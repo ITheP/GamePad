@@ -898,10 +898,6 @@ void loop()
     input = DigitalInputs[i];
     input->ValueState.StateJustChanged = false;
 
-#ifdef USE_EXTERNAL_LED
-    ExternalLEDConfig *ledConfig = input->LEDConfig;
-    // int ledNumber = ledConfig->LEDNumber;
-#endif
     unsigned long timeCheck = micros();
     if ((timeCheck - input->ValueState.StateChangedWhen) > DebounceDelay)
     {
@@ -929,20 +925,6 @@ void loop()
 
             sendReport = true;
           }
-
-#ifdef USE_EXTERNAL_LED
-          // Theoretically if we set LED's after bluetooth sends its report then latency will be less, but the delay of extra overhead is sooooo small, we are good
-          if (ledConfig != nullptr)
-          {                             // if (ledNumber != NOLED) {
-            ledConfig->StartTime = Now; // Start time LED was engaged, in case we want to apply to some effects
-            ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Enabled;
-            if (ledConfig->Effect == nullptr)
-            {
-              // Only bother to set press colour if not doing some fancy mode later
-              ExternalLeds[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Colour;
-            }
-          }
-#endif
         }
         else
         {
@@ -954,59 +936,11 @@ void loop()
 
             sendReport = true;
           }
-
-#ifdef USE_EXTERNAL_LED
-          // Theoretically if we set LED's after bluetooth sends its report then latency will be less, but the delay of extra overhead is sooooo small, we are good
-          if (ledConfig != nullptr)
-          { // if (ledNumber != NOLED) {
-            // Only set release colour if not doing some fancy mode later
-            if (ledConfig->Effect == nullptr)
-            {
-              ExternalLeds[ledConfig->LEDNumber] = ledConfig->SecondaryColour.Colour;
-            }
-
-            // Flag to disable the LED, effect or not
-            ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->SecondaryColour.Enabled;
-          }
-#endif
         }
 
         input->RenderOperation(input);
       }
     }
-
-#ifdef USE_EXTERNAL_LED
-    // Digital Input LEDs where fancy effects have been specified
-    // LEDConfig* config = &input->LEDConfig;
-    // Serial.println("Config state: " + String(config->Debug) + " [" + String(Frame) + "." + String(i) + "]");
-    // if (ledNumber != NOLED && ledConfig->Effect != nullptr && ExternalLedsEnabled[ledNumber])  // ledNumber != NOLED <-- shouldn't be needed if configured correctly
-    if (ledConfig != nullptr && ledConfig->Effect != nullptr && ExternalLedsEnabled[ledConfig->LEDNumber])
-      //(*(input->LEDConfig.Effect))(input, Now);
-      //(input->LEDConfig.*(input->LEDConfig.Effect))(input->StateJustChanged, Now);
-      //(config->*config->Effect)(input, Now);
-      ledConfig->Effect(input, Now);
-#endif
-
-    // Onboard/Status LED
-    // Always check if we want to set the status LED i.e. hold LED on rather than just on a press
-    // We don't just overwrite values incase we darken a previous brighter, so as a basic additive, we keep the brightest components
-#ifdef STATUS_LED_COMBINE_INPUTS
-    if (input->ValueState.Value == LOW && input->OnboardLED.Enabled)
-    {
-      if (input->OnboardLED.Colour.r > StatusLED_R)
-      {
-        StatusLED_R = (float)(input->OnboardLED.Colour.r);
-      }
-      if (input->OnboardLED.Colour.g > StatusLED_G)
-      {
-        StatusLED_G = (float)(input->OnboardLED.Colour.g);
-      }
-      if (input->OnboardLED.Colour.b > StatusLED_B)
-      {
-        StatusLED_B = (float)(input->OnboardLED.Colour.b);
-      }
-    }
-#endif
   }
 
 #ifdef INCLUDE_BENCHMARKS

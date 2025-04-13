@@ -60,7 +60,7 @@ void DigitalEffects::Throb(void *digitalInput, float time)
     input->ValueState.StateJustChangedLED = false;
     Serial.println(String(time) + ": Throb triggered");
   }
-  
+
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
   if (input->ValueState.StateJustChanged)
@@ -138,24 +138,21 @@ void DigitalEffects::Rain(void *digitalInput, float time)
 
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
-  if (Rain_PreviousTime + ledConfig->Rate < time)
+  if ((Rain_PreviousTime + ledConfig->Rate) < time)
   {
-    Rain_PreviousTime += ledConfig->Rate;
+    Rain_PreviousTime = time; //+= ledConfig->Rate;
 
     // Shift all existing LED's along the array
     for (int i = ledConfig->LEDNumbersCount - 1; i > 0; i--)
       *(ledConfig->ExternalLEDs[i]) = *(ledConfig->ExternalLEDs[i - 1]);
+
+    *(ledConfig->ExternalLEDs[0]) = ledConfig->SecondaryColour.Colour;
   }
 
-  if (input->ValueState.StateJustChangedLED)
+  // Only on presses, not releases
+  if (input->ValueState.StateJustChangedLED && input->ValueState.Value == LOW)
   {
-    input->ValueState.StateJustChangedLED = false;
     *(ledConfig->ExternalLEDs[0]) = ledConfig->PrimaryColour.Colour;
-    
-  }
-  else
-  {
-    *(ledConfig->ExternalLEDs[0]) = ledConfig->SecondaryColour.Colour;
   }
 }
 
@@ -310,7 +307,7 @@ void AnalogEffects::Throb(void *analogInput, float time)
     input->ValueState.StateJustChangedLED = false;
     ledConfig->StartTime = time;
   }
-  
+
   time = (time - ledConfig->StartTime) * ledConfig->Rate; // Rebase current time to LED's start timing * speed of throb
   uint8_t amount = (uint8_t)time;                         // 0->255
   *(ledConfig->ExternalLED) = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);

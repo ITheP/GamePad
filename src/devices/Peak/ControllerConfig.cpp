@@ -30,9 +30,8 @@ Input DigitalInput_Green = // Green button on guitar neck
         .LEDNumbers = { LED_DigitalTest,  (LED_DigitalTest+1), (LED_DigitalTest+2), (LED_DigitalTest+3), (LED_DigitalTest+4), (LED_DigitalTest+5), (LED_DigitalTest+6), (LED_DigitalTest+7),
           (LED_DigitalTest + 8),  (LED_DigitalTest+9), (LED_DigitalTest+10), (LED_DigitalTest+11), (LED_DigitalTest+12), (LED_DigitalTest+13), (LED_DigitalTest+14), (LED_DigitalTest+15),
           (LED_DigitalTest+16), (LED_DigitalTest+17), (LED_DigitalTest+18), (LED_DigitalTest+19), (LED_DigitalTest+20), (LED_DigitalTest+21), (LED_DigitalTest+22), (LED_DigitalTest+23) },
-
         .PrimaryColour = { CRGB(0, 255, 0), true },
-        .SecondaryColour = { CRGB(128, 0, 0), false },
+        .SecondaryColour = { CRGB(0, 0, 0), true },
         //.Effect = &DigitalEffects::Throb,
         .Effect = &DigitalEffects::Rain,
         .Rate = 0.033 //255.0 * 2
