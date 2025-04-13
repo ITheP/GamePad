@@ -1,0 +1,65 @@
+#pragma once
+
+#include <optional>
+#include <vector>
+#include "Config.h"
+#include "Stats.h"
+
+// Notes
+
+// To specify a setting specifying a function call, use NONE. If you ignore the setting, it should default to NONE. Equivalent of nullptr;
+// e.g. .BluetoothSetOperation = NON
+
+// Recommended max number of physical LED's
+// Using a typical 5V USB without high-current capabilities, it should be safe to power
+// 10-15 NeoPixels at moderate usage (around 20-30mA per LED)
+// 5-8 NeoPixels at full brightness (60mA per LED)
+// ...accounting for an extra 100 or so mA for controller
+// and remembering standard USB 2.0 ports are typically rated for 500mA, and USB 3.0 ports 900 mA
+
+// General configuration - reminder some config options are in Config.h
+//#define LIVE_BATTERY                // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
+#define USE_ONBOARD_LED               // Enable onboard Neopixel LED
+#define STATUS_LED_COMBINE_INPUTS     // Status LED includes a generalised colour made up of Status colour + other LED's (in an approximately additive way)
+#define USE_EXTERNAL_LED              // Enable external LEDs - may want to check the ExternalLED_FastLEDCount below too
+
+// =====
+// LED's
+// Mappings to physical Neopixel/equivalent LED offsets
+#define LED_Status      0
+#define LED_Green       1
+#define LED_Red         2
+#define LED_Yellow      3
+#define LED_Blue        4
+#define LED_Orange      5
+#define LED_Whammy      6
+#define LED_Tilt        7
+#define LED_Status_Copy 8
+#define LED_Hat_Off     9
+#define LED_Hat_1       10
+#define LED_Hat_2       11
+#define LED_Hat_3       12
+#define LED_Hat_4       13
+#define LED_Hat_5       14
+#define LED_Hat_6       15
+#define LED_Hat_7       16
+#define LED_Hat_8       17
+
+#define LED_BRIGHTNESS 20                     // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
+
+#define ONBOARD_LED_FADE_RATE (1.0 / 0.2)     // 0.15 is the total amount of seconds a complete 255->0 fade will be over
+
+#define EXTERNAL_LED_FADE_RATE (1.0 / 0.1)    // 0.075 is the total amount of seconds a complete 255->0 fade will be over (actual result is approximate)
+#define EXTERNAL_LED_TYPE WS2812B             // WS2852
+#define EXTERNAL_LED_COLOR_ORDER GRB
+
+// External pin EXTERNAL_LED_PIN defined lower down
+constexpr int ExternalLED_Count = 18;                // Space for all LEDs - in our case 5 neck buttons, 1 status LED + 1 status LED clone
+constexpr int ExternalLED_FastLEDCount = 18;         // Match ExternalLED_Count for all LEDs, but set to e.g. 1 (assuming LED 0 is the status led) for only the first status LED to be used
+                                                    // Lets us simplify code complexity for the sake of processing some extra LED logic but only want the status one installed (save battery life mode!)
+constexpr int ExternalLED_StatusLED = LED_Status;   // LED to use as an external Status - copy of internal status. Do not define if you have no external status led.
+
+// List of LED's we want cloning (lets you copy LED values between each other)
+// e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
+IntPair LEDClones[] = { { LED_Status, LED_Status_Copy } };
+int LEDClones_Count = sizeof(LEDClones) / sizeof(LEDClones[0]);
