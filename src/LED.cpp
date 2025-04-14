@@ -59,6 +59,31 @@ void InitExternalLED(ExternalLEDConfig *config, CRGB *leds)
 extern CRGB ExternalLeds[];
 extern int ExternalLedsEnabled[];
 
+//#define INCLUDE_BENCHMARKS1
+
+#ifdef INCLUDE_BENCHMARKS1
+
+unsigned long Benchmarks_StartTime1;
+unsigned long Benchmarks_SnapTime1;
+
+void StartBenchmark1()
+{
+  Serial.println("PERFORMANCE-1: Start");
+  Benchmarks_StartTime1 = micros();
+  Benchmarks_SnapTime1 = Benchmarks_StartTime1;
+}
+
+void ShowBenchmark1(char description[])
+{
+  // Reminder: microseconds = milliseconds * 0.001;
+  unsigned long now = micros();
+  unsigned long totalTimeTaken = (now - Benchmarks_StartTime1);
+  unsigned long timeTaken = (now - Benchmarks_SnapTime1);
+  Serial.println("PERFORMANCE: " + String(timeTaken * 0.001, 2) + "ms / " + String(totalTimeTaken * 0.001, 2) + "ms " + String(description));
+  Benchmarks_SnapTime1 = now;
+}
+#endif
+
 void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
 {
   for (;;)
@@ -66,6 +91,10 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
     // We don't want to do this as fast as possible, so we throttle it back
     if (UpdateLEDs)
     {
+#ifdef INCLUDE_BENCHMARKS1
+      StartBenchmark1();
+#endif
+
       // Digital handling
       for (int i = 0; i < DigitalInputs_Count; i++)
       {
@@ -74,7 +103,7 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
 
 #ifdef USE_EXTERNAL_LED
         // TODO: Just make default on/off effect for setting/unsetting leds rather than special code here?
-        
+
         if (ledConfig != nullptr)
         {
           if (input->ValueState.StateJustChangedLED)
@@ -106,12 +135,12 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
             }
           }
 
-          if (ledConfig->Effect != nullptr && ExternalLedsEnabled[ledConfig->LEDNumber])
+          if (ledConfig->Effect != nullptr && (ExternalLedsEnabled[ledConfig->LEDNumber] || ledConfig->RunEffectConstantly))
           {
             if (ledConfig->Effect != nullptr)
               ledConfig->Effect(input, Now);
           }
-                      
+
           // Serial.print("Digital State Just Changed: ");
           input->ValueState.StateJustChangedLED = false;
         }
@@ -138,6 +167,10 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
         }
 #endif
       }
+
+#ifdef INCLUDE_BENCHMARKS1
+      ShowBenchmark1("Loop.DigitalInputs");
+#endif
 
 // Analog effects
 #ifdef USE_EXTERNAL_LED
@@ -179,6 +212,10 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
       }
 #endif
 
+#ifdef INCLUDE_BENCHMARKS1
+      ShowBenchmark1("Loop.AnalogInputs");
+#endif
+
       // Copy around any LEDs that need duplicating
       // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
       for (int i = 0; i < LEDClones_Count; i++)
@@ -189,8 +226,16 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
         // Serial.println(" = B: " + String(ExternalLeds[pair.B].r) + "," + String(ExternalLeds[pair.B].g) + "," + String(ExternalLeds[pair.B].b));
       }
 
+#ifdef INCLUDE_BENCHMARKS1
+      ShowBenchmark1("Loop.Clone");
+#endif
+
       FastLED.show();
       UpdateLEDs = false;
+
+#ifdef INCLUDE_BENCHMARKS1
+      ShowBenchmark1("Loop.FastLED.Show");
+#endif
 
       // Fade everything ready for next loop - and of course things might get reset elsewhere in the mean time but we don't care
 
@@ -226,7 +271,12 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
         }
       }
 #endif
-    }
+
+#ifdef INCLUDE_BENCHMARKS1
+      ShowBenchmark1("UpdateExternalLEDsLoop");
+#endif
+
+    } // UpdateLEDs
 
     taskYIELD();
   }

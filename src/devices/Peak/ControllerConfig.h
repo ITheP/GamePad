@@ -49,28 +49,30 @@
 #define LED_Hat_6           14
 #define LED_Hat_7           15
 #define LED_Hat_8           16
+#define LED_DigitalTest     17
+#define LED_DigitalTest_Count 24
 // Non fading LED's after this point
-#define LED_Whammy          17
-#define LED_Whammy_Count    24
-#define LED_DigitalTest     41
-#define LED_DigitalTest_Count 16
+#define LED_Whammy          (LED_DigitalTest + LED_DigitalTest_Count)
+#define LED_Whammy_Count    16
 
-#define LED_BRIGHTNESS      20                // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
+#define LED_TOTALCOUNT      (LED_Whammy + LED_Whammy_Count)
 
-#define ONBOARD_LED_FADE_RATE (1.0 / 0.2)     // 0.15 is the total amount of seconds a complete 255->0 fade will be over
+#define LED_BRIGHTNESS      20                      // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
 
-#define EXTERNAL_LED_FADE_RATE (1.0 / 0.1)    // 0.075 is the total amount of seconds a complete 255->0 fade will be over (actual result is approximate)
-#define EXTERNAL_LED_TYPE WS2812B             // WS2852
+#define ONBOARD_LED_FADE_RATE (1.0 / 0.2)           // 0.15 is the total amount of seconds a complete 255->0 fade will be over
+
+#define EXTERNAL_LED_FADE_RATE (1.0 / 0.1)          // 0.075 is the total amount of seconds a complete 255->0 fade will be over (actual result is approximate)
+#define EXTERNAL_LED_TYPE WS2812B                   // WS2852
 #define EXTERNAL_LED_COLOR_ORDER GRB
 
 // External pin EXTERNAL_LED_PIN defined lower down
-#define ExternalLED_Count (41+16)         // Space for all LEDs - in our case 5 neck buttons, 1 status LED + 1 status LED clone
-#define ExternalLED_FadeCount 17            // Auto-fade of LED's - basically fades all LED's in ExternalLED array up to this point.
-                                           // RECOMMENDATION: if physically possible, stick all fading LED's at the start of your array, and non fading ones at the end - less overhead then
-                                           // Less overhead then                                          
-#define ExternalLED_FastLEDCount (41+16)  // Match ExternalLED_Count for all LEDs, but set to e.g. 1 (assuming LED 0 is the status led) for only the first status LED to be used
-                                           // Lets us simplify code complexity for the sake of processing some extra LED logic but only want the status one installed (save battery life mode!)
-#define ExternalLED_StatusLED LED_Status   // LED to use as an external Status - copy of internal status. Do not define if you have no external status led.
+#define ExternalLED_Count LED_TOTALCOUNT            // Space for all LEDs - in our case 5 neck buttons, 1 status LED + 1 status LED clone
+#define ExternalLED_FadeCount LED_Whammy            // Auto-fade of LED's - basically fades all LED's in ExternalLED array up to this point.
+                                                    // RECOMMENDATION: if physically possible, stick all fading LED's at the start of your array, and non fading ones at the end - less overhead then
+                                                    // Less overhead then                                          
+#define ExternalLED_FastLEDCount LED_TOTALCOUNT     // Match ExternalLED_Count for all LEDs, but set to e.g. 1 (assuming LED 0 is the status led) for only the first status LED to be used
+                                                    // Lets us simplify code complexity for the sake of processing some extra LED logic but only want the status one installed (save battery life mode!)
+#define ExternalLED_StatusLED LED_Status            // LED to use as an external Status - copy of internal status. Do not define if you have no external status led.
 
 // List of LED's we want cloning (lets you copy LED values between each other)
 // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points

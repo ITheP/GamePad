@@ -2,6 +2,8 @@
 #include "LED.h"
 #include "LEDEffects.h"
 
+extern int ExternalLedsEnabled[];
+
 // NOTES:
 // FastLED does have faster routines than some of the below
 // however our array's of LED's may be in any order (rather than continuous allocations of memory) and have other bits and bobs going on
@@ -132,7 +134,12 @@ float Rain_PreviousTime = 0;
 // Variant where Rain fades to other colour
 // Variant where it enables/disables LED's for a fading trail?
 // Reminder that array is probably not going to be in the autofade range
-void DigitalEffects::Rain(void *digitalInput, float time)
+
+// Secondary colour enabled = false - effect fades out
+// Secondary colour enabled = true - instant snap to second colour
+// ...so no fade effect e.g. if black instantly turns off LED as it passes
+// LEDConfig.RunEffectConstantly should be true if you want constantly live effect
+void DigitalArrayEffects::Rain(void *digitalInput, float time)
 {
   Input *input = static_cast<Input *>(digitalInput);
 
@@ -140,19 +147,75 @@ void DigitalEffects::Rain(void *digitalInput, float time)
 
   if ((Rain_PreviousTime + ledConfig->Rate) < time)
   {
-    Rain_PreviousTime = time; //+= ledConfig->Rate;
+    Rain_PreviousTime += ledConfig->Rate;
 
     // Shift all existing LED's along the array
-    for (int i = ledConfig->LEDNumbersCount - 1; i > 0; i--)
-      *(ledConfig->ExternalLEDs[i]) = *(ledConfig->ExternalLEDs[i - 1]);
+    for (int i = ledConfig->LEDNumbersCount; i > 0; i--)
+    {
+      if (*(ledConfig->ExternalLEDs[i - 1]) == ledConfig->PrimaryColour.Colour)
+      {
+        // shift any active LED's up a position (except for very last LED)
+        if (i < ledConfig->LEDNumbersCount)
+        {
+          *(ledConfig->ExternalLEDs[i]) = ledConfig->PrimaryColour.Colour;
+          ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = ledConfig->PrimaryColour.Enabled;
+        }
 
-    *(ledConfig->ExternalLEDs[0]) = ledConfig->SecondaryColour.Colour;
+        // De-escalate previous LED
+        *(ledConfig->ExternalLEDs[i - 1]) = ledConfig->SecondaryColour.Colour;
+        ExternalLedsEnabled[ledConfig->LEDNumbers[i - 1]] = ledConfig->SecondaryColour.Enabled;
+      }
+    }
   }
 
   // Only on presses, not releases
   if (input->ValueState.StateJustChangedLED && input->ValueState.Value == LOW)
   {
     *(ledConfig->ExternalLEDs[0]) = ledConfig->PrimaryColour.Colour;
+    ExternalLedsEnabled[ledConfig->LEDNumbers[0]] = ledConfig->PrimaryColour.Enabled;
+  }
+}
+
+// LEDConfig.RunEffectConstantly should be true if you want constantly live effect
+
+// Rain effect but colour of drop blends from primary to secondary colour
+// Ignores Primary and Secondary colour enabled flags
+void DigitalArrayEffects::BlendedRain(void *digitalInput, float time)
+{
+  Input *input = static_cast<Input *>(digitalInput);
+
+  ExternalLEDConfig *ledConfig = input->LEDConfig;
+
+  if ((Rain_PreviousTime + ledConfig->Rate) < time)
+  {
+    Rain_PreviousTime += ledConfig->Rate;
+
+    // Shift all existing LED's along the array
+    for (int i = ledConfig->LEDNumbersCount; i > 0; i--)
+    {
+      if (ExternalLedsEnabled[ledConfig->LEDNumbers[i-1]])
+      {
+        // shift any active LED's up a position (except for very last LED)
+        if (i < ledConfig->LEDNumbersCount)
+        {
+          float amount = ((float)(i) / (float)(ledConfig->LEDNumbersCount)) * 255.0;
+          CRGB colour = blend(ledConfig->PrimaryColour.Colour, ledConfig->SecondaryColour.Colour, amount);
+
+          *(ledConfig->ExternalLEDs[i]) = colour;
+          ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = ExternalLedsEnabled[ledConfig->LEDNumbers[i-1]];
+        }
+
+        // De-escalate previous LED
+        ExternalLedsEnabled[ledConfig->LEDNumbers[i - 1]] = false;
+      }
+    }
+  }
+
+  // Only on presses, not releases
+  if (input->ValueState.StateJustChangedLED && input->ValueState.Value == LOW)
+  {
+    *(ledConfig->ExternalLEDs[0]) = ledConfig->PrimaryColour.Colour;
+    ExternalLedsEnabled[ledConfig->LEDNumbers[0]] = true;
   }
 }
 

@@ -34,6 +34,7 @@ typedef struct ExternalLEDConfig {
   LED SecondaryColour;                                      // Secondary color, usually used as the colour e.g. to fade out from when button not pressed, or the colour to blend up from in e.g. analog effects
   typedef void (*EffectFunctionPointer)(void*, float);
   EffectFunctionPointer Effect;                             // Effect, either DigitalEffect::, HatEffect:: or AnalogEffect:: function pointer
+  int RunEffectConstantly;
   float Rate;                                               // Rate of effect, default to 0.0. - will vary in use depending on the Effect
   CRGB* ExternalLED;                                        // Pointer to actual LED settings - note this may be shared if the LEDNumber is re-used across inputs
   CHSV PrimaryHSV;                                          // Some effects want a Hue etc. - caches a precalculate value of this based on PrimaryColour

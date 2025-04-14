@@ -31,10 +31,12 @@ Input DigitalInput_Green = // Green button on guitar neck
           (LED_DigitalTest + 8),  (LED_DigitalTest+9), (LED_DigitalTest+10), (LED_DigitalTest+11), (LED_DigitalTest+12), (LED_DigitalTest+13), (LED_DigitalTest+14), (LED_DigitalTest+15),
           (LED_DigitalTest+16), (LED_DigitalTest+17), (LED_DigitalTest+18), (LED_DigitalTest+19), (LED_DigitalTest+20), (LED_DigitalTest+21), (LED_DigitalTest+22), (LED_DigitalTest+23) },
         .PrimaryColour = { CRGB(0, 255, 0), true },
-        .SecondaryColour = { CRGB(0, 0, 0), true },
+        .SecondaryColour = { CRGB(255, 0, 0), false },
         //.Effect = &DigitalEffects::Throb,
-        .Effect = &DigitalEffects::Rain,
-        .Rate = 0.033 //255.0 * 2
+        ///.Effect = &DigitalArrayEffects::Rain,
+        .Effect = &DigitalArrayEffects::BlendedRain,
+        .RunEffectConstantly = true,
+        .Rate = 0.0033 //255.0 * 2
     },
     .BluetoothIdOffset = 1
   };
@@ -163,8 +165,9 @@ Input AnalogInputs_Whammy =
     .OnboardLED = { CRGB::Pink, true },
     .LEDConfig = new ExternalLEDConfig {
         .LEDNumbers = { LED_Whammy,  (LED_Whammy+1), (LED_Whammy+2), (LED_Whammy+3), (LED_Whammy+4), (LED_Whammy+5), (LED_Whammy+6), (LED_Whammy+7),
-          (LED_Whammy + 8),  (LED_Whammy+9), (LED_Whammy+10), (LED_Whammy+11), (LED_Whammy+12), (LED_Whammy+13), (LED_Whammy+14), (LED_Whammy+15),
-          (LED_Whammy+16), (LED_Whammy+17), (LED_Whammy+18), (LED_Whammy+19), (LED_Whammy+20), (LED_Whammy+21), (LED_Whammy+22), (LED_Whammy+23) },
+          (LED_Whammy + 8),  (LED_Whammy+9), (LED_Whammy+10), (LED_Whammy+11), (LED_Whammy+12), (LED_Whammy+13), (LED_Whammy+14), (LED_Whammy+15)
+          //(LED_Whammy+16), (LED_Whammy+17), (LED_Whammy+18), (LED_Whammy+19), (LED_Whammy+20), (LED_Whammy+21), (LED_Whammy+22), (LED_Whammy+23)
+          },
         .PrimaryColour = { CRGB(255, 54, 96), true},
         .SecondaryColour = { CRGB::Green, false},
         //.Effect = &AnalogEffects::BlendedHue

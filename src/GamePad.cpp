@@ -40,53 +40,6 @@ void UpdateExternalLEDs(void *parameter)
   uint8_t externalDecrease = (uint8_t)(255.0 * EXTERNAL_LED_FADE_RATE * ThrottledUpdatesRate);
 
   UpdateExternalLEDsLoop(statusDecrease, externalDecrease);
-
-//   for (;;)
-//   {
-//     // We don't want to do this as fast as possible, so we throttle it back
-//     if (UpdateLEDs)
-//     {
-//       FastLED.show();
-//       UpdateLEDs = false;
-
-//       // Fade the status LED (fractional values)
-//       float statusDecrease = (255.0 * EXTERNAL_LED_FADE_RATE * ThrottledUpdatesRate);
-
-//       StatusLED_R -= statusDecrease;
-//       if (StatusLED_R < 0)
-//         StatusLED_R = 0;
-
-//       StatusLED_G -= statusDecrease;
-//       if (StatusLED_G < 0)
-//         StatusLED_G = 0;
-
-//       StatusLED_B -= statusDecrease;
-//       if (StatusLED_B < 0)
-//         StatusLED_B = 0;
-
-// #ifdef USE_EXTERNAL_LED
-//       // Fade disabled External LED's - note this are integer calculations so must be enough fade to actually have a decrease, and fractional components not applied over many iterations can add up to bigger differences over time. So this isn't exact.
-
-//       // We don't want to do this as fast as possible, and too many small fractional changes to work nicely with FastLED's preferred uint8_t
-//       // so we throttle back (assumes is delayed enough that there will always be a high enough value to affect a decrease)
-//       uint8_t decrease = (uint8_t)(255.0 * EXTERNAL_LED_FADE_RATE * ThrottledUpdatesRate);
-//       CRGB *crgb;
-//       float r, g, b;
-//       // As External LED's are updated to a value sporadically on press, and held without repeatedly being set each frame, we only fade when an LED is set as being disabled (i.e. a nice fade to being off)
-//       // TODO: Fade to an off colour rather than black?
-//       for (int i = 0; i < ExternalLED_Count; i++)
-//       {
-//         crgb = &ExternalLeds[i];
-//         if (!ExternalLedsEnabled[i])
-//         {
-//           crgb->fadeToBlackBy(decrease);
-//         }
-//       }
-// #endif
-//     }
-
-//     taskYIELD();
-//   }
 }
 
 #endif
@@ -1118,15 +1071,15 @@ void loop()
 
 #ifdef USE_EXTERNAL_LED
     // Hat fancy effects - but only active one will actually be run!
-    ExternalLEDConfig *config = hatInput->LEDConfigs[hatInput->ValueState.Value];
-    if (config != nullptr && ExternalLedsEnabled[config->LEDNumber])
+    ExternalLEDConfig *ledConfig = hatInput->LEDConfigs[hatInput->ValueState.Value];
+    if (ledConfig != nullptr && ExternalLedsEnabled[ledConfig->LEDNumber])
     {
-      if (config->Effect == nullptr)
+      if (ledConfig->Effect == nullptr)
         // Just set the colour
-        *(config->ExternalLED) = config->PrimaryColour.Colour;
+        *(ledConfig->ExternalLED) = ledConfig->PrimaryColour.Colour;
       else
         //(config->*config->Effect)(hatInput, Now);
-        config->Effect(hatInput, Now);
+        ledConfig->Effect(hatInput, Now);
     }
 #endif
 #ifdef STATUS_LED_COMBINE_INPUTS
