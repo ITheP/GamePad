@@ -59,7 +59,7 @@ void InitExternalLED(ExternalLEDConfig *config, CRGB *leds)
 extern CRGB ExternalLeds[];
 extern int ExternalLedsEnabled[];
 
-//#define INCLUDE_BENCHMARKS1
+// #define INCLUDE_BENCHMARKS1
 
 #ifdef INCLUDE_BENCHMARKS1
 

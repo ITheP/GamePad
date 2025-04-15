@@ -19,6 +19,9 @@ class DigitalArrayEffects
 public:
   static void Rain(void *digitalInput, float time);
   static void BlendedRain(void *digitalInput, float time);
+  static void Sparkle(void *digitalInput, float time);
+  static void SparkleTimeHue(void *digitalInput, float time);
+  static void SparkleTimeBlend(void *digitalInput, float time);
 };
 
 class HatEffects

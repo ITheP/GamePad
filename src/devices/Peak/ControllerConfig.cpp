@@ -34,9 +34,12 @@ Input DigitalInput_Green = // Green button on guitar neck
         .SecondaryColour = { CRGB(255, 0, 0), false },
         //.Effect = &DigitalEffects::Throb,
         ///.Effect = &DigitalArrayEffects::Rain,
-        .Effect = &DigitalArrayEffects::BlendedRain,
+        //.Effect = &DigitalArrayEffects::BlendedRain,
+        //.Effect = &DigitalArrayEffects::SparkleTimeHue,
+        .Effect = &DigitalArrayEffects::SparkleTimeBlend,
         .RunEffectConstantly = true,
-        .Rate = 0.0033 //255.0 * 2
+        .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
+        .Chance = (uint32_t)(0.01 * 0xFFFF) // 10% chance of sparkle
     },
     .BluetoothIdOffset = 1
   };

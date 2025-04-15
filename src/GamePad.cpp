@@ -12,11 +12,12 @@
 #include "Battery.h"
 #include "Stats.h"
 #include "RenderText.h"
+#include "Benchmark.h"
 
 // Individual controller configuration and pin mappings
 // #include "Config_360.h"
 #include "DeviceConfig.h"
-//#include "Configs/Peak/LEDConfig.h"
+// #include "Configs/Peak/LEDConfig.h"
 
 // -----------------------------------------------------
 // LED stuff (include after controller definition)
@@ -29,13 +30,12 @@ int ExternalLedsEnabled[ExternalLED_Count];
 
 #include "LED.h"
 
-
 #include "GamePad.h"
 
-// Task for core 1 handling FastLED updates
+// Task for handling FastLED updates
 void UpdateExternalLEDs(void *parameter)
 {
-  
+
   float statusDecrease = (255.0 * EXTERNAL_LED_FADE_RATE * ThrottledUpdatesRate);
   uint8_t externalDecrease = (uint8_t)(255.0 * EXTERNAL_LED_FADE_RATE * ThrottledUpdatesRate);
 
@@ -78,25 +78,26 @@ inline void TakeBatteryLevelReading()
 // Benchmarks
 
 #ifdef INCLUDE_BENCHMARKS
-unsigned long Benchmarks_StartTime;
-unsigned long Benchmarks_SnapTime;
+// unsigned long Benchmarks_StartTime;
+// unsigned long Benchmarks_SnapTime;
 
-void StartBenchmark()
-{
-  Serial.println("PERFORMANCE: Start");
-  Benchmarks_StartTime = micros();
-  Benchmarks_SnapTime = Benchmarks_StartTime;
-}
+// void StartBenchmark()
+// {
+//   Serial.println("PERFORMANCE: Start");
+//   Benchmarks_StartTime = micros();
+//   Benchmarks_SnapTime = Benchmarks_StartTime;
+// }
 
-void ShowBenchmark(char description[])
-{
-  // Reminder: microseconds = milliseconds * 0.001;
-  unsigned long now = micros();
-  unsigned long totalTimeTaken = (now - Benchmarks_StartTime);
-  unsigned long timeTaken = (now - Benchmarks_SnapTime);
-  Serial.println("PERFORMANCE: " + String(timeTaken * 0.001, 2) + "ms / " + String(totalTimeTaken * 0.001, 2) + "ms " + String(description));
-  Benchmarks_SnapTime = now;
-}
+// void MainBenchmark.Show(char description[])
+// {
+//   // Reminder: microseconds = milliseconds * 0.001;
+//   unsigned long now = micros();
+//   unsigned long totalTimeTaken = (now - Benchmarks_StartTime);
+//   unsigned long timeTaken = (now - Benchmarks_SnapTime);
+//   Serial.println("PERFORMANCE: " + String(timeTaken * 0.001, 2) + "ms / " + String(totalTimeTaken * 0.001, 2) + "ms " + String(description));
+//   Benchmarks_SnapTime = now;
+// }
+Benchmark MainBenchmark; // = new Benchmark();
 #endif
 
 // -----------------------------------------------------
@@ -311,7 +312,12 @@ void setup()
 
   FastLED.setBrightness(LED_BRIGHTNESS);
 
-  // FastLED.Show() main loop is processed on separate core to reduce main loop overheads
+  // FastLED.Show() main loop is processed on separate thread
+  // to allow for running on other cores
+  // Note that at time of writing, core runs on same thread as main loop (1)
+  // as Bluetooth/Wifi etc. run on core 0
+  // Gives us the option to choose where we want to run it in the future
+  // depending on load, latency, priority, etc.
   xTaskCreatePinnedToCore(
       UpdateExternalLEDs,
       "LEDUpdateTask",
@@ -345,8 +351,8 @@ void setup()
   // Knightrider the external LED's
   hue = 0;
 
-  // ideally 5 leds using a delay of 30 look nice and don't take too long (150ms)
-  // but have to scale this accordingly - else loads of led's take ages!
+  // Example of 5 leds using a delay of 30 look nice and don't take too long (150ms)
+  // but have to scale this to total number in use and keep within same time frame
   int pause = 150 / ExternalLED_FastLEDCount;
 
   for (int cycles = 0; cycles < 4; cycles++)
@@ -437,7 +443,7 @@ void setup()
       // Check if input has a defined LED that is also enabled
 #ifdef USE_EXTERNAL_LED
       int ledNumber = overrideInput->LEDConfig->LEDNumber;
-        extLed = &overrideInput->LEDConfig->PrimaryColour;
+      extLed = &overrideInput->LEDConfig->PrimaryColour;
 #endif
 
       for (int i = 0; i < 4; i++)
@@ -617,7 +623,7 @@ void setup()
 void DrawMainScreen()
 {
 #ifdef INCLUDE_BENCHMARKS
-  StartBenchmark();
+  MainBenchmark.Start("DrawMainScreen");
 #endif
 
   Display.clearDisplay();
@@ -644,7 +650,7 @@ void DrawMainScreen()
   Display.display();
 
 #ifdef INCLUDE_BENCHMARKS
-  ShowBenchmark("DrawMainScreen");
+  MainBenchmark.Snapshot("DrawMainScreen");
 #endif
 }
 
@@ -673,10 +679,6 @@ float PreviousThrottledUpdatesWhen = 0;
 
 void loop()
 {
-#ifdef INCLUDE_BENCHMARKS
-  StartBenchmark();
-#endif
-
   unsigned long currentMicroS = micros(); // + 4294967295UL - 10000000;
   double FractionalSeconds = (double)(currentMicroS / 1000000.0);
 
@@ -709,6 +711,10 @@ void loop()
     else
       SecondFlipFlop = false;
   }
+
+#ifdef INCLUDE_BENCHMARKS
+  MainBenchmark.Start("Loop", SecondRollover);
+#endif
 
   // SubSecond flagging - specific integer used for things like sub second sliding window calculations of UpDownCounts
   SubSecond = (int)(Now * SubSecondCount) % SubSecondCount;
@@ -839,7 +845,7 @@ void loop()
   SetFontCustom();
 
 #ifdef INCLUDE_BENCHMARKS
-  ShowBenchmark("Loop.Second Stuff");
+  MainBenchmark.Snapshot("Loop.Second Stuff", SecondRollover);
 #endif
 
   // Digital inputs
@@ -897,7 +903,7 @@ void loop()
   }
 
 #ifdef INCLUDE_BENCHMARKS
-  ShowBenchmark("Loop.DigitalInputs");
+  MainBenchmark.Snapshot("Loop.DigitalInputs", SecondRollover);
 #endif
 
   // Analog Inputs
@@ -929,7 +935,7 @@ void loop()
   }
 
 #ifdef INCLUDE_BENCHMARKS
-  ShowBenchmark("Loop.AnalogInputs");
+  MainBenchmark.Snapshot("Loop.AnalogInputs", SecondRollover);
 #endif
 
   // Hat inputs
@@ -1114,7 +1120,7 @@ void loop()
   }
 
 #ifdef INCLUDE_BENCHMARKS
-  ShowBenchmark("Loop.Hats");
+  MainBenchmark.Snapshot("Loop.Hats", SecondRollover);
 #endif
 
   // Analog reads all vals = int16_t
@@ -1208,7 +1214,7 @@ void loop()
   PreviousBTConnectionState = BTConnectionState;
 
 #ifdef INCLUDE_BENCHMARKS
-  ShowBenchmark("Loop.Bluetooth");
+  MainBenchmark.Snapshot("Loop.Bluetooth", SecondRollover);
 #endif
 
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
@@ -1236,7 +1242,7 @@ void loop()
   // }
 
 #ifdef INCLUDE_BENCHMARKS
-  ShowBenchmark("Loop.LEDExtraPrep");
+  MainBenchmark.Snapshot("Loop.LEDExtraPrep", SecondRollover);
 #endif
 
   // FastLED.show() is throttled to e.g. 30fps - updating too often
@@ -1249,7 +1255,7 @@ void loop()
   }
 
 #ifdef INCLUDE_BENCHMARKS
-  ShowBenchmark("Loop.FastLED.show()");
+  MainBenchmark.Snapshot("Loop.FastLED.show()", SecondRollover);
 #endif
 #endif
 
@@ -1265,7 +1271,7 @@ void loop()
     SetFontCustom();
 
 #ifdef INCLUDE_BENCHMARKS
-    ShowBenchmark("Loop.FPS");
+    MainBenchmark.Snapshot("Loop.FPS", SecondRollover);
 #endif
   }
 
@@ -1277,7 +1283,7 @@ void loop()
 #endif
 
 #ifdef INCLUDE_BENCHMARKS
-  ShowBenchmark("Loop.PreDisplay");
+  MainBenchmark.Snapshot("Loop.PreDisplay", SecondRollover);
 #endif
 
   // And finally update the display with all the lovely changes above
@@ -1287,7 +1293,7 @@ void loop()
   Frame++;
 
 #ifdef INCLUDE_BENCHMARKS
-  ShowBenchmark("Loop.Completion");
+  MainBenchmark.Snapshot("Loop.Completion", SecondRollover);
 #endif
 }
 

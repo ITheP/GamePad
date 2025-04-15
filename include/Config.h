@@ -85,7 +85,7 @@
 #define SETUP_DELAY     250           // Delay between stages of set up. Can be pretty much instant, but having a delay gives a chance to see pretty things on screen.
 
 //#define EXTRA_SERIAL_DEBUG          // Enable to print loads of extra information to serial
-//#define INCLUDE_BENCHMARKS          // Includes some basic performance statistics of running device over serial
+#define INCLUDE_BENCHMARKS          // Includes some basic performance statistics of running device over serial
 #define SHOW_FPS                    // Shows FPS top left of screen
 //#define WHITE_SCREEN                // Display will show a solid white screen, handy when physically aligning panel in device
 
@@ -99,7 +99,7 @@
 #define SERIAL_SPEED 921600
 
 #define SubSecondCount          30  // Number of sub-samples to take across a second when calculating clicks per second counts. Higher number = more accurate but more overhead.
-#define ThrottledUpdatesRate 0.016  // Fraction of a second to wait between throttled updates - 0.016 = 16ms = ~60FPS
+#define ThrottledUpdatesRate 0.005  // Fraction of a second to wait between throttled updates - 0.016 = 16ms = ~60FPS
 
 #define CLEAR_STATS_ON_FLIP // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
 

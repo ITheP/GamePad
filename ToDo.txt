@@ -7,3 +7,11 @@ NOTE that button holding measurements and LED measurements might cross the micro
 
 Have an AutoFade bool on LEDconfig? Though this means 1 led might get faded twice, so nope.
 
+Core 0 runs wifi, bluetooth etc.
+By default, main loop is on core 1.
+LED loop running on core 1 - slowing down core 1 accordingly.
+
+TODO:
+Can we find a happy balance between speed of LED processing and main loop latency?
+Note that too slow on the LED loop and things like fast fades along large LED arrays
+take some time!

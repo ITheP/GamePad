@@ -36,6 +36,8 @@ typedef struct ExternalLEDConfig {
   EffectFunctionPointer Effect;                             // Effect, either DigitalEffect::, HatEffect:: or AnalogEffect:: function pointer
   int RunEffectConstantly;
   float Rate;                                               // Rate of effect, default to 0.0. - will vary in use depending on the Effect
+  //float Frequency;                                          // How often ocurrs
+  uint32_t Chance;                                          // For relevant effect, chance of something ocuring where 0 = 0% and 0xFFFF = 100%
   CRGB* ExternalLED;                                        // Pointer to actual LED settings - note this may be shared if the LEDNumber is re-used across inputs
   CHSV PrimaryHSV;                                          // Some effects want a Hue etc. - caches a precalculate value of this based on PrimaryColour
   float StartTime;                                          // Start time of effect, used for some effects when calculating how long the effect has been active
@@ -44,6 +46,7 @@ typedef struct ExternalLEDConfig {
 
   int LEDNumbersCount;
   std::vector<CRGB*> ExternalLEDs;
+  float PreviousTime;
 } ExternalLEDConfig;
 
 // If LEDNumbers.Size() > 0 then set LEDNumber = LEDNumbers[0] and copy &ExternalLEDs[0] to ExternalLED

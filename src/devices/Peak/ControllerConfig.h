@@ -50,7 +50,7 @@
 #define LED_Hat_7           15
 #define LED_Hat_8           16
 #define LED_DigitalTest     17
-#define LED_DigitalTest_Count 24
+#define LED_DigitalTest_Count 23
 // Non fading LED's after this point
 #define LED_Whammy          (LED_DigitalTest + LED_DigitalTest_Count)
 #define LED_Whammy_Count    16
