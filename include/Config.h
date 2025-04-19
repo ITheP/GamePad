@@ -20,7 +20,7 @@
 // pud = Pull Up/Down resistor present
 
 // Notes:
-// Some pins can be used at the expense of more general device functionality - so we attempt to not interfear with anything critical (e.g. so USB doesn't stop working!)
+// Some pins can be used at the expense of more general device functionality - so we attempt to not interfere with anything critical (e.g. so USB doesn't stop working!)
 // Do not use ADC2 pins for ADC - device ADC2 has issues (especially if using wireless/bluetooth) and is easier just to not use it than faff around
 // GPIO00->21 have internal pull-up/down resistors, can also be woken up from deep low-power mode.
 // GPIO22->25 are not available
@@ -80,14 +80,18 @@
 // //      Gnd
 // //      Gnd
 
-//#include "Structs.h"
-
-#define SETUP_DELAY     250           // Delay between stages of set up. Can be pretty much instant, but having a delay gives a chance to see pretty things on screen.
-
-//#define EXTRA_SERIAL_DEBUG          // Enable to print loads of extra information to serial
-#define INCLUDE_BENCHMARKS          // Includes some basic performance statistics of running device over serial
+//#define EXTRA_SERIAL_DEBUG        // Enable to print loads of extra information to serial
+//#define INCLUDE_BENCHMARKS        // Includes some basic performance statistics of running device over serial
+//#define INCLUDE_BENCHMARKS_LED    // Basic performance stats for LED processing
 #define SHOW_FPS                    // Shows FPS top left of screen
-//#define WHITE_SCREEN                // Display will show a solid white screen, handy when physically aligning panel in device
+//#define WHITE_SCREEN              // Display will show a solid white screen, handy when physically aligning panel in device
+
+#define SETUP_DELAY     250         // Delay between stages of initial start up
+                                    // Could be pretty much instant, but having a delay gives a chance to display
+                                    // startup information on screen and have a chance to see it. And looks nice :)
+
+#define DEBOUNCE_DELAY  10000       // Button debounce delay (10000 == 10ms)
+                                    // Some info on timings here -> https://www.digikey.com/en/articles/how-to-implement-hardware-debounce-for-switches-and-relays?form=MG0AV3
 
 // XBox 360 X-Plorer Guitar Hero Controller (model 95065)
 // HID/XInput variant of BLE Gamepad https://github.com/Mystfit/ESP32-BLE-CompositeHID
@@ -98,14 +102,15 @@
 //#define SERIAL_SPEED 115200
 #define SERIAL_SPEED 921600
 
-#define SubSecondCount          30  // Number of sub-samples to take across a second when calculating clicks per second counts. Higher number = more accurate but more overhead.
-#define ThrottledUpdatesRate 0.005  // Fraction of a second to wait between throttled updates - 0.016 = 16ms = ~60FPS
+#define SUB_SECOND_COUNT         30     // Number of sub-samples to take across a second when calculating clicks per second counts. Higher number = more accurate but more overhead.
+#define DISPLAY_UPDATE_RATE      0.016  // Fraction of a second to wait between display updates - 0.016 = 16ms = ~60FPS
+#define LED_UPDATE_RATE          0.005  // Fraction of a second to wait between throttled updates - default is faster than 60fps to account for animation effects where we want faster propagation
 
-#define CLEAR_STATS_ON_FLIP // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
+#define CLEAR_STATS_ON_FLIP             // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
 
 // Some standard values
 #define LOW 0x0
 #define HIGH 0x1
 #define NONE 0
 
-#define ClearColour ST7735_BLACK
+//#define ClearColour ST7735_BLACK

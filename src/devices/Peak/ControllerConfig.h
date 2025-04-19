@@ -50,10 +50,10 @@
 #define LED_Hat_7           15
 #define LED_Hat_8           16
 #define LED_DigitalTest     17
-#define LED_DigitalTest_Count 23
+#define LED_DigitalTest_Count 15
 // Non fading LED's after this point
 #define LED_Whammy          (LED_DigitalTest + LED_DigitalTest_Count)
-#define LED_Whammy_Count    16
+#define LED_Whammy_Count    8
 
 #define LED_TOTALCOUNT      (LED_Whammy + LED_Whammy_Count)
 
@@ -253,3 +253,8 @@ extern int ControllerGfx_RunCount;
 extern int AnalogInputs_Count;
 extern int HatInputs_Count;
 extern int DigitalInputs_Count;
+
+// -----------------------------------------------------
+// Special case code specific to this controller
+
+void Custom_RenderHatStrumState(HatInput *hatInput);

@@ -4,7 +4,7 @@
 #include "Structs.h"
 
 #define UpDownCounts_Count 60                       // 60 second across a minute count
-#define UpDownSubCounts_Count (SubSecondCount * 2)  // Overall size of window that a 1 second sliding window is checked across to find out the actual max per second counts
+#define UpDownSubCounts_Count (SUB_SECOND_COUNT * 2)  // Overall size of window that a 1 second sliding window is checked across to find out the actual max per second counts
 //#define SubSecondCount 30                           // Number of sub-samples to take across a second when calculating clicks per second counts. Higher number = more accurate but more overhead. Also used as frequency for lower rate refreshes.
 
 extern int UpDownCurrentCount;

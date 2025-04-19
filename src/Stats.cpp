@@ -66,7 +66,7 @@ void UpDownCount_SecondPassed(int Second) {
     startPos = 0;
 
   int pos = startPos;
-  for (int i = 0; i < SubSecondCount; i++) {
+  for (int i = 0; i < SUB_SECOND_COUNT; i++) {
     tempCount += UpDownSubCounts[pos++];
 
     if (pos == UpDownSubCounts_Count)
@@ -76,13 +76,13 @@ void UpDownCount_SecondPassed(int Second) {
   maxCount = tempCount;
   // We have our first second's worth count, we now only have to remove the first SubValue and add the next SubValue at the end to calculate next potential second total
 
-  int endPos = startPos + SubSecondCount;
+  int endPos = startPos + SUB_SECOND_COUNT;
   if (endPos > UpDownSubCounts_Count)
     endPos -= UpDownSubCounts_Count;
 
-  int loops = SubSecondCount - 1;  // Skip a loop, i.e. the one above thats already added everything together for an initial value
+  int loops = SUB_SECOND_COUNT - 1;  // Skip a loop, i.e. the one above thats already added everything together for an initial value
 
-  for (int i = 0; i < SubSecondCount; i++) {
+  for (int i = 0; i < SUB_SECOND_COUNT; i++) {
     tempCount -= UpDownSubCounts[startPos++];
     tempCount += UpDownSubCounts[endPos++];
 

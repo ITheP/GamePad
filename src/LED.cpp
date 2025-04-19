@@ -5,6 +5,11 @@
 #include "DeviceConfig.h"
 #include "GamePad.h"
 
+#ifdef INCLUDE_BENCHMARKS_LED
+#include "Benchmark.h"
+Benchmark LEDBenchmark("PERF.LED");
+#endif
+
 CRGB StatusLed[1];
 
 float StatusLED_R = 0;
@@ -58,30 +63,10 @@ void InitExternalLED(ExternalLEDConfig *config, CRGB *leds)
 
 extern CRGB ExternalLeds[];
 extern int ExternalLedsEnabled[];
+extern int Second;
 
-// #define INCLUDE_BENCHMARKS1
-
-#ifdef INCLUDE_BENCHMARKS1
-
-unsigned long Benchmarks_StartTime1;
-unsigned long Benchmarks_SnapTime1;
-
-void StartBenchmark1()
-{
-  Serial.println("PERFORMANCE-1: Start");
-  Benchmarks_StartTime1 = micros();
-  Benchmarks_SnapTime1 = Benchmarks_StartTime1;
-}
-
-void ShowBenchmark1(char description[])
-{
-  // Reminder: microseconds = milliseconds * 0.001;
-  unsigned long now = micros();
-  unsigned long totalTimeTaken = (now - Benchmarks_StartTime1);
-  unsigned long timeTaken = (now - Benchmarks_SnapTime1);
-  Serial.println("PERFORMANCE: " + String(timeTaken * 0.001, 2) + "ms / " + String(totalTimeTaken * 0.001, 2) + "ms " + String(description));
-  Benchmarks_SnapTime1 = now;
-}
+#ifdef INCLUDE_BENCHMARKS_LED
+int LEDPreviousSecond;
 #endif
 
 void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
@@ -91,8 +76,12 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
     // We don't want to do this as fast as possible, so we throttle it back
     if (UpdateLEDs)
     {
-#ifdef INCLUDE_BENCHMARKS1
-      StartBenchmark1();
+#ifdef INCLUDE_BENCHMARKS_LED
+      int secondRollover;
+      secondRollover = (Second != LEDPreviousSecond);
+      LEDPreviousSecond = Second;
+
+      LEDBenchmark.Start("UpdateLEDs", secondRollover);
 #endif
 
       // Digital handling
@@ -108,31 +97,31 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
         {
           if (input->ValueState.StateJustChangedLED)
           {
-            if (ledConfig != nullptr)
+            // if (ledConfig != nullptr)
+            //{
+            if (input->ValueState.Value == LOW)
             {
-              if (input->ValueState.Value == LOW)
+              // Pressed
+              ledConfig->StartTime = Now; // Start time LED was engaged, in case we want to apply to some effects
+              ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Enabled;
+              if (ledConfig->Effect == nullptr)
               {
-                // Pressed
-                ledConfig->StartTime = Now; // Start time LED was engaged, in case we want to apply to some effects
-                ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Enabled;
-                if (ledConfig->Effect == nullptr)
-                {
-                  // Only bother to set press colour if not doing some fancy mode later
-                  ExternalLeds[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Colour;
-                }
-              }
-              else
-              {
-                // Released
-                ledConfig->StartTime = Now; // Start time LED was engaged, in case we want to apply to some effects
-                ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->SecondaryColour.Enabled;
-                if (ledConfig->Effect == nullptr)
-                {
-                  // Only bother to set press colour if not doing some fancy mode later
-                  ExternalLeds[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Colour;
-                }
+                // Only bother to set press colour if not doing some fancy mode later
+                ExternalLeds[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Colour;
               }
             }
+            else
+            {
+              // Released
+              ledConfig->StartTime = Now; // Start time LED was engaged, in case we want to apply to some effects
+              ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->SecondaryColour.Enabled;
+              if (ledConfig->Effect == nullptr)
+              {
+                // Only bother to set press colour if not doing some fancy mode later
+                ExternalLeds[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Colour;
+              }
+            }
+            //}
           }
 
           if (ledConfig->Effect != nullptr && (ExternalLedsEnabled[ledConfig->LEDNumber] || ledConfig->RunEffectConstantly))
@@ -141,8 +130,7 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
               ledConfig->Effect(input, Now);
           }
 
-          // Serial.print("Digital State Just Changed: ");
-          input->ValueState.StateJustChangedLED = false;
+          input->ValueState.StateJustChangedLED = false; // Changed at end incase effect wants to use it first
         }
 #endif
 
@@ -168,8 +156,8 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
 #endif
       }
 
-#ifdef INCLUDE_BENCHMARKS1
-      ShowBenchmark1("Loop.DigitalInputs");
+#ifdef INCLUDE_BENCHMARKS_LED
+      LEDBenchmark.Snapshot("Loop.DigitalInputs", secondRollover);
 #endif
 
 // Analog effects
@@ -212,8 +200,79 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
       }
 #endif
 
-#ifdef INCLUDE_BENCHMARKS1
-      ShowBenchmark1("Loop.AnalogInputs");
+#ifdef INCLUDE_BENCHMARKS_LED
+      LEDBenchmark.Snapshot("Loop.AnalogInputs", secondRollover);
+#endif
+
+// Hat effects
+#ifdef USE_EXTERNAL_LED
+      for (int i = 0; i < HatInputs_Count; i++)
+      {
+        HatInput *hatInput = HatInputs[i];
+
+        int16_t hatCurrentState = hatInput->ValueState.Value;
+        ExternalLEDConfig *ledConfig = hatInput->LEDConfigs[hatCurrentState];
+
+        if (hatInput->ValueState.StateJustChangedLED)
+        {
+          // Handle previous state's LED
+          // As HAT's might have effects that span other HAT LED's (such as highlighting LED's next to the
+          // main current one) we actually go through all HAT LED's and do the equivalent of unset them)
+          int16_t hatPreviousState = hatInput->ValueState.PreviousValue;
+          ExternalLEDConfig *previousLEDConfig = hatInput->LEDConfigs[hatPreviousState];
+          if (previousLEDConfig != nullptr)
+          {
+            for (int j = 0; j < 9; j++)
+            {
+              ExternalLEDConfig *tmpLEDConfig = hatInput->LEDConfigs[j];
+
+              if (tmpLEDConfig != nullptr)
+              {
+                if (previousLEDConfig->Effect == nullptr)
+                  *(tmpLEDConfig->ExternalLED) = tmpLEDConfig->SecondaryColour.Colour;
+
+                ExternalLedsEnabled[tmpLEDConfig->LEDNumber] = tmpLEDConfig->SecondaryColour.Enabled;
+              }
+            }
+          }
+
+          // Handle new state's LED
+          if (ledConfig != nullptr)
+          {
+            if (ledConfig->Effect == nullptr)
+              *(ledConfig->ExternalLED) = ledConfig->PrimaryColour.Colour;
+
+              ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Enabled;
+            }
+          }
+
+        if (ledConfig != nullptr && ledConfig->Effect != nullptr && (ExternalLedsEnabled[ledConfig->LEDNumber] || ledConfig->RunEffectConstantly))
+          ledConfig->Effect(hatInput, Now);
+
+        hatInput->ValueState.StateJustChangedLED = false; // Changed at end incase effect wants to use it first
+
+        // Onboard colours
+        LED *onboardLED = &(hatInput->OnboardLED[hatInput->ValueState.Value]);
+        if (onboardLED->Enabled)
+        {
+          if (onboardLED->Colour.r > StatusLED_R)
+          {
+            StatusLED_R = (float)(onboardLED->Colour.r);
+          }
+          if (onboardLED->Colour.g > StatusLED_G)
+          {
+            StatusLED_G = (float)(onboardLED->Colour.g);
+          }
+          if (onboardLED->Colour.b > StatusLED_B)
+          {
+            StatusLED_B = (float)(onboardLED->Colour.b);
+          }
+        }
+      }
+#endif
+
+#ifdef INCLUDE_BENCHMARKS_LED
+      LEDBenchmark.Snapshot("Loop.HATInputs", secondRollover);
 #endif
 
       // Copy around any LEDs that need duplicating
@@ -226,15 +285,15 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
         // Serial.println(" = B: " + String(ExternalLeds[pair.B].r) + "," + String(ExternalLeds[pair.B].g) + "," + String(ExternalLeds[pair.B].b));
       }
 
-#ifdef INCLUDE_BENCHMARKS1
-      ShowBenchmark1("Loop.Clone");
+#ifdef INCLUDE_BENCHMARKS_LED
+      LEDBenchmark.Snapshot("Loop.Clone", secondRollover);
 #endif
 
       FastLED.show();
       UpdateLEDs = false;
 
-#ifdef INCLUDE_BENCHMARKS1
-      ShowBenchmark1("Loop.FastLED.Show");
+#ifdef INCLUDE_BENCHMARKS_LED
+      LEDBenchmark.Snapshot("Loop.FastLED.Show", secondRollover);
 #endif
 
       // Fade everything ready for next loop - and of course things might get reset elsewhere in the mean time but we don't care
@@ -272,11 +331,10 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
       }
 #endif
 
-#ifdef INCLUDE_BENCHMARKS1
-      ShowBenchmark1("UpdateExternalLEDsLoop");
+#ifdef INCLUDE_BENCHMARKS_LED
+      LEDBenchmark.Snapshot("Loop.End", secondRollover);
 #endif
-
-    } // UpdateLEDs
+    }
 
     taskYIELD();
   }

@@ -9,19 +9,17 @@
 #include "Screen.h"
 #include "Icons.h"
 #include "Device.h"
-#include "Battery.h"
 #include "Stats.h"
 #include "RenderText.h"
 #include "Benchmark.h"
+#include "Battery.h"
+#include "GamePad.h"
 
-// Individual controller configuration and pin mappings
-// #include "Config_360.h"
+// Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
 #include "DeviceConfig.h"
-// #include "Configs/Peak/LEDConfig.h"
 
 // -----------------------------------------------------
 // LED stuff (include after controller definition)
-
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
 #include <FastLED.h>
 
@@ -30,14 +28,12 @@ int ExternalLedsEnabled[ExternalLED_Count];
 
 #include "LED.h"
 
-#include "GamePad.h"
-
 // Task for handling FastLED updates
 void UpdateExternalLEDs(void *parameter)
 {
 
-  float statusDecrease = (255.0 * EXTERNAL_LED_FADE_RATE * ThrottledUpdatesRate);
-  uint8_t externalDecrease = (uint8_t)(255.0 * EXTERNAL_LED_FADE_RATE * ThrottledUpdatesRate);
+  float statusDecrease = (255.0 * EXTERNAL_LED_FADE_RATE * LED_UPDATE_RATE);
+  uint8_t externalDecrease = (uint8_t)(255.0 * EXTERNAL_LED_FADE_RATE * LED_UPDATE_RATE);
 
   UpdateExternalLEDsLoop(statusDecrease, externalDecrease);
 }
@@ -55,14 +51,12 @@ int Logo_RunCount = sizeof(Logo) / sizeof(Logo[0]);
 
 // -----------------------------------------------------
 // Gamepad
+
 BleGamepad bleGamepad;
-
-int Frame = 0;
-
 bool BTConnectionState;
 bool PreviousBTConnectionState;
 
-// String buffers
+// Buffers
 char buffer[64]; // More than big enough for anything we are doing here
 
 // -----------------------------------------------------
@@ -78,30 +72,43 @@ inline void TakeBatteryLevelReading()
 // Benchmarks
 
 #ifdef INCLUDE_BENCHMARKS
-// unsigned long Benchmarks_StartTime;
-// unsigned long Benchmarks_SnapTime;
-
-// void StartBenchmark()
-// {
-//   Serial.println("PERFORMANCE: Start");
-//   Benchmarks_StartTime = micros();
-//   Benchmarks_SnapTime = Benchmarks_StartTime;
-// }
-
-// void MainBenchmark.Show(char description[])
-// {
-//   // Reminder: microseconds = milliseconds * 0.001;
-//   unsigned long now = micros();
-//   unsigned long totalTimeTaken = (now - Benchmarks_StartTime);
-//   unsigned long timeTaken = (now - Benchmarks_SnapTime);
-//   Serial.println("PERFORMANCE: " + String(timeTaken * 0.001, 2) + "ms / " + String(totalTimeTaken * 0.001, 2) + "ms " + String(description));
-//   Benchmarks_SnapTime = now;
-// }
-Benchmark MainBenchmark; // = new Benchmark();
+Benchmark MainBenchmark("PERF.Main");
 #endif
 
 // -----------------------------------------------------
-// Main setup
+// Misc
+// Serial.print(" @ " + String((uintptr_t)config, HEX));
+
+int DebounceDelay = DEBOUNCE_DELAY;
+
+int Frame = 0;
+unsigned long PreviousMicroS = 0;
+
+float Now;
+float PreviousNow;
+
+int PreviousSecond = -1;
+int Second = 0;
+int SecondRollover = false;       // Flag to easily sync operations that run once per second
+int SecondFlipFlop = false;       // Flag flipping between 0 and 1 every second to allow for things like blinking icons
+
+int PreviousSubSecond = -1;
+int SubSecond = 0;
+int SubSecondRollover = false;    // SubSecond flag for things like statistics sampling
+int SubSecondFlipFlop = false;
+
+char LastBatteryIcon = 0;
+int LastSerialState = -1;
+
+float PreviousFractionalSeconds = 0;
+float CurrentFractionalSeconds = 0;
+float ExtendedFractionalSeconds = 0;
+
+int LEDUpdateRollover = false;    // Throttling flag for LED updates - may be far faster than e.g. 60fps to allow for effects to propagate more quickly
+float NextLEDUpdatePoint = 0;
+
+int DisplayRollover = false;      // Throttling flag for display updates
+float NextDisplayUpdatePoint = 0;
 
 void setup()
 {
@@ -201,17 +208,12 @@ void setup()
     pinMode(input->Pin, INPUT_PULLUP);
     input->ValueState.Value = input->DefaultValue;
 
-    // input->Debug = "Digital State OK";
-
 #ifdef USE_EXTERNAL_LED
-    // LEDWrangler::InitInput(input, ExternalLeds, true);
-
     ExternalLEDConfig *config = input->LEDConfig;
 
     if (config != nullptr)
-    { //} && config->LEDNumber != NOLED) {
+    {
       Serial.print(", external LED " + String(config->LEDNumber));
-      // Serial.print(" @ " + String((uintptr_t)config, HEX));
       InitExternalLED(config, ExternalLeds);
     }
     else
@@ -233,13 +235,10 @@ void setup()
     input->ValueState.Value = input->DefaultValue;
 
 #ifdef USE_EXTERNAL_LED
-    // LEDWrangler::InitInput(input, ExternalLeds, true);
-
     ExternalLEDConfig *config = input->LEDConfig;
 
     if (config != nullptr)
     {
-      // config->Debug = "Analog LEDConfig OK";
       Serial.print(", External LED " + String(config->LEDNumber));
       InitExternalLED(config, ExternalLeds);
     }
@@ -250,7 +249,7 @@ void setup()
     Serial.println();
   }
 
-  // Hat
+  // Hat inputs
   Serial.println("\nHat Inputs: " + String(HatInputs_Count));
   HatInput *hatInput;
   for (int i = 0; i < HatInputs_Count; i++)
@@ -283,8 +282,6 @@ void setup()
     Serial.println();
 
 #ifdef USE_EXTERNAL_LED
-    // LEDWrangler::InitInput(hatInput, ExternalLeds);
-
     Serial.print("... Hat " + String(hatInput->Label) + " LEDs");
 
     for (int i = 0; i < 9; i++)
@@ -312,12 +309,9 @@ void setup()
 
   FastLED.setBrightness(LED_BRIGHTNESS);
 
-  // FastLED.Show() main loop is processed on separate thread
-  // to allow for running on other cores
-  // Note that at time of writing, core runs on same thread as main loop (1)
-  // as Bluetooth/Wifi etc. run on core 0
-  // Gives us the option to choose where we want to run it in the future
-  // depending on load, latency, priority, etc.
+  // FastLED.Show() main loop is processed on separate thread to allow for running on other cores.
+  // Note that at time of writing, core runs on same thread as main loop (1) as Bluetooth/Wifi etc. run on core 0
+  // Gives us the option to play around a bit and choose where we want to run it in the future
   xTaskCreatePinnedToCore(
       UpdateExternalLEDs,
       "LEDUpdateTask",
@@ -351,8 +345,9 @@ void setup()
   // Knightrider the external LED's
   hue = 0;
 
-  // Example of 5 leds using a delay of 30 look nice and don't take too long (150ms)
-  // but have to scale this to total number in use and keep within same time frame
+  // Show LED's so no matter how many, they are shown within a small time frame
+  // Example of 5 leds using a delay of 30ms look nice and don't take too long (150ms)
+  // Scale this to total number in use and keep within same time frame
   int pause = 150 / ExternalLED_FastLEDCount;
 
   for (int cycles = 0; cycles < 4; cycles++)
@@ -384,7 +379,6 @@ void setup()
   FastLED.show(); // Make sure final Black is accounted for
 
 #endif // USE_EXTERNAL_LED
-
   // Final confirmation that either onboard and/or external LED's being used
   RRE.drawChar(112, 49, (unsigned char)Icon_LEDOn);
   Display.display();
@@ -396,13 +390,14 @@ void setup()
   delay(SETUP_DELAY);
 #endif
 
-  // Bluetooth config. etc.
+  // Bluetooth and other general config
 
   RRE.drawChar(54, 51, (unsigned char)Icon_BTLogo);
   Display.display();
 
   // Dedicated checks to Inputs that allow buttons held on startup to switch between variants of Bluetooth Id's
-  // which should allow 1 controller to pair separately to multiple hosts independently if so required!
+  // which should allow 1 controller to pair separately to multiple hosts/devices and allow for multiple
+  // hosts to use same physical controller but as separate controllers
   int chipIdOffset = 0;
   Input *overrideInput = nullptr;
   for (int i = 0; i < DigitalInputs_Count; i++)
@@ -455,15 +450,11 @@ void setup()
         // Flash LED's
 #ifdef USE_ONBOARD_LED
         if (onboardLed != nullptr)
-        {
           StatusLed[0] = CRGB::Black;
-        }
 #endif
 #ifdef USE_EXTERNAL_LED
         if (extLed != nullptr)
-        {
           ExternalLeds[ledNumber] = extLed->Colour;
-        }
 #endif
         FastLED.show();
         delay(150);
@@ -474,19 +465,15 @@ void setup()
 
 #ifdef USE_ONBOARD_LED
         if (onboardLed != nullptr)
-        {
           StatusLed[0] = CRGB::Black;
-        }
 #endif
 #ifdef USE_EXTERNAL_LED
         if (extLed != nullptr)
-        {
           ExternalLeds[ledNumber] = CRGB::Black;
-        }
 #endif
         FastLED.show();
         if (i != 3)
-          delay(150); // No need to delay after final switchoff
+          delay(150); // No need to delay after final switch off
       }
     }
 #endif
@@ -510,7 +497,7 @@ void setup()
   else
   {
     snprintf(DeviceName, sizeof(DeviceName), "%s %d", DEVICE_NAME, chipIdOffset);
-    Serial.println("Bluetooth device Id/name variant selected: " + String(chipIdOffset));
+    Serial.println("Bluetooth device Id/name - custom value: " + String(chipIdOffset));
   }
 #else
   // Random Device Name
@@ -519,7 +506,7 @@ void setup()
   else
   {
     snprintf(DeviceName, sizeof(DeviceName), "%s %d.%d", DeviceNames[offset], offset, chipIdOffset);
-    Serial.println("Bluetooth device Id/name variant selected: " + String(chipIdOffset));
+    Serial.println("Bluetooth device Id/Name - system selected: " + String(chipIdOffset));
   }
 #endif
 
@@ -535,14 +522,14 @@ void setup()
   bleGamepadConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
   Serial.println("... Controller Type: Gamepad");
 
-  bleGamepadConfig.setVid(VID); // 0xe502);
+  bleGamepadConfig.setVid(VID);
   Serial.println("... VID: " + String(VID));
 
-  bleGamepadConfig.setPid(PID); // 0xabcd);
+  bleGamepadConfig.setPid(PID);
   Serial.println("... PID: " + String(PID));
 
   char modelNumber[] = "Guitar 1.0";
-  bleGamepadConfig.setModelNumber(modelNumber); // Type of controller this firmware is for
+  bleGamepadConfig.setModelNumber(modelNumber);
   Serial.println("... Model Number: " + String(modelNumber));
 
   char chipIdDesc[22]; // large enough to hold the uint64_t value as a string 20 chars + 1 for chipIdOffset + null terminator. Tests showed serial coming from esp32-s3 was 14 chars + the chipIdOffset
@@ -550,6 +537,7 @@ void setup()
   bleGamepadConfig.setSerialNumber(chipIdDesc);
   Serial.println("... Serial Number: " + String(chipIdDesc));
 
+  // TODO: Revision versions in config file
   char firmwareRevision[] = "1.0";
   bleGamepadConfig.setFirmwareRevision(firmwareRevision); // Version of this firmware
   Serial.println("... Firmware: v" + String(firmwareRevision));
@@ -594,11 +582,11 @@ void setup()
   // bleGamepadConfig.setIncludeRzAxis(false);
 
   bleGamepadConfig.setAutoReport(false);
-  bleGamepad.begin(&bleGamepadConfig); // Changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
+  bleGamepad.begin(&bleGamepadConfig);    // Note - changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
 
   // Battery
   pinMode(BATTERY_MONITOR_PIN, INPUT);
-  // Make sure we have atleast one battery reading complete
+  // Make sure we have atleast one battery reading completed
   TakeBatteryLevelReading();
 
   Display.display();
@@ -654,29 +642,6 @@ void DrawMainScreen()
 #endif
 }
 
-int DebounceDelay = 10000; // 10ms - some info on timings here -> https://www.digikey.com/en/articles/how-to-implement-hardware-debounce-for-switches-and-relays?form=MG0AV3
-
-unsigned long PreviousMicroS = 0;
-float Now;
-float PreviousNow;
-int PreviousSecond = -1;
-int Second = 0;
-int SecondRollover = false;
-int SecondFlipFlop = false;
-int PreviousSubSecond = -1;
-int SubSecond = 0;
-int SubSecondRollover = false;
-int SubSecondFlipFlop = false;
-char LastBatteryIcon = 0;
-int LastSerialState = -1;
-float CurrentFractionalSeconds = 0;
-float ExtendedFractionalSeconds = 0;
-float PreviousFractionalSeconds = 0;
-
-float NextThrottledUpdatesPoint = 0;
-float ThrottledUpdatesRollover = false;
-float PreviousThrottledUpdatesWhen = 0;
-
 void loop()
 {
   unsigned long currentMicroS = micros(); // + 4294967295UL - 10000000;
@@ -686,7 +651,7 @@ void loop()
   // millis() overflows after around 49.7 days however doesn't have the timing resolution we want
   // So we create our own extended micros() equivalent that doesn't overflow...
   // Check if micros() is smaller then last time - i.e. overflowed back around to start again
-  // if (FractionalSeconds < PreviousFractionalSeconds)    // Tried this first, but something up with FractionalSeconds sometimes being less than PreviousFractionalSeconds for certain edge case values and screwing everything up.
+  // if (FractionalSeconds < PreviousFractionalSeconds)    // Tried this first, but something up with FractionalSeconds sometimes being less than PreviousFractionalSeconds for certain edge case values
   if (currentMicroS < PreviousMicroS)
     // If so then account for it in our extended tracking
     ExtendedFractionalSeconds += (double)(4294967295UL / 1000000.0);
@@ -706,18 +671,16 @@ void loop()
     PreviousSecond = Second;
     SecondRollover = true;
 
-    if (Second & 1)
-      SecondFlipFlop = true;
-    else
-      SecondFlipFlop = false;
+    SecondFlipFlop = (Second & 1);
   }
 
 #ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Start("Loop", SecondRollover);
+  int showBenchmark = SubSecondRollover;
+  MainBenchmark.Start("Loop", showBenchmark);
 #endif
 
   // SubSecond flagging - specific integer used for things like sub second sliding window calculations of UpDownCounts
-  SubSecond = (int)(Now * SubSecondCount) % SubSecondCount;
+  SubSecond = (int)(Now * SUB_SECOND_COUNT) % SUB_SECOND_COUNT;
   if (SubSecond == PreviousSubSecond)
     SubSecondRollover = false;
   else
@@ -726,21 +689,22 @@ void loop()
     SubSecondRollover = true;
 
     UpDownCount_UpdateSubSecond();
-    TakeBatteryLevelReading(); // Reminder that we take multiple battery level reads and they are later averaged out
+
+    // Opportunity for a throttled battery level reading
+    // Reminder that we take multiple readings and they are later averaged out
+    TakeBatteryLevelReading();
   }
 
-  // General purpose fractional throttle - e.g. 30FPS to limit update rates
-  if (Now > NextThrottledUpdatesPoint)
-  {
-    PreviousThrottledUpdatesWhen = NextThrottledUpdatesPoint;
-    NextThrottledUpdatesPoint += ThrottledUpdatesRate;
-    ThrottledUpdatesRollover = true;
-  }
-  else
-  {
-    ThrottledUpdatesRollover = false;
-  }
+  // Throttle display updates
+  DisplayRollover = (Now > NextDisplayUpdatePoint);
+  if (DisplayRollover)
+    NextDisplayUpdatePoint += DISPLAY_UPDATE_RATE;
+  
 
+  // Throttle LED updates
+  LEDUpdateRollover = (Now > NextLEDUpdatePoint);
+  if (LEDUpdateRollover) NextLEDUpdatePoint += LED_UPDATE_RATE;
+  
   PreviousFractionalSeconds = FractionalSeconds;
 
   bool sendReport = false;
@@ -756,8 +720,12 @@ void loop()
   }
 #endif
 
+#ifdef INCLUDE_BENCHMARKS
+  MainBenchmark.Snapshot("Loop.Init", showBenchmark);
+#endif
+
   // Things we don't do so often, like every second. Reduce overhead. Would it make a difference if we didn't throttle things like this? Probably not :)
-  if (SecondRollover == true)
+  if (SecondRollover)
   {
     // Battery stuff
     int currentBatteryLevel = BatteryLevel();
@@ -833,6 +801,10 @@ void loop()
     }
   }
 
+#ifdef INCLUDE_BENCHMARKS
+  MainBenchmark.Snapshot("Loop.SecondRollover", showBenchmark);
+#endif
+
   if (SubSecondRollover)
   {
     // Update the total count more often - looks nicer
@@ -845,7 +817,7 @@ void loop()
   SetFontCustom();
 
 #ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.Second Stuff", SecondRollover);
+  MainBenchmark.Snapshot("Loop.SubSecondRollover", showBenchmark);
 #endif
 
   // Digital inputs
@@ -869,6 +841,7 @@ void loop()
       {
         // PRESSED!
         input->ValueState.Value = state;
+        input->ValueState.PreviousValue = !state;
         input->ValueState.StateChangedWhen = timeCheck;
         input->ValueState.StateJustChanged = true;
         input->ValueState.StateJustChangedLED = true;
@@ -898,12 +871,16 @@ void loop()
         }
 
         input->RenderOperation(input);
+
+        // Any extra special custom to specific controller code
+        if (input->CustomOperation != NONE)
+          input->CustomOperation(input);
       }
     }
   }
 
 #ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.DigitalInputs", SecondRollover);
+  MainBenchmark.Snapshot("Loop.DigitalInputs", showBenchmark);
 #endif
 
   // Analog Inputs
@@ -914,18 +891,23 @@ void loop()
 
     // We only register a change if it is above a certain level of change (kind of like smoothing it but without smoothing it)
     float threshold = .03 * 4095; // 3% change required
-    int val = input->ValueState.Value;
-    if (state < (val - threshold) || state > (val + threshold))
+    int previousValue = input->ValueState.Value;
+    if (state < (previousValue - threshold) || state > (previousValue + threshold))
     {
       if (state != input->ValueState.Value)
       {
         input->ValueState.Value = state;
+        input->ValueState.PreviousValue = previousValue;
         input->ValueState.StateChangedWhen = micros(); // ToDo: More accurate setting here, as there have been delays
 
         int16_t rangedState = map(state, 0, 4095, 0, 32737); // Scale range to match Bluetooth range
         (bleGamepad.*(input->BluetoothSetOperation))(rangedState);
 
         input->RenderOperation(input);
+
+        // Any extra special custom to specific controller code
+        if (input->CustomOperation != NONE)
+          input->CustomOperation(input);
 
         sendReport = true;
       }
@@ -935,7 +917,7 @@ void loop()
   }
 
 #ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.AnalogInputs", SecondRollover);
+  MainBenchmark.Snapshot("Loop.AnalogInputs", showBenchmark);
 #endif
 
   // Hat inputs
@@ -1008,33 +990,13 @@ void loop()
     // Final check to see if things have changed since last time
     // Serial.print("Hat current state: " + String(hatPreviousState) + "" - New State: " + String(hatCurrentState));
 
-    // On set.....
-    // same as digital, but blahblah[state]
-    // On unset.....
-    // same as digital, but blahblah[oldstate]
-
-    // Example - 1 led reused across all positions, neutral = off, any set = on
-    // Example - 1 led different colour each position
     if (hatCurrentState != hatPreviousState)
     {
       hatInput->ValueState.Value = hatCurrentState;
-      hatInput->ValueState.StateChangedWhen = micros(); // TODO make this when hat last read took place though realistically bog all ms will have passed
+      hatInput->ValueState.PreviousValue = hatPreviousState;
+      hatInput->ValueState.StateChangedWhen = micros(); // TODO make this when hat last read took place though realistically bog all time will have passed
       hatInput->ValueState.StateJustChanged = true;
       hatInput->ValueState.StateJustChangedLED = true;
-
-#ifdef USE_EXTERNAL_LED
-      // Release current state (if it shouldn't have been released, thats fine - it will get set again)
-      ExternalLEDConfig *previousLEDConfig = hatInput->LEDConfigs[hatPreviousState];
-      if (previousLEDConfig != nullptr)
-      {
-        // ExternalLedsEnabled[previousLEDConfig->LEDNumber] = previousLEDConfig->LEDNumber;
-        *(previousLEDConfig->ExternalLED) = previousLEDConfig->SecondaryColour.Colour;
-        ExternalLedsEnabled[previousLEDConfig->LEDNumber] = previousLEDConfig->SecondaryColour.Enabled;
-        // Serial.println("UNSET rate: " + String(previousLEDConfig->Rate));
-      }
-
-      // For a Hat - LED's are constantly set rather than 1 off set
-#endif
 
       // General hat array used with bluetooth library
       HatValues[hatInput->BluetoothHat] = hatCurrentState;
@@ -1046,66 +1008,10 @@ void loop()
       if (hatInput->ExtraOperation[hatCurrentState] != NONE)
         hatInput->ExtraOperation[hatCurrentState](hatInput);
 
-      // TODO: Replace below with specifying a blanking Icon that generalises to a defined set of icons, if required
-
-      // Special Case, as the digital d-pad up/down also map to the strum bar up/down
-      Display.fillRect(26, 25, 15, 15, C_BLACK);
-      char c;
-      if (hatInput->IndividualStates[1] == LOW)
-        c = Icon_Guitar2_CenterBottom;
-      else if (hatInput->IndividualStates[3] == LOW)
-        c = Icon_Guitar2_CenterTop;
-      else
-        c = Icon_Guitar2_CenterOff;
-
-      RRE.drawChar(26, 25, c);
-
-#ifdef USE_EXTERNAL_LED
-      ExternalLEDConfig *config = hatInput->LEDConfigs[hatCurrentState];
-      if (config != nullptr)
-      {
-        // if (hatInput->StateJustChanged)
-        //   config->StartTime = Now;
-        *(config->ExternalLED) = config->PrimaryColour.Colour;
-        ExternalLedsEnabled[config->LEDNumber] = config->PrimaryColour.Enabled;
-        // Serial.println("SET rate: " + String(config->Rate));
-
-        // TODO: If no config on hat then make sure it fades out rather than instant (off)? Maybe if CRGB = nullptr then don't set fade out colour i.e. should fade from whatever it is currently?
-      }
-#endif
+      // Any extra special custom to specific controller code
+      if (hatInput->CustomOperation != NONE)
+        hatInput->CustomOperation(hatInput);
     }
-
-#ifdef USE_EXTERNAL_LED
-    // Hat fancy effects - but only active one will actually be run!
-    ExternalLEDConfig *ledConfig = hatInput->LEDConfigs[hatInput->ValueState.Value];
-    if (ledConfig != nullptr && ExternalLedsEnabled[ledConfig->LEDNumber])
-    {
-      if (ledConfig->Effect == nullptr)
-        // Just set the colour
-        *(ledConfig->ExternalLED) = ledConfig->PrimaryColour.Colour;
-      else
-        //(config->*config->Effect)(hatInput, Now);
-        ledConfig->Effect(hatInput, Now);
-    }
-#endif
-#ifdef STATUS_LED_COMBINE_INPUTS
-    LED *onboardLED = &(hatInput->OnboardLED[hatInput->ValueState.Value]);
-    if (onboardLED->Enabled)
-    {
-      if (onboardLED->Colour.r > StatusLED_R)
-      {
-        StatusLED_R = (float)(onboardLED->Colour.r);
-      }
-      if (onboardLED->Colour.g > StatusLED_G)
-      {
-        StatusLED_G = (float)(onboardLED->Colour.g);
-      }
-      if (onboardLED->Colour.b > StatusLED_B)
-      {
-        StatusLED_B = (float)(onboardLED->Colour.b);
-      }
-    }
-#endif
   }
 
   if (hatInput->ValueState.StateJustChanged)
@@ -1120,7 +1026,7 @@ void loop()
   }
 
 #ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.Hats", SecondRollover);
+  MainBenchmark.Snapshot("Loop.Hats", showBenchmark);
 #endif
 
   // Analog reads all vals = int16_t
@@ -1158,7 +1064,7 @@ void loop()
       PreviousBTConnectionState = BTConnectionState;
 
 #ifdef USE_EXTERNAL_LED
-      // Remove any BT LED sstatus
+      // Remove any BT LED status
       ExternalLedsEnabled[ExternalLED_StatusLED] = false;
 #endif
     }
@@ -1175,20 +1081,7 @@ void loop()
   {
     // No Bluetooth - always be updating the searching icons
     if (SecondRollover)
-    {
-
-      char c;
-      if (SecondFlipFlop)
-      {
-        c = Icon_EyesLeft;
-      }
-      else
-      {
-        c = Icon_EyesRight;
-      }
-
-      RenderIcon(c, 65, 52, 16, 12); // Blanking area big enough to cover the `OK` if required
-    }
+      RenderIcon(SecondFlipFlop ? Icon_EyesLeft : Icon_EyesRight, 65, 52, 16, 12); // Blanking area big enough to cover the `OK` if required
 
     // Hunting for Bluetooth flashing blue status
     if (SecondFlipFlop)
@@ -1214,7 +1107,7 @@ void loop()
   PreviousBTConnectionState = BTConnectionState;
 
 #ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.Bluetooth", SecondRollover);
+  MainBenchmark.Snapshot("Loop.Bluetooth", showBenchmark);
 #endif
 
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
@@ -1227,36 +1120,13 @@ void loop()
 #endif
 
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
-  // LED tests for funsies
-  // Serial.print("StatusLED_R: " + String(StatusLED_R) + ", StatusLED_G: " + String(StatusLED_G) + ", StatusLED_B: " + String(StatusLED_B));
-  // Serial.println(" - StatusLed.r: " + String(StatusLed[0].r) + ", StatusLed.g: " + String(StatusLed[0].g) + ", StatusLed.b: " + String(StatusLed[0].b));
-  // float rainbowHue = 0;
-  // fill_rainbow(ExternalLeds, ExternalLED_Count, rainbowHue, 5);
-
-  // // Copy around any LEDs that need duplicating
-  // // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
-  // for (int i = 0; i < LEDClones_Count; i++)
-  // {
-  //   IntPair pair = LEDClones[i];
-  //   ExternalLeds[pair.B] = ExternalLeds[pair.A];
-  // }
-
-#ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.LEDExtraPrep", SecondRollover);
-#endif
-
-  // FastLED.show() is throttled to e.g. 30fps - updating too often
-
-  if (ThrottledUpdatesRollover)
-  {
-    // FastLED.show();
+  // Throttle updates, no point in updating too often
+  if (LEDUpdateRollover)
     UpdateLEDs = true;
-    // Serial.println("Pre - ThrottledUpdatesRollover: " + String(ThrottledUpdatesRollover) + " ThrottledUpdatesRate: " + String(ThrottledUpdatesRate) + " Now: " + String(Now) + " NextThrottledUpdatesPoint: " + String(NextThrottledUpdatesPoint) + " PreviousThrottledUpdatesWhen: " + String(PreviousThrottledUpdatesWhen));
-  }
+#endif
 
 #ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.FastLED.show()", SecondRollover);
-#endif
+  MainBenchmark.Snapshot("Loop.LEDStuff", showBenchmark);
 #endif
 
 #ifdef SHOW_FPS
@@ -1271,10 +1141,9 @@ void loop()
     SetFontCustom();
 
 #ifdef INCLUDE_BENCHMARKS
-    MainBenchmark.Snapshot("Loop.FPS", SecondRollover);
+    MainBenchmark.Snapshot("Loop.FPS", showBenchmark);
 #endif
   }
-
 #endif
 
 #ifdef WHITE_SCREEN
@@ -1283,69 +1152,16 @@ void loop()
 #endif
 
 #ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.PreDisplay", SecondRollover);
+  MainBenchmark.Snapshot("Loop.PreDisplay", showBenchmark);
 #endif
 
-  // And finally update the display with all the lovely changes above
-  Display.display();
+  // And finally update the display with all the lovely changes above - throttled as quite high overhead
+  if (DisplayRollover)
+    Display.display();
 
-  // ToDo: Only update display periodically - split the clear, redrawing of content and display across loops to help with performance/latency
   Frame++;
 
 #ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.Completion", SecondRollover);
+  MainBenchmark.Snapshot("Loop.Display", showBenchmark);
 #endif
-}
-
-#define BatteryEmptyXPos ((SCREEN_WIDTH - 48) >> 1)
-#define BatteryEmptyYPos ((SCREEN_HEIGHT - 16) >> 1)
-IconRun BatteryEmptyGfx[] = {
-    {.StartIcon = Icon_BatteryBigEmpty1, .Count = 3, .XPos = BatteryEmptyXPos, .YPos = BatteryEmptyYPos}};
-
-int BatteryEmptyGfx_RunCount = sizeof(BatteryEmptyGfx) / sizeof(BatteryEmptyGfx[0]);
-
-void DrawBatteryEmpty(int secondRollover, int SecondFlipFlop)
-{
-  // Not very optimal drawing, but we don't care, we aren't doing anything else now
-  if (secondRollover == true)
-  {
-    Display.clearDisplay();
-    SetFontCustom();
-
-    int xPos = (SCREEN_WIDTH - 48) >> 1;
-    // int yPos = (SCREEN_HEIGHT - 16) >> 1;
-
-    // char c = Icon_BatteryBigEmpty1;
-
-    RenderIconRuns(BatteryEmptyGfx, BatteryEmptyGfx_RunCount);
-    // for (uint8_t i = 0; i < 3; i++) {
-    //   RenderIcon((char)c, xPos, yPos, 0, 0);
-    //   xPos += 16;
-    //   c++;
-    // }
-
-    if (SecondFlipFlop)
-    {
-      // Hide middle bit of our battery warning intermittently to make it flash
-      // xPos = (SCREEN_WIDTH - 48) >> 1;
-      Display.fillRect(BatteryEmptyXPos + 2, BatteryEmptyYPos + 2, 40, 12, C_BLACK);
-    }
-
-    Display.display();
-
-#if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
-    // ToDo: If LED's were turned on at time this instigated, might remain on. Double check to make sure these are turned off.
-    if (SecondFlipFlop)
-      StatusLed[0] = CRGB::Black;
-    else
-      StatusLed[0] = CRGB::Red;
-
-#if defined(USE_EXTERNAL_LED) && defined(ExternalLED_StatusLED)
-    // Always make sure the external status LED is updated too
-    ExternalLeds[ExternalLED_StatusLED] = StatusLed[0];
-#endif
-
-    FastLED.show();
-#endif
-  }
 }

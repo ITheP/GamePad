@@ -9,6 +9,7 @@
 //#include "LEDConfig.h"
 
 #include "DeviceConfig.h"
+#include <Screen.h>
 
 // List of LED's we want cloning (lets you copy LED values between each other)
 // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
@@ -28,8 +29,8 @@ Input DigitalInput_Green = // Green button on guitar neck
     .LEDConfig = new ExternalLEDConfig {
         //.LEDNumber = LED_Green,
         .LEDNumbers = { LED_DigitalTest,  (LED_DigitalTest+1), (LED_DigitalTest+2), (LED_DigitalTest+3), (LED_DigitalTest+4), (LED_DigitalTest+5), (LED_DigitalTest+6), (LED_DigitalTest+7),
-          (LED_DigitalTest + 8),  (LED_DigitalTest+9), (LED_DigitalTest+10), (LED_DigitalTest+11), (LED_DigitalTest+12), (LED_DigitalTest+13), (LED_DigitalTest+14), (LED_DigitalTest+15),
-          (LED_DigitalTest+16), (LED_DigitalTest+17), (LED_DigitalTest+18), (LED_DigitalTest+19), (LED_DigitalTest+20), (LED_DigitalTest+21), (LED_DigitalTest+22), (LED_DigitalTest+23) },
+          (LED_DigitalTest + 8),  (LED_DigitalTest+9), (LED_DigitalTest+10), (LED_DigitalTest+11), (LED_DigitalTest+12), (LED_DigitalTest+13), (LED_DigitalTest+14)
+        },
         .PrimaryColour = { CRGB(0, 255, 0), true },
         .SecondaryColour = { CRGB(255, 0, 0), false },
         //.Effect = &DigitalEffects::Throb,
@@ -167,9 +168,7 @@ Input AnalogInputs_Whammy =
     .RenderOperation = RenderInput_AnalogBar_Vert, .XPos = uiWhammyX + 2, .YPos = uiWhammyY + 2, .RenderWidth = uiWhammyW - 4, .RenderHeight = uiWhammyH - 4, .TrueIcon = NONE, .FalseIcon = NONE,
     .OnboardLED = { CRGB::Pink, true },
     .LEDConfig = new ExternalLEDConfig {
-        .LEDNumbers = { LED_Whammy,  (LED_Whammy+1), (LED_Whammy+2), (LED_Whammy+3), (LED_Whammy+4), (LED_Whammy+5), (LED_Whammy+6), (LED_Whammy+7),
-          (LED_Whammy + 8),  (LED_Whammy+9), (LED_Whammy+10), (LED_Whammy+11), (LED_Whammy+12), (LED_Whammy+13), (LED_Whammy+14), (LED_Whammy+15)
-          //(LED_Whammy+16), (LED_Whammy+17), (LED_Whammy+18), (LED_Whammy+19), (LED_Whammy+20), (LED_Whammy+21), (LED_Whammy+22), (LED_Whammy+23)
+        .LEDNumbers = { LED_Whammy,  (LED_Whammy+1), (LED_Whammy+2), (LED_Whammy+3), (LED_Whammy+4), (LED_Whammy+5), (LED_Whammy+6), (LED_Whammy+7)
           },
         .PrimaryColour = { CRGB(255, 54, 96), true},
         .SecondaryColour = { CRGB::Green, false},
@@ -219,6 +218,7 @@ HatInput Hat0 =
         NONE,
         NONE
       },
+    .CustomOperation = Custom_RenderHatStrumState,
     .OnboardLED = {
         {},
         { CRGB::Red, true },
@@ -262,3 +262,20 @@ int ControllerGfx_RunCount = sizeof(ControllerGfx) / sizeof(ControllerGfx[0]);
 int AnalogInputs_Count = sizeof(AnalogInputs) / sizeof(AnalogInputs[0]);
 int HatInputs_Count = sizeof(HatInputs) / sizeof(HatInputs[0]);
 int DigitalInputs_Count = sizeof(DigitalInputs) / sizeof(DigitalInputs[0]);
+
+// Special case code specific to this controller
+
+// HAT has secondary rendering, with up/down also mapped to strum bar up/down which we want to visualise
+void Custom_RenderHatStrumState(HatInput *hatInput) {
+    // Special Case drawing of extra HAT interaction - the digital d-pad up/down also map to the strum bar up/down
+    Display.fillRect(26, 25, 15, 15, C_BLACK);
+    char c;
+    if (hatInput->IndividualStates[1] == LOW)
+      c = Icon_Guitar2_CenterBottom;
+    else if (hatInput->IndividualStates[3] == LOW)
+      c = Icon_Guitar2_CenterTop;
+    else
+      c = Icon_Guitar2_CenterOff;
+
+    RRE.drawChar(26, 25, c);
+}

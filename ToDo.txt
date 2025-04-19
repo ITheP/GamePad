@@ -15,3 +15,8 @@ TODO:
 Can we find a happy balance between speed of LED processing and main loop latency?
 Note that too slow on the LED loop and things like fast fades along large LED arrays
 take some time!
+
+IDLE LED Effect
+If controls not touched for XX seconds, idle mode till something pressed
+
+Screen on during idle (turn off while playing when wont see it - UNLESS BATTERY WARNING)
