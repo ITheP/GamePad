@@ -56,17 +56,9 @@ BleGamepad bleGamepad;
 bool BTConnectionState;
 bool PreviousBTConnectionState;
 
+// -----------------------------------------------------
 // Buffers
 char buffer[64]; // More than big enough for anything we are doing here
-
-// -----------------------------------------------------
-// Battery
-
-inline void TakeBatteryLevelReading()
-{
-  CumulativeBatterySensorReadings += analogRead(BATTERY_MONITOR_PIN);
-  BatteryLevelReadingsCount++;
-}
 
 // -----------------------------------------------------
 // Benchmarks
@@ -587,7 +579,7 @@ void setup()
   // Battery
   pinMode(BATTERY_MONITOR_PIN, INPUT);
   // Make sure we have atleast one battery reading completed
-  TakeBatteryLevelReading();
+  Battery::TakeReading();
 
   Display.display();
   delay(SETUP_DELAY * 2);
@@ -692,7 +684,7 @@ void loop()
 
     // Opportunity for a throttled battery level reading
     // Reminder that we take multiple readings and they are later averaged out
-    TakeBatteryLevelReading();
+    Battery::TakeReading();
   }
 
   // Throttle display updates
@@ -713,9 +705,9 @@ void loop()
   // We check previous battery level here as once its too low its too low. No point in re-processing other stuff, and recharging involves turning off device.
   // Only in a live environment - test board might have no battery connected to produce a measurable voltage, meaning a permanent 0 battery level
 #ifdef LIVE_BATTERY
-  if (PreviousBatteryLevel == 0)
+  if (Battery::PreviousBatteryLevel == 0)
   {
-    DrawBatteryEmpty(SecondRollover, SecondFlipFlop);
+    Battery::DrawEmpty(SecondRollover, SecondFlipFlop);
     return; // Sorry - no more processing! Make em go and charge things up
   }
 #endif
@@ -728,7 +720,7 @@ void loop()
   if (SecondRollover)
   {
     // Battery stuff
-    int currentBatteryLevel = BatteryLevel();
+    int currentBatteryLevel = Battery::GetLevel();
 
     // NOTE current h/w, charging is separate to powering device so can't happen at the same time. However in the future.... :)
     bool charging = false;
@@ -755,11 +747,11 @@ void loop()
       RenderIcon(LastBatteryIcon, 112, 53, 12, 9); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
 
       // ...however next line will trigger full screen low battery handling
-      PreviousBatteryLevel = currentBatteryLevel;
+      Battery::PreviousBatteryLevel = currentBatteryLevel;
     }
-    else if (PreviousBatteryLevel != currentBatteryLevel)
+    else if (Battery::PreviousBatteryLevel != currentBatteryLevel)
     {
-      PreviousBatteryLevel = currentBatteryLevel;
+      Battery::PreviousBatteryLevel = currentBatteryLevel;
       bleGamepad.setBatteryLevel(currentBatteryLevel);
       sendReport = true;
 

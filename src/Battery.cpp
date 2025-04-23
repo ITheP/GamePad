@@ -8,13 +8,13 @@
 
 extern CRGB ExternalLeds[];
 
-int PreviousBatteryLevel = -1;
-int CurrentBatterySensorReading = 0;
-int CurrentBatteryPercentage = 0;
-int CumulativeBatterySensorReadings = 0;
-int BatteryLevelReadingsCount = 0;
+int Battery::PreviousBatteryLevel = -1;
+int Battery::CurrentBatterySensorReading = 0;
+int Battery::CurrentBatteryPercentage = 0;
+int Battery::CumulativeBatterySensorReadings = 0;
+int Battery::BatteryLevelReadingsCount = 0;
 
-int BatteryLevel() {
+int Battery::GetLevel() {
   // We have had multiple readings, so average them out and update current battery level
   CurrentBatterySensorReading = CumulativeBatterySensorReadings / BatteryLevelReadingsCount;
   CumulativeBatterySensorReadings = 0;  // Ready for next round of readings
@@ -43,7 +43,7 @@ IconRun BatteryEmptyGfx[] = {
 
 int BatteryEmptyGfx_RunCount = sizeof(BatteryEmptyGfx) / sizeof(BatteryEmptyGfx[0]);
 
-void DrawBatteryEmpty(int secondRollover, int SecondFlipFlop)
+void Battery::DrawEmpty(int secondRollover, int SecondFlipFlop)
 {
   // Not very optimal drawing, but we don't care, we aren't doing anything else now
   if (secondRollover == true)

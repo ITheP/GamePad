@@ -27,7 +27,7 @@ typedef struct LED {
 extern int LEDClones_Count;
 
 typedef struct ExternalLEDConfig {
-  // External LED settings - hooked up to custom Neopixel/equivalent LED string
+  // External LED settings - hooked up to custom Neopixel/equivalent string of physical LEDs
   int LEDNumber;                                            // LED number when single LED is used
   std::vector<int> LEDNumbers;                              // Where multiple LED's are used - note first LED in array is copied into LEDNumber.
   LED PrimaryColour;                                        // Primary color, usually used as the colour when button pressed
@@ -48,9 +48,6 @@ typedef struct ExternalLEDConfig {
   std::vector<CRGB*> ExternalLEDs;
   float PreviousTime;
 } ExternalLEDConfig;
-
-// If LEDNumbers.Size() > 0 then set LEDNumber = LEDNumbers[0] and copy &ExternalLEDs[0] to ExternalLED
-
 
 void InitExternalLED(ExternalLEDConfig* config, CRGB* leds);
 void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate);
