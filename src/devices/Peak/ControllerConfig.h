@@ -29,6 +29,8 @@
 #define STATUS_LED_COMBINE_INPUTS     // Status LED includes a generalised colour made up of Status colour + other LED's (in an approximately additive way)
 #define USE_EXTERNAL_LED              // Enable external LEDs - may want to check the ExternalLED_FastLEDCount below too
 
+#define CLEAR_STATS_ON_FLIP             // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
+
 // =====
 // LED's
 // Mappings to physical Neopixel/equivalent LED offsets
@@ -97,6 +99,8 @@ extern IconRun ControllerGfx[];
 // pud = pull up pull down resistor available
 // Do not use ADC2 pins for ADC - ESP32-S3 ADC2 has issues (especially if using wireless/bluetooth) and is easier just to not use it than faff around
 
+// Extra details on configuration and what it means - see project Wiki https://github.com/ITheP/GamePad/wiki/ESP32-S3
+
 // SIDE ONE
 //      +3v3
 //      +3v3
@@ -150,7 +154,7 @@ extern IconRun ControllerGfx[];
 // Documented wire color in <brackets> was used in prototype
 
 // Battery monitor ... 10k -> +3.3, 20k -> Gnd
-#define BATTERY_MONITOR_PIN      PIN_02_D17_A8  // Battery Voltage - 20K ohm to Gnd + 10K ohm to +ve
+#define BATTERY_MONITOR_PIN     PIN_02_D17_A8 // Battery Voltage - 20K ohm to Gnd + 10K ohm to +ve
 
 // Guitar Neck Buttons
 #define HAT1_Right_PIN          PIN_05_D02_A2 // [05] <Gray>
