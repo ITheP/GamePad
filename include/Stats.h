@@ -41,6 +41,8 @@ public:
     Stats(const char *description);
     Stats(const char *description, Stats *nextStat);
 
+    const char *Description;
+    
     // Stats for current
     int Current_SecondCount;
     int Current_TotalCount;
@@ -94,7 +96,6 @@ public:
     void SubSecondPassed();
 
 private:
-    const char *Description;
     unsigned long StartTime;
 
     int Counts[STATS_MINUTE_COUNT];

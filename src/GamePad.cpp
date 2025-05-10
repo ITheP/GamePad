@@ -8,7 +8,6 @@
 #include "IconMappings.h"
 #include "Screen.h"
 #include "Icons.h"
-#include "Device.h"
 #include "Stats.h"
 #include "RenderText.h"
 #include "Benchmark.h"
@@ -28,49 +27,33 @@ const char* password = WIFI_PASSWORD;
 #define WEBSERVER
 
 #ifdef WEBSERVER
+#include "Web.h"
 #include <ESPAsyncWebServer.h>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 
 // Create AsyncWebServer on port 80
-AsyncWebServer server(80);
-
-void handleTestRequest(AsyncWebServerRequest *request) {
-  if (request->hasParam("num1") && request->hasParam("num2") && request->hasParam("text")) {
-      String num1Str = request->getParam("num1")->value();
-      String num2Str = request->getParam("num2")->value();
-      String text = request->getParam("text")->value();
-
-      int num1 = num1Str.toInt();
-      int num2 = num2Str.toInt();
-      String result = String(num1 * num2) + " " + text;
-
-      // Create JSON response
-      rapidjson::Document json;
-      json.SetObject();
-      rapidjson::Document::AllocatorType& allocator = json.GetAllocator();
-
-      json.AddMember("num1", num1, allocator);
-      json.AddMember("num2", num2, allocator);
-      json.AddMember("text", rapidjson::Value(text.c_str(), allocator), allocator);
-      json.AddMember("result", rapidjson::Value(result.c_str(), allocator), allocator);
-
-      rapidjson::StringBuffer buffer;
-      rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-      json.Accept(writer);
-
-      request->send(200, "application/json", buffer.GetString());
-  } else {
-      request->send(400, "application/json", "{\"error\":\"Missing parameters\"}");
-  }
-}
+AsyncWebServer WebServer(80);
 
 #endif
 
 
 // Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
 #include "DeviceConfig.h"
+
+char SerialNumber[22];// SerialNumber = large enough to hold the uint64_t value as a string 20 chars + 1 for chipIdOffset + null terminator. Tests showed serial coming from esp32-s3 was 14 chars + the chipIdOffset
+char DeviceName[20];
+
+// When configured for use, set of random names for controller. Actual name is picked using ESP32-S3's unique identity as a key to the name - means we can flash to multiple
+// devices and they should all get decently unique names.
+// Max 17 chars for a name (final name will be longer after adding automated bits to the end of the name for bluetooth variants)
+// Anything longer, name wont fit on display we are using!
+const char* DeviceNames[] = { "Ellen", "Holly", "Indy", "Smudge", "Peanut", "Claire", "Eleanor", "Evilyn", "Andy", "Toya", "Verity", "Laura", "Eagle",
+                        "Kevin", "Sophie", "Carla", "Hannah", "Becky", "Trent", "Jean", "Sebastian", "Phil", "Colin", "Berry", "Bazil", "Anne",
+                        "Bella", "Vivian", "Bunny", "Thomas", "Giles", "David", "John", "Penny", "Beverly", "Dannie", "Ginny", "Samantha", "Sam",
+                        "Lisa", "Charlie", "Albert", "Shoe", "Stevie" };
+int DeviceNamesCount = sizeof(DeviceNames) / sizeof(DeviceNames[0]);
 
 // -----------------------------------------------------
 // LED stuff (include after controller definition)
@@ -247,40 +230,14 @@ void setup()
     Serial.println("Connected to WiFi!");
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
+#endif
 
-    // Serve a basic homepage
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send(200, "text/html", "<h1>Welcome to ESP32-S3 Web Server</h1>");
-    });
-
-    // Serve another page
-    server.on("/about", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send(200, "text/html", "<h1>About Page</h1><p>This is an ESP32-S3 web server.</p>");
-    });
-
-    // Define API endpoint
-    server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request){
-      rapidjson::Document json;
-      json.SetObject();
-      rapidjson::Document::AllocatorType& allocator = json.GetAllocator();
+#ifdef WEBSERVER
+    Web::SetUpRoutes(WebServer);
   
-      json.AddMember("status", "success", allocator);
-      json.AddMember("message", "Hello from ESP32-S3!", allocator);
-      json.AddMember("value", 42, allocator);
-  
-      rapidjson::StringBuffer buffer;
-      rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-      json.Accept(writer);
-  
-      request->send(200, "application/json", buffer.GetString());
-      });
-
-
-      server.on("/test", HTTP_GET, handleTestRequest);
-
-        Serial.println("Starting HTTP Server...");
-  // Start server
-  server.begin();
+    Serial.println("Starting HTTP Server...");
+    // Start server
+    WebServer.begin();
 
 
 #endif
@@ -617,12 +574,12 @@ void setup()
 #endif
 
   snprintf(buffer, sizeof(buffer), "Guitar %s", DeviceName);
-  char type[] = "Guitar Controller";
-  bleGamepad = BleGamepad(buffer, type, 100);
+
+  bleGamepad = BleGamepad(buffer, ControllerType, 100);
 
   Serial.println("\nBluetooth configuration...");
   Serial.println("... Name: " + String(buffer));
-  Serial.println("... Type: " + String(type));
+  Serial.println("... Type: " + String(ControllerType));
   BleGamepadConfiguration bleGamepadConfig;
 
   bleGamepadConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
@@ -634,27 +591,22 @@ void setup()
   bleGamepadConfig.setPid(PID);
   Serial.println("... PID: " + String(PID));
 
-  char modelNumber[] = "Guitar 1.0";
-  bleGamepadConfig.setModelNumber(modelNumber);
-  Serial.println("... Model Number: " + String(modelNumber));
+  bleGamepadConfig.setModelNumber(ModelNumber);
+  Serial.println("... Model Number: " + String(ModelNumber));
 
-  char chipIdDesc[22]; // large enough to hold the uint64_t value as a string 20 chars + 1 for chipIdOffset + null terminator. Tests showed serial coming from esp32-s3 was 14 chars + the chipIdOffset
-  sprintf(chipIdDesc, "%llu%d", chipId, chipIdOffset);
-  bleGamepadConfig.setSerialNumber(chipIdDesc);
-  Serial.println("... Serial Number: " + String(chipIdDesc));
+  sprintf(SerialNumber, "%llu%d", chipId, chipIdOffset);
+  bleGamepadConfig.setSerialNumber(SerialNumber);
+  Serial.println("... Serial Number: " + String(SerialNumber));
 
   // TODO: Revision versions in config file
-  char firmwareRevision[] = "1.0";
-  bleGamepadConfig.setFirmwareRevision(firmwareRevision); // Version of this firmware
-  Serial.println("... Firmware: v" + String(firmwareRevision));
+  bleGamepadConfig.setFirmwareRevision(FirmwareRevision); // Version of this firmware
+  Serial.println("... Firmware: v" + String(FirmwareRevision));
 
-  char hardwareRevision[] = "1.0";
-  bleGamepadConfig.setHardwareRevision(hardwareRevision); // Version of circuit board etc.
-  Serial.println("... Hardware: v" + String(hardwareRevision));
+  bleGamepadConfig.setHardwareRevision(HardwareRevision); // Version of circuit board etc.
+  Serial.println("... Hardware: v" + String(HardwareRevision));
 
-  char softwareRevision[] = "1.0";
-  bleGamepadConfig.setSoftwareRevision(softwareRevision);
-  Serial.println("... Software: v" + String(softwareRevision));
+  bleGamepadConfig.setSoftwareRevision(SoftwareRevision);
+  Serial.println("... Software: v" + String(SoftwareRevision));
 
   bleGamepadConfig.setHidReportId(1);
 
@@ -692,6 +644,7 @@ void setup()
 
   // Battery
   pinMode(BATTERY_MONITOR_PIN, INPUT);
+
   // Make sure we have atleast one battery reading completed
   Battery::TakeReading();
 

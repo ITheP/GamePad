@@ -48,16 +48,16 @@ Includes...
 - [x] Benchmarking for performance
 - [x] Extra debug information
 - [x] Support for multiple controllers (via configuration files)
-<<<<<<< HEAD
+- [ ] Wifi support
+- [ ] Embedded web service
 - [ ] Better stats calculation with better decoupling of hardcoded stats counting
-=======
->>>>>>> 37d665f81b376b326bc3eb9f5451e1321a663ce3
 - [ ] Wired gamepad support
 - [ ] Run time user selectable options in controller
 - [ ] Save user options (and stats) to I2C Non-Volatile FRAM
+- [ ] 
 - [ ] Save user options (and stats) to onboard Flash (note: during power brownout on off)
 - [ ] Support for more LED effects
-- [ ] Idle LED effects
+- [ ] Idle LED effecs
 - [ ] Run time configurable LEDs (disable if power below certain level, turn on/off in options)
 - [ ] More accurate battery life indicator
 - [ ] HAT code needs tweaking to finish it completely
@@ -69,7 +69,7 @@ Includes...
 - [ ] Test/debug screen - show pins etc. on button presses (access via boot option?)
 - [ ] Investigate ESP32-S3 cpu throttling (reduce mhz) power saving mode
   
-## To Do - Electronics
+## To Do - Electron
 
 - [x] Battery level monitoring
 - [x] Integration with buttons

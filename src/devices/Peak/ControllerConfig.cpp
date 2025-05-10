@@ -11,6 +11,12 @@
 #include "DeviceConfig.h"
 #include <Screen.h>
 
+char ControllerType[] = "Guitar Controller";
+char ModelNumber[] = "Guitar 1.0";
+char FirmwareRevision[] = "1.0";
+char HardwareRevision[] = "1.0";
+char SoftwareRevision[] = "1.0";
+
 // List of LED's we want cloning (lets you copy LED values between each other)
 // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
 IntPair LEDClones[] = { { LED_Status, LED_Status_Copy } };

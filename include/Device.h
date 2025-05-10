@@ -1,7 +1,5 @@
 #pragma once
 
-char DeviceName[20];
-
 // When configured for use, set of random names for controller. Actual name is picked using ESP32-S3's unique identity as a key to the name - means we can flash to multiple
 // devices and they should all get decently unique names.
 // Max 17 chars for a name (final name will be longer after adding automated bits to the end of the name for bluetooth variants)
