@@ -6,7 +6,9 @@
 #include <BleGamepad.h>
 #include <FastLED.h>
 #include "LED.h"
+#include "stats.h"
 //#include "GamePad.h"
+//class Stats;
 
 typedef void (BleGamepad::*BleGamepadFunctionPointer)(uint8_t);
 typedef void (BleGamepad::*BleGamepadFunctionPointerInt)(int16_t);
@@ -46,7 +48,7 @@ typedef struct Input {
   BleGamepadFunctionPointerInt BluetoothSetOperation;
 
   void (*RenderOperation)(struct Input*);       // How input is rendered to the screen
-  void (*CustomOperation)(struct Input*);       // Controller specific operation, code within controller .cpp
+  void (*CustomOperation)();               // Custom/specific operation, code may be within controller .cpp
 
   int XPos;
   int YPos;
@@ -56,6 +58,7 @@ typedef struct Input {
   unsigned char TrueIcon;
   unsigned char FalseIcon;
 
+  Stats *Statistics;                                 // Stats for this input, if required
                                                 // Below LED's are ALWAYS used/set, non existence defaults to {0,0,0,false} which will turn things off
   LED OnboardLED;                               // Onboard LED is merged into other Onboard LED colours to create a `final combined colour`. Max of each R,G,B component generally gets used.
   ExternalLEDConfig* LEDConfig;
@@ -80,6 +83,8 @@ typedef struct HatInput {
 
   void (*ExtraOperation[9])(struct HatInput*);  // Extra operations that can run if neutral/up/up right/right/down right/down/down left/left/up left
   void (*CustomOperation)(struct HatInput*);    // Controller specific operation, code within controller .cpp
+
+  Stats *Statistics[9];
 
   LED OnboardLED[9];
 

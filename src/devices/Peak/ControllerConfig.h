@@ -10,6 +10,7 @@
 // #include "LEDConfig.h"
 
 #include "Structs.h"
+#include "Stats.h"
 
 // Notes
 
@@ -252,6 +253,20 @@ extern HatInput *HatInputs[];
 
 extern IntPair LEDClones[];
 extern int LEDClones_Count;
+
+extern Stats Stats_Neck;
+extern Stats Stats_Green;
+extern Stats Stats_Red;
+extern Stats Stats_Yellow;
+extern Stats Stats_Blue;
+extern Stats Stats_Orange;
+
+extern Stats Stats_StrumBar;
+extern Stats Stats_HatUp;
+extern Stats Stats_HatDown;
+
+extern Stats *AllStats[];
+extern int AllStats_Count;
 
 extern int ControllerGfx_RunCount;
 extern int AnalogInputs_Count;

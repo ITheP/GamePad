@@ -21,10 +21,42 @@ IconRun ControllerGfx[] = {
   { .StartIcon = Icon_Guitar2_B1, .Count = 6, .XPos = uiGuitar_xPos, .YPos = uiGuitar_yPos + 16 }
 };
 
+// Usage statistics
+// Stats used in various places, including any additional chain of other stats
+Stats Stats_Neck("Neck");
+Stats Stats_Green("Green", &Stats_Neck);
+Stats Stats_Red("Green", &Stats_Neck);
+Stats Stats_Yellow("Green", &Stats_Neck);
+Stats Stats_Blue("Green", &Stats_Neck);
+Stats Stats_Orange("Green", &Stats_Neck);
+
+Stats Stats_StrumBar("StrumBar");
+Stats Stats_HatUp("HatUp", &Stats_StrumBar);
+Stats Stats_HatDown("HatDown", &Stats_StrumBar);
+
+// Collated list of all stats to easily go through them to load/save/clear and run once per second and updates etc.
+Stats *AllStats[] = {
+  &Stats_Neck,
+  &Stats_Green,
+  &Stats_Red,
+  &Stats_Yellow,
+  &Stats_Blue,
+  &Stats_Orange,
+  &Stats_StrumBar,
+  &Stats_HatUp,
+  &Stats_HatDown
+};
+int AllStats_Count = sizeof(AllStats) / sizeof(AllStats[0]);
+
+// ToDo: RenderStats - what gets rendered where (icon/text, position, stats value, left/mid/right aligned)
+
+// Digital inputs
+
 Input DigitalInput_Green = // Green button on guitar neck
   { .Pin = BUTTON_Green_PIN, .Label = "Green", .BluetoothInput = BUTTON_1, .DefaultValue = HIGH,
     .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
     .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 76, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
+    .Statistics = &Stats_Green,
     .OnboardLED = { CRGB(0, 255, 0), true },
     .LEDConfig = new ExternalLEDConfig {
         //.LEDNumber = LED_Green,
@@ -49,6 +81,7 @@ Input DigitalInput_Red = // Red button on guitar neck
   { .Pin = BUTTON_Red_PIN, .Label = "Red", .BluetoothInput = BUTTON_2, .DefaultValue = HIGH,
     .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
     .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 69, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
+    .Statistics = &Stats_Red,
     .OnboardLED = { CRGB(255, 0, 0), true },
     .LEDConfig = new ExternalLEDConfig{
       .LEDNumber = LED_Red,
@@ -64,6 +97,7 @@ Input DigitalInput_Yellow = // Yellow button on guitar neck
   { .Pin = BUTTON_Yellow_PIN, .Label = "Yellow", .BluetoothInput = BUTTON_4, .DefaultValue = HIGH,
     .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
     .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 62, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
+    .Statistics = &Stats_Yellow,
     .OnboardLED = { CRGB(255, 255, 0), true },
     .LEDConfig = new ExternalLEDConfig {
         .LEDNumber = LED_Yellow,
@@ -79,6 +113,7 @@ Input DigitalInput_Blue = // Blue button on guitar neck
   { .Pin = BUTTON_Blue_PIN, .Label = "Blue", .BluetoothInput = BUTTON_3, .DefaultValue = HIGH,
     .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
     .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
+    .Statistics = &Stats_Blue,
     .OnboardLED = { CRGB(0, 0, 255), true },
     .LEDConfig = new ExternalLEDConfig {
         .LEDNumber = LED_Blue,
@@ -94,6 +129,7 @@ Input DigitalInput_Orange = // Orange button on guitar neck
   { .Pin = BUTTON_Orange_PIN, .Label = "Orange", .BluetoothInput = BUTTON_5, .DefaultValue = HIGH,
     .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
     .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 48, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
+    .Statistics = &Stats_Orange,
     .OnboardLED = { CRGB(255, 128, 0), true },
     .LEDConfig = new ExternalLEDConfig {
         .LEDNumber = LED_Orange,
@@ -132,7 +168,11 @@ Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled 
 Input DigitalInput_FlipScreen = // Lever on main body, will be flipped into a permanent on or off state, not just pressed
   { .Pin = BUTTON_FlipScreen_PIN, .Label = "Flip Screen", .BluetoothInput = NONE, .DefaultValue = -2,
     .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = NONE,
-    .RenderOperation = FlipScreen, .XPos = 0, .YPos = 0, .RenderWidth = 0, .RenderHeight = 0, .TrueIcon = NONE, .FalseIcon = NONE
+    .RenderOperation = FlipScreen,
+  #ifdef CLEAR_STATS_ON_FLIP
+    .CustomOperation = ResetAllCurrentStats,    // When screen flips, we reset all the stats
+  #endif
+  .XPos = 0, .YPos = 0, .RenderWidth = 0, .RenderHeight = 0, .TrueIcon = NONE, .FalseIcon = NONE
   };
 
 // DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
@@ -207,29 +247,39 @@ HatInput Hat0 =
   {
     .Pins = { NONE, HAT1_Right_PIN, NONE, HAT1_Left_PIN }, .Label = "1", .BluetoothHat = 0, .DefaultValue = 0,
     .RenderOperation = RenderInput_Hat, .XPos = -4, .YPos = 25, .RenderWidth = 15, .RenderHeight = 15, .StartIcon = Icon_DPad_Neutral,
-    .ExtraOperation = {
-        NONE,
-        UpDownCountClick,
-        NONE,
-        NONE,
-        NONE,
-        UpDownCountClick,
-        NONE,
-        NONE,
-        NONE
-      },
+    // .ExtraOperation = {
+    //     NONE,
+    //     UpDownCountClick,
+    //     NONE,
+    //     NONE,
+    //     NONE,
+    //     UpDownCountClick,
+    //     NONE,
+    //     NONE,
+    //     NONE
+    //   },
     .CustomOperation = Custom_RenderHatStrumState,
+    .Statistics = {
+      nullptr,
+      &Stats_HatUp,
+      nullptr,
+      &Stats_HatDown,
+      nullptr,
+      nullptr,
+      nullptr,
+      nullptr
+    },
     .OnboardLED = {
-        {},
-        { CRGB::Red, true },
-        {},
-        {},
-        {},
-        { CRGB::Green, true },
-        {},
-        {},
-        {}
-      },
+      {},
+      { CRGB::Red, true },
+      {},
+      {},
+      {},
+      { CRGB::Green, true },
+      {},
+      {},
+      {}
+    },
     .LEDConfigs = {
         nullptr,
         new ExternalLEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Blue, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &HatEffects::MoveRainbow, .Rate = 255.0 * 2 }, //Throb, .Rate = 255.0 * 2 },

@@ -20,3 +20,10 @@ IDLE LED Effect
 If controls not touched for XX seconds, idle mode till something pressed
 
 Screen on during idle (turn off while playing when wont see it - UNLESS BATTERY WARNING)
+
+Save settings to flash
+Brown out (interrupt call) -> save settings? https://forum.arduino.cc/t/power-loss-detection-at-esp32-saving-variables-to-flash-memory/1188993
+FRAM
+https://forums.adafruit.com/viewtopic.php?t=192021
+https://www.aliexpress.com/w/wholesale-I2C-Non%2525252dVolatile-FRAM.html?spm=a2g0o.home.search.0
+https://randomnerdtutorials.com/esp32-save-data-permanently-preferences/

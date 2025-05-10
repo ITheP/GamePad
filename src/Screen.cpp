@@ -81,7 +81,7 @@ void FlipScreen(Input* input) {
   }
 
   // Finally, if required, clear statistics when screen flips
-#ifdef CLEAR_STATS_ON_FLIP
-  UpDownCount_Reset();
-#endif
+// #ifdef CLEAR_STATS_ON_FLIP
+//   Stats_StrumBar.ResetCurrentCounts();
+// #endif
 }

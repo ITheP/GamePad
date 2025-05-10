@@ -1,5 +1,5 @@
 #include <Wire.h>
-// #include <WiFi.h>
+#include <WiFi.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <RREFont.h>
@@ -14,6 +14,60 @@
 #include "Benchmark.h"
 #include "Battery.h"
 #include "GamePad.h"
+#include "Secrets.h"
+
+#define WIFI
+
+#ifdef WIFI
+// Wi-Fi credentials
+const char* ssid = WIFI_SSID;
+const char* password = WIFI_PASSWORD;
+#endif
+
+
+#define WEBSERVER
+
+#ifdef WEBSERVER
+#include <ESPAsyncWebServer.h>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+
+// Create AsyncWebServer on port 80
+AsyncWebServer server(80);
+
+void handleTestRequest(AsyncWebServerRequest *request) {
+  if (request->hasParam("num1") && request->hasParam("num2") && request->hasParam("text")) {
+      String num1Str = request->getParam("num1")->value();
+      String num2Str = request->getParam("num2")->value();
+      String text = request->getParam("text")->value();
+
+      int num1 = num1Str.toInt();
+      int num2 = num2Str.toInt();
+      String result = String(num1 * num2) + " " + text;
+
+      // Create JSON response
+      rapidjson::Document json;
+      json.SetObject();
+      rapidjson::Document::AllocatorType& allocator = json.GetAllocator();
+
+      json.AddMember("num1", num1, allocator);
+      json.AddMember("num2", num2, allocator);
+      json.AddMember("text", rapidjson::Value(text.c_str(), allocator), allocator);
+      json.AddMember("result", rapidjson::Value(result.c_str(), allocator), allocator);
+
+      rapidjson::StringBuffer buffer;
+      rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+      json.Accept(writer);
+
+      request->send(200, "application/json", buffer.GetString());
+  } else {
+      request->send(400, "application/json", "{\"error\":\"Missing parameters\"}");
+  }
+}
+
+#endif
+
 
 // Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
 #include "DeviceConfig.h"
@@ -58,6 +112,7 @@ bool PreviousBTConnectionState;
 
 // -----------------------------------------------------
 // Buffers
+
 char buffer[64]; // More than big enough for anything we are doing here
 
 // -----------------------------------------------------
@@ -70,8 +125,6 @@ Benchmark MainBenchmark("PERF.Main");
 // -----------------------------------------------------
 // Misc
 // Serial.print(" @ " + String((uintptr_t)config, HEX));
-
-int DebounceDelay = DEBOUNCE_DELAY;
 
 int Frame = 0;
 unsigned long PreviousMicroS = 0;
@@ -171,6 +224,67 @@ void setup()
     RenderIcon((unsigned char)Icon_USB_Disconnected, 16, 53, 16, 16);
     Serial.println("Serial connected");
   }
+
+
+#ifdef WIFI
+  // Scan WIFI networks
+  String networks = "<h2>Available Wi-Fi Networks:</h2><ul>";
+  int numNetworks = WiFi.scanNetworks();
+  for (int i = 0; i < numNetworks; i++) {
+      Serial.println(String(WiFi.SSID(i)) + " (Signal: " + String(WiFi.RSSI(i)) + " dBm");
+  }
+
+    // Connect to Wi-Fi
+    Serial.println("Connecting to Wi-Fi...");
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED) {
+      
+        WiFi.begin(ssid, password);
+
+        delay(1000);
+        Serial.println("Connecting to WiFi...");
+    }
+    Serial.println("Connected to WiFi!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+
+    // Serve a basic homepage
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(200, "text/html", "<h1>Welcome to ESP32-S3 Web Server</h1>");
+    });
+
+    // Serve another page
+    server.on("/about", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(200, "text/html", "<h1>About Page</h1><p>This is an ESP32-S3 web server.</p>");
+    });
+
+    // Define API endpoint
+    server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request){
+      rapidjson::Document json;
+      json.SetObject();
+      rapidjson::Document::AllocatorType& allocator = json.GetAllocator();
+  
+      json.AddMember("status", "success", allocator);
+      json.AddMember("message", "Hello from ESP32-S3!", allocator);
+      json.AddMember("value", 42, allocator);
+  
+      rapidjson::StringBuffer buffer;
+      rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+      json.Accept(writer);
+  
+      request->send(200, "application/json", buffer.GetString());
+      });
+
+
+      server.on("/test", HTTP_GET, handleTestRequest);
+
+        Serial.println("Starting HTTP Server...");
+  // Start server
+  server.begin();
+
+
+#endif
+
 
   Display.display();
   delay(SETUP_DELAY);
@@ -680,7 +794,8 @@ void loop()
     PreviousSubSecond = SubSecond;
     SubSecondRollover = true;
 
-    UpDownCount_UpdateSubSecond();
+   // UpDownCount_UpdateSubSecond();
+    UpdateSubSecondStats();
 
     // Opportunity for a throttled battery level reading
     // Reminder that we take multiple readings and they are later averaged out
@@ -770,13 +885,14 @@ void loop()
       Display.fillRect(114, 55, width, 5, C_WHITE);
     }
 
-    UpDownCount_SecondPassed(Second);
+    //UpDownCount_SecondPassed(Second);
+    void UpdateSecondStats(int second);
 
     SetFontFixed();
 
     // Right text
     Display.fillRect(88, 50, 16, 16, C_BLACK);
-    PrintCenteredNumber(96, 50, UpDownMaxPerSecondEver);
+    PrintCenteredNumber(96, 50, Stats_StrumBar.Current_MaxPerSecond); //UpDownMaxPerSecondEver);
 
     SetFontCustom();
 
@@ -803,7 +919,7 @@ void loop()
     SetFontFixed();
     // Left text
     Display.fillRect(0, 50, 44, 16, C_BLACK);
-    PrintCenteredNumber(27, 50, UpDownTotalCount);
+    PrintCenteredNumber(27, 50, Stats_StrumBar.Current_TotalCount); // UpDownTotalCount);
   }
 
   SetFontCustom();
@@ -822,7 +938,7 @@ void loop()
     input->ValueState.StateJustChanged = false;
 
     unsigned long timeCheck = micros();
-    if ((timeCheck - input->ValueState.StateChangedWhen) > DebounceDelay)
+    if ((timeCheck - input->ValueState.StateChangedWhen) > DEBOUNCE_DELAY)
     {
       // Compare current with previous, and timing, so we can de-bounce if required
       state = digitalRead(input->Pin);
@@ -866,7 +982,7 @@ void loop()
 
         // Any extra special custom to specific controller code
         if (input->CustomOperation != NONE)
-          input->CustomOperation(input);
+          input->CustomOperation();
       }
     }
   }
@@ -899,7 +1015,7 @@ void loop()
 
         // Any extra special custom to specific controller code
         if (input->CustomOperation != NONE)
-          input->CustomOperation(input);
+          input->CustomOperation();
 
         sendReport = true;
       }
@@ -936,11 +1052,11 @@ void loop()
 
       // timeCheck = micros();
 
-      if ((micros() - hatInput->IndividualStateChangedWhen[j]) > DebounceDelay)
+      if ((micros() - hatInput->IndividualStateChangedWhen[j]) > DEBOUNCE_DELAY)
       {
         // Might not be using all pins
         uint8_t pin = hatInput->Pins[j];
-        if (pin != 0)
+        if (pin != NONE)
         {
           int individualState = digitalRead(pin);
           if (individualState != hatInput->IndividualStates[j])
@@ -954,7 +1070,7 @@ void loop()
       // else state remains same as last time
     }
 
-    // Step 2, copy first pin to extra buffer pin in states (faster/easier calculations, no wrapping needed)
+    // Step 2, copy first pin state to extra buffer pin in states (faster/easier calculations, no wrapping needed)
     hatInput->IndividualStates[4] = hatInput->IndividualStates[0];
 
     hatCurrentState = HAT_CENTERED; // initially nothing
@@ -963,20 +1079,20 @@ void loop()
     // ToDo: FIX THE BELOW, NOT WORKING!
 
     // Step 3, check values accounting for 2 press diagonals. We go backwards so other states are checked before the 0 button, which lets us check the 3+0 button combination extra buffer thingy
-    for (int j = 3; j >= 0; j--)
+    for (int j = 0; j < 4; j++)
     {
-      if (hatInput->IndividualStates[j] == LOW) // Pressed
+      if (hatInput->Pins[j] != NONE && hatInput->IndividualStates[j] == LOW) // Pressed
       {
         hatCurrentState = subState;
 
         // Check the diagonal by checking next pin (i.e. both pins pressed)
-        if (hatInput->IndividualStates[++j] == LOW)
+        if (hatInput->IndividualStates[j+1] == LOW)
           hatCurrentState++; // also pressed, so make diagonal
 
         break; // Bail from loop - no point in checking for further pressed keys, should be physically impossible on a hat (or be irrelevant)
       }
 
-      subState += 2; // Hat values go 0, 2, 4, 6 for Up, Right, Down, Left, diagonals go between these
+      subState += 2; // Hat values go 1, 3, 5, 7 for Up, Right, Down, Left, diagonals go 2, 4, 6, 8
     }
 
     // Final check to see if things have changed since last time
