@@ -48,7 +48,10 @@ Includes...
 - [x] Benchmarking for performance
 - [x] Extra debug information
 - [x] Support for multiple controllers (via configuration files)
+<<<<<<< HEAD
 - [ ] Better stats calculation with better decoupling of hardcoded stats counting
+=======
+>>>>>>> 37d665f81b376b326bc3eb9f5451e1321a663ce3
 - [ ] Wired gamepad support
 - [ ] Run time user selectable options in controller
 - [ ] Save user options (and stats) to I2C Non-Volatile FRAM
