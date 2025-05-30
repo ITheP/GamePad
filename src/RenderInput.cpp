@@ -104,8 +104,8 @@ void RenderInput_AnalogBar_Vert(Input* input) {
   int height = input->RenderHeight;
 
 // Renders a vertical bar, from bottom to top
-#ifdef EXTRA_SERIAL_DEBUG
-  Serial.println("AnalogBar." + String(input->Label) + ".Change: " + String(input->Value));
+#ifdef EXTRA_SERIAL_DEBUG_PLUS
+  Serial.println("AnalogBar." + String(input->Label) + ".Change: " + String(input->ValueState.Value));
 #endif
 
   // Clear any old bar
@@ -127,7 +127,7 @@ void RenderInput_Hat(HatInput* hatInput) {
   int height = hatInput->RenderHeight;
 
 #ifdef EXTRA_SERIAL_DEBUG
-  Serial.println("HatInput." + String(hatInput->Label) + ".Change: " + String(hatInput->Value));
+  Serial.println("HatInput." + String(hatInput->Label) + ".Change: " + String(hatInput->ValueState.Value));
 #endif
 
   // Clear previous

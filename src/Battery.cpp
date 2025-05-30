@@ -27,7 +27,7 @@ int Battery::GetLevel() {
 
   CurrentBatteryPercentage = (CurrentBatterySensorReading - BAT_MIN) * 100.0 / (BAT_MAX - BAT_MIN);
 
-#ifdef EXTRA_SERIAL_DEBUG
+#ifdef EXTRA_SERIAL_DEBUG_PLUS
   float voltage = map(CurrentBatteryPercentage, 0.0, 100.0, BAT_MINV, BAT_MAXV);
   Serial.println("Battery Sensor Limited: " + String(CurrentBatterySensorReading) + ", Battery %: " + String(CurrentBatteryPercentage) + ", Approx Battery Voltage: " + String(voltage));
 #endif

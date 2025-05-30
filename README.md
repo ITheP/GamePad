@@ -54,10 +54,12 @@ Includes...
 - [ ] Wired gamepad support
 - [ ] Run time user selectable options in controller
 - [ ] Save user options (and stats) to I2C Non-Volatile FRAM
-- [ ] 
-- [ ] Save user options (and stats) to onboard Flash (note: during power brownout on off)
+- [ ] Save user options (and stats) to onboard Flash (query around power brownout on off)
 - [ ] Support for more LED effects
-- [ ] Idle LED effecs
+- [ ] Idle LED effects
+- [ ] Independent LED effects (e.g. based on Stats)
+- [ ] Trigger on button down, and button up, with button up after X ms differing events (so can e.g. hold button to access menus while retaining its ability to be used in game)
+- [ ] One effect can affect others - e.g. buttons held down affect colour of another effect
 - [ ] Run time configurable LEDs (disable if power below certain level, turn on/off in options)
 - [ ] More accurate battery life indicator
 - [ ] HAT code needs tweaking to finish it completely
@@ -69,7 +71,7 @@ Includes...
 - [ ] Test/debug screen - show pins etc. on button presses (access via boot option?)
 - [ ] Investigate ESP32-S3 cpu throttling (reduce mhz) power saving mode
   
-## To Do - Electron
+## To Do - Electronics
 
 - [x] Battery level monitoring
 - [x] Integration with buttons

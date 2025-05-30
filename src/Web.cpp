@@ -2,6 +2,7 @@
 #include "GamePad.h"
 #include "Stats.h"
 #include <ESPAsyncWebServer.h>
+#include <SPIFFS.h>
 #include <sstream>
 #include "Battery.h"
 #include "rapidjson/document.h"
@@ -14,135 +15,148 @@ extern int AllStats_Count;
 void Web::SetUpRoutes(AsyncWebServer &server)
 {
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-              { Web::SendPage_Root(request); });
+                // Requires / in front of the filename to work with SPIFFS
+              { request->send(SPIFFS, "/root.html", "text/html"); });
+    //   { Web::SendPage_Root(request); });
 
     server.on("/component/stats", HTTP_GET, [](AsyncWebServerRequest *request)
               { request->send(200, "text/html", GetComponent_StatsTable().c_str()); });
 
-    server.on("/default.css", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(200, "text/css", Web::CSS); });
+    server.on("/page/main", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(200, "text/html", GetPage_Main().c_str()); });
+
+    server.on("/page/about", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(200, "text/html", GetPage_About().c_str()); });
+
+    server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(200, "text/html", "<html><h1>Test Page</h1><p>This is a test page.</p></html>"); });
+
+
+    // server.on("/default.css", HTTP_GET, [](AsyncWebServerRequest *request)
+    //           { request->send(200, "text/css", Web::CSS); });
 
     server.on("/json/stats", HTTP_GET, [](AsyncWebServerRequest *request)
               { Web::SendJson_Stats(request); });
-}
 
-const char *Web::CSS = R"(
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
-    margin: 0;
-    padding: 20px;
+    // Serve static files from SPIFFS
+    server.serveStatic("/", SPIFFS, "/").setDefaultFile("about.html");
+
+    server.onNotFound([](AsyncWebServerRequest *request)
+                      {
+        String path = request->url();
+        if (SPIFFS.exists(path)) {
+            request->send(SPIFFS, path, "text/html");
+        } else {
+            request->send(404, "text/plain", "File Not Found");
+        } });
 }
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-th, td {
-    padding: 10px;
-    text-align: left;
-}
-th {
-    background-color: #4CAF50;
-    color: white;
-}
-tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-a {
-    text-decoration: none;
-    color: #4CAF50;
-}
-a:hover {
-    text-decoration: underline;
-}
-.warning {
-    color: red;
-    font-weight: bold;
-}
-)";
 
 std::string Web::GetComponent_StatsTable()
 {
     std::ostringstream table;
-    table << "<table border='1'><tr><th>Name</th><th>Current Total</th></tr>";
+    table << "<table border='1'>"
+          << "<tr>"
+          << "<th rowspan='2'>Name</th>"
+          << "<th colspan='4'>Current</th>"
+          << "<th colspan='2'>Session</th>"
+          << "<th colspan='2'>Ever</th>"
+          << "</tr>"
+          << "<tr>"
+          << "<th>Second Count</th>"
+          << "<th>Total Count</th>"
+          << "<th>Max Per Second</th>"
+          << "<th>Max Per Second Over Last Minute</th>"
+          << "<th>Total Count</th>"
+          << "<th>Max Per Second</th>"
+          << "<th>Total Count</th>"
+          << "<th>Max per Second</th>"
+          << "</tr>";
 
     for (int i = 0; i < AllStats_Count; i++)
     {
-        table << "<tr><td>" << AllStats[i]->Description << "</td>"
-              << "<td>" << AllStats[i]->Current_TotalCount << "</td></tr>";
+        table << "<tr>"
+              << "<td>" << AllStats[i]->Description << "</td>"
+              << "<td>" << AllStats[i]->Current_SecondCount << "</td>"
+              << "<td>" << AllStats[i]->Current_TotalCount << "</td>"
+              << "<td>" << AllStats[i]->Current_MaxPerSecond << "</td>"
+              << "<td>" << AllStats[i]->Current_MaxPerSecondOverLastMinute << "</td>"
+              << "<td>" << AllStats[i]->Session_TotalCount << "</td>"
+              << "<td>" << AllStats[i]->Session_MaxPerSecond << "</td>"
+              << "<td>" << AllStats[i]->Ever_TotalCount << "</td>"
+              << "<td>" << AllStats[i]->Ever_MaxPerSecond << "</td>"
+              << "</tr>";
     }
 
     table << "</table>";
     return table.str();
 }
 
-void Web::SendPage_Root(AsyncWebServerRequest *request)
-{    
+void Web::Get_Header(std::ostringstream &stream)
+{
+    stream << "<header class='site-header'>"
+           << "<h1>" << DeviceName << "</h1>"
+           << "</header>";
+}
+
+void Web::Get_Footer(std::ostringstream &stream)
+{
+    stream << "<footer class='site-footer'>"
+           << "<p><i>(c) 2025 MisterB @ I The P</i></p>"
+           << "</footer>";
+}
+
+std::string Web::GetPage_Main()
+{
     std::ostringstream html;
-    html << "<html><head><title>Stats</title></head>"
-         << "<link rel='stylesheet' type='text/css' href='/default.css'>"
+    html
+        << "<h1>GamePad - " << DeviceName << "</h1>"
+        << "<h2>Device Information</h2>"
+        << "Controller type: " << ControllerType << "<br/>"
+        << "Device name: " << DeviceName << "<br/>"
+        << "Model number: " << ModelNumber << "<br/>"
+        << "Serial number: " << SerialNumber << "<br/>"
+        << "Firmware version: " << FirmwareRevision
+        << ", Hardware version: " << HardwareRevision
+        << ", Software version: " << SoftwareRevision << "<br/>"
+        << "Battery: " << Battery::GetLevel() << "%<br/>"
+        << "<h2>Statistics Overview</h2>"
+        << "<p>Current Time: <span id='currentTime'></span></p>"
+        << "<label><input type='checkbox' id='refreshBox' onchange='toggleRefresh()' checked> Auto-refresh stats every 5s</label>"
+        << "<div id='countdownDisplay' style='margin-top:10px; font-size:16px; font-weight:bold;'></div>"
+        << "<div id='statsTable'>"
+        << Web::GetComponent_StatsTable()
+        << "<script src='main.js' />";
 
-         << "<script>"
-         << "let countdown = 5;"
-         << "let refreshInterval;"
-         << "function updateTime() {"
-         << "  let now = new Date();"
-         << "  let timeString = now.getHours().toString().padStart(2, '0') + ':'"
-         << "                 + now.getMinutes().toString().padStart(2, '0') + ':'"
-         << "                 + now.getSeconds().toString().padStart(2, '0');"
-         << "  document.getElementById('currentTime').innerText = timeString;"
-         << "}"
+           return html.str();
+}
 
-         << "function toggleRefresh() {"
-         << "  let checkbox = document.getElementById('refreshBox');"
-         << "  localStorage.setItem('autoRefresh', checkbox.checked);"
-         << "  if (checkbox.checked) {"
-         << "    startAutoRefresh();"
-         << "  } else {"
-         << "    clearInterval(refreshInterval);"
-         << "    document.getElementById('countdownDisplay').innerHTML = '';"
-         << "  }"
-         << "}"
+// TODO: Read from file
+std::string Web::GetPage_About()
+{
+    std::ostringstream html;
+    html
+        << "<h1>About</h1>"
+        << "<h2>TO DO</h2>";
 
-         << "function startAutoRefresh() {"
-         << "  countdown = 5;"
-         << "  document.getElementById('countdownDisplay').innerHTML = countdown + 's until refresh';"
-         << "  refreshInterval = setInterval(() => {"
-         << "    countdown--;"
-         << "    document.getElementById('countdownDisplay').innerHTML = countdown + 's until refresh';"
-         << "    if (countdown <= 0) {"
-         << "      fetchStats();"
-         << "      countdown = 5;"
-         << "    }"
-         << "  }, 1000);"
-         << "}"
+           return html.str();
+}
 
-         << "function fetchStats() {"
-         << "  fetch('/component/stats')"
-         << "    .then(response => {"
-         << "      if (!response.ok) { throw new Error('Network response was not ok'); }"
-         << "      return response.text();"
-         << "    })"
-         << "    .then(html => { document.getElementById('statsTable').innerHTML = html; })"
-         << "    .catch(() => {"
-         << "      document.getElementById('statsTable').innerHTML = '<p class=\"warning\">Sorry, unable to communicate with GamePad to retrieve information. It may be turned off, not connected, lost connection or not have its Wifi and Web Service turned on.</p>';"
-         << "    });"
-         << "}"
+void Web::SendPage_Root(AsyncWebServerRequest *request)
+{
+    std::ostringstream html;
+    html << "<!DOCTYPE html>"
+         << "<html lang='en'>"
+         << "<head>"
+         << "<title>GamePad</title>"
+         << "<link rel='stylesheet' type='text/css' href='default.css' />"
+         << "<script src='main.js' />"
+         << "</head>"
+         << "<body>";
 
-         << "window.onload = function() {"
-         << "  let savedState = localStorage.getItem('autoRefresh') !== 'false';"
-         << "  document.getElementById('refreshBox').checked = savedState;"
-         << "  updateTime();"
-         << "  setInterval(updateTime, 1000);"
-         << "  if (savedState) {"
-         << "    startAutoRefresh();"
-         << "  }"
-         << "}"
-         << "</script>"
+         Web::Get_Header(html);
 
-         << "<body>"
+    html << "<div class='content'>"
          << "<h1>GamePad - " << DeviceName << "</h1>"
-         << "<p><i>(c) 2025 MisterB @ I The P</i></p>"
          << "<h2>Device Information</h2>"
          << "Controller type: " << ControllerType << "<br/>"
          << "Device name: " << DeviceName << "<br/>"
@@ -158,7 +172,12 @@ void Web::SendPage_Root(AsyncWebServerRequest *request)
          << "<div id='countdownDisplay' style='margin-top:10px; font-size:16px; font-weight:bold;'></div>"
          << "<div id='statsTable'>"
          << Web::GetComponent_StatsTable()
-         << "</div></body></html>";
+         << "</div>"
+         << "</div>";    // Content
+         Web::Get_Footer(html);
+
+    html << "</body>"
+         << "</html>";
 
     request->send(200, "text/html", html.str().c_str());
 }
@@ -173,8 +192,16 @@ void Web::SendJson_Stats(AsyncWebServerRequest *request)
     for (int i = 0; i < AllStats_Count; i++)
     {
         rapidjson::Value statObj(rapidjson::kObjectType);
-        statObj.AddMember("name", rapidjson::Value(AllStats[i]->Description, allocator), allocator);
-        statObj.AddMember("current_total", AllStats[i]->Current_TotalCount, allocator);
+        statObj.AddMember("Name", rapidjson::Value(AllStats[i]->Description, allocator), allocator);
+        statObj.AddMember("Current_SecondCount", AllStats[i]->Current_SecondCount, allocator);
+        statObj.AddMember("Current_TotalCount", AllStats[i]->Current_TotalCount, allocator);
+        statObj.AddMember("Current_MaxPerSecond", AllStats[i]->Current_MaxPerSecond, allocator);
+        statObj.AddMember("Current_MaxPerSecondOverLastMinute", AllStats[i]->Current_MaxPerSecondOverLastMinute, allocator);
+        statObj.AddMember("Session_TotalCount", AllStats[i]->Session_TotalCount, allocator);
+        statObj.AddMember("Session_MaxPerSecond", AllStats[i]->Session_MaxPerSecond, allocator);
+        statObj.AddMember("Ever_TotalCount", AllStats[i]->Ever_TotalCount, allocator);
+        statObj.AddMember("Ever_MaxPerSecond", AllStats[i]->Ever_MaxPerSecond, allocator);
+
         statsArray.PushBack(statObj, allocator);
     }
 

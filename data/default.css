@@ -1,0 +1,117 @@
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+.main {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.site-header,
+.site-footer {
+    font-family: Arial, sans-serif;
+    /* background: #12354d; */
+    background: transparent;
+    color: white;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.site-footer {
+    position: fixed;
+    background: #12354d;
+    bottom: 0;
+    width: 100%;
+}
+
+.content {
+    font-family: Arial, sans-serif;
+    background-color: black;
+    color: white;
+    flex-grow: 1;
+    display: flex;
+    margin: 0;
+    padding: 20px;
+}
+
+.menu-container {
+    display: flex;
+    justify-content: space-evenly;
+    /* Equal spacing */
+    width: 100%;
+    /* Keeps items from stretching too wide */
+}
+
+.menu-item {
+    width: 100%;
+    /* height: 40px; */
+    background: #3498db;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    Margin: 5px;
+    Padding: 5px;
+}
+
+.menu-item:hover {
+    background: #2980b9;
+}
+
+h1 {
+    margin-top: 0px;
+    margin-bottom: 0.2em;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 10px;
+    text-align: left;
+}
+
+th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+a {
+    text-decoration: none;
+    color: #4CAF50;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.warning {
+    color: red;
+    font-weight: bold;
+}
+
+#shader-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: auto;
+    z-index: -1;
+}

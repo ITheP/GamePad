@@ -1,7 +1,9 @@
 // Statistics counting
+#include <Preferences.h>
 #include "Config.h"
 #include "Stats.h"
 #include "DeviceConfig.h"
+#include "Prefs.h"
 
 void ResetAllCurrentStats()
 {
@@ -163,6 +165,34 @@ void Stats::SubSecondPassed()
     SubCountPos = 0;
 
   SubCountPos = 0;
+}
+
+void Stats::LoadFromPreferences()
+{
+  String key = "stats." + String(Description) + ".";
+
+  Prefs::Handler.putInt((key + "Current_SecondCount").c_str(), Current_SecondCount);
+  Prefs::Handler.putInt((key + "Current_TotalCount").c_str(), Current_TotalCount);
+  Prefs::Handler.putInt((key + "Current_MaxPerSecond").c_str(), Current_MaxPerSecond);
+  Prefs::Handler.putInt((key + "Current_MaxPerSecondOverLastMinute").c_str(), Current_MaxPerSecondOverLastMinute);
+  Prefs::Handler.putInt((key + "Session_TotalCount").c_str(), Session_TotalCount);
+  Prefs::Handler.putInt((key + "Session_MaxPerSecond").c_str(), Session_MaxPerSecond);
+  Prefs::Handler.putInt((key + "Ever_TotalCount").c_str(), Ever_TotalCount);
+  Prefs::Handler.putInt((key + "Ever_MaxPerSecond").c_str(), Ever_MaxPerSecond);
+}
+
+void Stats::SaveToPreferences()
+{
+  String key = "stats." + String(Description) + ".";
+
+  int Current_SecondCount = Prefs::Handler.getInt((key + "Current_SecondCount").c_str(), 0);
+  int Current_TotalCount = Prefs::Handler.getInt((key + "Current_TotalCount").c_str(), 0);
+  int Current_MaxPerSecond = Prefs::Handler.getInt((key + "Current_MaxPerSecond").c_str(), 0);
+  int Current_MaxPerSecondOverLastMinute = Prefs::Handler.getInt((key + "Current_MaxPerSecondOverLastMinute").c_str(), 0);
+  int Session_TotalCount = Prefs::Handler.getInt((key + "Session_TotalCount").c_str(), 0);
+  int Session_MaxPerSecond = Prefs::Handler.getInt((key + "Session_MaxPerSecond").c_str(), 0);
+  int Ever_TotalCount = Prefs::Handler.getInt((key + "Ever_TotalCount").c_str(), 0);
+  int Ever_MaxPerSecond = Prefs::Handler.getInt((key + "Ever_MaxPerSecond").c_str(), 0);
 }
 
 // int UpDownCurrentCount = 0;

@@ -31,10 +31,10 @@ IconRun ControllerGfx[] = {
 // Stats used in various places, including any additional chain of other stats
 Stats Stats_Neck("Neck");
 Stats Stats_Green("Green", &Stats_Neck);
-Stats Stats_Red("Green", &Stats_Neck);
-Stats Stats_Yellow("Green", &Stats_Neck);
-Stats Stats_Blue("Green", &Stats_Neck);
-Stats Stats_Orange("Green", &Stats_Neck);
+Stats Stats_Red("Red", &Stats_Neck);
+Stats Stats_Yellow("Yellow", &Stats_Neck);
+Stats Stats_Blue("Blue", &Stats_Neck);
+Stats Stats_Orange("Orange", &Stats_Neck);
 
 Stats Stats_StrumBar("StrumBar");
 Stats Stats_HatUp("HatUp", &Stats_StrumBar);

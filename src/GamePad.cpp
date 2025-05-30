@@ -32,6 +32,7 @@ const char* password = WIFI_PASSWORD;
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
+#include <SPIFFS.h>
 
 // Create AsyncWebServer on port 80
 AsyncWebServer WebServer(80);
@@ -233,6 +234,10 @@ void setup()
 #endif
 
 #ifdef WEBSERVER
+    if (!SPIFFS.begin(true)) {
+      Serial.println("SPIFFS Mount Failed");
+    }
+
     Web::SetUpRoutes(WebServer);
   
     Serial.println("Starting HTTP Server...");
@@ -1112,7 +1117,7 @@ void loop()
     {
       bleGamepad.sendReport();
 
-#ifdef EXTRA_SERIAL_DEBUG
+#ifdef EXTRA_SERIAL_DEBUG_PLUS
       Serial.println(String(Frame) + ": BT Report Sent");
 #endif
     }

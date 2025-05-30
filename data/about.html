@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>About</title>
+    <link rel='stylesheet' type='text/css' href='default.css' />
+
+    <script>
+        function LoadContent(name) {
+            fetch('/page/' + name)
+                .then(response => {
+                    if (!response.ok) { throw new Error('Network response was not ok'); }
+                    return response.text();
+                })
+                .then(html => { document.getElementById('content').innerHTML = html; })
+                .catch(() => {
+                    document.getElementById('content').innerHTML = '<p class=\warning\>Sorry, unable to communicate with GamePad to load page. It may be turned off, not connected, lost connection or not have its Wifi and Web Service turned on.</p>';
+                });
+        }
+    </script>
+</head>
+
+<body>
+    <canvas id="shader-container"></canvas>
+
+    <div class="main">
+        <header id="header" class='site-header'>
+            <h1>Test about checking stuff out</h1>
+
+            <div class="menu-container">
+                <div class="menu-item" onclick="LoadContent('main');">Home</div>
+                <div class="menu-item" onclick="LoadContent('about');">About</div>
+                <div class="menu-item">Services</div>
+                <div class="menu-item">Contact</div>
+            </div>
+        </header>
+
+        <div id='content' class='content'>
+            <p>This is a test</p>
+        </div>
+
+        <footer class='site-footer'>
+            <p><i>(c) 2025 MisterB @ I The P</i></p>
+        </footer>
+    </div>
+
+    <script src='shader_header.js'></script>
+</body>
+</html>

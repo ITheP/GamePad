@@ -20,7 +20,7 @@ void FlipScreen(Input* input) {
 #endif
 
 #ifdef EXTRA_SERIAL_DEBUG
-  Serial.println("Flip Screen " + String(input->Value));
+  Serial.println("Flip Screen " + String(input->ValueState.Value));
 #endif
 
 
