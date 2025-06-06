@@ -17,13 +17,6 @@
 
 #define WIFI
 
-#ifdef WIFI
-// Wi-Fi credentials
-const char* ssid = WIFI_SSID;
-const char* password = WIFI_PASSWORD;
-#endif
-
-
 #define WEBSERVER
 
 #ifdef WEBSERVER
@@ -39,21 +32,20 @@ AsyncWebServer WebServer(80);
 
 #endif
 
-
 // Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
 #include "DeviceConfig.h"
 
-char SerialNumber[22];// SerialNumber = large enough to hold the uint64_t value as a string 20 chars + 1 for chipIdOffset + null terminator. Tests showed serial coming from esp32-s3 was 14 chars + the chipIdOffset
+char SerialNumber[22]; // SerialNumber = large enough to hold the uint64_t value as a string 20 chars + 1 for chipIdOffset + null terminator. Tests showed serial coming from esp32-s3 was 14 chars + the chipIdOffset
 char DeviceName[20];
 
 // When configured for use, set of random names for controller. Actual name is picked using ESP32-S3's unique identity as a key to the name - means we can flash to multiple
 // devices and they should all get decently unique names.
 // Max 17 chars for a name (final name will be longer after adding automated bits to the end of the name for bluetooth variants)
 // Anything longer, name wont fit on display we are using!
-const char* DeviceNames[] = { "Ellen", "Holly", "Indy", "Smudge", "Peanut", "Claire", "Eleanor", "Evilyn", "Andy", "Toya", "Verity", "Laura", "Eagle",
-                        "Kevin", "Sophie", "Carla", "Hannah", "Becky", "Trent", "Jean", "Sebastian", "Phil", "Colin", "Berry", "Bazil", "Anne",
-                        "Bella", "Vivian", "Bunny", "Thomas", "Giles", "David", "John", "Penny", "Beverly", "Dannie", "Ginny", "Samantha", "Sam",
-                        "Lisa", "Charlie", "Albert", "Shoe", "Stevie" };
+const char *DeviceNames[] = {"Ellen", "Holly", "Indy", "Smudge", "Peanut", "Claire", "Eleanor", "Evilyn", "Andy", "Toya", "Verity", "Laura", "Eagle",
+                             "Kevin", "Sophie", "Carla", "Hannah", "Becky", "Trent", "Jean", "Sebastian", "Phil", "Colin", "Berry", "Bazil", "Anne",
+                             "Bella", "Vivian", "Bunny", "Thomas", "Giles", "David", "John", "Penny", "Beverly", "Dannie", "Ginny", "Samantha", "Sam",
+                             "Lisa", "Charlie", "Albert", "Shoe", "Stevie"};
 int DeviceNamesCount = sizeof(DeviceNames) / sizeof(DeviceNames[0]);
 
 // -----------------------------------------------------
@@ -118,12 +110,12 @@ float PreviousNow;
 
 int PreviousSecond = -1;
 int Second = 0;
-int SecondRollover = false;       // Flag to easily sync operations that run once per second
-int SecondFlipFlop = false;       // Flag flipping between 0 and 1 every second to allow for things like blinking icons
+int SecondRollover = false; // Flag to easily sync operations that run once per second
+int SecondFlipFlop = false; // Flag flipping between 0 and 1 every second to allow for things like blinking icons
 
 int PreviousSubSecond = -1;
 int SubSecond = 0;
-int SubSecondRollover = false;    // SubSecond flag for things like statistics sampling
+int SubSecondRollover = false; // SubSecond flag for things like statistics sampling
 int SubSecondFlipFlop = false;
 
 char LastBatteryIcon = 0;
@@ -133,10 +125,10 @@ float PreviousFractionalSeconds = 0;
 float CurrentFractionalSeconds = 0;
 float ExtendedFractionalSeconds = 0;
 
-int LEDUpdateRollover = false;    // Throttling flag for LED updates - may be far faster than e.g. 60fps to allow for effects to propagate more quickly
+int LEDUpdateRollover = false; // Throttling flag for LED updates - may be far faster than e.g. 60fps to allow for effects to propagate more quickly
 float NextLEDUpdatePoint = 0;
 
-int DisplayRollover = false;      // Throttling flag for display updates
+int DisplayRollover = false; // Throttling flag for display updates
 float NextDisplayUpdatePoint = 0;
 
 void setup()
@@ -209,44 +201,66 @@ void setup()
     Serial.println("Serial connected");
   }
 
+  // #ifdef WIFI
+  //  Scan WIFI networks
+  //  String networks = "<h2>Available Wi-Fi Networks:</h2><ul>";
+  //  int numNetworks = WiFi.scanNetworks();
+  //  for (int i = 0; i < numNetworks; i++) {
+  //      Serial.println(String(WiFi.SSID(i)) + " (Signal: " + String(WiFi.RSSI(i)) + " dBm");
+  //  }
 
-#ifdef WIFI
-  // Scan WIFI networks
-  String networks = "<h2>Available Wi-Fi Networks:</h2><ul>";
-  int numNetworks = WiFi.scanNetworks();
-  for (int i = 0; i < numNetworks; i++) {
-      Serial.println(String(WiFi.SSID(i)) + " (Signal: " + String(WiFi.RSSI(i)) + " dBm");
-  }
+  // // Connect to Wi-Fi
+  // Serial.println("Connecting to Wi-Fi...");
+  // int attempts = 0;
+  // while (WiFi.status() != WL_CONNECTED) {
 
-    // Connect to Wi-Fi
-    Serial.println("Connecting to Wi-Fi...");
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED) {
-      
-        WiFi.begin(ssid, password);
+  //     WiFi.begin(ssid, password);
 
-        delay(1000);
-        Serial.println("Connecting to WiFi...");
-    }
-    Serial.println("Connected to WiFi!");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-#endif
+  //     delay(1000);
+  //     Serial.println("Connecting to WiFi...");
+  // }
+  // Serial.println("Connected to WiFi!");
+
+  // wifi_ap_record_t ap_info;
+
+  // if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+  //     Serial.println("Signal strength: " + String(ap_info.rssi) + " dBm");
+  //     Serial.println("Channel: " + String(ap_info.primary));
+  // }
+
+  // Serial.print("IP Address: ");
+  // Serial.println(WiFi.localIP());
+
+  // #endif
 
 #ifdef WEBSERVER
-    if (!SPIFFS.begin(true)) {
-      Serial.println("SPIFFS Mount Failed");
-    }
+  if (!SPIFFS.begin(true))
+  {
+    Serial.println("SPIFFS Mount Failed");
+  }
 
-    Web::SetUpRoutes(WebServer);
-  
-    Serial.println("Starting HTTP Server...");
-    // Start server
-    WebServer.begin();
+  Web::SetUpRoutes(WebServer);
 
+  Serial.println("Starting HTTP Server...");
+
+  esp_netif_init(); // Need to do this now else the web service throws a wobbler
+
+  // Full BT mode
+//esp_bt_controller_enable(ESP_BT_MODE_CLASSIC_BT);
+// Low energy BT mode
+//esp_bt_controller_enable(ESP_BT_MODE_BLE);
+// Both BT simultaneously
+//esp_bt_controller_enable(ESP_BT_MODE_BTDM);
+
+  // esp_event_loop_create_default();
+  // esp_netif_create_default_wifi_sta();
+  // wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  // esp_wifi_init(&cfg);
+
+  // Start server
+  WebServer.begin();
 
 #endif
-
 
   Display.display();
   delay(SETUP_DELAY);
@@ -645,7 +659,7 @@ void setup()
   // bleGamepadConfig.setIncludeRzAxis(false);
 
   bleGamepadConfig.setAutoReport(false);
-  bleGamepad.begin(&bleGamepadConfig);    // Note - changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
+  bleGamepad.begin(&bleGamepadConfig); // Note - changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
 
   // Battery
   pinMode(BATTERY_MONITOR_PIN, INPUT);
@@ -752,7 +766,7 @@ void loop()
     PreviousSubSecond = SubSecond;
     SubSecondRollover = true;
 
-   // UpDownCount_UpdateSubSecond();
+    // UpDownCount_UpdateSubSecond();
     UpdateSubSecondStats();
 
     // Opportunity for a throttled battery level reading
@@ -764,12 +778,12 @@ void loop()
   DisplayRollover = (Now > NextDisplayUpdatePoint);
   if (DisplayRollover)
     NextDisplayUpdatePoint += DISPLAY_UPDATE_RATE;
-  
 
   // Throttle LED updates
   LEDUpdateRollover = (Now > NextLEDUpdatePoint);
-  if (LEDUpdateRollover) NextLEDUpdatePoint += LED_UPDATE_RATE;
-  
+  if (LEDUpdateRollover)
+    NextLEDUpdatePoint += LED_UPDATE_RATE;
+
   PreviousFractionalSeconds = FractionalSeconds;
 
   bool sendReport = false;
@@ -843,14 +857,14 @@ void loop()
       Display.fillRect(114, 55, width, 5, C_WHITE);
     }
 
-    //UpDownCount_SecondPassed(Second);
+    // UpDownCount_SecondPassed(Second);
     void UpdateSecondStats(int second);
 
     SetFontFixed();
 
     // Right text
     Display.fillRect(88, 50, 16, 16, C_BLACK);
-    PrintCenteredNumber(96, 50, Stats_StrumBar.Current_MaxPerSecond); //UpDownMaxPerSecondEver);
+    PrintCenteredNumber(96, 50, Stats_StrumBar.Current_MaxPerSecond); // UpDownMaxPerSecondEver);
 
     SetFontCustom();
 
@@ -1044,7 +1058,7 @@ void loop()
         hatCurrentState = subState;
 
         // Check the diagonal by checking next pin (i.e. both pins pressed)
-        if (hatInput->IndividualStates[j+1] == LOW)
+        if (hatInput->IndividualStates[j + 1] == LOW)
           hatCurrentState++; // also pressed, so make diagonal
 
         break; // Bail from loop - no point in checking for further pressed keys, should be physically impossible on a hat (or be irrelevant)
@@ -1171,6 +1185,11 @@ void loop()
   }
 
   PreviousBTConnectionState = BTConnectionState;
+
+#ifdef WIFI
+  if (SecondRollover) 
+    Network->HandleWifi(Second);
+#endif
 
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Snapshot("Loop.Bluetooth", showBenchmark);

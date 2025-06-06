@@ -1,5 +1,5 @@
-let countdown = 5;
-let refreshInterval;
+var countdown = 5;
+var refreshInterval;
 function updateTime() {
     let now = new Date();
     let timeString = now.getHours().toString().padStart(2, '0') + ':'
@@ -19,37 +19,51 @@ function toggleRefresh() {
     }
 }
 
+var statsStatus = document.getElementById('countdownDisplay');
+
 function startAutoRefresh() {
     countdown = 5;
-    document.getElementById('countdownDisplay').innerHTML = countdown + 's until refresh';
+    
     refreshInterval = setInterval(() => {
-        countdown--;
-        document.getElementById('countdownDisplay').innerHTML = countdown + 's until refresh';
-        if (countdown <= 0) {
-            fetchStats();
-            countdown = 5;
+        try {
+            if (countdown > 1) {
+                countdown--;
+                if (countdown < 6)
+                    statsStatus.innerHTML = countdown + 's until refresh';
+            }
+            else if (countdown == 1) {
+                countdown--;    // Make sure this doesn't trigger while fetchStats is running
+                fetchStats();
+            }
+        }
+        catch (error) {
+            clearInterval(refreshInterval);
         }
     }, 1000);
 }
 
 function fetchStats() {
+    statsStatus.innerText = 'Fetching latest stats...';
+
     fetch('/component/stats')
         .then(response => {
             if (!response.ok) { throw new Error('Network response was not ok'); }
             return response.text();
         })
-        .then(html => { document.getElementById('statsTable').innerHTML = html; })
+        .then(html => {
+            statsStatus.innerHTML = html;
+            countdown = 6;
+            statsStatus.innerText = 'Stats updated';
+            updateTime();
+        })
         .catch(() => {
-            document.getElementById('statsTable').innerHTML = '<p class=\warning\>Sorry, unable to communicate with GamePad to retrieve information. It may be turned off, not connected, lost connection or not have its Wifi and Web Service turned on.</p>';
+            statsStatus.innerText = 'Fetching latest stats failed, will try again in a few seconds.';
+            countdown = 8;
         });
 }
 
-// window.onload = function () {
-    let savedState = localStorage.getItem('autoRefresh') !== 'false';
-    document.getElementById('refreshBox').checked = savedState;
-    updateTime();
-    setInterval(updateTime, 1000);
-    if (savedState) {
-        startAutoRefresh();
-    }
-// }
+var savedState = localStorage.getItem('autoRefresh') !== 'false';
+document.getElementById('refreshBox').checked = savedState;
+if (savedState) {
+    startAutoRefresh();
+}

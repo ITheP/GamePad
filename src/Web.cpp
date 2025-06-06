@@ -8,47 +8,123 @@
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
+#include "Config.h"
+#include "Arduino.h"
 
 extern Stats *AllStats[];
 extern int AllStats_Count;
 
 void Web::SetUpRoutes(AsyncWebServer &server)
 {
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-                // Requires / in front of the filename to work with SPIFFS
-              { request->send(SPIFFS, "/root.html", "text/html"); });
-    //   { Web::SendPage_Root(request); });
-
-    server.on("/component/stats", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(200, "text/html", GetComponent_StatsTable().c_str()); });
-
-    server.on("/page/main", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(200, "text/html", GetPage_Main().c_str()); });
-
-    server.on("/page/about", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(200, "text/html", GetPage_About().c_str()); });
-
-    server.on("/test", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(200, "text/html", "<html><h1>Test Page</h1><p>This is a test page.</p></html>"); });
-
-
-    // server.on("/default.css", HTTP_GET, [](AsyncWebServerRequest *request)
-    //           { request->send(200, "text/css", Web::CSS); });
-
-    server.on("/json/stats", HTTP_GET, [](AsyncWebServerRequest *request)
-              { Web::SendJson_Stats(request); });
+    //     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+    //               {
+    // #ifdef EXTRA_SERIAL_DEBUG
+    //                   ShowRequestStart(request);
+    // #endif
+    //                   // Requires / in front of the filename to work with SPIFFS
+    //                   request->send(SPIFFS, "/root.html", "text/html");
+    // #ifdef EXTRA_SERIAL_DEBUG
+    //                   ShowRequestEnd(request);
+    // #endif
+    //               });
 
     // Serve static files from SPIFFS
-    server.serveStatic("/", SPIFFS, "/").setDefaultFile("about.html");
+    // server.serveStatic("/", SPIFFS, "/").setDefaultFile("root.html");
 
+    // We do a lot of the heavy lifting ourselves for sorting the
+    // pushing of web pages out - this is to allow us to
+    // more easily slap in dynamic content. Can still put in special cases and
+    // .on requests if required.
+    // Also wanted extra flexibility to debug/print what was going on
     server.onNotFound([](AsyncWebServerRequest *request)
                       {
-        String path = request->url();
-        if (SPIFFS.exists(path)) {
-            request->send(SPIFFS, path, "text/html");
-        } else {
-            request->send(404, "text/plain", "File Not Found");
-        } });
+                          String path = request->url();
+
+#ifdef EXTRA_SERIAL_DEBUG
+                          unsigned long start = millis();
+
+                          switch (request->method())
+                          {
+                          case HTTP_GET:
+                              Serial.print("GET ");
+                              break;
+                          case HTTP_POST:
+                              Serial.print("POST ");
+                              break;
+                          case HTTP_PUT:
+                              Serial.print("PUT ");
+                              break;
+                          case HTTP_DELETE:
+                              Serial.print("DELETE ");
+                              break;
+                          default:
+                              Serial.print("OTHER ");
+                              break;
+                          }
+                          Serial.println("WebRequest: HTTP " + request->url());
+#endif
+
+                          int success = 1;
+                          String contentType;
+
+                          // Default page
+                          if (path.equals("/"))
+                              // Requires / in front of the filename to work with SPIFFS
+                              request->send(SPIFFS, "/root.html", "text/html");
+                          // special cases
+                          else if (path.equals("/main"))
+                              request->send(200, "text/html", GetPage_Main().c_str());
+                          else if (path.equals("/debug"))
+                              request->send(200, "text/html", GetPage_Debug().c_str());
+                          else if (path.equals("/component/stats"))
+                              request->send(200, "text/html", GetComponent_StatsTable().c_str());
+                          else if (path.equals("/json/stats"))
+                              Web::SendJson_Stats(request);
+                          else
+                          {
+                              // if (path.startsWith("/page/"))
+                              // path = path.substring(6) + ".html"; // Convert /page/name to /name.html
+                              if (SPIFFS.exists(path))
+                              {
+                                  if (path.endsWith(".html"))
+                                      contentType = "text/html";
+                                  else if (path.endsWith(".js"))
+                                      contentType = "application/javascript";
+                                  else if (path.endsWith(".css"))
+                                      contentType = "text/css";
+                                  else if (path.endsWith(".png"))
+                                      contentType = "image/png";
+                                  else if (path.endsWith(".jpg"))
+                                      contentType = "image/jpeg";
+                                  else if (path.endsWith(".ico"))
+                                      contentType = "image/x-icon";
+                                  else
+                                      contentType = "text/plain";
+                                  // else if (path.endsWith(".gif")) contentType = "image/gif";
+
+                                  request->send(SPIFFS, path, contentType);
+                              }
+                              else
+                              {
+                                  request->send(404, "text/plain", "File Not Found");
+                                  Serial.println("Request for " + request->url() + ": File Not Found (404 returned)");
+
+                                  success = 0;
+                              }
+                          }
+
+#ifdef EXTRA_SERIAL_DEBUG
+                          if (success == 1)
+                          {
+                              unsigned long end = millis();
+                              Serial.print("Request for " + request->url() + " took : " + String(end - start) + "ms");
+                              if (!contentType.isEmpty())
+                                  Serial.print(" - Content-Type: " + contentType);
+
+                              Serial.println();
+                          }
+#endif
+                      });
 }
 
 std::string Web::GetComponent_StatsTable()
@@ -91,19 +167,19 @@ std::string Web::GetComponent_StatsTable()
     return table.str();
 }
 
-void Web::Get_Header(std::ostringstream &stream)
-{
-    stream << "<header class='site-header'>"
-           << "<h1>" << DeviceName << "</h1>"
-           << "</header>";
-}
+// void Web::Get_Header(std::ostringstream &stream)
+// {
+//     stream << "<header class='site-header'>"
+//            << "<h1>" << DeviceName << "</h1>"
+//            << "</header>";
+// }
 
-void Web::Get_Footer(std::ostringstream &stream)
-{
-    stream << "<footer class='site-footer'>"
-           << "<p><i>(c) 2025 MisterB @ I The P</i></p>"
-           << "</footer>";
-}
+// void Web::Get_Footer(std::ostringstream &stream)
+// {
+//     stream << "<footer class='site-footer'>"
+//            << "<p><i>(c) 2025 MisterB @ I The P</i></p>"
+//            << "</footer>";
+// }
 
 std::string Web::GetPage_Main()
 {
@@ -120,66 +196,24 @@ std::string Web::GetPage_Main()
         << ", Software version: " << SoftwareRevision << "<br/>"
         << "Battery: " << Battery::GetLevel() << "%<br/>"
         << "<h2>Statistics Overview</h2>"
-        << "<p>Current Time: <span id='currentTime'></span></p>"
+        << "<p>Last update time: <span id='currentTime'></span></p>"
         << "<label><input type='checkbox' id='refreshBox' onchange='toggleRefresh()' checked> Auto-refresh stats every 5s</label>"
         << "<div id='countdownDisplay' style='margin-top:10px; font-size:16px; font-weight:bold;'></div>"
         << "<div id='statsTable'>"
         << Web::GetComponent_StatsTable()
-        << "<script src='main.js' />";
+        << "</div>";
 
-           return html.str();
+    return html.str();
 }
 
-// TODO: Read from file
-std::string Web::GetPage_About()
+std::string Web::GetPage_Debug()
 {
     std::ostringstream html;
     html
-        << "<h1>About</h1>"
+        << "<h1>Debug</h1>"
         << "<h2>TO DO</h2>";
 
-           return html.str();
-}
-
-void Web::SendPage_Root(AsyncWebServerRequest *request)
-{
-    std::ostringstream html;
-    html << "<!DOCTYPE html>"
-         << "<html lang='en'>"
-         << "<head>"
-         << "<title>GamePad</title>"
-         << "<link rel='stylesheet' type='text/css' href='default.css' />"
-         << "<script src='main.js' />"
-         << "</head>"
-         << "<body>";
-
-         Web::Get_Header(html);
-
-    html << "<div class='content'>"
-         << "<h1>GamePad - " << DeviceName << "</h1>"
-         << "<h2>Device Information</h2>"
-         << "Controller type: " << ControllerType << "<br/>"
-         << "Device name: " << DeviceName << "<br/>"
-         << "Model number: " << ModelNumber << "<br/>"
-         << "Serial number: " << SerialNumber << "<br/>"
-         << "Firmware version: " << FirmwareRevision
-         << ", Hardware version: " << HardwareRevision
-         << ", Software version: " << SoftwareRevision << "<br/>"
-         << "Battery: " << Battery::GetLevel() << "%<br/>"
-         << "<h2>Statistics Overview</h2>"
-         << "<p>Current Time: <span id='currentTime'></span></p>"
-         << "<label><input type='checkbox' id='refreshBox' onchange='toggleRefresh()' checked> Auto-refresh stats every 5s</label>"
-         << "<div id='countdownDisplay' style='margin-top:10px; font-size:16px; font-weight:bold;'></div>"
-         << "<div id='statsTable'>"
-         << Web::GetComponent_StatsTable()
-         << "</div>"
-         << "</div>";    // Content
-         Web::Get_Footer(html);
-
-    html << "</body>"
-         << "</html>";
-
-    request->send(200, "text/html", html.str().c_str());
+    return html.str();
 }
 
 void Web::SendJson_Stats(AsyncWebServerRequest *request)

@@ -21,6 +21,7 @@ public:
     static std::string GetComponent_StatsTable();
     static std::string GetPage_Main();
     static std::string GetPage_About();
+    static std::string GetPage_Debug();
 
     static void SendJson_Stats(AsyncWebServerRequest *request);
 
