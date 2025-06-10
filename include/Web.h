@@ -25,7 +25,11 @@ public:
 
     static void SendJson_Stats(AsyncWebServerRequest *request);
 
+    static void RenderIcons();
+    
 private:
+    static int ShowTraffic;
+
     static void Get_Header(std::ostringstream &stream);
     static void Get_Footer(std::ostringstream &stream);
 };

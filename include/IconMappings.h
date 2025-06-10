@@ -3,6 +3,13 @@
 // Reminders:
 // Top left start letter is 0x20
 
+#define Icon_Test1 0x90
+#define Icon_Test2 0x91
+#define Icon_Test3 0x92
+#define Icon_Test4 0x93
+#define Icon_Test5 0x94
+#define Icon_Test6 0x95
+
 // Logo
 #define Icon_Logo_Start1 0xB0
 #define Icon_Logo_Start2 0xC0
@@ -21,40 +28,44 @@
 #define Icon_LEDOff 0X88
 #define Icon_LEDNone 0X89
 
-// Bluetooth
+
 #define Icon_EyesLeft 0x79
 #define Icon_EyesRight 0x7A
-#define Icon_BTOK 0x7B
+#define Icon_OK 0x7B
+
+// Bluetooth
 #define Icon_BTLogo 0x7C
 //#define Icon_Heart 0x7C
 
 // USB
-#define Icon_Wire_Horizontal 0x66
-#define Icon_USB_Unknown 0x67
-#define Icon_USB_Connected 0x68
-#define Icon_USB_Disconnected 0x69
-#define Icon_Wire_Vertical 0x6A
-#define Icon_USB_Connected_V 0x6B
-#define Icon_USB_Disconnected_V 0x6C
+#define Icon_Wire_Horizontal 0xA8
+#define Icon_USB_Unknown 0x69
+#define Icon_USB_Connected 0x6A
+#define Icon_USB_Controller 0x6B
+#define Icon_USB_Disconnected 0x6C
 
 // WiFi
 #define Icon_WIFI_TraceSignal 0x97
 #define Icon_WIFI_LowSignal 0x98
-#define Icon_WIFI_MediumSignal 0x99
-#define Icon_WIFI_MiddleSignal 0x9A
-#define Icon_WIFI_TopSignal 0x9B
+#define Icon_WIFI_MiddleSignal 0x99
+#define Icon_WIFI_TopSignal 0x9A
+#define Icon_WIFI_MediumSignal 0x9B
 #define Icon_WIFI_HighSignal 0x9C
 #define Icon_WIFI_Query 0x9D
 #define Icon_WIFI_LostSignal 0x9E
 #define Icon_WIFI_Disabled 0x9F
 
 // WebServer
-#define Icon_Web_Disabled 0xA8
-#define Icon_Web_Enabled 0xB8
-#define Icon_Web_Traffic 0xC8
+#define Icon_Web_Traffic 0x77
+#define Icon_Web_Enabled 0x67
+#define Icon_Web_Disabled 0x68
 
 // Misc.
 #define Icon_Settings 0xA7
+#define Icon_ITP_S 0xB8
+#define Icon_ITP_M 0xC8
+#define Icon_Skull 0xD8
+
 
 // Extra buttons
 #define Icon_Start 0x8A

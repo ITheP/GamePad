@@ -86,7 +86,7 @@ extern int LEDClones_Count;
 // ======================
 // User Interface Related
 #define uiGuitar_xPos 12
-#define uiGuitar_yPos 17
+#define uiGuitar_yPos 16
 
 #define uiWhammyX 117
 #define uiWhammyY 17

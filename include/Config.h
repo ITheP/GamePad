@@ -4,7 +4,7 @@
 //#define EXTRA_SERIAL_DEBUG_PLUS   // ...further detail, but can flood serial output somewhat!
 //#define INCLUDE_BENCHMARKS        // Includes some basic performance statistics of running device over serial
 //#define INCLUDE_BENCHMARKS_LED    // Basic performance stats for LED processing
-#define SHOW_FPS                    // Shows FPS top left of screen
+//#define SHOW_FPS                    // Shows FPS top left of screen
 //#define WHITE_SCREEN              // Display will show a solid white screen, handy when physically aligning panel in device
 
 #define SETUP_DELAY     250         // Delay between stages of initial start up
@@ -31,3 +31,27 @@
 #define LOW 0x0
 #define HIGH 0x1
 #define NONE 0
+
+// TODO: proper positional framework
+
+#define uiUSB_yPos 53
+
+
+//#define uiWiFiStatus_xPos (uiWiFi_xPos + 15)
+//#define uiWiFiStatus_yPos (uiWiFi_yPos + 2)
+
+#define uiWebServer_xPos 22
+#define uiWebServer_yPos 51
+#define uiWebServerStatus_xPos (uiWebServer_xPos + 16)
+#define uiWebServerStatus_yPos (uiWebServer_yPos)
+
+#define uiWiFi_xPos (uiWebServer_xPos + 23)
+#define uiWiFi_yPos 51
+
+#define uiBT_xPos 75
+#define uiBT_yPos 51
+#define uiBTStatus_xPos (uiBT_xPos + 11)
+#define uiBTStatus_yPos (uiBT_yPos + 1)
+
+#define uiBattery_xPos 112
+#define uiBattery_yPos 52

@@ -13,7 +13,9 @@
 #include "Benchmark.h"
 #include "Battery.h"
 #include "GamePad.h"
+#include "Network.h"
 #include "Secrets.h"
+#include "Screen.h"
 
 #define WIFI
 
@@ -170,8 +172,8 @@ void setup()
   // Animate USB socket coming into screen from off left, final resting place Xpos = 16 pixels in
   for (int i = -32; i <= 0; i++)
   {
-    RenderIcon(Icon_Wire_Horizontal, i, 53, 16, 9);
-    RenderIcon(Icon_USB_Unknown, i + 16, 53, 16, 9);
+    RenderIcon(Icon_Wire_Horizontal, i, uiUSB_yPos, 16, 9);
+    RenderIcon(Icon_USB_Unknown, i + 16, uiUSB_yPos, 16, 9);
     Display.display();
     delay(15);
   }
@@ -191,47 +193,29 @@ void setup()
     }
   }
 
+  unsigned char usbState;
   if (Serial)
   {
-    RenderIcon((unsigned char)Icon_USB_Connected, 16, 53, 16, 16);
+    Serial.println("Serial connected");
+    usbState = Icon_USB_Connected;
   }
   else
   {
-    RenderIcon((unsigned char)Icon_USB_Disconnected, 16, 53, 16, 16);
-    Serial.println("Serial connected");
+    Serial.println("Serial disconnected");
+    usbState = Icon_USB_Disconnected;
   }
 
-  // #ifdef WIFI
-  //  Scan WIFI networks
-  //  String networks = "<h2>Available Wi-Fi Networks:</h2><ul>";
-  //  int numNetworks = WiFi.scanNetworks();
-  //  for (int i = 0; i < numNetworks; i++) {
-  //      Serial.println(String(WiFi.SSID(i)) + " (Signal: " + String(WiFi.RSSI(i)) + " dBm");
-  //  }
+  RenderIcon(usbState, 16, uiUSB_yPos, 16, 16);
+  delay(SETUP_DELAY);
 
-  // // Connect to Wi-Fi
-  // Serial.println("Connecting to Wi-Fi...");
-  // int attempts = 0;
-  // while (WiFi.status() != WL_CONNECTED) {
-
-  //     WiFi.begin(ssid, password);
-
-  //     delay(1000);
-  //     Serial.println("Connecting to WiFi...");
-  // }
-  // Serial.println("Connected to WiFi!");
-
-  // wifi_ap_record_t ap_info;
-
-  // if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
-  //     Serial.println("Signal strength: " + String(ap_info.rssi) + " dBm");
-  //     Serial.println("Channel: " + String(ap_info.primary));
-  // }
-
-  // Serial.print("IP Address: ");
-  // Serial.println(WiFi.localIP());
-
-  // #endif
+  // Reverse back a bit for final USB position
+  for (int i = 0; i > -17; i--)
+  {
+    RenderIcon(Icon_Wire_Horizontal, i, uiUSB_yPos, 16, 9);
+    RenderIcon(usbState, i + 16, uiUSB_yPos, 17, 10);
+    Display.display();
+    delay(15);
+  }
 
 #ifdef WEBSERVER
   if (!SPIFFS.begin(true))
@@ -246,11 +230,11 @@ void setup()
   esp_netif_init(); // Need to do this now else the web service throws a wobbler
 
   // Full BT mode
-//esp_bt_controller_enable(ESP_BT_MODE_CLASSIC_BT);
-// Low energy BT mode
-//esp_bt_controller_enable(ESP_BT_MODE_BLE);
-// Both BT simultaneously
-//esp_bt_controller_enable(ESP_BT_MODE_BTDM);
+  // esp_bt_controller_enable(ESP_BT_MODE_CLASSIC_BT);
+  //  Low energy BT mode
+  // esp_bt_controller_enable(ESP_BT_MODE_BLE);
+  //  Both BT simultaneously
+  // esp_bt_controller_enable(ESP_BT_MODE_BTDM);
 
   // esp_event_loop_create_default();
   // esp_netif_create_default_wifi_sta();
@@ -474,7 +458,7 @@ void setup()
 
   // Bluetooth and other general config
 
-  RRE.drawChar(54, 51, (unsigned char)Icon_BTLogo);
+  RRE.drawChar(uiBT_xPos, uiBT_yPos, (unsigned char)Icon_BTLogo);
   Display.display();
 
   // Dedicated checks to Inputs that allow buttons held on startup to switch between variants of Bluetooth Id's
@@ -707,11 +691,11 @@ void DrawMainScreen()
   Display.drawRect(uiWhammyX, uiWhammyY, uiWhammyW, uiWhammyH, C_WHITE);
 
   // Bluetooth Initial
-  RenderIcon(Icon_BTLogo, 54, 51, 0, 0);
-  RenderIcon(Icon_EyesLeft, 65, 52, 0, 0);
+  RenderIcon(Icon_BTLogo, uiBT_xPos, uiBT_yPos, 0, 0);
+  RenderIcon(Icon_EyesLeft, uiBTStatus_xPos, uiBTStatus_yPos, 0, 0);
 
   // Battery initial
-  RenderIcon(Icon_Battery, 112, 53, 0, 0);
+  RenderIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 0, 0);
 
   Display.display();
 
@@ -772,6 +756,9 @@ void loop()
     // Opportunity for a throttled battery level reading
     // Reminder that we take multiple readings and they are later averaged out
     Battery::TakeReading();
+
+    // And finally Web traffic visuals
+    Web::RenderIcons();
   }
 
   // Throttle display updates
@@ -821,7 +808,7 @@ void loop()
       else
         LastBatteryIcon = Icon_BatteryCharging;
 
-      RenderIcon(LastBatteryIcon, 112, 53, 12, 9); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
+      RenderIcon(LastBatteryIcon, uiBattery_xPos, uiBattery_yPos, 14, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
     }
     else if (currentBatteryLevel == 0)
     {
@@ -831,7 +818,7 @@ void loop()
       else
         LastBatteryIcon = Icon_BatteryEmpty;
 
-      RenderIcon(LastBatteryIcon, 112, 53, 12, 9); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
+      RenderIcon(LastBatteryIcon, uiBattery_xPos, uiBattery_yPos, 14, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
 
       // ...however next line will trigger full screen low battery handling
       Battery::PreviousBatteryLevel = currentBatteryLevel;
@@ -846,15 +833,15 @@ void loop()
       if (LastBatteryIcon != Icon_Battery)
       {
         LastBatteryIcon = Icon_Battery;
-        RenderIcon(Icon_Battery, 112, 53, 12, 9);
+        RenderIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 14, 11);
       }
 
       // Battery level scale to 0->10 pixels
       int width = ((currentBatteryLevel / 100.0) * 10.0);
       // Render width as 0->10 pixel wide rectangle inside icon
-      Display.fillRect(114, 55, 10, 5, C_BLACK);
+      Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 4, 10, 5, C_BLACK);
 
-      Display.fillRect(114, 55, width, 5, C_WHITE);
+      Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 4, width, 5, C_WHITE);
     }
 
     // UpDownCount_SecondPassed(Second);
@@ -862,9 +849,9 @@ void loop()
 
     SetFontFixed();
 
-    // Right text
-    Display.fillRect(88, 50, 16, 16, C_BLACK);
-    PrintCenteredNumber(96, 50, Stats_StrumBar.Current_MaxPerSecond); // UpDownMaxPerSecondEver);
+    // Right text - STATS DISPLAY TEMP DISABLED
+    // Display.fillRect(88, 50, 16, 16, C_BLACK);
+    // PrintCenteredNumber(96, 50, Stats_StrumBar.Current_MaxPerSecond); // UpDownMaxPerSecondEver);
 
     SetFontCustom();
 
@@ -889,9 +876,10 @@ void loop()
   {
     // Update the total count more often - looks nicer
     SetFontFixed();
-    // Left text
-    Display.fillRect(0, 50, 44, 16, C_BLACK);
-    PrintCenteredNumber(27, 50, Stats_StrumBar.Current_TotalCount); // UpDownTotalCount);
+
+    // Left text Stats - STATS DISPLAY TEMP DISABLED
+    // Display.fillRect(0, 50, 44, 16, C_BLACK);
+    // PrintCenteredNumber(27, 50, Stats_StrumBar.Current_TotalCount); // UpDownTotalCount);
   }
 
   SetFontCustom();
@@ -1140,7 +1128,7 @@ void loop()
     if (PreviousBTConnectionState != BTConnectionState)
     {
       // Draw the connected icon
-      RenderIcon(Icon_BTOK, 65, 52, 16, 12);
+      RenderIcon(Icon_OK, uiBTStatus_xPos, uiBTStatus_yPos, 16, 12);
       PreviousBTConnectionState = BTConnectionState;
 
 #ifdef USE_EXTERNAL_LED
@@ -1161,7 +1149,7 @@ void loop()
   {
     // No Bluetooth - always be updating the searching icons
     if (SecondRollover)
-      RenderIcon(SecondFlipFlop ? Icon_EyesLeft : Icon_EyesRight, 65, 52, 16, 12); // Blanking area big enough to cover the `OK` if required
+      RenderIcon(SecondFlipFlop ? Icon_EyesLeft : Icon_EyesRight, uiBTStatus_xPos, uiBTStatus_yPos, 16, 12); // Blanking area big enough to cover the `OK` if required
 
     // Hunting for Bluetooth flashing blue status
     if (SecondFlipFlop)
@@ -1187,8 +1175,8 @@ void loop()
   PreviousBTConnectionState = BTConnectionState;
 
 #ifdef WIFI
-  if (SecondRollover) 
-    Network->HandleWifi(Second);
+  if (SecondRollover)
+    Network::HandleWifi(Second);
 #endif
 
 #ifdef INCLUDE_BENCHMARKS

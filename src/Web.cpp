@@ -10,9 +10,15 @@
 #include "rapidjson/stringbuffer.h"
 #include "Config.h"
 #include "Arduino.h"
+#include "IconMappings.h"
+#include "Icons.h"
+#include "Screen.h"
 
 extern Stats *AllStats[];
 extern int AllStats_Count;
+
+// Number of sub second loops to display traffic for. E.g. 30fps = ~33ms * 5 = 165ms
+#define TrafficDisplayTime 5
 
 void Web::SetUpRoutes(AsyncWebServer &server)
 {
@@ -38,6 +44,8 @@ void Web::SetUpRoutes(AsyncWebServer &server)
     // Also wanted extra flexibility to debug/print what was going on
     server.onNotFound([](AsyncWebServerRequest *request)
                       {
+                          ShowTraffic = TrafficDisplayTime + 1000; // +1 gives us some leeway to try make sure separate thread doesn't reduce this in the RenderIcon before it displays something
+
                           String path = request->url();
 
 #ifdef EXTRA_SERIAL_DEBUG
@@ -276,3 +284,31 @@ void Web::SendJson_Stats(AsyncWebServerRequest *request)
 //       request->send(400, "application/json", "{\"error\":\"Missing parameters\"}");
 //   }
 // }
+
+
+int Web::ShowTraffic = -1;
+
+void Web::RenderIcons()
+{
+    // if (FinalWifiCharacter != LastWifiCharacter)
+    // {
+         RenderIcon(Icon_Web_Enabled, uiWebServer_xPos, uiWebServer_yPos, 16, 16);
+    //     LastWifiCharacter = FinalWifiCharacter;
+    // }
+    // if (WifiStatusCharacter != LastWifiStatusCharacter)
+    // {
+
+    // Show traffic when it first happens
+    if (ShowTraffic > TrafficDisplayTime) {
+         RenderIcon(Icon_Web_Traffic, uiWebServerStatus_xPos, uiWebServerStatus_yPos, 5, 11);
+         ShowTraffic = TrafficDisplayTime;
+    }
+
+    if (ShowTraffic > 0)
+        ShowTraffic--;  // Little delay
+    else
+    {
+        Display.fillRect(uiWebServerStatus_xPos, uiWebServerStatus_yPos + 1, 5, 11, C_BLACK ); // Top pixel doesn't need blanking
+        ShowTraffic = -1;
+    }
+}
