@@ -4,6 +4,8 @@
 
 extern int ExternalLedsEnabled[];
 
+uint32_t rnd = random();
+
 // NOTES:
 // FastLED does have faster routines than some of the below
 // however our array's of LED's may be in any order (rather than continuous allocations of memory) and have other bits and bobs going on
@@ -228,8 +230,6 @@ void DigitalArrayEffects::BlendedRain(void *digitalInput, float time)
 // TODO: Analog with value mapped to density?
 // Rate = 0 to 0xFFFF (65535) (how likely an LED is to sparkle each frame). 5000 = 50% chance
 
-uint32_t rnd = random();
-
 void DigitalArrayEffects::Sparkle(void *digitalInput, float time)
 {
   Input *input = static_cast<Input *>(digitalInput);
@@ -324,7 +324,7 @@ void DigitalArrayEffects::SparkleTimeBlend(void *digitalInput, float time)
 
   time = time * ledConfig->Rate;
   uint8_t amount = (uint8_t)time;
-  amount = sin8(amount);  // Smooth off when number wraps
+  amount = sin8(amount); // Smooth off when number wraps
   CRGB colour = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);
 
   rnd += (uint32_t)time;
@@ -615,12 +615,14 @@ void AnalogArrayEffects::SetSingleAlongArray(void *analogInput, float time)
 
   // Clear existing colours
   for (int i = 0; i < count; i++)
-    *(ledConfig->ExternalLEDs[i]) = CRGB::Black;
+    //*(ledConfig->ExternalLEDs[i]) = CRGB::Black;
+    ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = false;
 
   // work out how far along we want our colour to show. Range = 0->255 remapped to 0->count
   int along = map(amount, 0, 255, 0, count - 1);
   // Set that LED
   *(ledConfig->ExternalLEDs[along]) = blendedColour;
+    ExternalLedsEnabled[ledConfig->LEDNumbers[along]] = true;
 }
 
 // Fills all LED's up to a point with same blended colour
@@ -639,7 +641,8 @@ void AnalogArrayEffects::FillToPointAlongArray(void *analogInput, float time)
 
   // Clear existing colours
   for (int i = 0; i < count; i++)
-    *(ledConfig->ExternalLEDs[i]) = CRGB::Black;
+    //*(ledConfig->ExternalLEDs[i]) = CRGB::Black;
+    ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = false;
 
   // work out how far along we want our colour to show. Range = 0->255 remapped to 0->count
   int along = map(amount, 0, 255, 0, count - 1);
@@ -647,6 +650,7 @@ void AnalogArrayEffects::FillToPointAlongArray(void *analogInput, float time)
   for (; along >= 0; along--)
   {
     *(ledConfig->ExternalLEDs[along]) = blendedColour;
+    ExternalLedsEnabled[ledConfig->LEDNumbers[along]] = true;
   }
 }
 
@@ -678,12 +682,14 @@ void AnalogArrayEffects::BuildBlendToEnd(void *analogInput, float time)
   for (; i < along; i++)
   {
     *(ledConfig->ExternalLEDs[i]) = blend(ledConfig->SecondaryColour.Colour, blendedColour, (fract8)rampUp);
+    ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = true;
     rampUp += rampUpRate;
   }
 
   // Clear remaining LED's
   for (; i < count; i++)
-    *(ledConfig->ExternalLEDs[i]) = CRGB::Black;
+  //  *(ledConfig->ExternalLEDs[i]) = CRGB::Black;
+    ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = false;
 }
 
 // Blends all LED's from Secondary colour to Primary colour along the array, Primary being the front moving point
@@ -713,12 +719,15 @@ void AnalogArrayEffects::SquishBlendToPoint(void *analogInput, float time)
   for (; i < along; i++)
   {
     *(ledConfig->ExternalLEDs[i]) = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, (fract8)rampUp);
+    
+    ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = true; // Could always get disabled by other effects
     rampUp += rampUpRate;
   }
 
   // Clear remaining LED's
   for (; i < count; i++)
-    *(ledConfig->ExternalLEDs[i]) = CRGB::Black;
+    //*(ledConfig->ExternalLEDs[i]) = CRGB::Black;
+    ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = false;
 }
 
 // Blends all LED's from Secondary colour to Primary colour along the array, Primary being the front moving point
@@ -742,14 +751,96 @@ void AnalogArrayEffects::PointWithTail(void *analogInput, float time)
   if (amount > 0)
   {
     // Tail
-    for (; i < tailEnd; i++)
+    for (; i < tailEnd; i++) {
       *(ledConfig->ExternalLEDs[i]) = ledConfig->SecondaryColour.Colour;
+      ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = true;
+    }
 
     // Front
+    ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = true;
     *(ledConfig->ExternalLEDs[i++]) = ledConfig->PrimaryColour.Colour;
   }
 
   // Clear remaining LED's
   for (; i < count; i++)
-    *(ledConfig->ExternalLEDs[i]) = CRGB::Black;
+    //*(ledConfig->ExternalLEDs[i]) = CRGB::Black;
+    ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = false;
+}
+
+// ===============================================================
+// General effects - not linked to specific input
+// e.g. Idle effects (when controllers getting bored)
+// e.g. Stats effects - showing how many times a button or combination of buttons were pressed
+
+// Ideally when LED's are turned off, just disable them rather than
+// setting to e.g. black, else they won't fade out nicely
+
+// Requires LED effect to have statistics set up
+// Note we attach stats via LED configuration setting rather than the digital input
+void GeneralArrayEffects::Elastic(void *externalLEDConfig, float time)
+{
+  ExternalLEDConfig *ledConfig = (ExternalLEDConfig *)externalLEDConfig;
+
+  // Want access to elastic statistics
+  Stats *stats = ledConfig->EffectStats;
+
+  float perc = stats->ElasticPercentage * 255.0;
+
+  for (int i = 0; i < ledConfig->LEDNumbersCount; i++)
+  {
+    float amount = ((float)(i) / (float)(ledConfig->LEDNumbersCount)) * 255.0;
+
+    if (amount < perc) {
+      *(ledConfig->ExternalLEDs[i]) = blend(ledConfig->PrimaryColour.Colour, ledConfig->SecondaryColour.Colour, amount);     
+      ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = true; // Could always get disabled by other effects
+    }
+    else {
+      //colour = CRGB::Black;
+      ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = false; // Could always get disabled by other effects
+    }
+  }
+}
+
+uint32_t seed = 0x89ADCBEF;
+// Random colours, ignores Primary and Secondary colour enabled flags
+// Is written so the randomness is throttled - i.e. doesn't change every frame, but slower
+// so you get to see random colours appearing and disappearing in a calmer way
+void GeneralArrayEffects::Random(void *externalLEDConfig, float time)
+{
+  ExternalLEDConfig *ledConfig = (ExternalLEDConfig *)externalLEDConfig;
+
+  uint32_t chance = ledConfig->Chance;
+
+  uint32_t repRnd = seed * (uint32_t)(time * 2.5);    // Should change around 4 times a second
+
+  CRGB colour;
+
+  // rnd += (uint32_t)time;
+  for (int i = 0; i < ledConfig->LEDNumbersCount; i++)
+  {
+
+    // Nice fast random
+    repRnd ^= repRnd << 13;
+    repRnd ^= repRnd >> 17;
+    repRnd ^= repRnd << 5;
+
+    if (chance > (repRnd & 0xFFFF))
+    {
+      //*(ledConfig->ExternalLEDs[i]) = CHSV(random8(), 255, 255);
+      *(ledConfig->ExternalLEDs[i]) = CHSV(repRnd & 0xFF, 255, 255);
+      ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = true;
+    }
+    else
+    {
+      ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = false;
+    }
+  }
+}
+
+void GeneralArrayEffects::DisableAll(void *externalLEDConfig, float time)
+{
+  ExternalLEDConfig *ledConfig = (ExternalLEDConfig *)externalLEDConfig;
+
+  for (int i = 0; i < ledConfig->LEDNumbersCount; i++)
+    ExternalLedsEnabled[ledConfig->LEDNumbers[i]] = false;
 }

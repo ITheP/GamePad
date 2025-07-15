@@ -16,6 +16,7 @@
 #include "Network.h"
 #include "Secrets.h"
 #include "Screen.h"
+#include "UI.h"
 
 #define WIFI
 
@@ -109,6 +110,7 @@ unsigned long PreviousMicroS = 0;
 
 float Now;
 float PreviousNow;
+float LastTimeAnyButtonPressed = 0;
 
 int PreviousSecond = -1;
 int Second = 0;
@@ -132,6 +134,9 @@ float NextLEDUpdatePoint = 0;
 
 int DisplayRollover = false; // Throttling flag for display updates
 float NextDisplayUpdatePoint = 0;
+
+int ControllerIdle = false;
+int ControllerIdleJustUnset = false;
 
 void setup()
 {
@@ -274,6 +279,14 @@ void setup()
     pinMode(input->Pin, INPUT_PULLUP);
     input->ValueState.Value = input->DefaultValue;
 
+    // Make sure any long press inputs (child inputs) have their parent set to help identify they are a child
+    // Needed to make sure child inputs are skipped in certain circumstances - they are processed via their parent
+    // LED's etc. ignore this and process all inputs always - never know what might need to be shown!
+    // It is somewhat up to the designer/specifications to work out how to make sure nothing
+    // conflicts if things like inputs use the same LED's as each other and what effects are in place
+    if (input->LongPressChildInput != nullptr)
+      input->LongPressChildInput->LongPressParentInput = input;
+
 #ifdef USE_EXTERNAL_LED
     ExternalLEDConfig *config = input->LEDConfig;
 
@@ -365,6 +378,30 @@ void setup()
     }
 #endif
   }
+
+ #ifdef USE_EXTERNAL_LED
+  // Misc LEDs
+  Serial.println("Misc LED Effects: " + String(MiscLEDEffects_Count));
+  for (int i = 0; i < MiscLEDEffects_Count; i++)
+  {
+        ExternalLEDConfig *config = MiscLEDEffects[i];
+
+    if (config != nullptr)
+      InitExternalLED(config, ExternalLeds);
+  }
+#endif
+
+ #ifdef USE_EXTERNAL_LED
+  // Idle LEDs
+  Serial.println("Idle LED Effects: " + String(IdleLEDEffects_Count));
+  for (int i = 0; i < IdleLEDEffects_Count; i++)
+  {
+        ExternalLEDConfig *config = IdleLEDEffects[i];
+
+    if (config != nullptr)
+      InitExternalLED(config, ExternalLeds);
+  }
+#endif
 
   delay(SETUP_DELAY);
 
@@ -845,7 +882,7 @@ void loop()
     }
 
     // UpDownCount_SecondPassed(Second);
-    void UpdateSecondStats(int second);
+    UpdateSecondStats(Second);
 
     SetFontFixed();
 
@@ -895,6 +932,14 @@ void loop()
   for (int i = 0; i < DigitalInputs_Count; i++)
   {
     input = DigitalInputs[i];
+
+    // Skip (child) digital inputs that have a LongPressParentInput - their processing will be handled indirectly via the parent
+    if (input->LongPressParentInput != nullptr)
+    {
+      // Serial.println("Skipping " + String(input->Label) + " as it has a parent input");
+      continue;
+    }
+
     input->ValueState.StateJustChanged = false;
 
     unsigned long timeCheck = micros();
@@ -904,19 +949,121 @@ void loop()
       state = digitalRead(input->Pin);
 
       // Serial.print(state);
-      // Process when state has changed
-      if (state != input->ValueState.Value)
+
+      int skipCheck = false;
+
+      // Digital inputs are easy, EXCEPT when using time delays
+      // e.g. you might have a Select button, however if that Select button is held down for more than 1 second, rather than
+      // delivering a Select button press, it ignores that and instead calls some custom code to e.g. change the controller mode to go to custom
+      // controller menu
+
+      // Bluetooth press/release operations should be paired nicely to keep on top of a proper controller state
+      // so we can't just send a Bluetooth press, wait a bit to see what release happens - might not be wanted
+
+      // if has linked input then
+      if (input->LongPressChildInput != nullptr)
       {
-        // PRESSED!
-        input->ValueState.Value = state;
+        //input->ValueState.Value = LONG_PRESS_MONITORING;
+        unsigned long timeDifference = timeCheck - input->ValueState.StateChangedWhen;
+        // Serial.println("NAME - " + String(input->Label));
+        //     Serial.println("State - " + String(state) + " for " + String(input->ValueState.Value));
+        if (state == PRESSED)
+        {
+          if (input->ValueState.Value != LONG_PRESS_MONITORING)
+          {
+            Serial.println("LONG PRESSED INITIATED");
+            input->ValueState.Value = LONG_PRESS_MONITORING;
+            input->ValueState.StateChangedWhen = timeCheck;
+          }
+          else if (timeDifference >= input->LongPressTiming)
+          {
+            //Serial.println("LONG PRESSED TIMING TRIGGER " + String(timeDifference) + " vs " + String(input->LongPressTiming));
+            // Past long press time, pass child on to main routine
+            input = input->LongPressChildInput;
+          }
+          // else
+          // {
+          //   Serial.println("Waiting " + String(timeDifference) + " vs " + String(input->LongPressTiming));
+          // }
+        }
+        else // if (state == NOT_PRESSED)
+        {
+          if (timeDifference >= input->LongPressTiming)
+          {
+            // We were monitoring a long press, so we need to release the child input
+
+            // first, de-escalate the long press monitoring
+            input->ValueState.Value = NOT_PRESSED;
+
+            // pass along child input to have its release processed
+            input = input->LongPressChildInput;
+
+            //    Serial.println("LONG NOT PRESSED");
+          }
+          else
+          {
+            if (input->ValueState.Value == LONG_PRESS_MONITORING)
+            {
+              // This was a short press, so we need to trigger the primary input
+              input->ValueState.Value = NOT_PRESSED; // Will force a press when we process the input below
+              state = PRESSED;                       // Force a pretend pressing for this cycle for this input
+              // Next loop will pick up it is not pressed any more and do the release
+              Serial.println("LONG SHORT PRESSED");
+
+              input->AutoHold = timeCheck + input->ShortPressReleaseTime;
+            }
+          }
+          
+          // Sorts out holding button after released for a time frame - means
+          // short press triggers can be for a bigger time period for things
+          // like UI components and LED's to show long enough the user can see them
+          if (input->AutoHold > timeCheck)
+          {
+            state = PRESSED;
+          }
+        }
+      }
+
+      // Process when state has changed
+      if (state != input->ValueState.Value && input->ValueState.Value != LONG_PRESS_MONITORING)
+      {
         input->ValueState.PreviousValue = !state;
+        input->ValueState.Value = state;
         input->ValueState.StateChangedWhen = timeCheck;
         input->ValueState.StateJustChanged = true;
         input->ValueState.StateJustChangedLED = true;
 
+        // Digital inputs are easy, EXCEPT when using time delays
+        // e.g. you might have a Select button, however if that select button is held down for more than 1 second, rather than
+        // delivering a Select button press, it ignores that and instead calls some custom code to e.g. change the controller mode to go to custom
+        // controller menu
+
+        // Bluetooth press/release operations should be paired nicely to keep on top of a proper controller state
+        // so we can't just send a Bluetooth press, wait a bit to see what release happens...
+
+        // If input->DelayedPressTiming > 0 then we don't do a press until the button is pressed and then released again before the press time happens
+        // else we treat it normally
+
+        // A delayed operation...
+        // Finding it out
+        // The digital input we pick up there is a delayed operation
+        // if its NOT triggered, then we flag here as a Press and Unpress at the same time
+        // AND set a `do the led's anyway` flag so the LED code can run for 1 loop
+        // If it IS triggered, then we just pass on the fact there is an input press going on based on the timing as if the timing zeros itself
+        // on the press length. That way the long press input should act like a normal input and can be processed as such.
+        // The secondary control should know no better!
+        // Theoretically we can chain them together maybe?
+
+        // OK SO if delay time ISNT met and we want to do an instant press release
+        // check for state == low, and if there was a delay timer then
+        // basically treat state == gone low + timer < delay = high, then next time through the state = high + timer < delay is time to go low
+        // MAY need an extra state = DELAY that lets us know we are delay checking untill eventually it goes high or gets passed on
+
         // We have to check input states not just for Bluetooth inputs, as buttons might control device functionality
-        if (state == LOW)
+        if (state == PRESSED)
         {
+          // PRESSED!
+
           if (input->BluetoothInput != 0)
           {
 
@@ -925,6 +1072,14 @@ void loop()
 
             sendReport = true;
           }
+
+          // Statistics
+          if (input->Statistics != nullptr)
+            input->Statistics->AddCount();
+
+          // Any extra special custom to specific controller code
+          if (input->CustomOperationPressed != NONE)
+            input->CustomOperationPressed();
         }
         else
         {
@@ -936,13 +1091,13 @@ void loop()
 
             sendReport = true;
           }
+
+          // Any extra special custom to specific controller code
+          if (input->CustomOperationReleased != NONE)
+            input->CustomOperationReleased();
         }
 
         input->RenderOperation(input);
-
-        // Any extra special custom to specific controller code
-        if (input->CustomOperation != NONE)
-          input->CustomOperation();
       }
     }
   }
@@ -974,8 +1129,8 @@ void loop()
         input->RenderOperation(input);
 
         // Any extra special custom to specific controller code
-        if (input->CustomOperation != NONE)
-          input->CustomOperation();
+        if (input->CustomOperationPressed != NONE)
+          input->CustomOperationPressed();
 
         sendReport = true;
       }
@@ -1079,6 +1234,10 @@ void loop()
       // Any extra special custom to specific controller code
       if (hatInput->CustomOperation != NONE)
         hatInput->CustomOperation(hatInput);
+
+      // Statistics
+      if (hatInput->Statistics[hatCurrentState] != nullptr)
+        hatInput->Statistics[hatCurrentState]->AddCount();
     }
   }
 
@@ -1109,6 +1268,22 @@ void loop()
   // leftVryJoystickValue = map(leftVryJoystickLecture, 0, 4095, 0, 32737);
   // rightVrxJoystickValue = map(rightVrxJoystickLecture, 4095, 0, 0, 32737);
   // rightVryJoystickValue = map(rightVryJoystickLecture, 0, 4095, 0, 32737);
+
+  // Little generalised check to see if anything has changed
+  if (sendReport)
+     LastTimeAnyButtonPressed = Now;
+
+  // Call idle LED effects etc. if controllers not had anything pressed for a while
+  if (Now - LastTimeAnyButtonPressed > 5.0)
+      ControllerIdle = true;
+  else
+  {
+    if (ControllerIdle) {
+      ControllerIdleJustUnset = true;
+      ControllerIdle = false;
+    }
+  }
+
 
   // Bluetooth
   BTConnectionState = bleGamepad.isConnected();

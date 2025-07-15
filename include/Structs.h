@@ -31,6 +31,7 @@ typedef struct IconRun {
 typedef struct State {
   int StateJustChanged; // = false;       // Used for things like LED effects that only want to change a value when a state change happens
   unsigned long StateChangedWhen;
+  unsigned long StateChangedWhenStart;    // Extra tag that just records when a positive (pressed) state change happened, so after a release we can calculate how long it took
   int StateJustChangedLED;                // Sticks around till LED processing is done, then set to false again
   int16_t Value;
   int16_t PreviousValue;
@@ -46,9 +47,10 @@ typedef struct Input {
   BleGamepadFunctionPointer BluetoothPressOperation;
   BleGamepadFunctionPointer BluetoothReleaseOperation; 
   BleGamepadFunctionPointerInt BluetoothSetOperation;
+  void (*CustomOperationPressed)();             // Custom/specific operation, code may be within controller .cpp
+  void (*CustomOperationReleased)();            // Custom/specific operation, code may be within controller .cpp
 
   void (*RenderOperation)(struct Input*);       // How input is rendered to the screen
-  void (*CustomOperation)();               // Custom/specific operation, code may be within controller .cpp
 
   int XPos;
   int YPos;
@@ -58,13 +60,20 @@ typedef struct Input {
   unsigned char TrueIcon;
   unsigned char FalseIcon;
 
-  Stats *Statistics;                                 // Stats for this input, if required
+  Stats *Statistics;                            // Stats for this input, if required
                                                 // Below LED's are ALWAYS used/set, non existence defaults to {0,0,0,false} which will turn things off
   LED OnboardLED;                               // Onboard LED is merged into other Onboard LED colours to create a `final combined colour`. Max of each R,G,B component generally gets used.
   ExternalLEDConfig* LEDConfig;
 
   int BluetoothIdOffset;                        // Set > 0 to enable this Input for Bluetooth Id override inclusion on startup
   State ValueState;
+
+  unsigned long LongPressTiming;                // Delayed operation timing in milliseconds for alternative press operation
+  Input *LongPressChildInput;                   // Equivalent Input configuration that kicks in if a delayed operation is required and is triggered
+  Input *LongPressParentInput;                  // Pointer back to the parent input that triggered the long press, so we can access the original input's timing
+  unsigned long ShortPressReleaseTime;          // If this was a short press, how long to auto-hold the button on for
+
+  unsigned long AutoHold;                       // Timer used to automatically hold a button for a time period after release *used with ShortPressReleaseTime)
 } Input;
 
 // DPad input - Hat's have 4 inputs for Up/Down/Left/Right

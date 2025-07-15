@@ -18,10 +18,18 @@ class Stats
 public:
     // Constructors
     Stats(const char *description);
+    Stats(const char *description, float elasticReductionRate, float elasticMax);
     Stats(const char *description, Stats *nextStat);
+    Stats(const char *description, float elasticReductionRate, float elasticMax, Stats *nextStat);
 
     const char *Description;
     
+    // Elastic stat, useful for things like certain LED effects
+    // Elastic as the value stretches towards the max value as counts are increased, but there is a constant reduction rate too so over time it will naturally return back to nothing
+    float ElasticReductionRate;       // 0 to disable Elastic calculations
+    float ElasticMax;
+    float ElasticPercentage;
+
     // Stats for current
     int Current_SecondCount;
     int Current_TotalCount;
@@ -83,4 +91,5 @@ private:
     int Counts[STATS_MINUTE_COUNT];
     int SubCounts[STATS_SUBCOUNTS_COUNT];
     int SubCountPos = 0;
+    float ElasticCount;
 };

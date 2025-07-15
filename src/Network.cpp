@@ -7,6 +7,7 @@
 #include "IconMappings.h"
 #include "Icons.h"
 #include "Web.h"
+#include "UI.h"
 
 #include "Secrets.h"
 
@@ -95,8 +96,8 @@ void Network::HandleWifi(int second)
             // -75 to -85 dBm - Weak, slow speeds or disconnects
             // < -85dBm       - Unusual, frequent disconnects
 
-#ifdef EXTRA_SERIAL_DEBUG
-            Serial.println(ap_info.rssi);
+#ifdef EXTRA_SERIAL_DEBUG_PLUS
+            Serial.println("WiFi Strength: " + String(ap_info.rssi));
 #endif
 
             // Update Wifi icon with relevant signal level if required

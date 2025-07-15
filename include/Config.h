@@ -25,33 +25,15 @@
 
 #define SUB_SECOND_COUNT         30     // Number of sub-samples to take across a second when calculating clicks per second counts. Higher number = more accurate but more overhead.
 #define DISPLAY_UPDATE_RATE      0.016  // Fraction of a second to wait between display updates - 0.016 = 16ms = ~60FPS
-#define LED_UPDATE_RATE          0.005  // Fraction of a second to wait between throttled updates - default is faster than 60fps to account for animation effects where we want faster propagation
+#define LED_UPDATE_RATE          0.005  // Fraction of a second to wait between throttled updates - default is faster than 60fps to account for animation effects where we want faster propagation across LED arrays
 
 // Some standard values
 #define LOW 0x0
 #define HIGH 0x1
+
+#define PRESSED 0x0
+#define NOT_PRESSED 0x1
+#define LONG_PRESS_MONITORING 0x2
+#define LONG_PRESS 0x3
+
 #define NONE 0
-
-// TODO: proper positional framework
-
-#define uiUSB_yPos 53
-
-
-//#define uiWiFiStatus_xPos (uiWiFi_xPos + 15)
-//#define uiWiFiStatus_yPos (uiWiFi_yPos + 2)
-
-#define uiWebServer_xPos 22
-#define uiWebServer_yPos 51
-#define uiWebServerStatus_xPos (uiWebServer_xPos + 16)
-#define uiWebServerStatus_yPos (uiWebServer_yPos)
-
-#define uiWiFi_xPos (uiWebServer_xPos + 23)
-#define uiWiFi_yPos 51
-
-#define uiBT_xPos 75
-#define uiBT_yPos 51
-#define uiBTStatus_xPos (uiBT_xPos + 11)
-#define uiBTStatus_yPos (uiBT_yPos + 1)
-
-#define uiBattery_xPos 112
-#define uiBattery_yPos 52

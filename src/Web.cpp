@@ -13,6 +13,7 @@
 #include "IconMappings.h"
 #include "Icons.h"
 #include "Screen.h"
+#include "UI.h"
 
 extern Stats *AllStats[];
 extern int AllStats_Count;
@@ -115,14 +116,16 @@ void Web::SetUpRoutes(AsyncWebServer &server)
                               else
                               {
                                   request->send(404, "text/plain", "File Not Found");
+#ifdef EXTRA_SERIAL_DEBUG
                                   Serial.println("Request for " + request->url() + ": File Not Found (404 returned)");
+#endif
 
                                   success = 0;
                               }
                           }
 
 #ifdef EXTRA_SERIAL_DEBUG
-                          if (success == 1)
+                          if (1 == success)
                           {
                               unsigned long end = millis();
                               Serial.print("Request for " + request->url() + " took : " + String(end - start) + "ms");
@@ -202,14 +205,14 @@ std::string Web::GetPage_Main()
         << "Firmware version: " << FirmwareRevision
         << ", Hardware version: " << HardwareRevision
         << ", Software version: " << SoftwareRevision << "<br/>"
-        << "Battery: " << Battery::GetLevel() << "%<br/>"
-        << "<h2>Statistics Overview</h2>"
-        << "<p>Last update time: <span id='currentTime'></span></p>"
-        << "<label><input type='checkbox' id='refreshBox' onchange='toggleRefresh()' checked> Auto-refresh stats every 5s</label>"
-        << "<div id='countdownDisplay' style='margin-top:10px; font-size:16px; font-weight:bold;'></div>"
-        << "<div id='statsTable'>"
-        << Web::GetComponent_StatsTable()
-        << "</div>";
+        << "Battery: " << Battery::GetLevel() << "%<br/>";
+        // << "<h2>Statistics Overview</h2>"
+        // << "<p>Last update time: <span id='currentTime'></span></p>"
+        // << "<label><input type='checkbox' id='refreshBox' onchange='toggleRefresh()' checked> Auto-refresh stats every 5s</label>"
+        // << "<div id='countdownDisplay' style='margin-top:10px; font-size:16px; font-weight:bold;'></div>"
+        // << "<div id='statsTable'>"
+        // << Web::GetComponent_StatsTable()
+        // << "</div>";
 
     return html.str();
 }

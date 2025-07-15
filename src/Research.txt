@@ -1,0 +1,13 @@
+Disable serial example, if needed?
+extra_flags={build.usb_flags} -DCDC_DISABLED
+
+
+Possible controller id's
+Rock Band Guitar Controller...
+VID=0x1BAD
+PID=0x0004
+leonardo.build.usb_product="Mockband Guitar"
+
+Rock Band 2 Drums
+VID=0x1BAD
+PID=0x3110

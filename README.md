@@ -29,7 +29,7 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 
 Includes...
 
-
+- [ ] Stats - flag to say if to bother counting per second counts or not
 - [x] OLED screen support
 - [x] Custom icons
 - [x] Battery life indicator
@@ -70,6 +70,7 @@ Includes...
 - [ ] Activity screen blanking (unlikely to see screen if playing) [power saving]
 - [ ] Test/debug screen - show pins etc. on button presses (access via boot option?)
 - [ ] Investigate ESP32-S3 cpu throttling (reduce mhz) power saving mode
+- [ ] Settings using whammy bar - e.g. hold button to set brightness and wiggle whammy bar to set it
   
 ## To Do - Electronics
 

@@ -4,6 +4,7 @@
 // #include "ControllerConfig.h"
 #include "DeviceConfig.h"
 #include "GamePad.h"
+#include "LEDEffects.h"
 
 #ifdef INCLUDE_BENCHMARKS_LED
 #include "Benchmark.h"
@@ -82,6 +83,26 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
       LEDPreviousSecond = Second;
 
       LEDBenchmark.Start("UpdateLEDs", secondRollover);
+#endif
+
+#ifdef USE_EXTERNAL_LED
+      // If idle just finished, make sure all LED's fade out
+      if (ControllerIdleJustUnset)
+      {
+        for (int i = 0; i < IdleLEDEffects_Count; i++)
+        {
+          ExternalLEDConfig *ledConfig = IdleLEDEffects[i];
+
+          if (ledConfig != nullptr)
+             GeneralArrayEffects::DisableAll(ledConfig, Now);
+        }
+
+        ControllerIdleJustUnset = false;
+      }
+#endif
+
+#ifdef INCLUDE_BENCHMARKS_LED
+      LEDBenchmark.Snapshot("Loop.MiscLEDEffects", secondRollover);
 #endif
 
       // Digital handling
@@ -242,9 +263,9 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
             if (ledConfig->Effect == nullptr)
               *(ledConfig->ExternalLED) = ledConfig->PrimaryColour.Colour;
 
-              ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Enabled;
-            }
+            ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Enabled;
           }
+        }
 
         if (ledConfig != nullptr && ledConfig->Effect != nullptr && (ExternalLedsEnabled[ledConfig->LEDNumber] || ledConfig->RunEffectConstantly))
           ledConfig->Effect(hatInput, Now);
@@ -273,6 +294,43 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
 
 #ifdef INCLUDE_BENCHMARKS_LED
       LEDBenchmark.Snapshot("Loop.HATInputs", secondRollover);
+#endif
+
+#ifdef USE_EXTERNAL_LED
+      // Misc. always running LED effects (not dependant on inputs)
+      for (int i = 0; i < MiscLEDEffects_Count; i++)
+      {
+        ExternalLEDConfig *ledConfig = MiscLEDEffects[i];
+
+        if (ledConfig != nullptr && ledConfig->Effect != nullptr)
+          ledConfig->Effect(ledConfig, Now);
+      }
+#endif
+
+#ifdef INCLUDE_BENCHMARKS_LED
+      LEDBenchmark.Snapshot("Loop.MiscLEDEffects", secondRollover);
+#endif
+
+#ifdef USE_EXTERNAL_LED
+      // TODO: If idle just unset - need to unset all LEDs to be disabled
+      // Must do this as FIRST thing before all other LED effects above are processed
+      // if (ControllerIdleJustUnset)
+
+      // Idle LED effects
+      if (ControllerIdle)
+      {
+        for (int i = 0; i < IdleLEDEffects_Count; i++)
+        {
+          ExternalLEDConfig *ledConfig = IdleLEDEffects[i];
+
+          if (ledConfig != nullptr && ledConfig->Effect != nullptr)
+            ledConfig->Effect(ledConfig, Now);
+        }
+      }
+#endif
+
+#ifdef INCLUDE_BENCHMARKS_LED
+      LEDBenchmark.Snapshot("Loop.MiscLEDEffects", secondRollover);
 #endif
 
       // Copy around any LEDs that need duplicating
@@ -321,11 +379,12 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
       float r, g, b;
       // As External LED's are updated to a value sporadically on press, and held without repeatedly being set each frame, we only fade when an LED is set as being disabled (i.e. a nice fade to being off)
       // TODO: Fade to an off colour rather than black?
+
       for (int i = 0; i < ExternalLED_FadeCount; i++)
       {
-        crgb = &ExternalLeds[i];
         if (!ExternalLedsEnabled[i])
         {
+          crgb = &ExternalLeds[i];
           crgb->fadeToBlackBy(externalFadeRate);
         }
       }

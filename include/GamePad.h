@@ -14,3 +14,5 @@ extern char SerialNumber[];
 extern char DeviceName[];
 extern const char* DeviceNames[];
 extern int DeviceNamesCount;
+extern int ControllerIdle;
+extern int ControllerIdleJustUnset;

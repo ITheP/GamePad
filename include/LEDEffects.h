@@ -2,6 +2,7 @@
 
 #include "FastLED.h"
 
+// Digital Input triggered effects, applied to individual LED
 class DigitalEffects
 {
 public:
@@ -14,6 +15,7 @@ public:
   static void MoveRainbow(void *digitalInput, float time);
 };
 
+// Digital Input triggered effects, applied to an array of LED's
 class DigitalArrayEffects
 {
 public:
@@ -24,6 +26,7 @@ public:
   static void SparkleTimeBlend(void *digitalInput, float time);
 };
 
+// HAT Input triggered effects
 class HatEffects
 {
 public:
@@ -36,6 +39,7 @@ public:
   static void MoveRainbow(void *hatInput, float time);
 };
 
+// Analog Input triggered effects, applied to individual LED
 class AnalogEffects
 {
 public:
@@ -51,6 +55,7 @@ public:
   static void BlendedEndAtHue(void *analogInput, float time);
 };
 
+// Analog Input triggered effects, applied to an array of LED's
 class AnalogArrayEffects
 {
 public:
@@ -59,4 +64,17 @@ public:
   static void BuildBlendToEnd(void *analogInput, float time);
   static void SquishBlendToPoint(void *analogInput, float time);
   static void PointWithTail(void *analogInput, float time);
+};
+
+// General effects, that run independent to any input
+class GeneralArrayEffects
+{
+public:
+  // Uses Stats linked to the LEDConfig to determine the percentage of the LED's that should be lit
+  static void Elastic(void* ExternalLEDConfig, float time);
+
+  static void Random(void* ExternalLEDConfig, float time);
+
+  // Used to disable all LED's e.g. end of Idle state so everything fades out
+  static void DisableAll(void* ExternalLEDConfig, float time);
 };

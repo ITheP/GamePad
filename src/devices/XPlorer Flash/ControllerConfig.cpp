@@ -1,0 +1,456 @@
+#include <optional>
+#include <vector>
+#include "Config.h"
+#include "RenderInput.h"
+#include "LED.h"
+#include "IconMappings.h"
+#include "Stats.h"
+#include "LEDEffects.h"
+//#include "LEDConfig.h"
+
+#include "DeviceConfig.h"
+#include <Screen.h>
+
+char ControllerType[] = "Guitar Controller";
+char ModelNumber[] = "Guitar 1.0";
+char FirmwareRevision[] = "1.0";
+char HardwareRevision[] = "1.0";
+char SoftwareRevision[] = "1.0";
+
+// List of LED's we want cloning (lets you copy LED values between each other)
+// e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
+// { { LED_Src, LED_Destination }, ... };
+IntPair LEDClones[] = {
+  { LED_WhammySide1, LED_WhammySide2 + 13},
+  { LED_WhammySide1 + 1, LED_WhammySide2 + 12},
+  { LED_WhammySide1 + 2, LED_WhammySide2 + 11},
+  { LED_WhammySide1 + 3, LED_WhammySide2 + 10},
+  { LED_WhammySide1 + 4, LED_WhammySide2 + 9},
+  { LED_WhammySide1 + 5, LED_WhammySide2 + 8},
+  { LED_WhammySide1 + 6, LED_WhammySide2 + 7},
+  { LED_WhammySide1 + 7, LED_WhammySide2 + 6},
+  { LED_WhammySide1 + 8, LED_WhammySide2 + 5},
+  { LED_WhammySide1 + 9, LED_WhammySide2 + 4},
+  { LED_WhammySide1 + 10, LED_WhammySide2 + 3},
+  { LED_WhammySide1 + 11, LED_WhammySide2 + 2},
+  { LED_WhammySide1 + 12, LED_WhammySide2 + 1},
+  { LED_WhammySide1 + 13, LED_WhammySide2}
+};
+int LEDClones_Count = sizeof(LEDClones) / sizeof(LEDClones[0]);
+
+// Idle LED effects - which might span LED's all over the place
+// ExtraLEDEffect IdleLEDEffects[] = {
+//   &effect,
+//   { LED_StrumBarSide1, LED_StrumBarSide1 + 1, LED_StrumBarSide1 + 2, LED_StrumBarSide1 + 3, LED_StrumBarSide1 + 4, LED_StrumBarSide1 + 5, LED_StrumBarSide1 + 6, LED_StrumBarSide1 + 7,
+//     LED_FretLEDs, LED_FretLEDs + 1, LED_FretLEDs + 2, LED_FretLEDs + 3, LED_FretLEDs + 4,
+//     LED_StrumBarSide1, LED_StrumBarSide1 + 1, LED_StrumBarSide1 + 2, LED_StrumBarSide1 + 3, LED_StrumBarSide1 + 4, LED_StrumBarSide1 + 5, LED_StrumBarSide1 + 6, LED_StrumBarSide1 + 7
+//   },
+// }
+
+IconRun ControllerGfx[] = {
+  { .StartIcon = Icon_Guitar3_T1, .Count = 6, .XPos = uiGuitar_xPos, .YPos = uiGuitar_yPos },
+  { .StartIcon = Icon_Guitar3_B1, .Count = 6, .XPos = uiGuitar_xPos, .YPos = uiGuitar_yPos + 16 }
+};
+
+// Usage statistics
+// Stats used in various places, including any additional chain of other stats
+Stats Stats_Neck("Neck");
+Stats Stats_Green("Green", &Stats_Neck);
+Stats Stats_Red("Red", &Stats_Neck);
+Stats Stats_Yellow("Yellow", &Stats_Neck);
+Stats Stats_Blue("Blue", &Stats_Neck);
+Stats Stats_Orange("Orange", &Stats_Neck);
+
+Stats Stats_Start_LongPress("Select Long Press");
+
+Stats Stats_StrumBar("Strum Bar");
+Stats Stats_HatUp("Strum Up", (4.0/SUB_SECOND_COUNT), 20.0, &Stats_StrumBar);
+Stats Stats_HatDown("Strum Down", (4.0/SUB_SECOND_COUNT), 20.0, &Stats_StrumBar);
+
+// Collated list of all stats to easily go through them to load/save/clear and run once per second and updates etc.
+Stats *AllStats[] = {
+  &Stats_Neck,
+  &Stats_Green,
+  &Stats_Red,
+  &Stats_Yellow,
+  &Stats_Blue,
+  &Stats_Orange,
+  &Stats_StrumBar,
+  &Stats_HatUp,
+  &Stats_HatDown,
+  &Stats_Start_LongPress
+};
+int AllStats_Count = sizeof(AllStats) / sizeof(AllStats[0]);
+
+// ToDo: RenderStats - what gets rendered where (icon/text, position, stats value, left/mid/right aligned)
+
+// Digital inputs
+
+Input DigitalInput_Green = // Green button on guitar neck
+  { .Pin = BUTTON_Green_PIN, .Label = "Green", .BluetoothInput = BUTTON_1, .DefaultValue = HIGH,
+    .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
+    .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 76, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
+    .Statistics = &Stats_Green,
+    .OnboardLED = { CRGB(0, 255, 0), true },
+    .LEDConfig = new ExternalLEDConfig {
+        .LEDNumber = LED_Green,
+        .PrimaryColour = { CRGB(0, 255, 0), true },
+        .SecondaryColour = { CRGB(0, 255, 0), false }
+    },
+    .BluetoothIdOffset = 1
+  };
+
+Input DigitalInput_Red = // Red button on guitar neck
+  { .Pin = BUTTON_Red_PIN, .Label = "Red", .BluetoothInput = BUTTON_2, .DefaultValue = HIGH,
+    .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
+    .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 69, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
+    .Statistics = &Stats_Red,
+    .OnboardLED = { CRGB(255, 0, 0), true },
+    .LEDConfig = new ExternalLEDConfig {
+        .LEDNumber = LED_Red,
+        .PrimaryColour = { CRGB(255, 0, 0), true },
+        .SecondaryColour = { CRGB(255, 0, 0), false }
+    },
+    .BluetoothIdOffset = 2
+  };
+
+Input DigitalInput_Yellow = // Yellow button on guitar neck
+  { .Pin = BUTTON_Yellow_PIN, .Label = "Yellow", .BluetoothInput = BUTTON_4, .DefaultValue = HIGH,
+    .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
+    .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 62, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
+    .Statistics = &Stats_Yellow,
+    .OnboardLED = { CRGB(255, 255, 0), true },
+    .LEDConfig = new ExternalLEDConfig {
+        .LEDNumber = LED_Yellow,
+        .PrimaryColour = { CRGB(255, 128, 0), true },
+        .SecondaryColour = { CRGB(255, 128, 0), false }
+    },
+    .BluetoothIdOffset = 3
+  }; // Onboard LED set to slightly off yellow, then if red is pressed as well, you can kind of see it a bit
+
+Input DigitalInput_Blue = // Blue button on guitar neck
+  { .Pin = BUTTON_Blue_PIN, .Label = "Blue", .BluetoothInput = BUTTON_3, .DefaultValue = HIGH,
+    .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
+    .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
+    .Statistics = &Stats_Blue,
+    .OnboardLED = { CRGB(0, 0, 255), true },
+    .LEDConfig = new ExternalLEDConfig {
+        .LEDNumber = LED_Blue,
+        .PrimaryColour = { CRGB(0, 0, 255), true },
+        .SecondaryColour = { CRGB(0, 0, 255), false }
+    },
+    .BluetoothIdOffset = 4
+  };
+
+Input DigitalInput_Orange = // Orange button on guitar neck
+  { .Pin = BUTTON_Orange_PIN, .Label = "Orange", .BluetoothInput = BUTTON_5, .DefaultValue = HIGH,
+    .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
+    .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 48, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
+    .Statistics = &Stats_Orange,
+    .OnboardLED = { CRGB(255, 128, 0), true },
+    .LEDConfig = new ExternalLEDConfig {
+        .LEDNumber = LED_Orange,
+        .PrimaryColour = { CRGB(255, 128, 0), true },
+        .SecondaryColour = { CRGB(255, 128, 0), false }
+    },
+    .BluetoothIdOffset = 5
+  };
+
+  // TEST - same as select but with some LED
+Input DigitalInput_Start_LongPress = // Select button on main body 
+  { .Pin = BUTTON_Start_PIN, .Label = "Select Long Press", .BluetoothInput = BUTTON_7, .DefaultValue = HIGH,
+    .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
+    .RenderOperation = RenderInput_DoubleIcon, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 23, .RenderWidth = 19, .RenderHeight = 5, .TrueIcon = Icon_Select1, .FalseIcon = NONE,
+    .Statistics = &Stats_Start_LongPress,
+    .OnboardLED = { CRGB(255, 255, 255), true },
+    .LEDConfig = new ExternalLEDConfig {
+        .LEDNumber = LED_StrumBarSide1,
+        .PrimaryColour = { CRGB(255, 255, 255), true },
+        .SecondaryColour = { CRGB(255, 0, 255), false }
+    }
+  };
+
+Input DigitalInput_Start = // Start button on main body
+  { .Pin = BUTTON_Start_PIN, .Label = "Start", .BluetoothInput = BUTTON_7, .DefaultValue = HIGH,
+    .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
+    .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 56, .YPos = uiGuitar_yPos + 3, .RenderWidth = 16, .RenderHeight = 5, .TrueIcon = Icon_Start, .FalseIcon = NONE,
+    .OnboardLED = { CRGB(255, 128, 0), true },
+    .LongPressTiming = 1000 * 1000, // 1sec = 1000ms = 1000000us
+    .LongPressChildInput = &DigitalInput_Start_LongPress, // Long press on Tilt button will trigger Select Long Press
+    .ShortPressReleaseTime = 250 * 1000
+  };
+
+Input DigitalInput_Select = // Select button on main body 
+  { .Pin = BUTTON_Select_PIN, .Label = "Select", .BluetoothInput = BUTTON_8, .DefaultValue = HIGH,
+    .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
+    .RenderOperation = RenderInput_DoubleIcon, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 23, .RenderWidth = 19, .RenderHeight = 5, .TrueIcon = Icon_Select1, .FalseIcon = NONE
+  };
+
+Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled vertically
+  { .Pin = BUTTON_Tilt_PIN, .Label = "Tilt", .BluetoothInput = BUTTON_9, .DefaultValue = HIGH,
+    .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
+    .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 91, .YPos = uiGuitar_yPos + 2, .RenderWidth = 7, .RenderHeight = 7, .TrueIcon = Icon_Tilt, .FalseIcon = NONE,
+    .OnboardLED = { CRGB(0, 255, 255), true },
+    .LEDConfig = new ExternalLEDConfig {
+        .LEDNumber = LED_StrumBarSide2,
+        .PrimaryColour = { CRGB(0, 255, 255), true },
+        .SecondaryColour = { CRGB(0, 255, 255), false }
+    }
+  };
+
+#define ENABLE_FLIP_SCREEN // Required if below is defined
+//#define FLIP_SCREEN_TOGGLE 1 // FlipScreen can either toggle on and off with a button press (enable), or holding a button down sets its flipped state (disable)
+Input DigitalInput_FlipScreen = // Lever on main body, will be flipped into a permanent on or off state, not just pressed
+  { .Pin = BUTTON_FlipScreen_PIN, .Label = "Flip Screen", .BluetoothInput = NONE, .DefaultValue = -2,
+    .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = NONE,
+#ifdef CLEAR_STATS_ON_FLIP
+    .CustomOperationPressed = ResetAllCurrentStats,    // When screen flips, we reset all the stats
+#endif
+    .RenderOperation = FlipScreen,
+    .XPos = 0, .YPos = 0, .RenderWidth = 0, .RenderHeight = 0, .TrueIcon = NONE, .FalseIcon = NONE
+  };
+
+// DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
+// Make sure for all DigitalInputs that have a long press reference, that the long press reference also has pointer back to the parent input
+Input *DigitalInputs[] = {
+  &DigitalInput_Green,
+  &DigitalInput_Red,
+  &DigitalInput_Yellow,   
+  &DigitalInput_Blue,
+  &DigitalInput_Orange,
+  &DigitalInput_Start,
+  &DigitalInput_Select,
+  &DigitalInput_Tilt,
+  &DigitalInput_FlipScreen,
+
+  // Other buttons of interest...
+  //{ PIN_07_D04_A4, "Vol+", VOLUME_INC_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Icon, 89, 55, 16, 5, Icon_VolUp, 0 },
+  //{ PIN_05_D02_A2, "Vol-", VOLUME_DEC_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Icon, 89, 55, 16, 5, Icon_VolDown, 0 },
+  //{ PIN_06_D03_A3, "Mute", VOLUME_MUTE_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Icon, 89, 55, 16, 5, Icon_VolMute, 0 },
+  //{ PIN_D12, "Menu", MENU_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 },
+  //{ PIN_D13, "Home", HOME_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 },
+  //{ PIN_A5, "Back", BACK_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 }
+
+  // Long press inputs
+  &DigitalInput_Start_LongPress
+};
+
+// // Secondary Digital Inputs, used for long press operations
+// // These are NOT iterated over
+// Input *LongPressDigitalInputs[] = {
+// };
+
+// // Should include both DigitalInputs AND LongPressDigitalInputs - referenced by e.g. LED code to iterate through all digital inputs
+// Input *AllDigitalInputs[] = {
+//   &DigitalInput_Green,
+//   &DigitalInput_Red,
+//   &DigitalInput_Yellow,   
+//   &DigitalInput_Blue,
+//   &DigitalInput_Orange,
+//   &DigitalInput_Start,
+//   &DigitalInput_Select,
+//   &DigitalInput_Tilt,
+//   &DigitalInput_FlipScreen
+
+//   // Other buttons of interest...
+//   //{ PIN_07_D04_A4, "Vol+", VOLUME_INC_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Icon, 89, 55, 16, 5, Icon_VolUp, 0 },
+//   //{ PIN_05_D02_A2, "Vol-", VOLUME_DEC_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Icon, 89, 55, 16, 5, Icon_VolDown, 0 },
+//   //{ PIN_06_D03_A3, "Mute", VOLUME_MUTE_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Icon, 89, 55, 16, 5, Icon_VolMute, 0 },
+//   //{ PIN_D12, "Menu", MENU_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 },
+//   //{ PIN_D13, "Home", HOME_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 },
+//   //{ PIN_A5, "Back", BACK_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 }
+// };
+
+// =============
+// Analog inputs
+
+#define Enable_Slider1 1
+
+// Specific inputs we need references to
+Input AnalogInputs_Whammy =
+  { .Pin = ANALOG_Whammy_PIN, .Label = "Whammy", .BluetoothInput = NONE, .DefaultValue = -1,
+    .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = &BleGamepad::setSlider1,
+    .RenderOperation = RenderInput_AnalogBar_Vert, .XPos = uiWhammyX + 2, .YPos = uiWhammyY + 2, .RenderWidth = uiWhammyW - 4, .RenderHeight = uiWhammyH - 4, .TrueIcon = NONE, .FalseIcon = NONE,
+    .OnboardLED = { CRGB::Pink, true },
+    .LEDConfig = new ExternalLEDConfig {
+        .LEDNumbers = { LED_WhammySide1,  (LED_WhammySide1+1), (LED_WhammySide1+2), (LED_WhammySide1+3), (LED_WhammySide1+4), (LED_WhammySide1+5), (LED_WhammySide1+6),
+                       (LED_WhammySide1+7), (LED_WhammySide1+8), (LED_WhammySide1+9), (LED_WhammySide1+10), (LED_WhammySide1+11), (LED_WhammySide1+12), (LED_WhammySide1+13)
+          },
+        .PrimaryColour = { CRGB(255, 54, 96), true},
+        .SecondaryColour = { CRGB::Green, false},
+        //.Effect = &AnalogEffects::BlendedHue
+        //.Effect = &AnalogEffects::SimpleSet_Fill
+        //.Effect = &AnalogArrayEffects::BuildBlendToEnd
+        //.Effect = &AnalogArrayEffects::SquishBlendToPoint
+        .Effect = &AnalogArrayEffects::PointWithTail
+        // .Effect = &LEDConfig::AnalogEffect_SimpleSet
+        // .Effect = &LEDConfig::AnalogEffect_Throb
+        // .Effect = &LEDConfig::AnalogEffect_Hue
+        // .Effect = &LEDConfig::AnalogEffect_StartAtHue
+        // .Effect = &LEDConfig::AnalogEffect_EndAtHue
+        // .Effect = &LEDConfig::AnalogEffect_BlendedStartAtHue
+        // .Effect = &LEDConfig::AnalogEffect_BlendedEndAtHue
+    }
+  };
+
+Input *AnalogInputs[] = {
+  &AnalogInputs_Whammy
+};
+
+// ==========
+// Hat inputs
+
+// Assumes hats are used Hat1 -> 4
+
+// Hat states, for all possible hats
+// (for simplicity, all hats are passed to bleGamepad library, even if not used)
+// To define a hat without a pin/control point, set pin to NONE - e.g. might only want to use up/down but not left/right
+
+unsigned char HatValues[] = { 0, 0, 0, 0 };
+
+// Hat used for up/down strum bar
+HatInput Hat0 =
+  {
+    .Pins = { HAT1_Up_PIN, HAT1_Right_PIN, HAT1_Down_PIN, HAT1_Left_PIN }, .Label = "1", .BluetoothHat = 0, .DefaultValue = 0,
+    .RenderOperation = RenderInput_Hat, .XPos = -4, .YPos = 25, .RenderWidth = 15, .RenderHeight = 15, .StartIcon = Icon_DPad_Neutral,
+    // .ExtraOperation = {
+    //     NONE,
+    //     UpDownCountClick,
+    //     NONE,
+    //     NONE,
+    //     NONE,
+    //     UpDownCountClick,
+    //     NONE,
+    //     NONE,
+    //     NONE
+    //   },
+    .CustomOperation = Custom_RenderHatStrumState,
+    .Statistics = {
+      nullptr,          // Centered
+      &Stats_HatUp,     // Up
+      nullptr,          // Up Right
+      nullptr,          // Right
+      nullptr,          // Down Right
+      &Stats_HatDown,   // Down
+      nullptr,          // Down Left
+      nullptr,          // Left
+      nullptr           // Up Left
+    },
+    .OnboardLED = {
+      {},
+      { CRGB::Red, true },
+      {},
+      {},
+      {},
+      { CRGB::Green, true },
+      {},
+      {},
+      {}
+    },
+    .LEDConfigs = {
+        nullptr,
+        nullptr, //new ExternalLEDConfig{.LEDNumber = LED_StrumBarSide1,  .PrimaryColour = LED(CRGB::Blue, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &HatEffects::MoveRainbow, .Rate = 255.0 * 2 }, //Throb, .Rate = 255.0 * 2 },
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr, //new ExternalLEDConfig{.LEDNumber = LED_StrumBarSide2,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &HatEffects::MoveRainbow, .Rate = 27.0 }, //TimeHue, .Rate = 27.0 },
+        //new LEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &LEDConfig::DigitalEffect_SimpleSet, .Rate = 27.0 },
+        //new LEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &LEDConfig::DigitalEffect_Throb, .Rate = 27.0 },
+        //new LEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &LEDConfig::DigitalEffect_MoveRainbow, .Rate = 27.0 },
+        //new LEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &LEDConfig::DigitalEffect_Pulse, .Rate = 27.0 },
+        //new LEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &LEDConfig::DigitalEffect_TimeHue, .Rate = 27.0 },
+        
+        nullptr,
+        nullptr,
+        nullptr
+      }
+  };
+
+HatInput *HatInputs[] = {
+  &Hat0
+};
+
+// Miscellaneous LED effects
+ExternalLEDConfig *MiscLEDEffects[] =
+  { // Strum bar elastic effect side 1 (the Up's)
+    new ExternalLEDConfig {
+        .LEDNumbers = { LED_StrumBarSide1, LED_StrumBarSide1 + 1, LED_StrumBarSide1 + 2, LED_StrumBarSide1 + 3, LED_StrumBarSide1 + 4, LED_StrumBarSide1 + 5},
+        .PrimaryColour = { CRGB(0, 255, 0), true },
+        .SecondaryColour = { CRGB(255, 0, 0), false },
+        //.Effect = &DigitalEffects::Throb,
+        ///.Effect = &DigitalArrayEffects::Rain,
+        //.Effect = &DigitalArrayEffects::BlendedRain,
+        //.Effect = &DigitalArrayEffects::SparkleTimeHue,
+        .Effect = &GeneralArrayEffects::Elastic,
+        //.RunEffectConstantly = true,
+       // .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
+       // .Chance = (uint32_t)(0.01 * 0xFFFF), // 10% chance of sparkle
+        .EffectStats = &Stats_HatUp
+    },
+
+    new ExternalLEDConfig {
+        .LEDNumbers = { LED_StrumBarSide2 + 5, LED_StrumBarSide2 + 4, LED_StrumBarSide2 + 3, LED_StrumBarSide2 + 2, LED_StrumBarSide2 + 1, LED_StrumBarSide2},
+        .PrimaryColour = { CRGB(0, 255, 0), true },
+        .SecondaryColour = { CRGB(255, 0, 0), false },
+        //.Effect = &DigitalEffects::Throb,
+        ///.Effect = &DigitalArrayEffects::Rain,
+        //.Effect = &DigitalArrayEffects::BlendedRain,
+        //.Effect = &DigitalArrayEffects::SparkleTimeHue,
+        .Effect = &GeneralArrayEffects::Elastic,
+        //.RunEffectConstantly = true,
+       // .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
+       // .Chance = (uint32_t)(0.01 * 0xFFFF), // 10% chance of sparkle
+        .EffectStats = &Stats_HatDown
+    }
+  }; // Onboard LED set to slightly off yellow, then if red is pressed as well, you can kind of see it a bit
+
+  ExternalLEDConfig *IdleLEDEffects[] =
+  {
+    new ExternalLEDConfig {
+        // All LED's - there are 45 in total, and in this case we don't care about order
+        .LEDNumbers = { 0,1,2,3,4,5,6,7,8,9,
+                        10,11,12,13,14,15,16,17,18,19,
+                        20,21,22,23,24,25,26,27,28,29,
+                        30,31,32,33,34,35,36,37,38,39,
+                        40,41,42,43,44 },
+        //.PrimaryColour = { CRGB(0, 255, 0), true },
+        //.SecondaryColour = { CRGB(255, 0, 0), false },
+        //.Effect = &DigitalEffects::Throb,
+        ///.Effect = &DigitalArrayEffects::Rain,
+        //.Effect = &DigitalArrayEffects::BlendedRain,
+        //.Effect = &DigitalArrayEffects::SparkleTimeHue,
+        .Effect = &GeneralArrayEffects::Random,
+        //.RunEffectConstantly = true,
+       // .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
+        .Chance = (uint32_t)(0.1 * 0xFFFF)
+        //.EffectStats = &Stats_HatDown
+    }
+  };
+
+
+// -----------------------------------------------------
+// Array sizes
+
+int ControllerGfx_RunCount = sizeof(ControllerGfx) / sizeof(ControllerGfx[0]);
+int AnalogInputs_Count = sizeof(AnalogInputs) / sizeof(AnalogInputs[0]);
+int HatInputs_Count = sizeof(HatInputs) / sizeof(HatInputs[0]);
+int DigitalInputs_Count = sizeof(DigitalInputs) / sizeof(DigitalInputs[0]);
+int MiscLEDEffects_Count = sizeof(MiscLEDEffects) / sizeof(MiscLEDEffects[0]);
+int IdleLEDEffects_Count = sizeof(IdleLEDEffects) / sizeof(IdleLEDEffects[0]);
+
+// Special case code specific to this controller
+
+// HAT has secondary rendering, with up/down also mapped to strum bar up/down which we want to visualise
+void Custom_RenderHatStrumState(HatInput *hatInput) {
+    // Special Case drawing of extra HAT interaction - the digital d-pad up/down also map to the strum bar up/down
+    Display.fillRect(26, 25, 15, 15, C_BLACK);
+    char c;
+    if (hatInput->IndividualStates[HAT_UP] == PRESSED)
+      c = Icon_Guitar2_CenterBottom;
+    else if (hatInput->IndividualStates[HAT_DOWN] == PRESSED)
+      c = Icon_Guitar2_CenterTop;
+    else
+      c = Icon_Guitar2_CenterOff;
+
+    RRE.drawChar(26, 25, c);
+}

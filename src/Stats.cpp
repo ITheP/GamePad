@@ -24,10 +24,13 @@ void UpdateSubSecondStats()
 }
 
 Stats::Stats(const char *description) : Description(description) {};
+Stats::Stats(const char *description, float elasticReductionRate, float elasticMax) : Description(description), ElasticReductionRate(elasticReductionRate), ElasticMax(elasticMax) {};
 Stats::Stats(const char *description, Stats *nextStats) : Description(description), NextStat(nextStats) {};
+Stats::Stats(const char *description, float elasticReductionRate, float elasticMax, Stats *nextStats) : Description(description), ElasticReductionRate(elasticReductionRate), ElasticMax(elasticMax), NextStat(nextStats) {};
 
 void Stats::AddCount()
 {
+  Serial.println("Adding count to " + String(Description));
   Current_SecondCount++;
   Current_TotalCount++;
   Session_TotalCount++;
@@ -102,7 +105,7 @@ void Stats::SecondPassed(int Second)
   int subCounts_Count = STATS_SUBCOUNTS_COUNT;
   int subSecond_Count = SUB_SECOND_COUNT;
 
-  int startPos = SubCountPos + 1; // +1 cause we want to make sure we aren't starting with the entire previous second, only the previous e.g. 9/10ths plua first 10th of new second
+  int startPos = SubCountPos + 1; // +1 cause we want to make sure we aren't starting with the entire previous second, only the previous e.g. 9/10ths plus first 10th of new second
   if (startPos == subCounts_Count)
     startPos = 0;
 
@@ -158,13 +161,35 @@ void Stats::SecondPassed(int Second)
   }
 }
 
+// float Stats::ElasticCount;
+// float Stats::ElasticReductionRate = 1.0;
+// float Stats::ElasticMax = 20.0;
+// float Stats::ElasticPercentage;
+
 void Stats::SubSecondPassed()
 {
+  if (ElasticReductionRate > 0)
+  {
+    ElasticCount -= ElasticReductionRate;
+    ElasticCount += Current_SecondCount;
+    if (ElasticCount < 0)
+      ElasticCount = 0;
+    else if (ElasticCount > ElasticMax)
+      ElasticCount = ElasticMax;
+
+    ElasticPercentage = (float)ElasticCount / (float)ElasticMax;
+
+    //Serial.println("Elastic [" + String(Description) + "]- Increase: " + String(Current_SecondCount) + ", Count: " + String(ElasticCount) + ", Percentage: " + String(ElasticPercentage) + ", Max: " + String(ElasticMax) + ", Reduction Rate: " + String(ElasticReductionRate));
+
+    //delay(25);
+  }
+
   SubCounts[SubCountPos++] = Current_SecondCount;
   if (SubCountPos == STATS_SUBCOUNTS_COUNT)
     SubCountPos = 0;
 
-  SubCountPos = 0;
+  // SubCountPos = 0;
+  Current_SecondCount = 0;
 }
 
 void Stats::LoadFromPreferences()

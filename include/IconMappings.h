@@ -126,6 +126,24 @@
 #define Icon_Guitar2_CenterBottom 0x72
 #define Icon_Guitar2_CenterOn 0x73
 
+// Guitar 3 Gfx
+#define Icon_Guitar3_T1 0x80
+#define Icon_Guitar3_T2 0x81
+#define Icon_Guitar3_T3 0x82
+#define Icon_Guitar3_T4 0x83
+#define Icon_Guitar3_T5 0x84
+#define Icon_Guitar3_T6 0x85
+#define Icon_Guitar3_B1 0x90
+#define Icon_Guitar3_B2 0x91
+#define Icon_Guitar3_B3 0x92
+#define Icon_Guitar3_B4 0x93
+#define Icon_Guitar3_B5 0x94
+#define Icon_Guitar3_B6 0x95
+#define Icon_Guitar3_CenterOff 0xA0
+#define Icon_Guitar3_CenterTop 0xA1
+#define Icon_Guitar3_CenterBottom 0xA2
+#define Icon_Guitar3_CenterOn 0xA3
+
 // Joypad low states
 #define Icon_JPad_Icon 0x36
 #define Icon_JPad_Neutral 0x37

@@ -36,9 +36,11 @@ Stats Stats_Yellow("Yellow", &Stats_Neck);
 Stats Stats_Blue("Blue", &Stats_Neck);
 Stats Stats_Orange("Orange", &Stats_Neck);
 
-Stats Stats_StrumBar("StrumBar");
-Stats Stats_HatUp("HatUp", &Stats_StrumBar);
-Stats Stats_HatDown("HatDown", &Stats_StrumBar);
+Stats Stats_Start_LongPress("Select Long Press");
+
+Stats Stats_StrumBar("Strum Bar");
+Stats Stats_HatLeft("Strum Up", &Stats_StrumBar);
+Stats Stats_HatRight("Strum Down", &Stats_StrumBar);
 
 // Collated list of all stats to easily go through them to load/save/clear and run once per second and updates etc.
 Stats *AllStats[] = {
@@ -49,8 +51,9 @@ Stats *AllStats[] = {
   &Stats_Blue,
   &Stats_Orange,
   &Stats_StrumBar,
-  &Stats_HatUp,
-  &Stats_HatDown
+  &Stats_HatLeft,
+  &Stats_HatRight,
+  &Stats_Start_LongPress
 };
 int AllStats_Count = sizeof(AllStats) / sizeof(AllStats[0]);
 
@@ -68,6 +71,12 @@ Input DigitalInput_Green = // Green button on guitar neck
         //.LEDNumber = LED_Green,
         .LEDNumbers = { LED_DigitalTest,  (LED_DigitalTest+1), (LED_DigitalTest+2), (LED_DigitalTest+3), (LED_DigitalTest+4), (LED_DigitalTest+5), (LED_DigitalTest+6), (LED_DigitalTest+7),
           (LED_DigitalTest + 8),  (LED_DigitalTest+9), (LED_DigitalTest+10), (LED_DigitalTest+11), (LED_DigitalTest+12), (LED_DigitalTest+13), (LED_DigitalTest+14)
+          // TEMPORARY
+          ,
+          (LED_DigitalTest + 14 + 1), (LED_DigitalTest + 14 + 2), (LED_DigitalTest + 14 + 3), (LED_DigitalTest + 14 + 4), (LED_DigitalTest + 14 + 5),
+          (LED_DigitalTest + 14 + 6), (LED_DigitalTest + 14 + 7), (LED_DigitalTest + 14 + 8), (LED_DigitalTest + 14 + 9), (LED_DigitalTest + 14 + 10),
+          (LED_DigitalTest + 14 + 11), (LED_DigitalTest + 14 + 12), (LED_DigitalTest + 14 + 13), (LED_DigitalTest + 14 + 14),
+          (LED_DigitalTest + 14 + 15), (LED_DigitalTest + 14 + 16), (LED_DigitalTest + 14 + 17)
         },
         .PrimaryColour = { CRGB(0, 255, 0), true },
         .SecondaryColour = { CRGB(255, 0, 0), false },
@@ -145,10 +154,28 @@ Input DigitalInput_Orange = // Orange button on guitar neck
     .BluetoothIdOffset = 5
   }; // Onboard LED Slightly off colour again, so additional red looks different
 
+  // TEST - same as select but with some LED
+Input DigitalInput_Start_LongPress = // Select button on main body 
+  { .Pin = BUTTON_Start_PIN, .Label = "Select Long Press", .BluetoothInput = BUTTON_7, .DefaultValue = HIGH,
+    .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
+    .RenderOperation = RenderInput_DoubleIcon, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 23, .RenderWidth = 19, .RenderHeight = 5, .TrueIcon = Icon_Select1, .FalseIcon = NONE,
+        .Statistics = &Stats_Start_LongPress,
+        .OnboardLED = { CRGB(255, 255, 255), true },
+        .LEDConfig = new ExternalLEDConfig {
+        .LEDNumber = LED_Orange,
+        .PrimaryColour = { CRGB(255, 255, 255), true },
+        .SecondaryColour = { CRGB(255, 0, 255), false }
+    }
+  };
+
 Input DigitalInput_Start = // Start button on main body
   { .Pin = BUTTON_Start_PIN, .Label = "Start", .BluetoothInput = BUTTON_7, .DefaultValue = HIGH,
     .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
-    .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 56, .YPos = uiGuitar_yPos + 3, .RenderWidth = 16, .RenderHeight = 5, .TrueIcon = Icon_Start, .FalseIcon = NONE
+    .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 56, .YPos = uiGuitar_yPos + 3, .RenderWidth = 16, .RenderHeight = 5, .TrueIcon = Icon_Start, .FalseIcon = NONE,
+    .OnboardLED = { CRGB(255, 128, 0), true },
+    .LongPressTiming = 1000 * 1000, // 1sec = 1000ms = 1000000us
+    .LongPressChildInput = &DigitalInput_Start_LongPress, // Long press on Tilt button will trigger Select Long Press
+    .ShortPressReleaseTime = 250 * 1000
   };
 
 Input DigitalInput_Select = // Select button on main body 
@@ -174,14 +201,15 @@ Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled 
 Input DigitalInput_FlipScreen = // Lever on main body, will be flipped into a permanent on or off state, not just pressed
   { .Pin = BUTTON_FlipScreen_PIN, .Label = "Flip Screen", .BluetoothInput = NONE, .DefaultValue = -2,
     .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = NONE,
+#ifdef CLEAR_STATS_ON_FLIP
+    .CustomOperationPressed = ResetAllCurrentStats,    // When screen flips, we reset all the stats
+#endif
     .RenderOperation = FlipScreen,
-  #ifdef CLEAR_STATS_ON_FLIP
-    .CustomOperation = ResetAllCurrentStats,    // When screen flips, we reset all the stats
-  #endif
-  .XPos = 0, .YPos = 0, .RenderWidth = 0, .RenderHeight = 0, .TrueIcon = NONE, .FalseIcon = NONE
+    .XPos = 0, .YPos = 0, .RenderWidth = 0, .RenderHeight = 0, .TrueIcon = NONE, .FalseIcon = NONE
   };
 
 // DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
+// Make sure for all DigitalInputs that have a long press reference, that the long press reference also has pointer back to the parent input
 Input *DigitalInputs[] = {
   &DigitalInput_Green,
   &DigitalInput_Red,
@@ -191,7 +219,7 @@ Input *DigitalInputs[] = {
   &DigitalInput_Start,
   &DigitalInput_Select,
   &DigitalInput_Tilt,
-  &DigitalInput_FlipScreen
+  &DigitalInput_FlipScreen,
 
   // Other buttons of interest...
   //{ PIN_07_D04_A4, "Vol+", VOLUME_INC_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Icon, 89, 55, 16, 5, Icon_VolUp, 0 },
@@ -200,7 +228,36 @@ Input *DigitalInputs[] = {
   //{ PIN_D12, "Menu", MENU_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 },
   //{ PIN_D13, "Home", HOME_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 },
   //{ PIN_A5, "Back", BACK_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 }
+
+  // Long press inputs
+  &DigitalInput_Start_LongPress
 };
+
+// // Secondary Digital Inputs, used for long press operations
+// // These are NOT iterated over
+// Input *LongPressDigitalInputs[] = {
+// };
+
+// // Should include both DigitalInputs AND LongPressDigitalInputs - referenced by e.g. LED code to iterate through all digital inputs
+// Input *AllDigitalInputs[] = {
+//   &DigitalInput_Green,
+//   &DigitalInput_Red,
+//   &DigitalInput_Yellow,   
+//   &DigitalInput_Blue,
+//   &DigitalInput_Orange,
+//   &DigitalInput_Start,
+//   &DigitalInput_Select,
+//   &DigitalInput_Tilt,
+//   &DigitalInput_FlipScreen
+
+//   // Other buttons of interest...
+//   //{ PIN_07_D04_A4, "Vol+", VOLUME_INC_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Icon, 89, 55, 16, 5, Icon_VolUp, 0 },
+//   //{ PIN_05_D02_A2, "Vol-", VOLUME_DEC_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Icon, 89, 55, 16, 5, Icon_VolDown, 0 },
+//   //{ PIN_06_D03_A3, "Mute", VOLUME_MUTE_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Icon, 89, 55, 16, 5, Icon_VolMute, 0 },
+//   //{ PIN_D12, "Menu", MENU_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 },
+//   //{ PIN_D13, "Home", HOME_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 },
+//   //{ PIN_A5, "Back", BACK_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 }
+// };
 
 // =============
 // Analog inputs
@@ -266,14 +323,15 @@ HatInput Hat0 =
     //   },
     .CustomOperation = Custom_RenderHatStrumState,
     .Statistics = {
-      nullptr,
-      &Stats_HatUp,
-      nullptr,
-      &Stats_HatDown,
-      nullptr,
-      nullptr,
-      nullptr,
-      nullptr
+      nullptr,          // Centered
+      nullptr,          // Up
+      nullptr,          // Up Right
+      &Stats_HatLeft,   // Right
+      nullptr,          // Down Right
+      nullptr,          // Down
+      nullptr,          // Down Left
+      &Stats_HatRight,  // Left
+      nullptr           // Up Left
     },
     .OnboardLED = {
       {},
