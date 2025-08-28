@@ -379,24 +379,24 @@ void setup()
 #endif
   }
 
- #ifdef USE_EXTERNAL_LED
+#ifdef USE_EXTERNAL_LED
   // Misc LEDs
   Serial.println("Misc LED Effects: " + String(MiscLEDEffects_Count));
   for (int i = 0; i < MiscLEDEffects_Count; i++)
   {
-        ExternalLEDConfig *config = MiscLEDEffects[i];
+    ExternalLEDConfig *config = MiscLEDEffects[i];
 
     if (config != nullptr)
       InitExternalLED(config, ExternalLeds);
   }
 #endif
 
- #ifdef USE_EXTERNAL_LED
+#ifdef USE_EXTERNAL_LED
   // Idle LEDs
   Serial.println("Idle LED Effects: " + String(IdleLEDEffects_Count));
   for (int i = 0; i < IdleLEDEffects_Count; i++)
   {
-        ExternalLEDConfig *config = IdleLEDEffects[i];
+    ExternalLEDConfig *config = IdleLEDEffects[i];
 
     if (config != nullptr)
       InitExternalLED(config, ExternalLeds);
@@ -963,7 +963,7 @@ void loop()
       // if has linked input then
       if (input->LongPressChildInput != nullptr)
       {
-        //input->ValueState.Value = LONG_PRESS_MONITORING;
+        // input->ValueState.Value = LONG_PRESS_MONITORING;
         unsigned long timeDifference = timeCheck - input->ValueState.StateChangedWhen;
         // Serial.println("NAME - " + String(input->Label));
         //     Serial.println("State - " + String(state) + " for " + String(input->ValueState.Value));
@@ -977,8 +977,8 @@ void loop()
           }
           else if (timeDifference >= input->LongPressTiming)
           {
-            //Serial.println("LONG PRESSED TIMING TRIGGER " + String(timeDifference) + " vs " + String(input->LongPressTiming));
-            // Past long press time, pass child on to main routine
+            // Serial.println("LONG PRESSED TIMING TRIGGER " + String(timeDifference) + " vs " + String(input->LongPressTiming));
+            //  Past long press time, pass child on to main routine
             input = input->LongPressChildInput;
           }
           // else
@@ -1013,7 +1013,7 @@ void loop()
               input->AutoHold = timeCheck + input->ShortPressReleaseTime;
             }
           }
-          
+
           // Sorts out holding button after released for a time frame - means
           // short press triggers can be for a bigger time period for things
           // like UI components and LED's to show long enough the user can see them
@@ -1123,7 +1123,14 @@ void loop()
         input->ValueState.PreviousValue = previousValue;
         input->ValueState.StateChangedWhen = micros(); // ToDo: More accurate setting here, as there have been delays
 
-        int16_t rangedState = map(state, 0, 4095, 0, 32737); // Scale range to match Bluetooth range
+        int16_t minValue = input->MinValue;
+        int16_t maxValue = input->MaxValue;
+        int16_t constrainedState = constrain(state, minValue, maxValue);
+
+        int16_t rangedState = map(constrainedState, minValue, maxValue, 0, 32737); // Scale range to match Bluetooth range. Ranged state min/max theoretically 0->4095
+
+        // Serial.println("Constrained " + String(constrainedState) + " - Ranged; " + String(rangedState));
+
         (bleGamepad.*(input->BluetoothSetOperation))(rangedState);
 
         input->RenderOperation(input);
@@ -1191,23 +1198,27 @@ void loop()
     hatCurrentState = HAT_CENTERED; // initially nothing
     subState = 1;                   // First possible value with something there (1 = Up. 0 = neutral/nothing position)
 
-    // ToDo: FIX THE BELOW, NOT WORKING!
-
-    // Step 3, check values accounting for 2 press diagonals. We go backwards so other states are checked before the 0 button, which lets us check the 3+0 button combination extra buffer thingy
-    for (int j = 0; j < 4; j++)
+    // Special case
+    if (hatInput->IndividualStates[0] == PRESSED && hatInput->IndividualStates[3] == PRESSED)
+      hatCurrentState = 8;
+    else
     {
-      if (hatInput->Pins[j] != NONE && hatInput->IndividualStates[j] == LOW) // Pressed
+      // Step 3, check values accounting for 2 press diagonals. We go backwards so other states are checked before the 0 button, which lets us check the 3+0 button combination extra buffer thingy
+      for (int j = 0; j < 4; j++)
       {
-        hatCurrentState = subState;
+        if (hatInput->IndividualStates[j] == PRESSED) // Pressed
+        {
+          hatCurrentState = subState;
 
-        // Check the diagonal by checking next pin (i.e. both pins pressed)
-        if (hatInput->IndividualStates[j + 1] == LOW)
-          hatCurrentState++; // also pressed, so make diagonal
+          // Check the diagonal by checking next pin (i.e. both pins pressed)
+          if (hatInput->IndividualStates[j + 1] == PRESSED)
+            hatCurrentState++; // also pressed, so make diagonal
 
-        break; // Bail from loop - no point in checking for further pressed keys, should be physically impossible on a hat (or be irrelevant)
+          break; // Bail from loop - no point in checking for further pressed keys, should be physically impossible on a hat (or be irrelevant)
+        }
+
+        subState += 2; // Hat values go 1, 3, 5, 7 for Up, Right, Down, Left, diagonals go 2, 4, 6, 8
       }
-
-      subState += 2; // Hat values go 1, 3, 5, 7 for Up, Right, Down, Left, diagonals go 2, 4, 6, 8
     }
 
     // Final check to see if things have changed since last time
@@ -1271,19 +1282,19 @@ void loop()
 
   // Little generalised check to see if anything has changed
   if (sendReport)
-     LastTimeAnyButtonPressed = Now;
+    LastTimeAnyButtonPressed = Now;
 
   // Call idle LED effects etc. if controllers not had anything pressed for a while
-  if (Now - LastTimeAnyButtonPressed > 5.0)
-      ControllerIdle = true;
+  if (Now - LastTimeAnyButtonPressed > IDLE_TIMEOUT)
+    ControllerIdle = true;
   else
   {
-    if (ControllerIdle) {
+    if (ControllerIdle)
+    {
       ControllerIdleJustUnset = true;
       ControllerIdle = false;
     }
   }
-
 
   // Bluetooth
   BTConnectionState = bleGamepad.isConnected();

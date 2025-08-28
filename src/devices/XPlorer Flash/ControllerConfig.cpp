@@ -64,8 +64,8 @@ Stats Stats_Orange("Orange", &Stats_Neck);
 Stats Stats_Start_LongPress("Select Long Press");
 
 Stats Stats_StrumBar("Strum Bar");
-Stats Stats_HatUp("Strum Up", (4.0/SUB_SECOND_COUNT), 20.0, &Stats_StrumBar);
-Stats Stats_HatDown("Strum Down", (4.0/SUB_SECOND_COUNT), 20.0, &Stats_StrumBar);
+Stats Stats_HatUp("Strum Up", (6.0/SUB_SECOND_COUNT), 22, &Stats_StrumBar);
+Stats Stats_HatDown("Strum Down", (6.0/SUB_SECOND_COUNT), 22, &Stats_StrumBar);
 
 // Collated list of all stats to easily go through them to load/save/clear and run once per second and updates etc.
 Stats *AllStats[] = {
@@ -176,7 +176,7 @@ Input DigitalInput_Start = // Start button on main body
     .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 56, .YPos = uiGuitar_yPos + 3, .RenderWidth = 16, .RenderHeight = 5, .TrueIcon = Icon_Start, .FalseIcon = NONE,
     .OnboardLED = { CRGB(255, 128, 0), true },
     .LongPressTiming = 1000 * 1000, // 1sec = 1000ms = 1000000us
-    .LongPressChildInput = &DigitalInput_Start_LongPress, // Long press on Tilt button will trigger Select Long Press
+    .LongPressChildInput = &DigitalInput_Start_LongPress, // Long press on Start button will trigger Start Long Press
     .ShortPressReleaseTime = 250 * 1000
   };
 
@@ -192,7 +192,7 @@ Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled 
     .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 91, .YPos = uiGuitar_yPos + 2, .RenderWidth = 7, .RenderHeight = 7, .TrueIcon = Icon_Tilt, .FalseIcon = NONE,
     .OnboardLED = { CRGB(0, 255, 255), true },
     .LEDConfig = new ExternalLEDConfig {
-        .LEDNumber = LED_StrumBarSide2,
+        .LEDNumber = LED_WhammySide2,
         .PrimaryColour = { CRGB(0, 255, 255), true },
         .SecondaryColour = { CRGB(0, 255, 255), false }
     }
@@ -268,7 +268,7 @@ Input *DigitalInputs[] = {
 
 // Specific inputs we need references to
 Input AnalogInputs_Whammy =
-  { .Pin = ANALOG_Whammy_PIN, .Label = "Whammy", .BluetoothInput = NONE, .DefaultValue = -1,
+  { .Pin = ANALOG_Whammy_PIN, .Label = "Whammy", .BluetoothInput = NONE, .DefaultValue = -1, .MinValue = 2300, .MaxValue = 3500,
     .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = &BleGamepad::setSlider1,
     .RenderOperation = RenderInput_AnalogBar_Vert, .XPos = uiWhammyX + 2, .YPos = uiWhammyY + 2, .RenderWidth = uiWhammyW - 4, .RenderHeight = uiWhammyH - 4, .TrueIcon = NONE, .FalseIcon = NONE,
     .OnboardLED = { CRGB::Pink, true },
@@ -311,7 +311,7 @@ unsigned char HatValues[] = { 0, 0, 0, 0 };
 // Hat used for up/down strum bar
 HatInput Hat0 =
   {
-    .Pins = { HAT1_Up_PIN, HAT1_Right_PIN, HAT1_Down_PIN, HAT1_Left_PIN }, .Label = "1", .BluetoothHat = 0, .DefaultValue = 0,
+    .Pins = { HAT1_Up_PIN, HAT1_Right_PIN, HAT1_Down_PIN, HAT1_Left_PIN }, .Label = "Hat0", .BluetoothHat = 0, .DefaultValue = 0,
     .RenderOperation = RenderInput_Hat, .XPos = -4, .YPos = 25, .RenderWidth = 15, .RenderHeight = 15, .StartIcon = Icon_DPad_Neutral,
     // .ExtraOperation = {
     //     NONE,
@@ -421,8 +421,9 @@ ExternalLEDConfig *MiscLEDEffects[] =
         //.Effect = &DigitalArrayEffects::SparkleTimeHue,
         .Effect = &GeneralArrayEffects::Random,
         //.RunEffectConstantly = true,
-       // .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
-        .Chance = (uint32_t)(0.1 * 0xFFFF)
+        .Rate =  1.5,
+        .Chance = (uint32_t)(0.1 * 0xFFFF),
+        .CustomTag = 64.0
         //.EffectStats = &Stats_HatDown
     }
   };
@@ -445,10 +446,13 @@ void Custom_RenderHatStrumState(HatInput *hatInput) {
     // Special Case drawing of extra HAT interaction - the digital d-pad up/down also map to the strum bar up/down
     Display.fillRect(26, 25, 15, 15, C_BLACK);
     char c;
-    if (hatInput->IndividualStates[HAT_UP] == PRESSED)
-      c = Icon_Guitar2_CenterBottom;
-    else if (hatInput->IndividualStates[HAT_DOWN] == PRESSED)
+    
+    if (hatInput->ValueState.Value == HAT_UP)
+    //if (hatInput->IndividualStates[HAT_UP] == PRESSED)
       c = Icon_Guitar2_CenterTop;
+    //else if (hatInput->IndividualStates[HAT_DOWN] == PRESSED)
+    else if (hatInput->ValueState.Value == HAT_DOWN)
+      c = Icon_Guitar2_CenterBottom;
     else
       c = Icon_Guitar2_CenterOff;
 

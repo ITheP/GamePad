@@ -96,6 +96,10 @@ void RenderInput_Text(Input* input) {
   // CURRENTLY UNUSED
 }
 
+float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+
 // Draws a rectangle, size varies by inputs value
 void RenderInput_AnalogBar_Vert(Input* input) {
   int xPos = input->XPos;
@@ -111,7 +115,14 @@ void RenderInput_AnalogBar_Vert(Input* input) {
   // Clear any old bar
   Display.fillRect(xPos, yPos, width, height, C_BLACK);
 
-  int barHeight = (input->ValueState.Value / 4096.0) * height;
+  int16_t value = input->ValueState.Value;
+  int16_t minValue = input->MinValue;
+  int16_t maxValue = input->MaxValue;
+  int16_t constrainedState = constrain(value, minValue, maxValue);
+
+  float rangedValue = mapFloat(constrainedState, minValue, maxValue, 0.0, 1.0);
+
+  int barHeight = (rangedValue * (height-1));
   // Make sure bar is always at least 1 pixel high, and in our case here account for fractional rounding down to nearest pixel (which might otherwise cause a full value to miss final pixel of height)
   // Note that for some reason, .fillRect was creating a 2 pixel high rectangle with a funny offset when barHeight was set to 0
   barHeight++;

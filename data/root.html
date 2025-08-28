@@ -6,15 +6,19 @@
 
     <script>
         var animationFrameId = 0;
-        
-        function LoadContent(name, colour, js) {
+
+        function LoadContent(url, colour, js) {
             document.documentElement.style.setProperty('--bg-color', colour || '#12354dDD');
             var content = document.getElementById('content');
             content.innerHTML = "<p>Loading...</p>";
 
-            fetch(name)
+            fetch(url)
                 .then(response => {
                     if (!response.ok) { throw new Error('Network response was not ok'); }
+
+                    // Clear out any existing timers
+                    IntervalManager.clearAll();
+
                     return response.text();
                 })
                 .then(html => {
@@ -30,6 +34,44 @@
                     content.innerHTML = "<p class='warning'>Sorry, unable to communicate with GamePad to load page. It may be turned off, not connected, lost connection or not have its Wifi and Web Service turned on.</p>";
                 });
         }
+
+        const IntervalManager = (() => {
+            const ids = [];
+
+            return {
+                add(fn, delay) {
+                    const id = setInterval(fn, delay);
+                    ids.push(id);
+                    return id;
+                },
+                clearAll() {
+                    ids.forEach(clearInterval);
+                    ids.length = 0;
+                }
+            };
+        })();
+
+        const ResizeManager = (() => {
+            let resizeHandler = null;
+
+            return {
+                attach(fn) {
+                    if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+                    resizeHandler = fn;
+                    window.addEventListener('resize', resizeHandler);
+                },
+                detach() {
+                    if (resizeHandler) {
+                        window.removeEventListener('resize', resizeHandler);
+                        resizeHandler = null;
+                    }
+                },
+                isAttached() {
+                    return !!resizeHandler;
+                }
+            };
+        })();
+
     </script>
 </head>
 
@@ -42,7 +84,8 @@
                 <div class="menu-item" onclick="LoadContent('main', '#12354dDD', 'main.js');">Home</div>
                 <div class="menu-item" onclick="LoadContent('stats.html', '#12354dDD', 'stats.js');">Stats</div>
                 <div class="menu-item" onclick="LoadContent('about.html', '#00000099', 'about.js');">About</div>
-                <div class="menu-item" onclick="LoadContent('services.html', '#00320088', 'services.js');">Services</div>
+                <div class="menu-item" onclick="LoadContent('services.html', '#00320088', 'services.js');">Services
+                </div>
                 <div class="menu-item" onclick="LoadContent('debug', '#320000DD', null);">Debug</div>
             </div>
         </header>

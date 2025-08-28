@@ -26,7 +26,7 @@ function main() {
     }
 
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    ResizeManager.attach(resizeCanvas);
 
     var vertexShaderSource = `
             attribute vec2 position;
@@ -89,6 +89,19 @@ function main() {
 
                 vec3 bgColor = vec3(0.0); // Black background
                 vec3 finalColor = mix(bgColor.rgb, glowColor.rgb, texColor.a);
+
+                // // Round vignette
+                // vec2 center = vec2(0.5);
+                // float dist = distance(v_texCoord, center);
+                // float radius = 0.35;     // circle radius before fade starts
+                // float softness = 0.15;    // controls the fade gradient
+                // float vignette = smoothstep(radius, radius + softness, dist);
+                // finalColor = mix(finalColor, vec3(0.0), vignette);
+
+                // // Square vignette
+                // vec2 edgeFade = smoothstep(vec2(0.0), vec2(0.2), v_texCoord) * smoothstep(vec2(1.0), vec2(0.8), v_texCoord);
+                // float vignette = edgeFade.x * edgeFade.y;
+                // finalColor = mix(vec3(0.0), finalColor, vignette);
 
                 //gl_FragColor = vec4(v_texCoord.x, v_texCoord.y, 1.0, 1.0);
                 gl_FragColor = vec4(finalColor, 1.0);

@@ -30,7 +30,7 @@ Stats::Stats(const char *description, float elasticReductionRate, float elasticM
 
 void Stats::AddCount()
 {
-  Serial.println("Adding count to " + String(Description));
+ // Serial.println("Adding count to " + String(Description));
   Current_SecondCount++;
   Current_TotalCount++;
   Session_TotalCount++;
@@ -143,6 +143,7 @@ void Stats::SecondPassed(int Second)
   }
 
   Counts[Second] = maxCount;
+  Current_CrossSecondCount = maxCount;
 
   if (Current_MaxPerSecond < maxCount)
     Current_MaxPerSecond = maxCount;

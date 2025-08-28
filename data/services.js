@@ -26,14 +26,14 @@ function main() {
     }
 
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    ResizeManager.attach(resizeCanvas);
 
     // Vertex Shader Source
     var vertexShaderSource = `
             attribute vec2 position;
-            varying vec2 vUv;
+            varying vec2 v_texCoord;
             void main() {
-                vUv = position * 0.5 + 0.5;
+                v_texCoord = position * 0.5 + 0.5;
                 gl_Position = vec4(position, 0.0, 1.0);
             }
         `;
@@ -41,39 +41,48 @@ function main() {
     // Fragment Shader Source (Generates Color Wave Effect)
     var fragmentShaderSource = `
             precision mediump float;
-            varying vec2 vUv;
+            varying vec2 v_texCoord;
             uniform float time;
 
             void main() {
+                float contrast = 1.0; // 0.3;
+                
                 // Apply zoom-out effect
-                vec2 zoomUvR = vUv * 8.0;
-                //zoomUvR.y *= 0.2;
-                //zoomUvR.y += sin(time) * 1.2;
-                float wave = sin(zoomUvR.x) + sin(time * 1.17);  // Previously 0.2, now 0.5 for larger effect
+                vec2 zoomUvR = v_texCoord * 8.0;
+                float wave = sin(zoomUvR.x) + sin(time * 1.17);
                 float offsetR = sin(zoomUvR.x + sin(time)) + sin(zoomUvR.y + wave) * (cos(wave + time));
                 float r = (sin((time + zoomUvR.y) * 0.5) * offsetR) + 0.5;
-                r *= 0.4;
+                r *= contrast;
 
                 float time2 = time + 1.141;
-                vec2 zoomUvG = vUv * 6.0;
-                //zoomUvG.y *= 0.2;
-                //zoomUvG.y += sin(time2) * 1.3;
-                wave = sin(zoomUvG.x) + sin(time2 * 0.49);  // Previously 0.2, now 0.5 for larger effect
+                vec2 zoomUvG = v_texCoord * 6.0;
+                wave = sin(zoomUvG.x) + sin(time2 * 0.49);
                 float offsetG = sin(zoomUvG.x + sin(time2)) + sin(zoomUvG.y + wave) * (cos(wave + time2));
-                float g = (sin((time2 + zoomUvG.y) * 0.5) * offsetG) + 0.5; 
-                g *= 0.4;
+                float g = (sin((time2 + zoomUvG.y) * 0.5) * offsetG) + 0.5;
+                g *= contrast;
 
                 float time3 = time + 2.141;
-                vec2 zoomUvB = vUv * 4.0;
-                //zoomUvB.y *= 0.25;
-                //zoomUvB.y += sin(time3) * 1.25;
-                wave = sin(zoomUvB.x) + sin(time3 * 0.78);  // Previously 0.2, now 0.5 for larger effect
+                vec2 zoomUvB = v_texCoord * 4.0;
+                wave = sin(zoomUvB.x) + sin(time3 * 0.78);
                 float offsetB = sin(zoomUvB.x + sin(time3)) + sin(zoomUvB.y + wave) * (cos(wave + time3));
-                float b = (sin((time3 + zoomUvB.y) * 0.5) * offsetB) + 0.5; 
-                b *= 0.4;
+                float b = (sin((time3 + zoomUvB.y) * 0.5) * offsetB) + 0.5;
+                b *= contrast;
 
                 vec3 color = vec3(r, g, b);
-                
+
+                // Round vignette
+                vec2 center = vec2(0.5);
+                float dist = distance(v_texCoord, center);
+                float radius = 0.35;     // circle radius before fade starts
+                float softness = 0.15;    // controls the fade gradient
+                float vignette = smoothstep(radius, radius + softness, dist);
+                color = mix(color, vec3(0.0), vignette);
+
+                // // Square vignette
+                // vec2 edgeFade = smoothstep(vec2(0.0), vec2(0.2), v_texCoord) * smoothstep(vec2(1.0), vec2(0.8), v_texCoord);
+                // float vignette = edgeFade.x * edgeFade.y;
+                // color = mix(vec3(0.0), color, vignette);
+
                 gl_FragColor = vec4(color, 1.0);
             }
         `;

@@ -14,35 +14,41 @@ function toggleRefresh() {
     if (checkbox.checked) {
         startAutoRefresh();
     } else {
-        clearInterval(refreshInterval);
+        IntervalManager.clearAll();
         document.getElementById('countdownDisplay').innerHTML = '';
     }
 }
 
 var statsStatus = document.getElementById('countdownDisplay');
+var fetchingStats = false;
 
 function startAutoRefresh() {
     countdown = 5;
-    
-    refreshInterval = setInterval(() => {
-        try {
-            if (countdown > 1) {
-                countdown--;
-                if (countdown < 6)
-                    statsStatus.innerHTML = countdown + 's until refresh';
+
+    IntervalManager.add(() => {
+        if (fetchingStats == false) {
+            try {
+                if (countdown > 1) {
+                    countdown--;
+                    if (countdown < 6)
+                        statsStatus.innerHTML = countdown + 's until refresh';
+                }
+                else if (countdown == 1) {
+                    countdown--;    // Make sure this doesn't trigger while fetchStats is running
+                    fetchStats();
+                }
             }
-            else if (countdown == 1) {
-                countdown--;    // Make sure this doesn't trigger while fetchStats is running
-                fetchStats();
+            catch (error) {
+                IntervalManager.clearAll();
+                statsStatus.innerText = 'Error fetching stats: ' + (error?.message || error);
             }
-        }
-        catch (error) {
-            clearInterval(refreshInterval);
         }
     }, 1000);
 }
 
 function fetchStats() {
+    fetchingStats = true;
+
     statsStatus.innerText = 'Fetching latest stats...';
 
     fetch('/component/stats')
@@ -55,10 +61,14 @@ function fetchStats() {
             countdown = 6;
             statsStatus.innerText = 'Stats updated';
             updateTime();
+
+            fetchingStats = false;
         })
         .catch(() => {
             statsStatus.innerText = 'Fetching latest stats failed, will try again in a few seconds.';
             countdown = 8;
+
+            fetchingStats = false;
         });
 }
 

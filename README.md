@@ -71,6 +71,8 @@ Includes...
 - [ ] Test/debug screen - show pins etc. on button presses (access via boot option?)
 - [ ] Investigate ESP32-S3 cpu throttling (reduce mhz) power saving mode
 - [ ] Settings using whammy bar - e.g. hold button to set brightness and wiggle whammy bar to set it
+- [ ] Analog inputs - have a configuration screen that allows you to set min/max values (by using them) and save to settings
+- [ ] Flip-able controls - i.e. flips mappings inside so e.g. up and down flipped on strum bar (or whole HAT is flipped and upside down)
   
 ## To Do - Electronics
 

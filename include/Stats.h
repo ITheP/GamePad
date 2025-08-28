@@ -38,6 +38,8 @@ public:
     int Current_MaxPerSecondOverLastMinute;
     //int Current_MaxPerSecondEver;
 
+    int Current_CrossSecondCount;
+
     // Stats for current session (since power on)
     int Session_TotalCount;
     //int Session_CountPerSecond;

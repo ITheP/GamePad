@@ -1,6 +1,6 @@
 #pragma once
 
-#define EXTRA_SERIAL_DEBUG          // Enable to print loads of extra information to serial
+//#define EXTRA_SERIAL_DEBUG          // Enable to print loads of extra information to serial
 //#define EXTRA_SERIAL_DEBUG_PLUS   // ...further detail, but can flood serial output somewhat!
 //#define INCLUDE_BENCHMARKS        // Includes some basic performance statistics of running device over serial
 //#define INCLUDE_BENCHMARKS_LED    // Basic performance stats for LED processing

@@ -15,7 +15,7 @@
 // #define uiWebServer_xPos (uiWebServerStatus_xPos + 10)
 // #define uiWebServer_yPos 51
 
-#define uiWebServer_xPos 24
+#define uiWebServer_xPos 26
 #define uiWebServer_yPos 51
 
 #define uiWebServerStatus_xPos (uiWebServer_xPos + 15)

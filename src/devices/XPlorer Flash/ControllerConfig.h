@@ -32,6 +32,9 @@
 
 #define CLEAR_STATS_ON_FLIP             // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
 
+// Go into idle LED effects mode after 10 seconds
+#define IDLE_TIMEOUT 10.0
+
 // =====
 // LED's
 
@@ -55,11 +58,9 @@
 #define LED_Green           6
 #define LED_Red             7
 #define LED_Yellow          8
-#define LED_Status          8   // ?
 #define LED_Blue            9
 #define LED_Orange          10
 #define LED_StrumBarSide2   11
-#define LED_Tilt            6   // ?
 #define LED_WhammySide1     17
 #define LED_WhammySide2     31
 //#define LED_Status_Copy     7
@@ -77,6 +78,10 @@
 // Non fading LED's after this point
 //#define LED_Whammy          (LED_DigitalTest + LED_DigitalTest_Count)
 //#define LED_Whammy_Count    8
+
+
+#define LED_Status          LED_WhammySide1
+#define LED_Tilt            LED_WhammySide2
 
 #define LED_TOTALCOUNT      45
 
@@ -129,7 +134,7 @@ extern IconRun ControllerGfx[];
 #define PIN_04_D01_A1 4   // [Whammy] OK pud ADC1_3 Touch_01
 #define PIN_05_D02_A2 5   // [      ] OK pud ADC1_4 Touch_02
 #define PIN_06_D03_A3 6   // [      ] OK pud ADC1_5 Touch_03
-#define PIN_07_D04_A4 7   // [      ] OK pud ADC1_6 Touch_04
+#define PIN_07_D04_A4 7   // [Tilt  ] OK pud ADC1_6 Touch_04
 #define PIN_15_D05    15  // [Green ] OK pud adc2_4           - Do not use for ADC
 #define PIN_16_D06    16  // [Red   ] OK pud adc2_5           - Do not use for ADC
 #define PIN_17_D07    17  // [Blue  ] OK pud adc2_6           - Do not use for ADC
@@ -153,7 +158,7 @@ extern IconRun ControllerGfx[];
 #define PIN_01_D16_A7 1   // [BatMon] OK pud ADC1_0 Touch_01  - Battery Monitor
 #define PIN_02_D17_A8 2   // [      ] OK pud ADC1_1 Touch_02
 #define PIN_42_D18    42  // [      ] ok                      - JTAG MTMS
-#define PIN_41_D19    41  // [ lipSc] ok                      - JTAG MTDI
+#define PIN_41_D19    41  // [      ] ok                      - JTAG MTDI
 #define PIN_40_D20    40  // [Screen] ok                      - JTAG MTDO
 #define PIN_39_D21    39  // [Screen] ok                      - JTAG MTCK, SPI2 CS
 #define PIN_38_D22    38  // [ExtLED] ok                      - External Status LED
@@ -179,9 +184,9 @@ extern IconRun ControllerGfx[];
 
 // Hat/Dpad
 
-#define HAT1_Up_PIN             PIN_09_D10_A5 // [09] <Gray>
+#define HAT1_Up_PIN             PIN_11_D12    // [09] <Gray>
 #define HAT1_Right_PIN          PIN_10_D11_A6 // [10] <Brown>
-#define HAT1_Down_PIN           PIN_11_D12    // [11] <Blue>
+#define HAT1_Down_PIN           PIN_09_D10_A5 // [11] <Blue>
 #define HAT1_Left_PIN           PIN_12_D13    // [12] <Green>
 #define BUTTON_Start_PIN        PIN_13_D14    // [13] <Orange>
 #define BUTTON_Select_PIN       PIN_14_D15    // [14] <Yellow>
@@ -199,11 +204,11 @@ extern IconRun ControllerGfx[];
 // Gnd                                        // [G ] <F>
 
 // Extra buttons
-#define BUTTON_Tilt_PIN         PIN_10_D11_A6 // [10] < > Tilt Sensor
+#define BUTTON_Tilt_PIN         PIN_07_D04_A4 // [10] < > Tilt Sensor
 // 11 Spare?                                  // [11] <White>
 // 12 Spare?                                  // [12] <Black>
 
-#define BUTTON_FlipScreen_PIN    PIN_41_D19
+#define BUTTON_FlipScreen_PIN   PIN_41_D19
 
 // Whammy Bar / POT
 // +3.3v                                      // [+V] <Red>
