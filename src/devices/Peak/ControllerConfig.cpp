@@ -19,7 +19,7 @@ char SoftwareRevision[] = "1.0";
 
 // List of LED's we want cloning (lets you copy LED values between each other)
 // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
-IntPair LEDClones[] = { { LED_Status, LED_Status_Copy } };
+IntPair LEDClones[] = { }; //{ LED_Status, LED_Status_Copy } };
 int LEDClones_Count = sizeof(LEDClones) / sizeof(LEDClones[0]);
 
 IconRun ControllerGfx[] = {
@@ -67,28 +67,28 @@ Input DigitalInput_Green = // Green button on guitar neck
     .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 76, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
     .Statistics = &Stats_Green,
     .OnboardLED = { CRGB(0, 255, 0), true },
-    .LEDConfig = new ExternalLEDConfig {
-        //.LEDNumber = LED_Green,
-        .LEDNumbers = { LED_DigitalTest,  (LED_DigitalTest+1), (LED_DigitalTest+2), (LED_DigitalTest+3), (LED_DigitalTest+4), (LED_DigitalTest+5), (LED_DigitalTest+6), (LED_DigitalTest+7),
-          (LED_DigitalTest + 8),  (LED_DigitalTest+9), (LED_DigitalTest+10), (LED_DigitalTest+11), (LED_DigitalTest+12), (LED_DigitalTest+13), (LED_DigitalTest+14)
-          // TEMPORARY
-          ,
-          (LED_DigitalTest + 14 + 1), (LED_DigitalTest + 14 + 2), (LED_DigitalTest + 14 + 3), (LED_DigitalTest + 14 + 4), (LED_DigitalTest + 14 + 5),
-          (LED_DigitalTest + 14 + 6), (LED_DigitalTest + 14 + 7), (LED_DigitalTest + 14 + 8), (LED_DigitalTest + 14 + 9), (LED_DigitalTest + 14 + 10),
-          (LED_DigitalTest + 14 + 11), (LED_DigitalTest + 14 + 12), (LED_DigitalTest + 14 + 13), (LED_DigitalTest + 14 + 14),
-          (LED_DigitalTest + 14 + 15), (LED_DigitalTest + 14 + 16), (LED_DigitalTest + 14 + 17)
-        },
-        .PrimaryColour = { CRGB(0, 255, 0), true },
-        .SecondaryColour = { CRGB(255, 0, 0), false },
-        //.Effect = &DigitalEffects::Throb,
-        ///.Effect = &DigitalArrayEffects::Rain,
-        //.Effect = &DigitalArrayEffects::BlendedRain,
-        //.Effect = &DigitalArrayEffects::SparkleTimeHue,
-        .Effect = &DigitalArrayEffects::SparkleTimeBlend,
-        .RunEffectConstantly = true,
-        .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
-        .Chance = (uint32_t)(0.01 * 0xFFFF) // 10% chance of sparkle
-    },
+    // .LEDConfig = new ExternalLEDConfig {
+    //     //.LEDNumber = LED_Green,
+    //     .LEDNumbers = { LED_DigitalTest,  (LED_DigitalTest+1), (LED_DigitalTest+2), (LED_DigitalTest+3), (LED_DigitalTest+4), (LED_DigitalTest+5), (LED_DigitalTest+6), (LED_DigitalTest+7),
+    //       (LED_DigitalTest + 8),  (LED_DigitalTest+9), (LED_DigitalTest+10), (LED_DigitalTest+11), (LED_DigitalTest+12), (LED_DigitalTest+13), (LED_DigitalTest+14)
+    //       // TEMPORARY
+    //       ,
+    //       (LED_DigitalTest + 14 + 1), (LED_DigitalTest + 14 + 2), (LED_DigitalTest + 14 + 3), (LED_DigitalTest + 14 + 4), (LED_DigitalTest + 14 + 5),
+    //       (LED_DigitalTest + 14 + 6), (LED_DigitalTest + 14 + 7), (LED_DigitalTest + 14 + 8), (LED_DigitalTest + 14 + 9), (LED_DigitalTest + 14 + 10),
+    //       (LED_DigitalTest + 14 + 11), (LED_DigitalTest + 14 + 12), (LED_DigitalTest + 14 + 13), (LED_DigitalTest + 14 + 14),
+    //       (LED_DigitalTest + 14 + 15), (LED_DigitalTest + 14 + 16), (LED_DigitalTest + 14 + 17)
+    //     },
+    //     .PrimaryColour = { CRGB(0, 255, 0), true },
+    //     .SecondaryColour = { CRGB(255, 0, 0), false },
+    //     //.Effect = &DigitalEffects::Throb,
+    //     ///.Effect = &DigitalArrayEffects::Rain,
+    //     //.Effect = &DigitalArrayEffects::BlendedRain,
+    //     //.Effect = &DigitalArrayEffects::SparkleTimeHue,
+    //     .Effect = &DigitalArrayEffects::SparkleTimeBlend,
+    //     .RunEffectConstantly = true,
+    //     .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
+    //     .Chance = (uint32_t)(0.01 * 0xFFFF) // 10% chance of sparkle
+    // },
     .BluetoothIdOffset = 1
   };
 
@@ -98,13 +98,13 @@ Input DigitalInput_Red = // Red button on guitar neck
     .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 69, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
     .Statistics = &Stats_Red,
     .OnboardLED = { CRGB(255, 0, 0), true },
-    .LEDConfig = new ExternalLEDConfig{
-      .LEDNumber = LED_Red,
-      .PrimaryColour = { CRGB(255, 0, 0), true },
-      .SecondaryColour = { CRGB(0, 0, 0), false }, 
-      .Effect = &DigitalEffects::Pulse,
-      .Rate = 255.0 * 2
-    },
+    // .LEDConfig = new ExternalLEDConfig{
+    //   .LEDNumber = LED_Red,
+    //   .PrimaryColour = { CRGB(255, 0, 0), true },
+    //   .SecondaryColour = { CRGB(0, 0, 0), false }, 
+    //   .Effect = &DigitalEffects::Pulse,
+    //   .Rate = 255.0 * 2
+    // },
     .BluetoothIdOffset = 2
   };
 
@@ -114,13 +114,13 @@ Input DigitalInput_Yellow = // Yellow button on guitar neck
     .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 62, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
     .Statistics = &Stats_Yellow,
     .OnboardLED = { CRGB(255, 255, 0), true },
-    .LEDConfig = new ExternalLEDConfig {
-        .LEDNumber = LED_Yellow,
-        .PrimaryColour = { CRGB(255, 255, 0), true },
-        .SecondaryColour = { CRGB(255, 255, 0), false },
-        .Effect = &DigitalEffects::TimeHue,
-        .Rate = 255.0 * 2
-    },
+    // .LEDConfig = new ExternalLEDConfig {
+    //     .LEDNumber = LED_Yellow,
+    //     .PrimaryColour = { CRGB(255, 255, 0), true },
+    //     .SecondaryColour = { CRGB(255, 255, 0), false },
+    //     .Effect = &DigitalEffects::TimeHue,
+    //     .Rate = 255.0 * 2
+    // },
     .BluetoothIdOffset = 3
   }; // Onboard LED set to slightly off yellow, then if red is pressed as well, you can kind of see it a bit
 
@@ -130,13 +130,13 @@ Input DigitalInput_Blue = // Blue button on guitar neck
     .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
     .Statistics = &Stats_Blue,
     .OnboardLED = { CRGB(0, 0, 255), true },
-    .LEDConfig = new ExternalLEDConfig {
-        .LEDNumber = LED_Blue,
-        .PrimaryColour = { CRGB(0, 0, 255), true },
-        .SecondaryColour = { CRGB(0, 0, 255), false },
-        .Effect = &DigitalEffects::MoveRainbow,
-        .Rate = 27.0
-    },
+    // .LEDConfig = new ExternalLEDConfig {
+    //     .LEDNumber = LED_Blue,
+    //     .PrimaryColour = { CRGB(0, 0, 255), true },
+    //     .SecondaryColour = { CRGB(0, 0, 255), false },
+    //     .Effect = &DigitalEffects::MoveRainbow,
+    //     .Rate = 27.0
+    // },
     .BluetoothIdOffset = 4
   };
 
@@ -146,11 +146,11 @@ Input DigitalInput_Orange = // Orange button on guitar neck
     .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 48, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE,
     .Statistics = &Stats_Orange,
     .OnboardLED = { CRGB(255, 128, 0), true },
-    .LEDConfig = new ExternalLEDConfig {
-        .LEDNumber = LED_Orange,
-        .PrimaryColour = { CRGB(255, 128, 0), true },
-        .SecondaryColour = { CRGB(255, 128, 0), false }
-    },
+    // .LEDConfig = new ExternalLEDConfig {
+    //     .LEDNumber = LED_Orange,
+    //     .PrimaryColour = { CRGB(255, 128, 0), true },
+    //     .SecondaryColour = { CRGB(255, 128, 0), false }
+    // },
     .BluetoothIdOffset = 5
   }; // Onboard LED Slightly off colour again, so additional red looks different
 
@@ -160,12 +160,12 @@ Input DigitalInput_Start_LongPress = // Select button on main body
     .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
     .RenderOperation = RenderInput_DoubleIcon, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 23, .RenderWidth = 19, .RenderHeight = 5, .TrueIcon = Icon_Select1, .FalseIcon = NONE,
         .Statistics = &Stats_Start_LongPress,
-        .OnboardLED = { CRGB(255, 255, 255), true },
-        .LEDConfig = new ExternalLEDConfig {
-        .LEDNumber = LED_Orange,
-        .PrimaryColour = { CRGB(255, 255, 255), true },
-        .SecondaryColour = { CRGB(255, 0, 255), false }
-    }
+        .OnboardLED = { CRGB(255, 255, 255), true }
+    //     .LEDConfig = new ExternalLEDConfig {
+    //     .LEDNumber = LED_Orange,
+    //     .PrimaryColour = { CRGB(255, 255, 255), true },
+    //     .SecondaryColour = { CRGB(255, 0, 255), false }
+    // }
   };
 
 Input DigitalInput_Start = // Start button on main body
@@ -188,12 +188,12 @@ Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled 
   { .Pin = BUTTON_Tilt_PIN, .Label = "Tilt", .BluetoothInput = BUTTON_9, .DefaultValue = HIGH,
     .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
     .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 91, .YPos = uiGuitar_yPos + 2, .RenderWidth = 7, .RenderHeight = 7, .TrueIcon = Icon_Tilt, .FalseIcon = NONE,
-    .OnboardLED = { CRGB(0, 255, 255), true },
-    .LEDConfig = new ExternalLEDConfig {
-        .LEDNumber = LED_Tilt,
-        .PrimaryColour = { CRGB(0, 255, 255), true },
-        .SecondaryColour = { CRGB(0, 255, 255), false }
-    }
+    .OnboardLED = { CRGB(0, 255, 255), true }
+    // .LEDConfig = new ExternalLEDConfig {
+    //     .LEDNumber = LED_Tilt,
+    //     .PrimaryColour = { CRGB(0, 255, 255), true },
+    //     .SecondaryColour = { CRGB(0, 255, 255), false }
+    // }
   };
 
 #define ENABLE_FLIP_SCREEN // Required if below is defined
@@ -269,25 +269,25 @@ Input AnalogInputs_Whammy =
   { .Pin = ANALOG_Whammy_PIN, .Label = "Whammy", .BluetoothInput = NONE, .DefaultValue = -1,
     .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = &BleGamepad::setSlider1,
     .RenderOperation = RenderInput_AnalogBar_Vert, .XPos = uiWhammyX + 2, .YPos = uiWhammyY + 2, .RenderWidth = uiWhammyW - 4, .RenderHeight = uiWhammyH - 4, .TrueIcon = NONE, .FalseIcon = NONE,
-    .OnboardLED = { CRGB::Pink, true },
-    .LEDConfig = new ExternalLEDConfig {
-        .LEDNumbers = { LED_Whammy,  (LED_Whammy+1), (LED_Whammy+2), (LED_Whammy+3), (LED_Whammy+4), (LED_Whammy+5), (LED_Whammy+6), (LED_Whammy+7)
-          },
-        .PrimaryColour = { CRGB(255, 54, 96), true},
-        .SecondaryColour = { CRGB::Green, false},
-        //.Effect = &AnalogEffects::BlendedHue
-        //.Effect = &AnalogEffects::SimpleSet_Fill
-        //.Effect = &AnalogArrayEffects::BuildBlendToEnd
-        //.Effect = &AnalogArrayEffects::SquishBlendToPoint
-        .Effect = &AnalogArrayEffects::PointWithTail
-        // .Effect = &LEDConfig::AnalogEffect_SimpleSet
-        // .Effect = &LEDConfig::AnalogEffect_Throb
-        // .Effect = &LEDConfig::AnalogEffect_Hue
-        // .Effect = &LEDConfig::AnalogEffect_StartAtHue
-        // .Effect = &LEDConfig::AnalogEffect_EndAtHue
-        // .Effect = &LEDConfig::AnalogEffect_BlendedStartAtHue
-        // .Effect = &LEDConfig::AnalogEffect_BlendedEndAtHue
-    }
+    .OnboardLED = { CRGB::Pink, true }
+    // .LEDConfig = new ExternalLEDConfig {
+    //     .LEDNumbers = { LED_Whammy,  (LED_Whammy+1), (LED_Whammy+2), (LED_Whammy+3), (LED_Whammy+4), (LED_Whammy+5), (LED_Whammy+6), (LED_Whammy+7)
+    //       },
+    //     .PrimaryColour = { CRGB(255, 54, 96), true},
+    //     .SecondaryColour = { CRGB::Green, false},
+    //     //.Effect = &AnalogEffects::BlendedHue
+    //     //.Effect = &AnalogEffects::SimpleSet_Fill
+    //     //.Effect = &AnalogArrayEffects::BuildBlendToEnd
+    //     //.Effect = &AnalogArrayEffects::SquishBlendToPoint
+    //     .Effect = &AnalogArrayEffects::PointWithTail
+    //     // .Effect = &LEDConfig::AnalogEffect_SimpleSet
+    //     // .Effect = &LEDConfig::AnalogEffect_Throb
+    //     // .Effect = &LEDConfig::AnalogEffect_Hue
+    //     // .Effect = &LEDConfig::AnalogEffect_StartAtHue
+    //     // .Effect = &LEDConfig::AnalogEffect_EndAtHue
+    //     // .Effect = &LEDConfig::AnalogEffect_BlendedStartAtHue
+    //     // .Effect = &LEDConfig::AnalogEffect_BlendedEndAtHue
+    // }
   };
 
 Input *AnalogInputs[] = {
@@ -346,12 +346,12 @@ HatInput Hat0 =
     },
     .LEDConfigs = {
         nullptr,
-        new ExternalLEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Blue, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &HatEffects::MoveRainbow, .Rate = 255.0 * 2 }, //Throb, .Rate = 255.0 * 2 },
+        nullptr, //new ExternalLEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Blue, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &HatEffects::MoveRainbow, .Rate = 255.0 * 2 }, //Throb, .Rate = 255.0 * 2 },
         nullptr,
         nullptr,
         nullptr,
         
-        new ExternalLEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &HatEffects::MoveRainbow, .Rate = 27.0 }, //TimeHue, .Rate = 27.0 },
+        nullptr, //new ExternalLEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &HatEffects::MoveRainbow, .Rate = 27.0 }, //TimeHue, .Rate = 27.0 },
         //new LEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &LEDConfig::DigitalEffect_SimpleSet, .Rate = 27.0 },
         //new LEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &LEDConfig::DigitalEffect_Throb, .Rate = 27.0 },
         //new LEDConfig{.LEDNumber = LED_Hat_1,  .PrimaryColour = LED(CRGB::Red, true ), .SecondaryColour = LED(CRGB::Black, false ), .Effect = &LEDConfig::DigitalEffect_MoveRainbow, .Rate = 27.0 },
@@ -368,6 +368,10 @@ HatInput *HatInputs[] = {
   &Hat0
 };
 
+// Miscellaneous LED effects
+ExternalLEDConfig *MiscLEDEffects[] = { };
+
+  ExternalLEDConfig *IdleLEDEffects[] = { };
 
 // -----------------------------------------------------
 // Array sizes
@@ -376,6 +380,8 @@ int ControllerGfx_RunCount = sizeof(ControllerGfx) / sizeof(ControllerGfx[0]);
 int AnalogInputs_Count = sizeof(AnalogInputs) / sizeof(AnalogInputs[0]);
 int HatInputs_Count = sizeof(HatInputs) / sizeof(HatInputs[0]);
 int DigitalInputs_Count = sizeof(DigitalInputs) / sizeof(DigitalInputs[0]);
+int MiscLEDEffects_Count = sizeof(MiscLEDEffects) / sizeof(MiscLEDEffects[0]);
+int IdleLEDEffects_Count = sizeof(IdleLEDEffects) / sizeof(IdleLEDEffects[0]);
 
 // Special case code specific to this controller
 

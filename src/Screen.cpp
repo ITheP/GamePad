@@ -11,7 +11,7 @@ int PreviousScreenOrientation = 0;
 void FlipScreen(Input* input) {
 #ifdef LIVE_BATTERY
   // Don't draw if we are showing the end game battery warning
-  if (PreviousBatteryLevel == 0) {
+  if (Battery::PreviousBatteryLevel == 0) {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("Flip Screen cancelled - BatteryLevel 0");
 #endif

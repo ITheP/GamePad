@@ -18,6 +18,9 @@
 #include "Screen.h"
 #include "UI.h"
 
+// #include "soc/soc.h"
+// #include "soc/rtc_cntl_reg.h"
+
 #define WIFI
 
 #define WEBSERVER
@@ -140,6 +143,9 @@ int ControllerIdleJustUnset = false;
 
 void setup()
 {
+  // Development test specific
+  // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // disables brownout detector
+
   // delay(10); // Give pins on start up time to settle if theres any power up glitching
   Wire.begin(I2C_SDA, I2C_SCL);
 
@@ -827,6 +833,16 @@ void loop()
   MainBenchmark.Snapshot("Loop.Init", showBenchmark);
 #endif
 
+  SetFontFixed();
+  Display.fillRect(0, 0, SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
+  snprintf(buffer, sizeof(buffer), "%d%% - %.1fv",
+           Battery::CurrentBatteryPercentage,
+           Battery::Voltage);
+
+  RRE.printStr(0, 0, "Battery:");
+  RRE.printStr(ALIGN_RIGHT, 0, buffer);
+  SetFontCustom();
+  
   // Things we don't do so often, like every second. Reduce overhead. Would it make a difference if we didn't throttle things like this? Probably not :)
   if (SecondRollover)
   {
@@ -876,9 +892,9 @@ void loop()
       // Battery level scale to 0->10 pixels
       int width = ((currentBatteryLevel / 100.0) * 10.0);
       // Render width as 0->10 pixel wide rectangle inside icon
-      Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 4, 10, 5, C_BLACK);
+      Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, 10, 5, C_BLACK);
 
-      Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 4, width, 5, C_WHITE);
+      Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, width, 5, C_WHITE);
     }
 
     // UpDownCount_SecondPassed(Second);

@@ -49,6 +49,7 @@ public:
     static int CurrentBatteryPercentage;
     static int CumulativeBatterySensorReadings;
     static int BatteryLevelReadingsCount;
+    static float Voltage;
 };
 
 inline void Battery::TakeReading() {

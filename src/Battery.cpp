@@ -1,10 +1,11 @@
 #include "Battery.h"
-#include <Structs.h>
-#include <IconMappings.h>
-#include <Screen.h>
-#include <RenderText.h>
-#include <Icons.h>
+#include "Structs.h"
+#include "IconMappings.h"
+#include "Screen.h"
+#include "RenderText.h"
+#include "Icons.h"
 #include "DeviceConfig.h"
+#include "Utils.h"
 
 extern CRGB ExternalLeds[];
 
@@ -13,6 +14,7 @@ int Battery::CurrentBatterySensorReading = 0;
 int Battery::CurrentBatteryPercentage = 0;
 int Battery::CumulativeBatterySensorReadings = 0;
 int Battery::BatteryLevelReadingsCount = 0;
+float Battery::Voltage = 0.0;
 
 int Battery::GetLevel() {
   // We have had multiple readings, so average them out and update current battery level
@@ -27,9 +29,10 @@ int Battery::GetLevel() {
 
   CurrentBatteryPercentage = (CurrentBatterySensorReading - BAT_MIN) * 100.0 / (BAT_MAX - BAT_MIN);
 
+  Voltage = fmap(CurrentBatteryPercentage, 0.0, 100.0, BAT_MINV, BAT_MAXV);
+
 #ifdef EXTRA_SERIAL_DEBUG_PLUS
-  float voltage = map(CurrentBatteryPercentage, 0.0, 100.0, BAT_MINV, BAT_MAXV);
-  Serial.println("Battery Sensor Limited: " + String(CurrentBatterySensorReading) + ", Battery %: " + String(CurrentBatteryPercentage) + ", Approx Battery Voltage: " + String(voltage));
+  Serial.println("Battery Sensor Limited: " + String(CurrentBatterySensorReading) + ", Battery %: " + String(CurrentBatteryPercentage) + ", Approx Battery Voltage: " + String(Voltage));
 #endif
 
   return CurrentBatteryPercentage;

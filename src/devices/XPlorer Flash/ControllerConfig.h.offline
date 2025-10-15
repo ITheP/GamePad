@@ -1,14 +1,5 @@
 #pragma once
 
-// #include <optional>
-// #include <vector>
-// #include "Config.h"
-// #include "RenderInput.h"
-// #include "LED.h"
-// #include "IconMappings.h"
-// #include "Stats.h"
-// #include "LEDConfig.h"
-
 #include "Structs.h"
 #include "Stats.h"
 
@@ -32,35 +23,60 @@
 
 #define CLEAR_STATS_ON_FLIP             // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
 
+// Go into idle LED effects mode after 10 seconds
+#define IDLE_TIMEOUT 10.0
+
 // =====
 // LED's
+
+// 0-5   = Strumbar Side 1
+// 6     = Green Fret
+// 7     = Red
+// 8     = Yellow
+// 9     = Blue
+// 10    = Orange
+// 11-16 = Strumbar Side 2
+// 17-30 = Whammy Side 1
+// 31-44 = Whammy Side 2
+
+// Status = not sure yet
+// Tilt = note sure yet
+// BT = Not sure yet
+
 // Mappings to physical Neopixel/equivalent LED offsets
-#define LED_Status          0
-#define LED_Green           1
-#define LED_Red             2
-#define LED_Yellow          3
-#define LED_Blue            4
-#define LED_Orange          5
-#define LED_Tilt            6
-#define LED_Status_Copy     7
-#define LED_Hat_Off         8
-#define LED_Hat_1           9
-#define LED_Hat_2           10
-#define LED_Hat_3           11
-#define LED_Hat_4           12
-#define LED_Hat_5           13
-#define LED_Hat_6           14
-#define LED_Hat_7           15
-#define LED_Hat_8           16
-#define LED_DigitalTest     17
-#define LED_DigitalTest_Count (15+17)
+#define LED_StrumBarSide1   0
+#define LED_FretLEDs        6
+#define LED_Green           6
+#define LED_Red             7
+#define LED_Yellow          8
+#define LED_Blue            9
+#define LED_Orange          10
+#define LED_StrumBarSide2   11
+#define LED_WhammySide1     17
+#define LED_WhammySide2     31
+//#define LED_Status_Copy     7
+//#define LED_Hat_Off         8
+//#define LED_Hat_1           9
+//#define LED_Hat_2           10
+//#define LED_Hat_3           11
+//#define LED_Hat_4           12
+//#define LED_Hat_5           13
+//#define LED_Hat_6           14
+//#define LED_Hat_7           15
+//#define LED_Hat_8           16
+//#define LED_DigitalTest     17
+//#define LED_DigitalTest_Count (15+17)
 // Non fading LED's after this point
-#define LED_Whammy          (LED_DigitalTest + LED_DigitalTest_Count)
-#define LED_Whammy_Count    8
+//#define LED_Whammy          (LED_DigitalTest + LED_DigitalTest_Count)
+//#define LED_Whammy_Count    8
 
-#define LED_TOTALCOUNT      (LED_Whammy + LED_Whammy_Count)
 
-#define LED_BRIGHTNESS     20                      // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
+#define LED_Status          LED_WhammySide1
+#define LED_Tilt            LED_WhammySide2
+
+#define LED_TOTALCOUNT      45
+
+#define LED_BRIGHTNESS     20                       // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
 
 #define ONBOARD_LED_FADE_RATE (1.0 / 0.2)           // 0.15 is the total amount of seconds a complete 255->0 fade will be over
 
@@ -70,7 +86,7 @@
 
 // External pin EXTERNAL_LED_PIN defined lower down
 #define ExternalLED_Count LED_TOTALCOUNT            // Space for all LEDs - in our case 5 neck buttons, 1 status LED + 1 status LED clone
-#define ExternalLED_FadeCount LED_Whammy            // Auto-fade of LED's - basically fades all LED's in ExternalLED array up to this point.
+#define ExternalLED_FadeCount LED_TOTALCOUNT        // Auto-fade of LED's - basically fades all LED's in ExternalLED array up to this point.
                                                     // RECOMMENDATION: if physically possible, stick all fading LED's at the start of your array, and non fading ones at the end - less overhead then
                                                     // Less overhead then                                          
 #define ExternalLED_FastLEDCount LED_TOTALCOUNT     // Match ExternalLED_Count for all LEDs, but set to e.g. 1 (assuming LED 0 is the status led) for only the first status LED to be used
@@ -107,20 +123,20 @@ extern IconRun ControllerGfx[];
 //      +3v3
 //      RST
 #define PIN_04_D01_A1 4   // [Whammy] OK pud ADC1_3 Touch_01
-#define PIN_05_D02_A2 5   // [Hat1 R] OK pud ADC1_4 Touch_02
-#define PIN_06_D03_A3 6   // [Hat1 L] OK pud ADC1_5 Touch_03
-#define PIN_07_D04_A4 7   // [Blue  ] OK pud ADC1_6 Touch_04
+#define PIN_05_D02_A2 5   // [      ] OK pud ADC1_4 Touch_02
+#define PIN_06_D03_A3 6   // [      ] OK pud ADC1_5 Touch_03
+#define PIN_07_D04_A4 7   // [Tilt  ] OK pud ADC1_6 Touch_04
 #define PIN_15_D05    15  // [Green ] OK pud adc2_4           - Do not use for ADC
-#define PIN_16_D06    16  // [Orange] OK pud adc2_5           - Do not use for ADC
-#define PIN_17_D07    17  // [Yellow] OK pud adc2_6           - Do not use for ADC
-#define PIN_18_D08    18  // [      ] OK pud adc2_7           - Do not use for ADC
-#define PIN_08_D09    8   // [Red   ] OK pud ADC1_7 Touch_08  - I2C SDA default
+#define PIN_16_D06    16  // [Red   ] OK pud adc2_5           - Do not use for ADC
+#define PIN_17_D07    17  // [Blue  ] OK pud adc2_6           - Do not use for ADC
+#define PIN_18_D08    18  // [Yellow] OK pud adc2_7           - Do not use for ADC
+#define PIN_08_D09    8   // [Orange] OK pud ADC1_7 Touch_08  - I2C SDA default
 //      PIN_3         XX  //             pud ADC1_2 Touch_03  - Boot Strapping pin (JTAG signal source) - DO NOT USE
 //      PIN_46        XX  //                                  - Boot Strapping pin (Chip boot mode and ROM messages printing), input only, no internal pull up/down - DO NOT USE
-#define PIN_09_D10_A5 9   // [      ] OK pud ADC1_8 Touch_09  - I2C SCL Default
-#define PIN_10_D11_A6 10  // [Tilt  ] OK pud ACD1_9 Touch_10  -                      SPI3 CS
-#define PIN_11_D12    11  // [      ] OK pud adc2_0 Touch_11  - Do not use for ADC - SPI3 MOSI
-#define PIN_12_D13    12  // [      ] OK pud adc2_1 Touch_12  - Do not use for ADC - SPI3 CLK
+#define PIN_09_D10_A5 9   // [Hat1 U] OK pud ADC1_8 Touch_09  - I2C SCL Default
+#define PIN_10_D11_A6 10  // [Hat1 R] OK pud ACD1_9 Touch_10  -                      SPI3 CS
+#define PIN_11_D12    11  // [Hat1 D] OK pud adc2_0 Touch_11  - Do not use for ADC - SPI3 MOSI
+#define PIN_12_D13    12  // [Hat1 L] OK pud adc2_1 Touch_12  - Do not use for ADC - SPI3 CLK
 #define PIN_13_D14    13  // [Start ] OK pud adc2_2 Touch_13  - Do not use for ADC - SPI3 MISO
 #define PIN_14_D15    14  // [Select] OK pud adc2_3 Touch_14  - Do not use for ADC
 //      +5v in            //                                  - +5v from USB if IN-OUT jumper bridged
@@ -130,10 +146,10 @@ extern IconRun ControllerGfx[];
 //      Gnd
 //      TX            43  //                                  - UART0 TX/Debug
 //      RX            44  //                                  - UART0 RX/Debug
-#define PIN_01_D16_A7 1   // [      ] OK pud ADC1_0 Touch_01
+#define PIN_01_D16_A7 1   // [BatMon] OK pud ADC1_0 Touch_01  - Battery Monitor
 #define PIN_02_D17_A8 2   // [      ] OK pud ADC1_1 Touch_02
 #define PIN_42_D18    42  // [      ] ok                      - JTAG MTMS
-#define PIN_41_D19    41  // [FlipSc] ok                      - JTAG MTDI
+#define PIN_41_D19    41  // [      ] ok                      - JTAG MTDI
 #define PIN_40_D20    40  // [Screen] ok                      - JTAG MTDO
 #define PIN_39_D21    39  // [Screen] ok                      - JTAG MTCK, SPI2 CS
 #define PIN_38_D22    38  // [ExtLED] ok                      - External Status LED
@@ -143,7 +159,7 @@ extern IconRun ControllerGfx[];
 //      PIN_0             //                                  - Boot Strapping Pin Boot Mode
 //      PIN_45            //                                  - Boot Strapping Pin VDD SPI Voltage (VDD_SPI voltage, selects between 1.8v and 3.3v)
 #define PIN_48_D23    48  // [IntLED] ok                      - Internal NEOPIXEL (default internal pin reference)
-#define PIN_47_D24    47  // [ExtLED] ok                      - External LED's
+#define PIN_47_D24    47  // [      ] ok                      - External LED's
 #define PIN_21_D25    21  // [      ] OK pud
 //      PIN_20        XX  //                                  - USB_D+ - if reconfigured as normal GPIO, USB-JTAG functionality unavailable - i.e. don't expect USB to work! - DO NOT USE
 //      PIN 19        XX  //                                  - USB_D- - DO NOT USE
@@ -157,25 +173,31 @@ extern IconRun ControllerGfx[];
 // Battery monitor ... 10k -> +3.3, 20k -> Gnd
 #define BATTERY_MONITOR_PIN     PIN_02_D17_A8 // Battery Voltage - 20K ohm to Gnd + 10K ohm to +ve
 
+// Hat/Dpad
+
+#define HAT1_Up_PIN             PIN_11_D12    // [09] <Gray>
+#define HAT1_Right_PIN          PIN_10_D11_A6 // [10] <Brown>
+#define HAT1_Down_PIN           PIN_09_D10_A5 // [11] <Blue>
+#define HAT1_Left_PIN           PIN_12_D13    // [12] <Green>
+#define BUTTON_Start_PIN        PIN_13_D14    // [13] <Orange>
+#define BUTTON_Select_PIN       PIN_14_D15    // [14] <Yellow>
+// Gnd                                        // [G ] <Black>
+// +3.3v                                      // [+V] <Red>
+
 // Guitar Neck Buttons
-#define HAT1_Right_PIN          PIN_05_D02_A2 // [05] <Gray>
-#define HAT1_Left_PIN           PIN_06_D03_A3 // [06] <Brown>
-#define BUTTON_Blue_PIN         PIN_07_D04_A4 // [07] <Blue> 4th
-#define BUTTON_Green_PIN        PIN_15_D05    // [15] <Green> 1st
-#define BUTTON_Orange_PIN       PIN_16_D06    // [16] <Orange> 5th
-#define BUTTON_Yellow_PIN       PIN_17_D07    // [17] <Yellow> 3rd
-// Gnd                                        // [G ] <Black> - Set as Gnd
-#define BUTTON_Red_PIN          PIN_08_D09    // [18] <Red> 2nd
+// A B C
+// D E F
+#define BUTTON_Blue_PIN         PIN_17_D07    // [17] <A> 4th
+#define BUTTON_Yellow_PIN       PIN_18_D08    // [18] <B> 3rd
+#define BUTTON_Orange_PIN       PIN_08_D09    // [08] <C> 5th
+#define BUTTON_Red_PIN          PIN_16_D06    // [16] <D> 2nd
+#define BUTTON_Green_PIN        PIN_15_D05    // [15] <E> 1st
+// Gnd                                        // [G ] <F>
 
 // Extra buttons
-#define BUTTON_Tilt_PIN         PIN_10_D11_A6 // [10] < > Tilt Sensor
+#define BUTTON_Tilt_PIN         PIN_07_D04_A4 // [10] < > Tilt Sensor
 // 11 Spare?                                  // [11] <White>
 // 12 Spare?                                  // [12] <Black>
-
-// End Buttons
-#define BUTTON_Start_PIN        PIN_13_D14    // [13] <Red>
-#define BUTTON_Select_PIN       PIN_14_D15    // [14] <White>
-// Gnd                                        // [G ]
 
 #define BUTTON_FlipScreen_PIN   PIN_41_D19
 
@@ -187,7 +209,7 @@ extern IconRun ControllerGfx[];
 // Screen block (TWO SETS OF WIRE COLOURS - accidentally soldered the block socket wrong way around, doh, so lists what colour should have been, then what was actually used
 // +3.3v                                      // [+V] <Red> <Gray> - V++ (ignore pin 36)
 // Gnd                                        // [G ] <Black> <Brown> - set as Gnd (ignore pin 39)
-#define EXTERNAL_LED_PIN        PIN_38_D22    // [  ] <Yellow> <Blue> - External NeoPixel Status LED (was PIN_47_D24)
+#define EXTERNAL_LED_PIN        PIN_38_D22    // [38] <Yellow> <Blue> - External NeoPixel Status LED
 #define I2C_SDA                 PIN_39_D21    // [39] <Orange> <Green> - Screen - SDA
 #define I2C_SCL                 PIN_40_D20    // [40] <Green> <Orange> - Screen - SCK
 // 41                                         // [41] <Yellow> - Rotator Switch 1
@@ -264,10 +286,15 @@ extern Stats Stats_HatRight;
 extern Stats *AllStats[];
 extern int AllStats_Count;
 
+extern ExternalLEDConfig *MiscLEDEffects[];
+extern ExternalLEDConfig *IdleLEDEffects[];
+
 extern int ControllerGfx_RunCount;
 extern int AnalogInputs_Count;
 extern int HatInputs_Count;
 extern int DigitalInputs_Count;
+extern int MiscLEDEffects_Count;
+extern int IdleLEDEffects_Count;
 
 // -----------------------------------------------------
 // Special case code specific to this controller
