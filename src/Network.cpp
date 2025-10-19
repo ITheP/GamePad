@@ -13,40 +13,54 @@
 
 // TODO: If ndef WIFI then draw the icons for no wifi in main display setup
 
+constexpr char *WiFi_HighSignal = "OK - High Signal";
+constexpr char *WiFi_MediumSignal = "OK - Medium Signal";
+constexpr char *WiFi_LowSignal = "OK - Low Signal";
+constexpr char *WiFi_TraceSignal = "OK - Trace Signal";
+constexpr char *WiFi_Query = "Problem checking access point";
+constexpr char *WiFi_AccessPointUnavailable = "Access point not found";
+constexpr char *WiFi_Disabled = "Disabled";
+constexpr char *WiFi_Connecting = "Connecting...";
+constexpr char *WiFi_ReConnecting = "Reconnecting...";
+constexpr char *WiFi_Disconnected = "Disconnected";
+constexpr char *WiFi_UnknownStatus = "Unknown Status";
+
 // Wi-Fi credentials
 const char *Network::ssid = WIFI_SSID;
 const char *Network::password = WIFI_PASSWORD;
 
-int Network::WifiConnecting = 0;
-wl_status_t Network::WifiConnectionState;
-wl_status_t Network::PreviousWifiConnectionState = WL_SCAN_COMPLETED; // Initialize to something we know it won't be to force a UI update straight away;
+int Network::WiFiConnecting = 0;
+wl_status_t Network::WiFiConnectionState;
+wl_status_t Network::PreviousWiFiConnectionState = WL_SCAN_COMPLETED; // Initialize to something we know it won't be to force a UI update straight away;
 
-unsigned char Network::LastWifiCharacter;
-unsigned char Network::LastWifiStatusCharacter;
-int Network::WifiStatusIterations;
+unsigned char Network::LastWiFiCharacter;
+unsigned char Network::LastWiFiStatusCharacter;
+int Network::WiFiStatusIterations;
 
 // ToDo: Disconnected icon if wifi is turned off
 
-unsigned char Network::WifiCharacter;
-unsigned char Network::WifiStatusCharacter;
-// We have a final character that might override the WifiCharacter (e.g. animation) but we want to retain what
-// the current WifiCharacter is so that we can re-render it when status isn't changing. Mainly relevant when in a connecting state.
-unsigned char Network::FinalWifiCharacter;
+unsigned char Network::WiFiCharacter;
+char *Network::WiFiStatus;
 
-void Network::HandleWifi(int second)
+unsigned char Network::WiFiStatusCharacter;
+// We have a final character that might override the WiFiCharacter (e.g. animation) but we want to retain what
+// the current WiFiCharacter is so that we can re-render it when status isn't changing. Mainly relevant when in a connecting state.
+unsigned char Network::FinalWiFiCharacter;
+
+void Network::HandleWiFi(int second)
 {
-    // Wifi
+    // WiFi
     // Connect to Wi-Fi
-    WifiConnectionState = WiFi.status();
-    // FinalWifiCharacter = WifiCharacter;
+    WiFiConnectionState = WiFi.status();
+    // FinalWiFiCharacter = WiFiCharacter;
 
-    if (WifiConnectionState == WL_CONNECTED)
+    if (WiFiConnectionState == WL_CONNECTED)
     {
         wifi_ap_record_t ap_info;
         esp_err_t state = esp_wifi_sta_get_ap_info(&ap_info);
 
         // Just connected.
-        if (PreviousWifiConnectionState != WifiConnectionState)
+        if (PreviousWiFiConnectionState != WiFiConnectionState)
         {
 #ifdef EXTRA_SERIAL_DEBUG
             Serial.println("Connected to WiFi...");
@@ -84,10 +98,10 @@ void Network::HandleWifi(int second)
                 Serial.println("Wi-Fi power saving mode is unknown.");
             }
 #endif
-            WifiConnecting = false;
+            WiFiConnecting = false;
         }
 
-        // Wifi signal level can change at any time, so we constantly update it
+        // WiFi signal level can change at any time, so we constantly update it
         if (state == ESP_OK)
         {
             // -30 to -50 dBm - Excellent signal
@@ -100,17 +114,28 @@ void Network::HandleWifi(int second)
             Serial.println("WiFi Strength: " + String(ap_info.rssi));
 #endif
 
-            // Update Wifi icon with relevant signal level if required
+            // Update WiFi icon with relevant signal level if required
             if (ap_info.rssi > -50)
-                WifiCharacter = Icon_WIFI_HighSignal;
+            {
+                WiFiCharacter = Icon_WIFI_HighSignal;
+                WiFiStatus = WiFi_HighSignal;
+            }
             else if (ap_info.rssi > -67)
-                WifiCharacter = Icon_WIFI_MediumSignal;
+            {
+                WiFiCharacter = Icon_WIFI_MediumSignal;
+                WiFiStatus = WiFi_MediumSignal;
+            }
             else if (ap_info.rssi > -75)
-                WifiCharacter = Icon_WIFI_LowSignal;
+            {
+                WiFiCharacter = Icon_WIFI_LowSignal;
+                WiFiStatus = WiFi_LowSignal;
+            }
             else
-                WifiCharacter = Icon_WIFI_TraceSignal;
-
-           //WifiStatusCharacter = Icon_OK;
+            {
+                WiFiCharacter = Icon_WIFI_TraceSignal;
+                WiFiStatus = WiFi_TraceSignal;
+            }
+            // WiFiStatusCharacter = Icon_OK;
         }
         else
         {
@@ -120,32 +145,38 @@ void Network::HandleWifi(int second)
 
             // Somethings gone pretty wrong!
             if ((second & 1) == 0)
-                WifiCharacter = Icon_WIFI_Query;
+            {
+                WiFiCharacter = Icon_WIFI_Query;
+                WiFiStatus = WiFi_Query;
+            }
             else
-                WifiCharacter = Icon_WIFI_Disabled;
+            {
+                WiFiCharacter = Icon_WIFI_Disabled;
+                WiFiStatus = WiFi_Disabled;
+            }
 
-            WifiStatusCharacter = Icon_Skull;
+            WiFiStatusCharacter = Icon_Skull;
         }
 
-        FinalWifiCharacter = WifiCharacter;
+        FinalWiFiCharacter = WiFiCharacter;
     }
     // else if (not enabled/disconnected state)
     // HERE TO DO
     else
     {
         // Eyes hunting icons
-        //WifiStatusCharacter = (unsigned char)Icon_EyesLeft + (unsigned char)(WifiStatusIterations & 1);
+        // WiFiStatusCharacter = (unsigned char)Icon_EyesLeft + (unsigned char)(WiFiStatusIterations & 1);
 
         // Somethings changed...
-        if (PreviousWifiConnectionState != WifiConnectionState)
+        if (PreviousWiFiConnectionState != WiFiConnectionState)
         {
-            WifiStatusIterations = 0;
+            WiFiStatusIterations = 0;
 
-            if (WifiConnectionState == WL_IDLE_STATUS || WifiConnectionState == WL_NO_SHIELD || WifiConnectionState == WL_CONNECT_FAILED)
+            if (WiFiConnectionState == WL_IDLE_STATUS || WiFiConnectionState == WL_NO_SHIELD || WiFiConnectionState == WL_CONNECT_FAILED)
             // WL_NO_SHIELD is Known to be an init state on device start up, so use it as an alternative to try and connect
             // WL_CONNECT_FAILED we just try and connect again
             {
-                if (WifiConnecting == false)
+                if (WiFiConnecting == false)
                 {
 #ifdef EXTRA_SERIAL_DEBUG
                     Serial.println("WIFI: Idle");
@@ -157,80 +188,81 @@ void Network::HandleWifi(int second)
                     // esp_wifi_set_ps(WIFI_PS_NONE);
 
                     WiFi.begin(ssid, password);
-                    WifiConnecting = true;
+                    WiFiConnecting = true;
+                    WiFiStatus = WiFi_Connecting;
                 }
 
-                WifiCharacter = Icon_WIFI_TraceSignal;
+                WiFiCharacter = Icon_WIFI_TraceSignal;
             }
-            else if (WifiConnectionState == WL_CONNECTION_LOST)
+            else if (WiFiConnectionState == WL_CONNECTION_LOST)
             {
 #ifdef EXTRA_SERIAL_DEBUG
                 Serial.println("WIFI: Connection lost, attempting to reconnect...");
 #endif
-                WifiCharacter = Icon_WIFI_LostSignal;
+                WiFiCharacter = Icon_WIFI_LostSignal;
+                WiFiStatus = WiFi_ReConnecting;
                 WiFi.reconnect();
             }
-            else if (WifiConnectionState == WL_DISCONNECTED)
+            else if (WiFiConnectionState == WL_DISCONNECTED)
             {
 #ifdef EXTRA_SERIAL_DEBUG
                 Serial.println("WIFI: Connection disconnected, attempting to reconnect...");
 #endif
 
-                WifiCharacter = Icon_WIFI_LostSignal;
+                WiFiCharacter = Icon_WIFI_LostSignal;
+                WiFiStatus = WiFi_Disconnected;
                 WiFi.reconnect();
             }
-            else if (WifiConnectionState == WL_NO_SSID_AVAIL)
+            else if (WiFiConnectionState == WL_NO_SSID_AVAIL)
             {
 #ifdef EXTRA_SERIAL_DEBUG
                 Serial.println("WIFI: SSID [' + ssid + '] is not available or cannot be found");
 #endif
-                WifiCharacter = Icon_WIFI_Query;
+                WiFiCharacter = Icon_WIFI_Query;
+                WiFiStatus = WiFi_AccessPointUnavailable;
             }
             else
             {
 #ifdef EXTRA_SERIAL_DEBUG
-                Serial.println("WIFI: Unknown status: " + String(WifiConnectionState));
+                Serial.println("WIFI: Unknown status: " + String(WiFiConnectionState));
 #endif
-                WifiCharacter = Icon_WIFI_Query;
+                WiFiCharacter = Icon_WIFI_Query;
+                WiFiStatus = WiFi_UnknownStatus;
             }
         }
         else
         {
             // We have a 0 based iteration counter, rather than using seconds
             // so that relevant iconography should always start from a 0 based offset
-            WifiStatusIterations++;
+            WiFiStatusIterations++;
         }
 
         // Base icon remains the same but we animate the search part of this
-        unsigned char animation = (unsigned char)(WifiStatusIterations & 0b11);
+        unsigned char animation = (unsigned char)(WiFiStatusIterations & 0b11);
         // Serial.println((int)(animation));
         if (animation == 0)
-            FinalWifiCharacter = WifiCharacter;
+            FinalWiFiCharacter = WiFiCharacter;
         else
-            FinalWifiCharacter = (unsigned char)Icon_WIFI_TraceSignal + animation; // 0-3
-
-        Serial.print(animation);
-        Serial.print(" - ");
-        Serial.println((int)FinalWifiCharacter);
+            FinalWiFiCharacter = (unsigned char)Icon_WIFI_TraceSignal + animation; // 0-3
     }
 
-    PreviousWifiConnectionState = WifiConnectionState;
+    PreviousWiFiConnectionState = WiFiConnectionState;
 
     RenderIcons();
 }
 
 void Network::RenderIcons()
 {
-    if (FinalWifiCharacter != LastWifiCharacter)
+    if (FinalWiFiCharacter != LastWiFiCharacter)
     {
-        RenderIcon(FinalWifiCharacter, uiWiFi_xPos, uiWiFi_yPos, 14, 16);
-        LastWifiCharacter = FinalWifiCharacter;
+        RenderIcon(FinalWiFiCharacter, uiWiFi_xPos, uiWiFi_yPos, 14, 16);
+        LastWiFiCharacter = FinalWiFiCharacter;
     }
-    //if (WifiStatusCharacter != LastWifiStatusCharacter)
+    // if (WiFiStatusCharacter != LastWiFiStatusCharacter)
     //{
-    //    RenderIcon(WifiStatusCharacter, uiWiFiStatus_xPos, uiWiFiStatus_yPos, 16, 16);
-    //    LastWifiStatusCharacter = WifiStatusCharacter;
-    //}
+    //     RenderIcon(WiFiStatusCharacter, uiWiFiStatus_xPos, uiWiFiStatus_yPos, 16, 16);
+    //     LastWiFiStatusCharacter = WiFiStatusCharacter;
+    // }
 
     // TEMPORARY TEST
     Web::RenderIcons();

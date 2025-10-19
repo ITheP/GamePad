@@ -15,7 +15,7 @@ PBM file should be B&W, 1-bit.
 The file should contain 16x6 or 32x3 characters (96 characters mode),
 16x8 (128 characters mode) or 1 line for digits and following characters.
 
-Use IrfanView to convert bitmaps in other formats.
+Use IrfanView to convert to bitmaps from other formats.
 
 IMPORTANT: Photoshop doesn't create a valid .pbm file.
 Open and re-save in IrfanView to fix.
@@ -30,7 +30,6 @@ $outputFile = "CustomIcons.16x16.h"
 # Run the font generator
 Write-Host "Processing PBM file..."
 & .\rrefontgen.exe "CustomIcons.16x16.pbm" 16 16 "CustomIcons16" 0 2 0 | Out-File -Encoding ASCII $tempFile
-
 
 $searchString = "----><--------><--------><--------><--------><--------><----"
 $replacement = "$searchString`r`n*/"

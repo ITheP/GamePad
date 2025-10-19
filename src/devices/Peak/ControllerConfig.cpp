@@ -10,12 +10,13 @@
 
 #include "DeviceConfig.h"
 #include <Screen.h>
+#include "Menus.h"
 
-char ControllerType[] = "Guitar Controller";
-char ModelNumber[] = "Guitar 1.0";
-char FirmwareRevision[] = "1.0";
-char HardwareRevision[] = "1.0";
-char SoftwareRevision[] = "1.0";
+char *ControllerType = "Guitar Controller";
+char *ModelNumber = "Guitar 1.0";
+char *FirmwareRevision = "1.0";
+char *HardwareRevision = "1.0";
+char *SoftwareRevision = "1.0";
 
 // List of LED's we want cloning (lets you copy LED values between each other)
 // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
@@ -36,7 +37,7 @@ Stats Stats_Yellow("Yellow", &Stats_Neck);
 Stats Stats_Blue("Blue", &Stats_Neck);
 Stats Stats_Orange("Orange", &Stats_Neck);
 
-Stats Stats_Start_LongPress("Select Long Press");
+Stats Stats_Start_LongPress("Start Long Press");
 
 Stats Stats_StrumBar("Strum Bar");
 Stats Stats_HatLeft("Strum Up", &Stats_StrumBar);
@@ -156,9 +157,9 @@ Input DigitalInput_Orange = // Orange button on guitar neck
 
   // TEST - same as select but with some LED
 Input DigitalInput_Start_LongPress = // Select button on main body 
-  { .Pin = BUTTON_Start_PIN, .Label = "Select Long Press", .BluetoothInput = BUTTON_7, .DefaultValue = HIGH,
+  { .Pin = BUTTON_Start_PIN, .Label = "Start Long Press", .BluetoothInput = NONE, .DefaultValue = HIGH,
     .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
-    .RenderOperation = RenderInput_DoubleIcon, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 23, .RenderWidth = 19, .RenderHeight = 5, .TrueIcon = Icon_Select1, .FalseIcon = NONE,
+    .RenderOperation = RenderInput_DoubleIcon, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 23, .RenderWidth = 19, .RenderHeight = 5, .TrueIcon = Icon_Start, .FalseIcon = NONE,
         .Statistics = &Stats_Start_LongPress,
         .OnboardLED = { CRGB(255, 255, 255), true }
     //     .LEDConfig = new ExternalLEDConfig {
@@ -174,14 +175,32 @@ Input DigitalInput_Start = // Start button on main body
     .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 56, .YPos = uiGuitar_yPos + 3, .RenderWidth = 16, .RenderHeight = 5, .TrueIcon = Icon_Start, .FalseIcon = NONE,
     .OnboardLED = { CRGB(255, 128, 0), true },
     .LongPressTiming = 1000 * 1000, // 1sec = 1000ms = 1000000us
-    .LongPressChildInput = &DigitalInput_Start_LongPress, // Long press on Tilt button will trigger Select Long Press
+    .LongPressChildInput = &DigitalInput_Start_LongPress, // Long press on Start button will trigger Select Long Press
     .ShortPressReleaseTime = 250 * 1000
+  };
+
+  // TEST - same as select but with some LED
+Input DigitalInput_Select_LongPress = // Select button on main body 
+  { .Pin = BUTTON_Select_PIN, .Label = "Select Long Press", .BluetoothInput = NONE, .DefaultValue = HIGH,
+    .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = NONE,
+    .CustomOperationPressed = Menus::ToggleMenuMode, .CustomOperationReleased = NONE,
+    .RenderOperation = RenderInput_DoubleIcon, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 23, .RenderWidth = 19, .RenderHeight = 5, .TrueIcon = Icon_Select1, .FalseIcon = NONE,
+    .OnboardLED = { CRGB(255, 255, 255), true } // Long press on Start button will trigger Select Long Press
+    //     .LEDConfig = new ExternalLEDConfig {
+    //     .LEDNumber = LED_Orange,
+    //     .PrimaryColour = { CRGB(255, 255, 255), true },
+    //     .SecondaryColour = { CRGB(255, 0, 255), false }
+    // }
   };
 
 Input DigitalInput_Select = // Select button on main body 
   { .Pin = BUTTON_Select_PIN, .Label = "Select", .BluetoothInput = BUTTON_8, .DefaultValue = HIGH,
     .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE,
-    .RenderOperation = RenderInput_DoubleIcon, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 23, .RenderWidth = 19, .RenderHeight = 5, .TrueIcon = Icon_Select1, .FalseIcon = NONE
+    .RenderOperation = RenderInput_DoubleIcon, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 23, .RenderWidth = 19, .RenderHeight = 5, .TrueIcon = Icon_Select1, .FalseIcon = NONE,
+    .OnboardLED = { CRGB(255, 128, 0), true },
+    .LongPressTiming = 1000 * 1000, // 1sec = 1000ms = 1000000us
+    .LongPressChildInput = &DigitalInput_Select_LongPress,
+    .ShortPressReleaseTime = 250 * 1000
   };
 
 Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled vertically
@@ -209,7 +228,6 @@ Input DigitalInput_FlipScreen = // Lever on main body, will be flipped into a pe
   };
 
 // DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
-// Make sure for all DigitalInputs that have a long press reference, that the long press reference also has pointer back to the parent input
 Input *DigitalInputs[] = {
   &DigitalInput_Green,
   &DigitalInput_Red,
@@ -230,7 +248,8 @@ Input *DigitalInputs[] = {
   //{ PIN_A5, "Back", BACK_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 }
 
   // Long press inputs
-  &DigitalInput_Start_LongPress
+  &DigitalInput_Start_LongPress,
+  &DigitalInput_Select_LongPress
 };
 
 // // Secondary Digital Inputs, used for long press operations
@@ -266,7 +285,7 @@ Input *DigitalInputs[] = {
 
 // Specific inputs we need references to
 Input AnalogInputs_Whammy =
-  { .Pin = ANALOG_Whammy_PIN, .Label = "Whammy", .BluetoothInput = NONE, .DefaultValue = -1,
+  { .Pin = ANALOG_Whammy_PIN, .Label = "Whammy", .BluetoothInput = NONE, .DefaultValue = -1, .MinValue = 2300, .MaxValue = 3500,
     .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = &BleGamepad::setSlider1,
     .RenderOperation = RenderInput_AnalogBar_Vert, .XPos = uiWhammyX + 2, .YPos = uiWhammyY + 2, .RenderWidth = uiWhammyW - 4, .RenderHeight = uiWhammyH - 4, .TrueIcon = NONE, .FalseIcon = NONE,
     .OnboardLED = { CRGB::Pink, true }
@@ -310,28 +329,28 @@ HatInput Hat0 =
   {
     .Pins = { NONE, HAT1_Right_PIN, NONE, HAT1_Left_PIN }, .Label = "1", .BluetoothHat = 0, .DefaultValue = 0,
     .RenderOperation = RenderInput_Hat, .XPos = -4, .YPos = 25, .RenderWidth = 15, .RenderHeight = 15, .StartIcon = Icon_DPad_Neutral,
-    // .ExtraOperation = {
-    //     NONE,
-    //     UpDownCountClick,
-    //     NONE,
-    //     NONE,
-    //     NONE,
-    //     UpDownCountClick,
-    //     NONE,
-    //     NONE,
-    //     NONE
-    //   },
+    .ExtraOperation = {
+        NONE,           // Centered
+        NONE,           // Up
+        NONE,           // Up Right
+        Menus::MoveUp,   // Right
+        NONE,           // Down Right
+        NONE,           // Down
+        NONE,           // Down Left
+        Menus::MoveDown, // Left
+        NONE            // Up Left
+      },
     .CustomOperation = Custom_RenderHatStrumState,
     .Statistics = {
-      nullptr,          // Centered
-      nullptr,          // Up
-      nullptr,          // Up Right
+      NONE,             // Centered
+      NONE,             // Up
+      NONE,             // Up Right
       &Stats_HatLeft,   // Right
-      nullptr,          // Down Right
-      nullptr,          // Down
-      nullptr,          // Down Left
+      NONE,             // Down Right
+      NONE,             // Down
+      NONE,             // Down Left
       &Stats_HatRight,  // Left
-      nullptr           // Up Left
+      NONE              // Up Left
     },
     .OnboardLED = {
       {},

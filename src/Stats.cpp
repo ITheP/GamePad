@@ -5,10 +5,12 @@
 #include "DeviceConfig.h"
 #include "Prefs.h"
 
-void ResetAllCurrentStats()
+int ResetAllCurrentStats()
 {
   for (int i = 0; i < AllStats_Count; i++)
     AllStats[i]->ResetCurrentCounts();
+
+    return REPORTTOCONTROLLER_NO;
 }
 
 void UpdateSecondStats(int second)

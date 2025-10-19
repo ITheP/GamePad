@@ -13,8 +13,8 @@
 typedef void (BleGamepad::*BleGamepadFunctionPointer)(uint8_t);
 typedef void (BleGamepad::*BleGamepadFunctionPointerInt)(int16_t);
 
-typedef void (*LEDEffectFunctionPointerOld)(Input*, float);
-typedef void (*LEDHatEffectFunctionPointer)(HatInput*, int, float);
+// typedef void (*LEDEffectFunctionPointerOld)(Input*, float);
+// typedef void (*LEDHatEffectFunctionPointer)(HatInput*, int, float);
 
 typedef struct IntPair {
   int A;
@@ -53,8 +53,8 @@ typedef struct Input {
   BleGamepadFunctionPointer BluetoothPressOperation;
   BleGamepadFunctionPointer BluetoothReleaseOperation; 
   BleGamepadFunctionPointerInt BluetoothSetOperation;
-  void (*CustomOperationPressed)();             // Custom/specific operation, code may be within controller .cpp
-  void (*CustomOperationReleased)();            // Custom/specific operation, code may be within controller .cpp
+  int (*CustomOperationPressed)();             // Custom/specific operation, code may be within controller .cpp
+  int (*CustomOperationReleased)();            // Custom/specific operation, code may be within controller .cpp
 
   void (*RenderOperation)(struct Input*);       // How input is rendered to the screen
 
@@ -76,6 +76,7 @@ typedef struct Input {
 
   unsigned long LongPressTiming;                // Delayed operation timing in milliseconds for alternative press operation
   Input *LongPressChildInput;                   // Equivalent Input configuration that kicks in if a delayed operation is required and is triggered
+  // Set automatically by code
   Input *LongPressParentInput;                  // Pointer back to the parent input that triggered the long press, so we can access the original input's timing
   unsigned long ShortPressReleaseTime;          // If this was a short press, how long to auto-hold the button on for
 
@@ -96,7 +97,7 @@ typedef struct HatInput {
   int RenderHeight;
   unsigned char StartIcon;                      // Represents first icon in list of mapped icons. Should be 9 - Neutral, Up, UpRight, Right, DownRight, Down, DownLeft, Left, UpLeft
 
-  void (*ExtraOperation[9])(struct HatInput*);  // Extra operations that can run if neutral/up/up right/right/down right/down/down left/left/up left
+  int (*ExtraOperation[9])();  // Extra operations that can run if neutral/up/up right/right/down right/down/down left/left/up left
   void (*CustomOperation)(struct HatInput*);    // Controller specific operation, code within controller .cpp
 
   Stats *Statistics[9];

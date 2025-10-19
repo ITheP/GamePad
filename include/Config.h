@@ -1,10 +1,9 @@
 #pragma once
 
-//#define EXTRA_SERIAL_DEBUG          // Enable to print loads of extra information to serial
+//#define EXTRA_SERIAL_DEBUG        // Enable to print loads of extra information to serial
 //#define EXTRA_SERIAL_DEBUG_PLUS   // ...further detail, but can flood serial output somewhat!
 //#define INCLUDE_BENCHMARKS        // Includes some basic performance statistics of running device over serial
 //#define INCLUDE_BENCHMARKS_LED    // Basic performance stats for LED processing
-//#define SHOW_FPS                    // Shows FPS top left of screen
 //#define WHITE_SCREEN              // Display will show a solid white screen, handy when physically aligning panel in device
 
 #define SETUP_DELAY     250         // Delay between stages of initial start up
@@ -31,9 +30,15 @@
 #define LOW 0x0
 #define HIGH 0x1
 
+#define ON 0x0
+#define OFF 0x1
+
 #define PRESSED 0x0
 #define NOT_PRESSED 0x1
 #define LONG_PRESS_MONITORING 0x2
 #define LONG_PRESS 0x3
+
+#define REPORTTOCONTROLLER_YES 0
+#define REPORTTOCONTROLLER_NO 1
 
 #define NONE 0

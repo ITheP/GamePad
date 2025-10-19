@@ -14,6 +14,7 @@
 #include "Icons.h"
 #include "Screen.h"
 #include "UI.h"
+#include "Utils.h"
 
 extern Stats *AllStats[];
 extern int AllStats_Count;
@@ -197,15 +198,16 @@ std::string Web::GetPage_Main()
     std::ostringstream html;
     html
         << "<h1>GamePad - " << DeviceName << "</h1>"
+        << "Core v" << getBuildVersion() << "<br/>"
         << "<h2>Device Information</h2>"
         << "Controller type: " << ControllerType << "<br/>"
         << "Device name: " << DeviceName << "<br/>"
         << "Model number: " << ModelNumber << "<br/>"
         << "Serial number: " << SerialNumber << "<br/>"
-        << "Firmware version: " << FirmwareRevision
-        << ", Hardware version: " << HardwareRevision
-        << ", Software version: " << SoftwareRevision << "<br/>"
-        << "Battery: " << Battery::GetLevel() << "%<br/>";
+        << "Firmware version: v" << FirmwareRevision
+        << ", Hardware version: v" << HardwareRevision
+        << ", Software version: v" << SoftwareRevision << "<br/>"
+        << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
         // << "<h2>Statistics Overview</h2>"
         // << "<p>Last update time: <span id='currentTime'></span></p>"
         // << "<label><input type='checkbox' id='refreshBox' onchange='toggleRefresh()' checked> Auto-refresh stats every 5s</label>"
@@ -293,12 +295,12 @@ int Web::ShowTraffic = -1;
 
 void Web::RenderIcons()
 {
-    // if (FinalWifiCharacter != LastWifiCharacter)
+    // if (FinalWiFiCharacter != LastWiFiCharacter)
     // {
          RenderIcon(Icon_Web_Enabled, uiWebServer_xPos, uiWebServer_yPos, 16, 16);
-    //     LastWifiCharacter = FinalWifiCharacter;
+    //     LastWiFiCharacter = FinalWiFiCharacter;
     // }
-    // if (WifiStatusCharacter != LastWifiStatusCharacter)
+    // if (WiFiStatusCharacter != LastWiFiStatusCharacter)
     // {
 
     // Show traffic when it first happens

@@ -17,6 +17,8 @@
 #include "Secrets.h"
 #include "Screen.h"
 #include "UI.h"
+#include "Utils.h"
+#include "Menus.h"
 
 // #include "soc/soc.h"
 // #include "soc/rtc_cntl_reg.h"
@@ -41,8 +43,10 @@ AsyncWebServer WebServer(80);
 // Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
 #include "DeviceConfig.h"
 
-char SerialNumber[22]; // SerialNumber = large enough to hold the uint64_t value as a string 20 chars + 1 for chipIdOffset + null terminator. Tests showed serial coming from esp32-s3 was 14 chars + the chipIdOffset
 char DeviceName[20];
+char SerialNumber[22]; // SerialNumber = large enough to hold the uint64_t value as a string 20 chars + 1 for ESPChipIdOffset + null terminator. Tests showed serial coming from esp32-s3 was 14 chars + the ESPChipIdOffset
+uint64_t ESPChipId;
+int ESPChipIdOffset;
 
 // When configured for use, set of random names for controller. Actual name is picked using ESP32-S3's unique identity as a key to the name - means we can flash to multiple
 // devices and they should all get decently unique names.
@@ -95,7 +99,7 @@ bool PreviousBTConnectionState;
 // -----------------------------------------------------
 // Buffers
 
-char buffer[64]; // More than big enough for anything we are doing here
+char buffer[64]; // General purpose buffer for formatting text into
 
 // -----------------------------------------------------
 // Benchmarks
@@ -109,6 +113,7 @@ Benchmark MainBenchmark("PERF.Main");
 // Serial.print(" @ " + String((uintptr_t)config, HEX));
 
 int Frame = 0;
+int FPS = 0;
 unsigned long PreviousMicroS = 0;
 
 float Now;
@@ -141,16 +146,23 @@ float NextDisplayUpdatePoint = 0;
 int ControllerIdle = false;
 int ControllerIdleJustUnset = false;
 
-void setup()
+void setupShowBattery()
 {
-  // Development test specific
-  // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // disables brownout detector
+  Battery::TakeReading();
+  int currentBatteryLevel = Battery::GetLevel();
 
-  // delay(10); // Give pins on start up time to settle if theres any power up glitching
-  Wire.begin(I2C_SDA, I2C_SCL);
+  SetFontFixed();
+  Display.fillRect(HALF_SCREEN_WIDTH, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
+  snprintf(buffer, sizeof(buffer), "%d%% %.1fv",
+           Battery::CurrentBatteryPercentage,
+           Battery::Voltage);
 
-  // ResetPrintDisplayLine();  // Not currently used // Make sure any rendering of text starts top left of screen
+  RRE.printStr(ALIGN_RIGHT, SCREEN_HEIGHT - RREHeight_fixed_8x16, buffer);
+  SetFontCustom();
+}
 
+void setupDisplay()
+{
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   // if (!Display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS, &Wire, OLED_RESET)) {
   if (!Display.begin(SCREEN_ADDRESS, true))
@@ -170,29 +182,49 @@ void setup()
 
   Display.clearDisplay();
   Display.display();
+}
 
+void setupRRE()
+{
   RRE.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
   RRE.setCR(0);
   RRE.setScale(1);
+}
 
-  // Show Logo
+void setupRenderLogo()
+{
   SetFontCustom();
   RenderIconRuns(Logo, Logo_RunCount);
   Display.display();
+}
 
+void setupBattery()
+{
+  // Battery
+  pinMode(BATTERY_MONITOR_PIN, INPUT);
+  // Make sure we have atleast one battery reading completed
+  Battery::TakeReading();
+
+  setupShowBattery();
+}
+
+void setupUSB()
+{
   // Animate USB socket coming into screen from off left, final resting place Xpos = 16 pixels in
   for (int i = -32; i <= 0; i++)
   {
     RenderIcon(Icon_Wire_Horizontal, i, uiUSB_yPos, 16, 9);
     RenderIcon(Icon_USB_Unknown, i + 16, uiUSB_yPos, 16, 9);
     Display.display();
-    delay(15);
+    delay(10);
   }
 
   Serial.println("Starting up...");
   Serial.println("Checking serial...");
 
   Serial.begin(SERIAL_SPEED);
+
+  setupShowBattery();
 
   // Give the serial connection 0.5 seconds to do something - and bail if no connection during that time
   unsigned long stopWaitingTime = micros() + 500000;
@@ -227,8 +259,11 @@ void setup()
     Display.display();
     delay(15);
   }
+}
 
 #ifdef WEBSERVER
+void setupWebServer()
+{
   if (!SPIFFS.begin(true))
   {
     Serial.println("SPIFFS Mount Failed");
@@ -254,24 +289,11 @@ void setup()
 
   // Start server
   WebServer.begin();
-
+}
 #endif
 
-  Display.display();
-  delay(SETUP_DELAY);
-
-  Serial.println("\nHardware...");
-  Serial.println("SRam: " + String(ESP.getHeapSize()) + " (" + String(ESP.getFreeHeap()) + " free)");
-  // May need compile time configure to get PSRam support - https://thingpulse.com/esp32-how-to-use-psram/?form=MG0AV3
-  Serial.println("PSRam: " + String(ESP.getPsramSize()) + " (" + String(ESP.getFreePsram()) + " free)");
-
-  // Controls
-  RRE.drawChar(85, 50, (unsigned char)Icon_EmptyCircle_12);
-  Display.display();
-  delay(SETUP_DELAY / 2);
-  RRE.drawChar(87, 52, (unsigned char)Icon_FilledCircle_8);
-  Display.display();
-
+void setupDigitalInputs()
+{
   // Digital Inputs
   Serial.println("\nButton/Digital Inputs: " + String(DigitalInputs_Count));
 
@@ -307,9 +329,14 @@ void setup()
 
     Serial.println();
   }
+}
 
+void setupAnalogInputs()
+{
   // Analog Inputs
   Serial.println("\nAnalog Inputs: " + String(AnalogInputs_Count));
+
+  Input *input;
   for (int i = 0; i < AnalogInputs_Count; i++)
   {
     input = AnalogInputs[i];
@@ -333,7 +360,10 @@ void setup()
 
     Serial.println();
   }
+}
 
+void setupHatInputs()
+{
   // Hat inputs
   Serial.println("\nHat Inputs: " + String(HatInputs_Count));
   HatInput *hatInput;
@@ -363,7 +393,6 @@ void setup()
     }
 
     hatInput->ValueState.Value = hatInput->DefaultValue;
-
     Serial.println();
 
 #ifdef USE_EXTERNAL_LED
@@ -384,8 +413,11 @@ void setup()
     }
 #endif
   }
+}
 
 #ifdef USE_EXTERNAL_LED
+void setupInitExternalLEDs()
+{
   // Misc LEDs
   Serial.println("Misc LED Effects: " + String(MiscLEDEffects_Count));
   for (int i = 0; i < MiscLEDEffects_Count; i++)
@@ -395,9 +427,7 @@ void setup()
     if (config != nullptr)
       InitExternalLED(config, ExternalLeds);
   }
-#endif
 
-#ifdef USE_EXTERNAL_LED
   // Idle LEDs
   Serial.println("Idle LED Effects: " + String(IdleLEDEffects_Count));
   for (int i = 0; i < IdleLEDEffects_Count; i++)
@@ -407,11 +437,16 @@ void setup()
     if (config != nullptr)
       InitExternalLED(config, ExternalLeds);
   }
+}
 #endif
 
-  delay(SETUP_DELAY);
+void setupLEDs()
+{
+#ifdef USE_EXTERNAL_LED
+  void setupInitExternalLEDs();
+#endif
 
-// Flash a little LED icon up to show we are playing with LED's
+  // Flash a little LED icon up to show we are playing with LED's
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
   RRE.drawChar(112, 49, (unsigned char)Icon_LEDOn);
   Display.display();
@@ -419,7 +454,7 @@ void setup()
   FastLED.setBrightness(LED_BRIGHTNESS);
 
   // FastLED.Show() main loop is processed on separate thread to allow for running on other cores.
-  // Note that at time of writing, core runs on same thread as main loop (1) as Bluetooth/Wifi etc. run on core 0
+  // Note that at time of writing, thread runs on same core as main loop (1) as Bluetooth/WiFi etc. run on core 0
   // Gives us the option to play around a bit and choose where we want to run it in the future
   xTaskCreatePinnedToCore(
       UpdateExternalLEDs,
@@ -498,7 +533,10 @@ void setup()
   Display.display();
   delay(SETUP_DELAY);
 #endif
+}
 
+void setupBluetooth()
+{
   // Bluetooth and other general config
 
   RRE.drawChar(uiBT_xPos, uiBT_yPos, (unsigned char)Icon_BTLogo);
@@ -507,8 +545,9 @@ void setup()
   // Dedicated checks to Inputs that allow buttons held on startup to switch between variants of Bluetooth Id's
   // which should allow 1 controller to pair separately to multiple hosts/devices and allow for multiple
   // hosts to use same physical controller but as separate controllers
-  int chipIdOffset = 0;
+  ESPChipIdOffset = 0;
   Input *overrideInput = nullptr;
+  Input *input;
   for (int i = 0; i < DigitalInputs_Count; i++)
   {
     input = DigitalInputs[i];
@@ -516,21 +555,21 @@ void setup()
     {
       if (digitalRead(input->Pin) == LOW)
       {
-        chipIdOffset = input->BluetoothIdOffset;
+        ESPChipIdOffset = input->BluetoothIdOffset;
         overrideInput = input;
-        Serial.println("Bluetooth Id Override : " + String(chipIdOffset));
+        Serial.println("Bluetooth Id Override : " + String(ESPChipIdOffset));
       }
     }
   }
 
-  if (chipIdOffset > 0)
+  if (ESPChipIdOffset > 0)
   {
     // Extra Bluetooth iconography to show that one of the extra bluetooth Id variants is active
     SetFontFixed();
     RRE.drawChar(65, 50, '+');
     delay(100);
     Display.display();
-    snprintf(buffer, sizeof(buffer), "%d", chipIdOffset);
+    snprintf(buffer, sizeof(buffer), "%d", ESPChipIdOffset);
 
     // If we found a BluetoothId override input, flash it (as long as it has an ExternalLEDPrimaryColour LED and OnboardLED defined with enabled values)
     // We get the associated LED and colours from whatever control defined the override
@@ -591,36 +630,44 @@ void setup()
     Display.display();
     SetFontCustom();
   }
+}
 
-  uint64_t chipId = ESP.getEfuseMac();
-  int offset = chipId % DeviceNamesCount;
+void setupDeviceIdentifiers()
+{
+  ESPChipId = ESP.getEfuseMac();
+  int offset = ESPChipId % DeviceNamesCount;
   // Bluetooth controller max name length = 30 chars (+ null terminator)
 
   // If the below line is put before the offset = above, the name will also randomise. Currently set up for a consistent name so it doesn't get too confusing!
-  chipId += chipIdOffset;
+  ESPChipId += ESPChipIdOffset;
 
 #ifdef DEVICE_NAME
   // Custom device name
-  if (chipIdOffset == 0)
+  if (ESPChipIdOffset == 0)
     snprintf(DeviceName, sizeof(DeviceName), "%s", DEVICE_NAME);
   else
   {
-    snprintf(DeviceName, sizeof(DeviceName), "%s %d", DEVICE_NAME, chipIdOffset);
-    Serial.println("Bluetooth device Id/name - custom value: " + String(chipIdOffset));
+    snprintf(DeviceName, sizeof(DeviceName), "%s %d", DEVICE_NAME, ESPChipIdOffset);
+    Serial.println("Bluetooth device Id/name - custom value: " + String(ESPChipIdOffset));
   }
 #else
   // Random Device Name
-  if (chipIdOffset == 0)
+  if (ESPChipIdOffset == 0)
     snprintf(DeviceName, sizeof(DeviceName), "%s %d", DeviceNames[offset], offset);
   else
   {
-    snprintf(DeviceName, sizeof(DeviceName), "%s %d.%d", DeviceNames[offset], offset, chipIdOffset);
-    Serial.println("Bluetooth device Id/Name - system selected: " + String(chipIdOffset));
+    snprintf(DeviceName, sizeof(DeviceName), "%s %d.%d", DeviceNames[offset], offset, ESPChipIdOffset);
+    Serial.println("Bluetooth device Id/Name - system selected: " + String(ESPChipIdOffset));
   }
 #endif
 
-  snprintf(buffer, sizeof(buffer), "Guitar %s", DeviceName);
+  // Init serial number
+  sprintf(SerialNumber, "%llu%d", ESPChipId, ESPChipIdOffset);
+}
 
+void setupController()
+{
+  snprintf(buffer, sizeof(buffer), "Guitar %s", DeviceName);
   bleGamepad = BleGamepad(buffer, ControllerType, 100);
 
   Serial.println("\nBluetooth configuration...");
@@ -640,9 +687,10 @@ void setup()
   bleGamepadConfig.setModelNumber(ModelNumber);
   Serial.println("... Model Number: " + String(ModelNumber));
 
-  sprintf(SerialNumber, "%llu%d", chipId, chipIdOffset);
   bleGamepadConfig.setSerialNumber(SerialNumber);
   Serial.println("... Serial Number: " + String(SerialNumber));
+
+  Serial.println("... Core build: " + String(getBuildVersion()));
 
   // TODO: Revision versions in config file
   bleGamepadConfig.setFirmwareRevision(FirmwareRevision); // Version of this firmware
@@ -687,15 +735,63 @@ void setup()
 
   bleGamepadConfig.setAutoReport(false);
   bleGamepad.begin(&bleGamepadConfig); // Note - changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
+}
 
-  // Battery
-  pinMode(BATTERY_MONITOR_PIN, INPUT);
+void setup()
+{
+  // Development test specific
+  // WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // disables brownout detector
 
-  // Make sure we have atleast one battery reading completed
-  Battery::TakeReading();
+  // delay(10); // Give pins on start up time to settle if theres any power up glitching
+
+  Wire.begin(I2C_SDA, I2C_SCL);
+
+  setupDisplay();
+  setupRRE();
+  setupRenderLogo();
+  setupBattery();
+  setupUSB();
+
+  // Clear battery text ready for icons
+  Display.fillRect(HALF_SCREEN_WIDTH, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
+
+#ifdef WEBSERVER
+  setupWebServer();
+#endif
+
+  Display.display();
+  delay(SETUP_DELAY);
+
+  Serial.println("\nHardware...");
+  Serial.println("SRam: " + String(ESP.getHeapSize()) + " (" + String(ESP.getFreeHeap()) + " free)");
+  // May need compile time configure to get PSRam support - https://thingpulse.com/esp32-how-to-use-psram/?form=MG0AV3
+  Serial.println("PSRam: " + String(ESP.getPsramSize()) + " (" + String(ESP.getFreePsram()) + " free)");
+
+  // Controls icon
+  RRE.drawChar(85, 50, (unsigned char)Icon_EmptyCircle_12);
+  Display.display();
+  delay(SETUP_DELAY / 2);
+  RRE.drawChar(87, 52, (unsigned char)Icon_FilledCircle_8);
+  Display.display();
+
+  setupDigitalInputs();
+  setupAnalogInputs();
+  setupHatInputs();
+
+  delay(SETUP_DELAY);
+
+  setupLEDs();
+
+  setupBluetooth();
+  setupDeviceIdentifiers();
+
+  setupController();
 
   Display.display();
   delay(SETUP_DELAY * 2);
+
+  
+  Menus::Setup();
 
 // Screen flip control needs to be checked and set before main screen is drawn
 #ifdef ENABLE_FLIP_SCREEN
@@ -721,10 +817,11 @@ void DrawMainScreen()
 
   Display.clearDisplay();
 
-  // Controller name
-  SetFontFixed();
-  ResetPrintDisplayLine();
-  PrintDisplayLineCenter(DeviceName);
+  // Controller name displayed bu default first menu option
+
+  // SetFontFixed();
+  // ResetPrintDisplayLine();
+  // PrintDisplayLineCenter(DeviceName);
 
   SetFontCustom();
   if (ControllerGfx_RunCount > 0)
@@ -777,6 +874,8 @@ void loop()
     SecondRollover = true;
 
     SecondFlipFlop = (Second & 1);
+    FPS = Frame;
+    Frame = 0;
   }
 
 #ifdef INCLUDE_BENCHMARKS
@@ -833,16 +932,6 @@ void loop()
   MainBenchmark.Snapshot("Loop.Init", showBenchmark);
 #endif
 
-  SetFontFixed();
-  Display.fillRect(0, 0, SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
-  snprintf(buffer, sizeof(buffer), "%d%% - %.1fv",
-           Battery::CurrentBatteryPercentage,
-           Battery::Voltage);
-
-  RRE.printStr(0, 0, "Battery:");
-  RRE.printStr(ALIGN_RIGHT, 0, buffer);
-  SetFontCustom();
-  
   // Things we don't do so often, like every second. Reduce overhead. Would it make a difference if we didn't throttle things like this? Probably not :)
   if (SecondRollover)
   {
@@ -977,7 +1066,7 @@ void loop()
       // so we can't just send a Bluetooth press, wait a bit to see what release happens - might not be wanted
 
       // if has linked input then
-      if (input->LongPressChildInput != nullptr)
+      if (input->LongPressChildInput != NONE)
       {
         // input->ValueState.Value = LONG_PRESS_MONITORING;
         unsigned long timeDifference = timeCheck - input->ValueState.StateChangedWhen;
@@ -987,7 +1076,7 @@ void loop()
         {
           if (input->ValueState.Value != LONG_PRESS_MONITORING)
           {
-            Serial.println("LONG PRESSED INITIATED");
+            //Serial.println("LONG PRESS - MONITORING INITIATED");
             input->ValueState.Value = LONG_PRESS_MONITORING;
             input->ValueState.StateChangedWhen = timeCheck;
           }
@@ -1004,27 +1093,28 @@ void loop()
         }
         else // if (state == NOT_PRESSED)
         {
-          if (timeDifference >= input->LongPressTiming)
+          if (input->ValueState.Value == LONG_PRESS_MONITORING)
           {
-            // We were monitoring a long press, so we need to release the child input
+            if (timeDifference >= input->LongPressTiming)
+            {
+              // We were monitoring a long press, so we need to release the child input
 
-            // first, de-escalate the long press monitoring
-            input->ValueState.Value = NOT_PRESSED;
+              //Serial.println("LONG PRESS - ESCALATING TO CHILD");
+              // first, de-escalate the long press monitoring
+              input->ValueState.Value = NOT_PRESSED;
 
-            // pass along child input to have its release processed
-            input = input->LongPressChildInput;
+              // pass along child input to have its release processed
+              input = input->LongPressChildInput;
 
-            //    Serial.println("LONG NOT PRESSED");
-          }
-          else
-          {
-            if (input->ValueState.Value == LONG_PRESS_MONITORING)
+              //Serial.println("LONG PRESS - LONG PRESSED");
+            }
+            else
             {
               // This was a short press, so we need to trigger the primary input
               input->ValueState.Value = NOT_PRESSED; // Will force a press when we process the input below
               state = PRESSED;                       // Force a pretend pressing for this cycle for this input
               // Next loop will pick up it is not pressed any more and do the release
-              Serial.println("LONG SHORT PRESSED");
+              //Serial.println("LONG PRESS - SHORT PRESSED");
 
               input->AutoHold = timeCheck + input->ShortPressReleaseTime;
             }
@@ -1043,6 +1133,7 @@ void loop()
       // Process when state has changed
       if (state != input->ValueState.Value && input->ValueState.Value != LONG_PRESS_MONITORING)
       {
+        //Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
         input->ValueState.PreviousValue = !state;
         input->ValueState.Value = state;
         input->ValueState.StateChangedWhen = timeCheck;
@@ -1076,41 +1167,51 @@ void loop()
         // MAY need an extra state = DELAY that lets us know we are delay checking untill eventually it goes high or gets passed on
 
         // We have to check input states not just for Bluetooth inputs, as buttons might control device functionality
+
+        int customOperationStatus = REPORTTOCONTROLLER_YES;
+
         if (state == PRESSED)
         {
           // PRESSED!
 
-          if (input->BluetoothInput != 0)
-          {
-
-            // bleGamepad.press(input->BluetoothInput);
-            (bleGamepad.*(input->BluetoothPressOperation))(input->BluetoothInput);
-
-            sendReport = true;
-          }
-
-          // Statistics
-          if (input->Statistics != nullptr)
-            input->Statistics->AddCount();
-
           // Any extra special custom to specific controller code
           if (input->CustomOperationPressed != NONE)
-            input->CustomOperationPressed();
+            customOperationStatus = input->CustomOperationPressed();
+
+          if (customOperationStatus == REPORTTOCONTROLLER_YES)
+          {
+            if (input->BluetoothInput != 0)
+            {
+
+              // bleGamepad.press(input->BluetoothInput);
+              (bleGamepad.*(input->BluetoothPressOperation))(input->BluetoothInput);
+
+              sendReport = true;
+            }
+
+            // Statistics
+            if (input->Statistics != nullptr)
+              input->Statistics->AddCount();
+          }
         }
         else
         {
           // RELEASED!!
-          if (input->BluetoothInput != 0)
-          {
-            // bleGamepad.release(input->BluetoothInput);
-            (bleGamepad.*(input->BluetoothReleaseOperation))(input->BluetoothInput);
-
-            sendReport = true;
-          }
 
           // Any extra special custom to specific controller code
           if (input->CustomOperationReleased != NONE)
-            input->CustomOperationReleased();
+            customOperationStatus = input->CustomOperationReleased();
+
+          if (customOperationStatus == REPORTTOCONTROLLER_YES)
+          {
+            if (input->BluetoothInput != 0)
+            {
+              // bleGamepad.release(input->BluetoothInput);
+              (bleGamepad.*(input->BluetoothReleaseOperation))(input->BluetoothInput);
+
+              sendReport = true;
+            }
+          }
         }
 
         input->RenderOperation(input);
@@ -1245,26 +1346,37 @@ void loop()
       hatInput->ValueState.Value = hatCurrentState;
       hatInput->ValueState.PreviousValue = hatPreviousState;
       hatInput->ValueState.StateChangedWhen = micros(); // TODO make this when hat last read took place though realistically bog all time will have passed
-      hatInput->ValueState.StateJustChanged = true;
       hatInput->ValueState.StateJustChangedLED = true;
-
-      // General hat array used with bluetooth library
-      HatValues[hatInput->BluetoothHat] = hatCurrentState;
 
       // hatChanged = true;
 
       hatInput->RenderOperation(hatInput);
 
-      if (hatInput->ExtraOperation[hatCurrentState] != NONE)
-        hatInput->ExtraOperation[hatCurrentState](hatInput);
-
-      // Any extra special custom to specific controller code
+      // Any general hat level extra operations
       if (hatInput->CustomOperation != NONE)
         hatInput->CustomOperation(hatInput);
 
-      // Statistics
-      if (hatInput->Statistics[hatCurrentState] != nullptr)
-        hatInput->Statistics[hatCurrentState]->AddCount();
+      int extraOperationStatus = REPORTTOCONTROLLER_YES;
+      // Hat position specific extra operations
+      // We allow cancellation of bluetooth setting here so
+      // we can use hat activities for onboard operations (such as menu navigation)
+      // without it being reported back via bluetooth
+
+      if (hatInput->ExtraOperation[hatCurrentState] != NONE)
+        extraOperationStatus = hatInput->ExtraOperation[hatCurrentState]();
+
+      if (extraOperationStatus != REPORTTOCONTROLLER_NO)
+      {
+        hatInput->ValueState.StateJustChanged = true;
+
+        // General hat array used with bluetooth library
+        HatValues[hatInput->BluetoothHat] = hatCurrentState;
+
+        // Statistics
+        // We don't count statistics if bluetooth operation was cancelled
+        if (hatInput->Statistics[hatCurrentState] != nullptr)
+          hatInput->Statistics[hatCurrentState]->AddCount();
+      }
     }
   }
 
@@ -1378,7 +1490,7 @@ void loop()
 
 #ifdef WIFI
   if (SecondRollover)
-    Network::HandleWifi(Second);
+    Network::HandleWiFi(Second);
 #endif
 
 #ifdef INCLUDE_BENCHMARKS
@@ -1404,21 +1516,11 @@ void loop()
   MainBenchmark.Snapshot("Loop.LEDStuff", showBenchmark);
 #endif
 
-#ifdef SHOW_FPS
-  // FPS display
-  if (SecondRollover)
-  {
-    SetFontFixed();
-    Display.fillRect(0, 0, 40, 14, C_BLACK);
-    snprintf(buffer, sizeof(buffer), "%d", Frame);
-    RRE.printStr(0, 0, buffer);
-    Frame = 0;
-    SetFontCustom();
+  if (DisplayRollover || SecondRollover)
+    Menus::Handle();
 
 #ifdef INCLUDE_BENCHMARKS
-    MainBenchmark.Snapshot("Loop.FPS", showBenchmark);
-#endif
-  }
+  MainBenchmark.Snapshot("Loop.MenuHandled", showBenchmark);
 #endif
 
 #ifdef WHITE_SCREEN
@@ -1435,7 +1537,7 @@ void loop()
     Display.display();
 
   Frame++;
-
+//Serial.println("Frame: " + String(Frame));
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Snapshot("Loop.Display", showBenchmark);
 #endif

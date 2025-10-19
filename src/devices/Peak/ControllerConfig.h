@@ -169,7 +169,7 @@ extern IconRun ControllerGfx[];
 
 // End Buttons
 #define BUTTON_Start_PIN        PIN_13_D14    // [13] <Red>
-#define BUTTON_Select_PIN       PIN_14_D15    // [14] <White>
+#define BUTTON_Select_PIN       PIN_12_D13 // PIN_14_D15    // [14] <White>
 // Gnd                                        // [G ]
 
 #define BUTTON_FlipScreen_PIN   PIN_41_D19
@@ -281,8 +281,8 @@ void Custom_RenderHatStrumState(HatInput *hatInput);
 
 // -----------------------------------------------------
 // Version references
-extern char ControllerType[];
-extern char ModelNumber[];
-extern char FirmwareRevision[];
-extern char HardwareRevision[];
-extern char SoftwareRevision[];
+extern char *ControllerType;
+extern char *ModelNumber;
+extern char *FirmwareRevision;
+extern char *HardwareRevision;
+extern char *SoftwareRevision;

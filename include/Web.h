@@ -4,11 +4,11 @@
 #include <string>
 #include "Stats.h"
 
-extern char ControllerType[];
-extern char ModelNumber[];
-extern char FirmwareRevision[];
-extern char HardwareRevision[];
-extern char SoftwareRevision[];
+extern char *ControllerType;
+extern char *ModelNumber;
+extern char *FirmwareRevision;
+extern char *HardwareRevision;
+extern char *SoftwareRevision;
 
 class Web
 {

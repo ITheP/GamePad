@@ -6,7 +6,7 @@
 #define STATS_SUBCOUNTS_COUNT (SUB_SECOND_COUNT * 2) // Overall size of window that a 1 second sliding window is checked across to find out the actual max per second counts
 
 
-void ResetAllCurrentStats();
+int ResetAllCurrentStats();
 void UpdateSecondStats(int second);
 void UpdateSubSecondStats();
 

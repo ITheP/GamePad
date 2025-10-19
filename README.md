@@ -48,7 +48,7 @@ Includes...
 - [x] Benchmarking for performance
 - [x] Extra debug information
 - [x] Support for multiple controllers (via configuration files)
-- [ ] Wifi support
+- [ ] WiFi support
 - [ ] Embedded web service
 - [ ] Better stats calculation with better decoupling of hardcoded stats counting
 - [ ] Wired gamepad support

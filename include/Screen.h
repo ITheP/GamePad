@@ -8,6 +8,8 @@ void FlipScreen(Input* input);
 
 // Screen width/height in pixels
 #define SCREEN_WIDTH 128
+#define HALF_SCREEN_WIDTH 64
+#define QUARTER_SCREEN_WIDTH 32
 #define SCREEN_HEIGHT 64
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)

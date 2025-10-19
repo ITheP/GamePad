@@ -10,12 +10,13 @@
 
 #include "DeviceConfig.h"
 #include <Screen.h>
+#include "Menu.h"
 
-char ControllerType[] = "Guitar Controller";
-char ModelNumber[] = "Guitar 1.0";
-char FirmwareRevision[] = "1.0";
-char HardwareRevision[] = "1.0";
-char SoftwareRevision[] = "1.0";
+char *ControllerType = "Guitar Controller";
+char *ModelNumber = "Guitar 1.0";
+char *FirmwareRevision = "1.0";
+char *HardwareRevision = "1.0";
+char *SoftwareRevision = "1.0";
 
 // List of LED's we want cloning (lets you copy LED values between each other)
 // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
@@ -211,7 +212,6 @@ Input DigitalInput_FlipScreen = // Lever on main body, will be flipped into a pe
   };
 
 // DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
-// Make sure for all DigitalInputs that have a long press reference, that the long press reference also has pointer back to the parent input
 Input *DigitalInputs[] = {
   &DigitalInput_Green,
   &DigitalInput_Red,
