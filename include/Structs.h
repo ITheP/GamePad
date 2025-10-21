@@ -53,8 +53,8 @@ typedef struct Input {
   BleGamepadFunctionPointer BluetoothPressOperation;
   BleGamepadFunctionPointer BluetoothReleaseOperation; 
   BleGamepadFunctionPointerInt BluetoothSetOperation;
-  int (*CustomOperationPressed)();             // Custom/specific operation, code may be within controller .cpp
-  int (*CustomOperationReleased)();            // Custom/specific operation, code may be within controller .cpp
+  ControllerReport (*CustomOperationPressed)();             // Custom/specific operation, code may be within controller .cpp
+  ControllerReport (*CustomOperationReleased)();            // Custom/specific operation, code may be within controller .cpp
 
   void (*RenderOperation)(struct Input*);       // How input is rendered to the screen
 
@@ -97,7 +97,7 @@ typedef struct HatInput {
   int RenderHeight;
   unsigned char StartIcon;                      // Represents first icon in list of mapped icons. Should be 9 - Neutral, Up, UpRight, Right, DownRight, Down, DownLeft, Left, UpLeft
 
-  int (*ExtraOperation[9])();  // Extra operations that can run if neutral/up/up right/right/down right/down/down left/left/up left
+  ControllerReport (*ExtraOperation[9])();  // Extra operations that can run if neutral/up/up right/right/down right/down/down left/left/up left
   void (*CustomOperation)(struct HatInput*);    // Controller specific operation, code within controller .cpp
 
   Stats *Statistics[9];

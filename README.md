@@ -5,7 +5,7 @@
 ***Not ready for use or release. Not for public use.***
 
 ## About
-Embedded esp32-s3/arduino/equivalent game controller. Originally written to convert old Guitar Hero controllers to wireless windows/android compatible bluetooth game controllers.
+Embedded esp32-s3/arduino/equivalent controller. Originally written to convert old Guitar Hero controllers to wireless windows/android compatible bluetooth controllers.
 
 ## Features
 - **Bluetooth Gamepad**: Connects to Windows and Android devices via Bluetooth. Allows for multiple bluetooth identities off a single controller.
@@ -48,17 +48,17 @@ Includes...
 - [x] Benchmarking for performance
 - [x] Extra debug information
 - [x] Support for multiple controllers (via configuration files)
-- [ ] WiFi support
-- [ ] Embedded web service
-- [ ] Better stats calculation with better decoupling of hardcoded stats counting
+- [X] WiFi support
+- [X] Embedded web service
+- [X] Better stats calculation with better decoupling of hardcoded stats counting
 - [ ] Wired gamepad support
-- [ ] Run time user selectable options in controller
+- [ ] Run time user selectable options in controller and/or web
 - [ ] Save user options (and stats) to I2C Non-Volatile FRAM
 - [ ] Save user options (and stats) to onboard Flash (query around power brownout on off)
 - [ ] Support for more LED effects
-- [ ] Idle LED effects
+- [X] Idle LED effects
 - [ ] Independent LED effects (e.g. based on Stats)
-- [ ] Trigger on button down, and button up, with button up after X ms differing events (so can e.g. hold button to access menus while retaining its ability to be used in game)
+- [X] Trigger on button down, and button up, and alternative long press triggers (so can e.g. hold button to access menus while retaining its ability to be used in game)
 - [ ] One effect can affect others - e.g. buttons held down affect colour of another effect
 - [ ] Run time configurable LEDs (disable if power below certain level, turn on/off in options)
 - [ ] More accurate battery life indicator

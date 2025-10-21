@@ -13,17 +13,17 @@
 
 // TODO: If ndef WIFI then draw the icons for no wifi in main display setup
 
-constexpr char *WiFi_HighSignal = "OK - High Signal";
-constexpr char *WiFi_MediumSignal = "OK - Medium Signal";
-constexpr char *WiFi_LowSignal = "OK - Low Signal";
-constexpr char *WiFi_TraceSignal = "OK - Trace Signal";
-constexpr char *WiFi_Query = "Problem checking access point";
-constexpr char *WiFi_AccessPointUnavailable = "Access point not found";
-constexpr char *WiFi_Disabled = "Disabled";
-constexpr char *WiFi_Connecting = "Connecting...";
-constexpr char *WiFi_ReConnecting = "Reconnecting...";
-constexpr char *WiFi_Disconnected = "Disconnected";
-constexpr char *WiFi_UnknownStatus = "Unknown Status";
+char WiFi_HighSignal[] = "OK - High Signal";
+char WiFi_MediumSignal[] = "OK - Medium Signal";
+char WiFi_LowSignal[] = "OK - Low Signal";
+char WiFi_TraceSignal[] = "OK - Trace Signal";
+char WiFi_Query[] = "Problem checking access point";
+char WiFi_AccessPointUnavailable[] = "Access point not found";
+char WiFi_Disabled[] = "Disabled";
+char WiFi_Connecting[] = "Connecting...";
+char WiFi_ReConnecting[] = "Reconnecting...";
+char WiFi_Disconnected[] = "Disconnected";
+char WiFi_UnknownStatus[] = "Unknown Status";
 
 // Wi-Fi credentials
 const char *Network::ssid = WIFI_SSID;
@@ -117,22 +117,22 @@ void Network::HandleWiFi(int second)
             // Update WiFi icon with relevant signal level if required
             if (ap_info.rssi > -50)
             {
-                WiFiCharacter = Icon_WIFI_HighSignal;
+                WiFiCharacter = Icon_WiFi_HighSignal;
                 WiFiStatus = WiFi_HighSignal;
             }
             else if (ap_info.rssi > -67)
             {
-                WiFiCharacter = Icon_WIFI_MediumSignal;
+                WiFiCharacter = Icon_WiFi_MediumSignal;
                 WiFiStatus = WiFi_MediumSignal;
             }
             else if (ap_info.rssi > -75)
             {
-                WiFiCharacter = Icon_WIFI_LowSignal;
+                WiFiCharacter = Icon_WiFi_LowSignal;
                 WiFiStatus = WiFi_LowSignal;
             }
             else
             {
-                WiFiCharacter = Icon_WIFI_TraceSignal;
+                WiFiCharacter = Icon_WiFi_TraceSignal;
                 WiFiStatus = WiFi_TraceSignal;
             }
             // WiFiStatusCharacter = Icon_OK;
@@ -146,12 +146,12 @@ void Network::HandleWiFi(int second)
             // Somethings gone pretty wrong!
             if ((second & 1) == 0)
             {
-                WiFiCharacter = Icon_WIFI_Query;
+                WiFiCharacter = Icon_WiFi_Query;
                 WiFiStatus = WiFi_Query;
             }
             else
             {
-                WiFiCharacter = Icon_WIFI_Disabled;
+                WiFiCharacter = Icon_WiFi_Disabled;
                 WiFiStatus = WiFi_Disabled;
             }
 
@@ -192,14 +192,14 @@ void Network::HandleWiFi(int second)
                     WiFiStatus = WiFi_Connecting;
                 }
 
-                WiFiCharacter = Icon_WIFI_TraceSignal;
+                WiFiCharacter = Icon_WiFi_TraceSignal;
             }
             else if (WiFiConnectionState == WL_CONNECTION_LOST)
             {
 #ifdef EXTRA_SERIAL_DEBUG
                 Serial.println("WIFI: Connection lost, attempting to reconnect...");
 #endif
-                WiFiCharacter = Icon_WIFI_LostSignal;
+                WiFiCharacter = Icon_WiFi_LostSignal;
                 WiFiStatus = WiFi_ReConnecting;
                 WiFi.reconnect();
             }
@@ -209,7 +209,7 @@ void Network::HandleWiFi(int second)
                 Serial.println("WIFI: Connection disconnected, attempting to reconnect...");
 #endif
 
-                WiFiCharacter = Icon_WIFI_LostSignal;
+                WiFiCharacter = Icon_WiFi_LostSignal;
                 WiFiStatus = WiFi_Disconnected;
                 WiFi.reconnect();
             }
@@ -218,7 +218,7 @@ void Network::HandleWiFi(int second)
 #ifdef EXTRA_SERIAL_DEBUG
                 Serial.println("WIFI: SSID [' + ssid + '] is not available or cannot be found");
 #endif
-                WiFiCharacter = Icon_WIFI_Query;
+                WiFiCharacter = Icon_WiFi_Query;
                 WiFiStatus = WiFi_AccessPointUnavailable;
             }
             else
@@ -226,7 +226,7 @@ void Network::HandleWiFi(int second)
 #ifdef EXTRA_SERIAL_DEBUG
                 Serial.println("WIFI: Unknown status: " + String(WiFiConnectionState));
 #endif
-                WiFiCharacter = Icon_WIFI_Query;
+                WiFiCharacter = Icon_WiFi_Query;
                 WiFiStatus = WiFi_UnknownStatus;
             }
         }
@@ -243,7 +243,7 @@ void Network::HandleWiFi(int second)
         if (animation == 0)
             FinalWiFiCharacter = WiFiCharacter;
         else
-            FinalWiFiCharacter = (unsigned char)Icon_WIFI_TraceSignal + animation; // 0-3
+            FinalWiFiCharacter = (unsigned char)Icon_WiFi_TraceSignal + animation; // 0-3
     }
 
     PreviousWiFiConnectionState = WiFiConnectionState;

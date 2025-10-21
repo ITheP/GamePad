@@ -12,11 +12,11 @@
 #include <Screen.h>
 #include "Menus.h"
 
-char *ControllerType = "Guitar Controller";
-char *ModelNumber = "Guitar 1.0";
-char *FirmwareRevision = "1.0";
-char *HardwareRevision = "1.0";
-char *SoftwareRevision = "1.0";
+char ControllerType[] = "Guitar Controller";
+char ModelNumber[] = "Guitar 1.0";
+char FirmwareRevision[] = "1.0";
+char HardwareRevision[] = "1.0";
+char SoftwareRevision[] = "1.0";
 
 // List of LED's we want cloning (lets you copy LED values between each other)
 // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
@@ -333,11 +333,11 @@ HatInput Hat0 =
         NONE,           // Centered
         NONE,           // Up
         NONE,           // Up Right
-        Menus::MoveUp,   // Right
+        Menus::MoveDown,   // Right
         NONE,           // Down Right
         NONE,           // Down
         NONE,           // Down Left
-        Menus::MoveDown, // Left
+        Menus::MoveUp, // Left
         NONE            // Up Left
       },
     .CustomOperation = Custom_RenderHatStrumState,

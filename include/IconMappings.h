@@ -45,15 +45,15 @@
 #define Icon_USB_Disconnected 0x6C
 
 // WiFi
-#define Icon_WIFI_TraceSignal 0x97
-#define Icon_WIFI_LowSignal 0x98
-#define Icon_WIFI_MiddleSignal 0x99
-#define Icon_WIFI_TopSignal 0x9A
-#define Icon_WIFI_MediumSignal 0x9B
-#define Icon_WIFI_HighSignal 0x9C
-#define Icon_WIFI_Query 0x9D
-#define Icon_WIFI_LostSignal 0x9E
-#define Icon_WIFI_Disabled 0x9F
+#define Icon_WiFi_TraceSignal 0x97
+#define Icon_WiFi_LowSignal 0x98
+#define Icon_WiFi_MiddleSignal 0x99
+#define Icon_WiFi_TopSignal 0x9A
+#define Icon_WiFi_MediumSignal 0x9B
+#define Icon_WiFi_HighSignal 0x9C
+#define Icon_WiFi_Query 0x9D
+#define Icon_WiFi_LostSignal 0x9E
+#define Icon_WiFi_Disabled 0x9F
 
 // WebServer
 #define Icon_Web_Traffic 0x77
@@ -207,3 +207,17 @@
 #define Icon_FilledCircle_12 0xDD
 #define Icon_FilledCircle_13 0xDE
 #define Icon_FilledCircle_14 0xDF
+
+// Menu Items
+#define Icon_Menu_QuestionMark 0xE0
+#define Icon_Menu_Stats 0xE1
+#define Icon_Menu_USB 0xE2
+#define Icon_Menu_WiFi 0xE3
+#define Icon_Menu_WebServer 0xE4
+#define Icon_Menu_Battery 0xE5
+#define Icon_Menu_Version 0xE6
+#define Icon_Menu_FPS 0xE7
+#define Icon_Menu_Bluetooth 0xE8
+#define Icon_Menu_Smile 0xE9
+#define Icon_Menu_Debug 0xEA
+#define Icon_Menu_Separator 0xEB

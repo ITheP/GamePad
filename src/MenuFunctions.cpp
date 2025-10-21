@@ -15,6 +15,9 @@
 
 extern CRGB ExternalLeds[];
 
+static char Text_Connected[] = "Connected";
+static char Text_Disconnected[] = "Disconnected";
+
 #define MenuContentStartX 22
 
 // char AboutDetails[128];
@@ -41,49 +44,68 @@ void MenuFunctions::Setup()
 // Name menu item
 void MenuFunctions::InitName()
 {
-  // Display.fillRect(0, 0, SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
-  // SetFontFixed();
-  // RRE.printStr(ALIGN_CENTER, 0, DeviceName);
-  // SetFontCustom();
   Menus::DisplayMenuBasicCenteredText(DeviceName);
 }
 
 // About menu item
 void MenuFunctions::InitAbout()
 {
-  // Display.fillRect(0, 0, SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
-  // SetFontFixed();
-  // RRE.printStr(ALIGN_CENTER, 0, AboutDetails);
-  // SetFontCustom();
-  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s - Core %s - FW v%s - HW v%s - SW v%s - ",
+  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s - Core %s - FW v%s - HW v%s - SW v%s",
            ModelNumber, getBuildVersion(), FirmwareRevision, HardwareRevision, SoftwareRevision);
 
-  Menus::InitMenuItemDisplay("About", Menus::MenuTextBuffer, MENUS_SCROLLDEFINITELYNEEDED);
+  Menus::InitMenuItemDisplay(Menus::MenuTextBuffer, ScrollDefinitelyNeeded);
 }
+
+// Version menu item
+void MenuFunctions::InitVersion()
+{
+  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "About text TODO",
+           ModelNumber, getBuildVersion(), FirmwareRevision, HardwareRevision, SoftwareRevision);
+
+  Menus::InitMenuItemDisplay(Menus::MenuTextBuffer, ScrollDefinitelyNeeded);
+}
+
+static char Battery_Empty[] = "Empty";
+static char Battery_Low[] = "Low";
+static char Battery_OK[] = "OK";
+static char Battery_Good[] = "Good";
+static char Battery_Awesome[] = "Awesome";
+static char Battery_Charging[] = "Charging";
+static char Battery_Wired[] = "Wired";
 
 // Battery menu item
 void MenuFunctions::DrawBatteryLevel()
 {
-  // SetFontFixed();
-  // Display.fillRect(HALF_SCREEN_WIDTH, 0, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
-  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%d %d%% %.1fv",
-           Battery::CurrentBatterySensorReading,
+  // snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%d %d%% %.1fv",
+  //          Battery::CurrentBatterySensorReading,
+  //          Battery::CurrentBatteryPercentage,
+  //          Battery::Voltage);
+
+  float batteryLevel = Battery::Voltage;
+  const char *text;
+
+  if (batteryLevel <= 3.3)
+    text = Battery_Empty;
+  else if (batteryLevel < 3.5)
+    text = Battery_Low;
+  else if (batteryLevel < 3.7)
+    text = Battery_OK;
+  else if (batteryLevel < 3.9)
+    text = Battery_Good;
+  else
+    text = Battery_Awesome;
+
+  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s %d%% %.1fv",
+           text,
            Battery::CurrentBatteryPercentage,
            Battery::Voltage);
 
-  // RRE.printStr(ALIGN_RIGHT, 0, buffer);
-  // SetFontCustom();
-  Menus::UpdateMenuText(Menus::MenuTextBuffer, MENUS_NOSCROLLNEEDED);
+  Menus::UpdateMenuText(Menus::MenuTextBuffer, NoScrollNeeded);
 }
 
 void MenuFunctions::InitBattery()
 {
-  // Display.fillRect(0, 0, SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
-  // SetFontFixed();
-  // static char label[] = "Battery:";
-  // RRE.printStr(0, 0, label);
-
-  Menus::InitMenuItemDisplay("Battery", NONE, MENUS_NOSCROLLNEEDED);
+  Menus::InitMenuItemDisplay();
   MenuFunctions::DrawBatteryLevel();
 }
 
@@ -93,20 +115,12 @@ void MenuFunctions::UpdateBattery()
     MenuFunctions::DrawBatteryLevel();
 }
 
-// WiFi menu item
-// void MenuFunctions::DrawWiFi()
-// {
-//   SetFontFixed();
-//   Display.fillRect(MenuContentStartX, 0, SCREEN_WIDTH - MenuContentStartX, RREHeight_fixed_8x16, C_BLACK);
-//   RRE.printStr(MenuContentStartX, 0, Network::WiFiStatus);
-//   SetFontCustom();
-// }
-
+// Wifi menu item
 char *LastWiFiStatus = NONE;
 
 void MenuFunctions::InitWiFi()
 {
-  Menus::InitMenuItemDisplay("WiFi", Network::WiFiStatus, MENUS_SCROLLCHECK);
+  Menus::InitMenuItemDisplay(Network::WiFiStatus, ScrollCheck);
   LastWiFiStatus = Network::WiFiStatus;
 }
 
@@ -114,9 +128,31 @@ void MenuFunctions::UpdateWiFi()
 {
   if (SecondRollover && LastWiFiStatus != Network::WiFiStatus)
   {
-    Menus::UpdateMenuText(Network::WiFiStatus, MENUS_SCROLLCHECK);
+    Menus::UpdateMenuText(Network::WiFiStatus, ScrollCheck);
     LastWiFiStatus = Network::WiFiStatus;
   }
+}
+
+// Bluetooth menu item
+bool LastBluetoothStatus = false;
+
+void MenuFunctions::DrawBluetooth()
+{
+  LastBluetoothStatus = BTConnectionState;
+  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s - Name: %s", (LastBluetoothStatus ? Text_Connected : Text_Disconnected), DeviceName); //, VID, PID);
+  Menus::UpdateMenuText(Menus::MenuTextBuffer, ScrollDefinitelyNeeded);
+}
+
+void MenuFunctions::InitBluetooth()
+{
+  Menus::InitMenuItemDisplay();
+  DrawBluetooth();
+}
+
+void MenuFunctions::UpdateBluetooth()
+{
+  if (SecondRollover && LastBluetoothStatus != BTConnectionState)
+    DrawBluetooth();
 }
 
 int LastWebServerMode = -999;
@@ -125,10 +161,10 @@ int LastWebServerMode = -999;
 void MenuFunctions::DrawWebServer()
 {
   WiFiMode_t mode = WiFi.getMode();
-Serial.println("WEB: " + String(mode) + " cast " + String((int)mode));
+  // Serial.println("WEB: " + String(mode) + " cast " + String((int)mode));
 
   if ((int)mode == LastWebServerMode)
-    return;     // No point in restarting if its already doing this as a thing
+    return; // No point in restarting if its already doing this as a thing
 
   LastWebServerMode = (int)mode;
 
@@ -144,12 +180,12 @@ Serial.println("WEB: " + String(mode) + " cast " + String((int)mode));
   else
     snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "IP Address not found");
 
-  Menus::UpdateMenuText(Menus::MenuTextBuffer, MENUS_SCROLLCHECK);
+  Menus::UpdateMenuText(Menus::MenuTextBuffer, ScrollCheck);
 }
 
 void MenuFunctions::InitWebServer()
 {
-  Menus::InitMenuItemDisplay("Web", NONE);
+  Menus::InitMenuItemDisplay();
   LastWebServerMode = -999;
   DrawWebServer();
 }
@@ -163,13 +199,13 @@ void MenuFunctions::UpdateWebServer()
 // FPS menu item
 void MenuFunctions::DrawFPS()
 {
-    itoa(FPS, Menus::MenuTextBuffer, 10);
-    Menus::UpdateMenuText(Menus::MenuTextBuffer, MENUS_NOSCROLLNEEDED);
+  itoa(FPS, Menus::MenuTextBuffer, 10);
+  Menus::UpdateMenuText(Menus::MenuTextBuffer, NoScrollNeeded);
 }
 
 void MenuFunctions::InitFPS()
 {
-  Menus::InitMenuItemDisplay("FPS", NONE);
+  Menus::InitMenuItemDisplay();
   DrawFPS();
 }
 
@@ -177,4 +213,49 @@ void MenuFunctions::UpdateFPS()
 {
   if (SecondRollover)
     DrawFPS();
+}
+
+int LastUSBStatus = -1;
+
+// USB menu item
+void MenuFunctions::DrawUSB()
+{
+  int usbStatus = Serial;
+
+  if (LastUSBStatus == usbStatus)
+    return;
+
+  LastUSBStatus = usbStatus;
+
+  if (usbStatus)
+    Menus::UpdateMenuText(Text_Connected, NoScrollNeeded);
+  else
+    Menus::UpdateMenuText(Text_Disconnected, NoScrollNeeded);
+}
+
+void MenuFunctions::InitUSB()
+{
+  Menus::InitMenuItemDisplay();
+  LastUSBStatus = -1;
+  DrawUSB();
+}
+
+void MenuFunctions::UpdateUSB()
+{
+  if (SecondRollover)
+    DrawUSB();
+}
+
+static char test[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890!\"£$%^&*()-=_+<>,.;'#:@~[]{}";
+
+void MenuFunctions::InitDebug()
+{
+  Menus::InitMenuItemDisplay(test, ScrollDefinitelyNeeded);
+}
+
+static char stats[] = "STATISTICS - TODO";
+
+void MenuFunctions::InitStats()
+{
+  Menus::InitMenuItemDisplay(stats, ScrollDefinitelyNeeded);
 }

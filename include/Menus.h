@@ -7,22 +7,26 @@
 #define MenuTextBufferSize 256
 #define MaxCharsFitOnScreen ((SCREEN_WIDTH / 2) + 1) // Theoretical max number of chars on screen (1 pixel wide) + 1 pixel spacings +1 for /0
 
-#define MENUS_NOSCROLLNEEDED 0
-#define MENUS_SCROLLCHECK 1
-#define MENUS_SCROLLDEFINITELYNEEDED 2
+enum MenuScrollState {
+    NoScrollNeeded,
+    ScrollCheck,
+    ScrollDefinitelyNeeded
+};
 
 class Menus
 {
 public:
+    static MenuOption *CurrentMenuOption;
+    
     static int MenusStatus;
     static Menu *RootMenu;
     static Menu *CurrentMenu;
     static char MenuTextBuffer[];
 
-    static int ToggleMenuMode();
+    static ControllerReport ToggleMenuMode();
     //static int SelectionOff();
 
-    static void InitMenuItemDisplay(char *label, char *text, int scrollStatus = MENUS_SCROLLCHECK);
+    static void InitMenuItemDisplay(char *text = NONE, MenuScrollState scrollStatus = NoScrollNeeded);
     static void UpdateMenuText(char *text, int scrollStatus);
     static void DisplayMenuText();
     static void DisplayMenuBasicCenteredText(char *text);
@@ -31,6 +35,6 @@ public:
     static void Setup();
     static void Handle();
 
-    static int MoveUp();
-    static int MoveDown();
+    static ControllerReport MoveUp();
+    static ControllerReport MoveDown();
 };

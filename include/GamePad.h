@@ -34,3 +34,4 @@ extern const char* DeviceNames[];
 extern int DeviceNamesCount;
 extern int ControllerIdle;
 extern int ControllerIdleJustUnset;
+extern bool BTConnectionState;

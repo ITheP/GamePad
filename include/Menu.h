@@ -5,7 +5,7 @@
 typedef struct MenuOption
 {
     const char *Description;
-    char Icon;
+    unsigned char Icon;
     const char *Label;
     void (*InitOperation)();
     void (*Operation)();

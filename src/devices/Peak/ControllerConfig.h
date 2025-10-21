@@ -281,8 +281,8 @@ void Custom_RenderHatStrumState(HatInput *hatInput);
 
 // -----------------------------------------------------
 // Version references
-extern char *ControllerType;
-extern char *ModelNumber;
-extern char *FirmwareRevision;
-extern char *HardwareRevision;
-extern char *SoftwareRevision;
+extern char ControllerType[];
+extern char ModelNumber[];
+extern char FirmwareRevision[];
+extern char HardwareRevision[];
+extern char SoftwareRevision[];

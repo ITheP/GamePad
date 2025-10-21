@@ -752,6 +752,7 @@ void setup()
   setupBattery();
   setupUSB();
 
+
   // Clear battery text ready for icons
   Display.fillRect(HALF_SCREEN_WIDTH, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
 
@@ -1154,21 +1155,21 @@ void loop()
         // A delayed operation...
         // Finding it out
         // The digital input we pick up there is a delayed operation
-        // if its NOT triggered, then we flag here as a Press and Unpress at the same time
+        // if its NOT triggered, then we flag here as a Press and Un-press at the same time
         // AND set a `do the led's anyway` flag so the LED code can run for 1 loop
         // If it IS triggered, then we just pass on the fact there is an input press going on based on the timing as if the timing zeros itself
         // on the press length. That way the long press input should act like a normal input and can be processed as such.
         // The secondary control should know no better!
         // Theoretically we can chain them together maybe?
 
-        // OK SO if delay time ISNT met and we want to do an instant press release
+        // OK SO if delay time ISN'T met and we want to do an instant press release
         // check for state == low, and if there was a delay timer then
         // basically treat state == gone low + timer < delay = high, then next time through the state = high + timer < delay is time to go low
-        // MAY need an extra state = DELAY that lets us know we are delay checking untill eventually it goes high or gets passed on
+        // MAY need an extra state = DELAY that lets us know we are delay checking until eventually it goes high or gets passed on
 
         // We have to check input states not just for Bluetooth inputs, as buttons might control device functionality
 
-        int customOperationStatus = REPORTTOCONTROLLER_YES;
+        ControllerReport customOperationControllerReport = ReportToController;
 
         if (state == PRESSED)
         {
@@ -1176,9 +1177,9 @@ void loop()
 
           // Any extra special custom to specific controller code
           if (input->CustomOperationPressed != NONE)
-            customOperationStatus = input->CustomOperationPressed();
+            customOperationControllerReport = input->CustomOperationPressed();
 
-          if (customOperationStatus == REPORTTOCONTROLLER_YES)
+          if (customOperationControllerReport == ReportToController)
           {
             if (input->BluetoothInput != 0)
             {
@@ -1200,9 +1201,9 @@ void loop()
 
           // Any extra special custom to specific controller code
           if (input->CustomOperationReleased != NONE)
-            customOperationStatus = input->CustomOperationReleased();
+            customOperationControllerReport = input->CustomOperationReleased();
 
-          if (customOperationStatus == REPORTTOCONTROLLER_YES)
+          if (customOperationControllerReport == ReportToController)
           {
             if (input->BluetoothInput != 0)
             {
@@ -1356,16 +1357,16 @@ void loop()
       if (hatInput->CustomOperation != NONE)
         hatInput->CustomOperation(hatInput);
 
-      int extraOperationStatus = REPORTTOCONTROLLER_YES;
+      ControllerReport extraOperationControllerReport = DontReportToController;
       // Hat position specific extra operations
       // We allow cancellation of bluetooth setting here so
       // we can use hat activities for onboard operations (such as menu navigation)
       // without it being reported back via bluetooth
 
       if (hatInput->ExtraOperation[hatCurrentState] != NONE)
-        extraOperationStatus = hatInput->ExtraOperation[hatCurrentState]();
+        extraOperationControllerReport = hatInput->ExtraOperation[hatCurrentState]();
 
-      if (extraOperationStatus != REPORTTOCONTROLLER_NO)
+      if (extraOperationControllerReport == ReportToController)
       {
         hatInput->ValueState.StateJustChanged = true;
 

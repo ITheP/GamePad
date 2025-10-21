@@ -38,7 +38,9 @@
 #define LONG_PRESS_MONITORING 0x2
 #define LONG_PRESS 0x3
 
-#define REPORTTOCONTROLLER_YES 0
-#define REPORTTOCONTROLLER_NO 1
+enum ControllerReport {
+    ReportToController = 0,
+    DontReportToController = 1
+};
 
 #define NONE 0
