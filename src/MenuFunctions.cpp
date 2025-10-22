@@ -15,17 +15,12 @@
 
 extern CRGB ExternalLeds[];
 
-static char Text_Connected[] = "Connected";
-static char Text_Disconnected[] = "Disconnected";
-
 #define MenuContentStartX 22
 
-// char AboutDetails[128];
-// int AboutDetailsLength = 0;
-// int AboutDetailsCopyLength = 0;
-// int aboutCharPos = 0;
-// int startCharWidth;
-// int aboutPixelPos = startCharWidth;
+// NOTE
+// Careful with your choice of Scroll checking choices. If your text is a little bit too long
+// and you select NoScroll - remembering it renders from the right of the screen - there is a chance
+// it will draw into the menu icon area.
 
 void MenuFunctions::Setup()
 {
@@ -50,8 +45,7 @@ void MenuFunctions::InitName()
 // About menu item
 void MenuFunctions::InitAbout()
 {
-  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s - Core %s - FW v%s - HW v%s - SW v%s",
-           ModelNumber, getBuildVersion(), FirmwareRevision, HardwareRevision, SoftwareRevision);
+  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "About Text TODO");
 
   Menus::InitMenuItemDisplay(Menus::MenuTextBuffer, ScrollDefinitelyNeeded);
 }
@@ -59,7 +53,7 @@ void MenuFunctions::InitAbout()
 // Version menu item
 void MenuFunctions::InitVersion()
 {
-  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "About text TODO",
+  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s - Core %s - FW v%s - HW v%s - SW v%s",
            ModelNumber, getBuildVersion(), FirmwareRevision, HardwareRevision, SoftwareRevision);
 
   Menus::InitMenuItemDisplay(Menus::MenuTextBuffer, ScrollDefinitelyNeeded);
@@ -136,10 +130,13 @@ void MenuFunctions::UpdateWiFi()
 // Bluetooth menu item
 bool LastBluetoothStatus = false;
 
+static char BT_Connected[] = "BT Connected";
+static char BT_Disconnected[] = "BT Disconnected";
+
 void MenuFunctions::DrawBluetooth()
 {
   LastBluetoothStatus = BTConnectionState;
-  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s - Name: %s", (LastBluetoothStatus ? Text_Connected : Text_Disconnected), DeviceName); //, VID, PID);
+  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s - %s", (LastBluetoothStatus ? BT_Connected : BT_Disconnected), DeviceName); //, VID, PID);
   Menus::UpdateMenuText(Menus::MenuTextBuffer, ScrollDefinitelyNeeded);
 }
 
@@ -215,9 +212,12 @@ void MenuFunctions::UpdateFPS()
     DrawFPS();
 }
 
+// USB menu item
 int LastUSBStatus = -1;
 
-// USB menu item
+static char USB_Connected[] = "USB Connected";
+static char USB_Disconnected[] = "USB Disconnected";
+
 void MenuFunctions::DrawUSB()
 {
   int usbStatus = Serial;
@@ -228,9 +228,9 @@ void MenuFunctions::DrawUSB()
   LastUSBStatus = usbStatus;
 
   if (usbStatus)
-    Menus::UpdateMenuText(Text_Connected, NoScrollNeeded);
+    Menus::UpdateMenuText(USB_Connected, NoScrollNeeded);
   else
-    Menus::UpdateMenuText(Text_Disconnected, NoScrollNeeded);
+    Menus::UpdateMenuText(USB_Disconnected, ScrollDefinitelyNeeded);
 }
 
 void MenuFunctions::InitUSB()

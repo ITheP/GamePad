@@ -21,9 +21,11 @@
 
 extern CRGB ExternalLeds[];
 
-#define MenuTextStartX 24      // 15 pixels for icon, 2 spacer pixels, 4 for separator, 2 spacer pixels
+#define MenuTextStartX 25 // 15 pixels for icon, 2 spacer pixels, 4 for separator, 2 spacer pixels
 
 unsigned int MenuFrame = 0;
+float MenuStartTime = 0.0;
+#define MenuStartDelay 0.75   // Seconds before menu starts scrolling (if it scrolls)
 
 int Menus::MenusStatus = OFF;
 Menu *Menus::RootMenu = NONE;
@@ -45,12 +47,11 @@ MenuOption MainMenuOptions[] = {
     {"WiFi", Icon_Menu_WiFi, "WiFi", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
     {"USB", Icon_Menu_USB, "USB", MenuFunctions::InitUSB, MenuFunctions::UpdateUSB, NONE},
     {"FPS", Icon_Menu_FPS, "FPS", MenuFunctions::InitFPS, MenuFunctions::UpdateFPS, NONE},
-    {"Web Server",Icon_Menu_WebServer , "Web Server", MenuFunctions::InitWebServer, MenuFunctions::UpdateWebServer, NONE},
+    {"Web Server", Icon_Menu_WebServer, "Web Server", MenuFunctions::InitWebServer, MenuFunctions::UpdateWebServer, NONE},
     {"About", Icon_Menu_QuestionMark, "About", MenuFunctions::InitAbout, NONE, NONE},
     {"Version", Icon_Menu_Version, "About", MenuFunctions::InitVersion, NONE, NONE},
     {"Debug", Icon_Menu_Debug, "Debug", MenuFunctions::InitDebug, NONE, NONE},
-    {"Stats", Icon_Menu_Stats, "Stats", MenuFunctions::InitStats, NONE, NONE}
-  };
+    {"Stats", Icon_Menu_Stats, "Stats", MenuFunctions::InitStats, NONE, NONE}};
 
 Menu MainMenu = {
     MainMenuOptions,
@@ -101,10 +102,10 @@ void Menus::InitMenuItemDisplay(char *text, MenuScrollState scrollStatus)
 {
   // WORK OUT ICONS OR LEFT MENU TEXT STUFF HERE
   SetFontCustom();
-  Display.fillRect(0, 0, SCREEN_WIDTH, 12, C_BLACK);
+  Display.fillRect(0, 0, MenuTextStartX-1, 13, C_BLACK); //SCREEN_WIDTH, 12, C_BLACK);
   // 15 pixels for icon, 2 spacer pixels, 4 for separator, 2 spacer pixels
-  RRE.drawChar(0, 1, CurrentMenuOption->Icon);
-  RRE.drawChar(18, 2, Icon_Menu_Separator);
+  RRE.drawChar(0, 2, CurrentMenuOption->Icon);
+  RRE.drawChar(18, 3, Icon_Menu_Separator);
 
   if (text != NONE)
     UpdateMenuText(text, scrollStatus);
@@ -118,6 +119,7 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
 {
   // CurrentMenuText = text;
   // MenuTextLength = std::strlen(CurrentMenuText);
+  Serial.println("UpdateMenyText COMING IN AS: " + String(scrollStatus) + " ON TEXT [" + String(text) + "]");
 
   SetFontFixed();
 
@@ -127,34 +129,63 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     // Work out width of text to see if scrolling is needed
     // Optimised so stop once off screen
     // CurrentMenuText = text;
+    Serial.println("SCROLL CHECK: " + String(scrollStatus) + " ON TEXT " + String(text));
+    Serial.println("   Menu Text Length: " + String(MenuTextLength));
+    Serial.print("   Chars:");
 
     int totalWidth = DisplayTextStart;
+    MenuTextLength = 0;
 
-    for (int i = 0; i < MenuTextLength; ++i)
+    // We piggyback calculating the length of MenuTextLength in our check
+
+    char c = text[0];
+    while (c != '\0')
     {
-      totalWidth += RRE.charWidth(text[i]) + 1; // +1 for character spacing
+      Serial.print(" " + String(text[MenuTextLength]) + ":" + String(RRE.charWidth(text[MenuTextLength]) + 1));
+
+      MenuTextLength++;
+      totalWidth += RRE.charWidth(c) + 1; // +1 for character spacing
+
       if (totalWidth > SCREEN_WIDTH)
       {
         scrollStatus = ScrollDefinitelyNeeded;
+        Serial.println();
+        Serial.println("SCROLL FLAGGING REQUIRED: " + String(scrollStatus) + " ON TEXT " + String(text));
+
+        // Count out the rest of the characters in the string
+        c = text[MenuTextLength];
+        while (c != '\0')
+          c = text[++MenuTextLength];
+
         break;
       }
-    }
 
-    Serial.println("TotalWidth " + String(totalWidth) + " compared to SCREEN_WIDTH " + String(SCREEN_WIDTH));
+      c = text[MenuTextLength];
+    }
+    Serial.println();
+
+    Serial.println("TotalWidth " + String(totalWidth) + " compared to SCREEN_WIDTH " + String(SCREEN_WIDTH) + ", MenuTextLength: " + String(MenuTextLength) + " - CalculatedStringLength: " + String(MenuTextLength) + " with syslength " + String(std::strlen(text)));
   }
+   else if (scrollStatus == ScrollDefinitelyNeeded)
+   {
+    MenuTextLength = std::strlen(text); 
+   }
 
   if (scrollStatus == ScrollDefinitelyNeeded)
   {
-    Serial.println("scroll is needed");
+    Serial.println("SCROLL DEFINITELY NEEDED: " + String(scrollStatus) + " ON TEXT " + String(text));
+
     // For scrolling text, stick a " - " on to visually separate end of text from start on wrap
     // Already MenuTextBuffer we can just amend it. For other strings, won't have buffer
     // space at the end so we copy into the MenuTextBuffer.
     // Note that text could get used elsewhere (logs, serial output, web output)
     // so we don't go round sticking the separator on everything in advance as we might not want it.
-    if (text == MenuTextBuffer)
+    if (text != MenuTextBuffer)
+      strcpy(MenuTextBuffer, text); // Shouldn't need strncopy()
+
       strcat(MenuTextBuffer, " - ");
-    else
-      sprintf(MenuTextBuffer, "%s - ", text);
+
+    MenuTextLength += 3; // include the " - " above
 
     // Scroll that sucker!
     // Pad the end of the text buffer with the starting segment so we can scroll seamlessly
@@ -164,13 +195,18 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     MenuTextPixelPos = 0;
     ScrollMenuText = ON;
 
+    MenuStartTime = Now + MenuStartDelay;  // start scrolling in 2.5 seconds
+
     // CurrentMenuText = MenuTextBuffer;
-    MenuTextLength = std::strlen(MenuTextBuffer);
+    // MenuTextLength = std::strlen(MenuTextBuffer);
 
     // Serial.println("UpdateMenuText + tooWide = " + String(scrollStatus));
     // Serial.println("End buffer: " + String(CurrentMenuText));
 
     Serial.println("SCROLL TEXT SETUP: " + String(MenuTextBuffer));
+
+    // Draw initial text, which will stick around till the MenuStartTime kicks in with actual scrolling updates
+    DrawScrollingText();
   }
   else
   {
@@ -181,30 +217,28 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
 
     // Redraw static text
     Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
-    //Display.fillRect(DisplayTextStart, 0, 10, RREHeight_fixed_8x16, C_WHITE);
+    // Display.fillRect(DisplayTextStart, 0, 10, RREHeight_fixed_8x16, C_WHITE);
     RRE.printStr(ALIGN_RIGHT, -1, text);
   }
 
   SetFontCustom();
-}
 
-// Super simple display of basic centered text - no icons or anything (e.g. used for Device Name)
-void Menus::DisplayMenuBasicCenteredText(char *text)
-{
-  ScrollMenuText = OFF; // Just in case any ongoing scrolling is happening!
-
-  SetFontFixed();
-  Display.fillRect(0, 0, SCREEN_WIDTH, 13, C_BLACK);
-  RRE.printStr(ALIGN_CENTER, -1, text);
-  SetFontCustom();
+  Serial.println("----------------------");
+  Serial.println();
 }
 
 void Menus::DisplayMenuText()
 {
   // Throttle scrolling to every other frame
-  if (ScrollMenuText == ON && (MenuFrame & 0x01) == 0)
+  if (ScrollMenuText == ON && (MenuFrame & 0x01) == 0 && (MenuStartTime < Now))
   {
-    // Scroll the text
+    DrawScrollingText();
+  }
+}
+
+void Menus::DrawScrollingText()
+{
+      // Scroll the text
     Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
     SetFontFixed();
 
@@ -232,22 +266,31 @@ void Menus::DisplayMenuText()
     if (MenuTextPixelPos < MenuTextStartCharWidth)
     {
       MenuTextPixelPos = 0;
-            MenuTextCharPos++;
+      MenuTextCharPos++;
 
       if (MenuTextCharPos >= MenuTextLength)
         MenuTextCharPos = 0;
 
       MenuTextStartCharWidth = -RRE.charWidth(MenuTextBuffer[MenuTextCharPos]);
-
-      }
+    }
 
     SetFontCustom();
 
     // After scrolling content, the left edge rendering will creep into where the menu separator is - so we re-draw this to keep everything neat
-    Display.fillRect(16, 0, 9, 12, C_BLACK);  // Believe its 7 pixels we need to blank, could be 8 - TBC
-    //RRE.drawChar(0, 1, CurrentMenuOption->Icon);
-    RRE.drawChar(18, 2, Icon_Menu_Separator);
-  }
+    Display.fillRect(16, 0, 9, 13, C_BLACK); // Believe its 7 pixels we need to blank, could be 8 - TBC
+    // RRE.drawChar(0, 1, CurrentMenuOption->Icon);
+    RRE.drawChar(18, 3, Icon_Menu_Separator);
+}
+
+// Super simple display of basic centered text - no icons or anything (e.g. used for Device Name)
+void Menus::DisplayMenuBasicCenteredText(char *text)
+{
+  ScrollMenuText = OFF; // Just in case any ongoing scrolling is happening!
+
+  SetFontFixed();
+  Display.fillRect(0, 0, SCREEN_WIDTH, 13, C_BLACK);
+  RRE.printStr(ALIGN_CENTER, -1, text);
+  SetFontCustom();
 }
 
 // Used for animated Menu line
@@ -282,8 +325,8 @@ void Menus::Handle()
 
       for (int i = LineOffset; i < SCREEN_WIDTH; i += DoubleLineWidth)
       {
-        Display.drawFastHLine(i, 13, LineWidth, C_WHITE);
-        Display.drawFastHLine(i + LineWidth, 13, LineWidth, C_BLACK);
+        Display.drawFastHLine(i, 14, LineWidth, C_WHITE);
+        Display.drawFastHLine(i + LineWidth, 14, LineWidth, C_BLACK);
       }
     }
   }

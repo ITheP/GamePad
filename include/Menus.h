@@ -37,4 +37,7 @@ public:
 
     static ControllerReport MoveUp();
     static ControllerReport MoveDown();
+
+private:
+    static void DrawScrollingText();
 };
