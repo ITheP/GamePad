@@ -21,7 +21,7 @@
 
 extern CRGB ExternalLeds[];
 
-#define MenuTextStartX 25 // 15 pixels for icon, 2 spacer pixels, 4 for separator, 2 spacer pixels
+#define MenuTextStartX 18 // 15 pixels for icon, 2 spacer pixels, 4 for separator, 2 spacer pixels
 
 unsigned int MenuFrame = 0;
 float MenuStartTime = 0.0;
@@ -34,9 +34,6 @@ Menu *Menus::CurrentMenu = NONE;
 // Having a default MenuOption that does nothing helps save us check for null reference on
 // uninitialised CurrentMenuOption later on
 MenuOption *NoMenuOption = new MenuOption{"None", NONE, NONE, NONE};
-// MenuOption *Menu::CurrentMenuOption = DefaultMenuOption;
-// int RequiredMenuOffset = 0;
-// int CurrentMenuOffset = 0;
 
 MenuOption *Menus::CurrentMenuOption;
 
@@ -66,8 +63,6 @@ Menu MainMenu = {
 // Value selection operations for menu items that have values to select from (make this a reusable other menus, e.g. true/false
 // Breadcrumb trail display of menu hierarchy
 
-// int Menu::MenuOptionsCount = sizeof(Menu::MenuOptions) / sizeof(Menu::MenuOptions[0]);
-
 ControllerReport Menus::ToggleMenuMode()
 {
   if (MenusStatus == ON)
@@ -75,7 +70,7 @@ ControllerReport Menus::ToggleMenuMode()
     MenusStatus = OFF;
 
     // Clear menu dotted line animation
-    Display.drawFastHLine(0, 13, SCREEN_WIDTH, C_BLACK);
+    Display.drawFastHLine(0, 14, SCREEN_WIDTH, C_BLACK);
 
     return ReportToController;
   }
@@ -84,28 +79,27 @@ ControllerReport Menus::ToggleMenuMode()
   return DontReportToController;
 }
 
-#define MaxCharsFitOnScreen ((SCREEN_WIDTH / 2) + 1) // Theoretical max number of chars on screen (1 pixel wide) + 1 pixel spacings +1 for /0
-// int BufferCopyCharsLength = MaxCharsFitOnScreen;                      // Number of chars that fit on screen + 1 to account for partial offsets to the left;
-char Menus::MenuTextBuffer[MenuTextBufferSize + 4]; // General use Menu display text buffer to render dynamic content into - +4 to make sure there is space for ' - \0'
-// char *CurrentMenuText;
+#define MaxCharsFitOnScreen ((SCREEN_WIDTH / 2) + 1)  // Theoretical max number of chars on screen (1 pixel wide) + 1 pixel spacings +1 for /0
+                                                      // Number of chars that fit on screen + 1 to account for partial offsets to the left;
+char Menus::MenuTextBuffer[MenuTextBufferSize + 4];   // General use Menu display text buffer to render dynamic content into - +4 to make sure there is space for ' - \0'
 
 int ScrollMenuText = OFF;
 int DisplayTextStart = MenuTextStartX;
-int MenuTextLength = 0; // Length of buffer without duplicated segment for scrolling
+int MenuTextLength = 0;
 int MenuTextCharPos = 0;
 int MenuTextStartCharWidth = 0;
 int MenuTextPixelPos = MenuTextStartCharWidth;
 
 // Menu auto-scrolls text if too long to fit on screen
-
 void Menus::InitMenuItemDisplay(char *text, MenuScrollState scrollStatus)
 {
   // WORK OUT ICONS OR LEFT MENU TEXT STUFF HERE
   SetFontCustom();
   Display.fillRect(0, 0, MenuTextStartX-1, 13, C_BLACK); //SCREEN_WIDTH, 12, C_BLACK);
-  // 15 pixels for icon, 2 spacer pixels, 4 for separator, 2 spacer pixels
+
   RRE.drawChar(0, 2, CurrentMenuOption->Icon);
-  RRE.drawChar(18, 3, Icon_Menu_Separator);
+  // 15 pixels for icon, 3 spacer pixels, 4 for separator, 3 spacer pixels
+  // RRE.drawChar(18, 3, Icon_Menu_Separator);
 
   if (text != NONE)
     UpdateMenuText(text, scrollStatus);
@@ -117,22 +111,12 @@ void Menus::InitMenuItemDisplay(char *text, MenuScrollState scrollStatus)
 // We do all this to try minimise amount of overhead checking for text fit to work out if we need to scroll or not - high overheads
 void Menus::UpdateMenuText(char *text, int scrollStatus)
 {
-  // CurrentMenuText = text;
-  // MenuTextLength = std::strlen(CurrentMenuText);
-  Serial.println("UpdateMenyText COMING IN AS: " + String(scrollStatus) + " ON TEXT [" + String(text) + "]");
-
   SetFontFixed();
 
   if (scrollStatus == ScrollCheck)
   {
-    Serial.println("checking if scroll needed");
     // Work out width of text to see if scrolling is needed
     // Optimised so stop once off screen
-    // CurrentMenuText = text;
-    Serial.println("SCROLL CHECK: " + String(scrollStatus) + " ON TEXT " + String(text));
-    Serial.println("   Menu Text Length: " + String(MenuTextLength));
-    Serial.print("   Chars:");
-
     int totalWidth = DisplayTextStart;
     MenuTextLength = 0;
 
@@ -141,16 +125,12 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     char c = text[0];
     while (c != '\0')
     {
-      Serial.print(" " + String(text[MenuTextLength]) + ":" + String(RRE.charWidth(text[MenuTextLength]) + 1));
-
       MenuTextLength++;
       totalWidth += RRE.charWidth(c) + 1; // +1 for character spacing
 
       if (totalWidth > SCREEN_WIDTH)
       {
         scrollStatus = ScrollDefinitelyNeeded;
-        Serial.println();
-        Serial.println("SCROLL FLAGGING REQUIRED: " + String(scrollStatus) + " ON TEXT " + String(text));
 
         // Count out the rest of the characters in the string
         c = text[MenuTextLength];
@@ -162,9 +142,6 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
 
       c = text[MenuTextLength];
     }
-    Serial.println();
-
-    Serial.println("TotalWidth " + String(totalWidth) + " compared to SCREEN_WIDTH " + String(SCREEN_WIDTH) + ", MenuTextLength: " + String(MenuTextLength) + " - CalculatedStringLength: " + String(MenuTextLength) + " with syslength " + String(std::strlen(text)));
   }
    else if (scrollStatus == ScrollDefinitelyNeeded)
    {
@@ -277,9 +254,9 @@ void Menus::DrawScrollingText()
     SetFontCustom();
 
     // After scrolling content, the left edge rendering will creep into where the menu separator is - so we re-draw this to keep everything neat
-    Display.fillRect(16, 0, 9, 13, C_BLACK); // Believe its 7 pixels we need to blank, could be 8 - TBC
-    // RRE.drawChar(0, 1, CurrentMenuOption->Icon);
-    RRE.drawChar(18, 3, Icon_Menu_Separator);
+    Display.fillRect(16-7, 0, 9, 13, C_BLACK); // Believe its 7 pixels we need to blank, could be 8 - TBC
+     RRE.drawChar(0, 2, CurrentMenuOption->Icon);
+    //RRE.drawChar(18, 3, Icon_Menu_Separator);
 }
 
 // Super simple display of basic centered text - no icons or anything (e.g. used for Device Name)

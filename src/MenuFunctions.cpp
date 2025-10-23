@@ -136,7 +136,7 @@ static char BT_Disconnected[] = "BT Disconnected";
 void MenuFunctions::DrawBluetooth()
 {
   LastBluetoothStatus = BTConnectionState;
-  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s - %s", (LastBluetoothStatus ? BT_Connected : BT_Disconnected), DeviceName); //, VID, PID);
+  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s - %s", (LastBluetoothStatus ? BT_Connected : BT_Disconnected), FullDeviceName); //, VID, PID);
   Menus::UpdateMenuText(Menus::MenuTextBuffer, ScrollDefinitelyNeeded);
 }
 

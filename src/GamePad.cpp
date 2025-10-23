@@ -44,6 +44,7 @@ AsyncWebServer WebServer(80);
 #include "DeviceConfig.h"
 
 char DeviceName[20];
+char FullDeviceName[32];
 char SerialNumber[22]; // SerialNumber = large enough to hold the uint64_t value as a string 20 chars + 1 for ESPChipIdOffset + null terminator. Tests showed serial coming from esp32-s3 was 14 chars + the ESPChipIdOffset
 uint64_t ESPChipId;
 int ESPChipIdOffset;
@@ -659,6 +660,8 @@ void setupDeviceIdentifiers()
     snprintf(DeviceName, sizeof(DeviceName), "%s %d.%d", DeviceNames[offset], offset, ESPChipIdOffset);
     Serial.println("Bluetooth device Id/Name - system selected: " + String(ESPChipIdOffset));
   }
+
+  snprintf(FullDeviceName, sizeof(FullDeviceName), "%s %s", ControllerDeviceNameType, DeviceName);
 #endif
 
   // Init serial number
@@ -667,8 +670,8 @@ void setupDeviceIdentifiers()
 
 void setupController()
 {
-  snprintf(buffer, sizeof(buffer), "Guitar %s", DeviceName);
-  bleGamepad = BleGamepad(buffer, ControllerType, 100);
+  //snprintf(buffer, sizeof(buffer), "Guitar %s", DeviceName);
+  bleGamepad = BleGamepad(FullDeviceName, ControllerType, 100);
 
   Serial.println("\nBluetooth configuration...");
   Serial.println("... Name: " + String(buffer));
@@ -1357,7 +1360,7 @@ void loop()
       if (hatInput->CustomOperation != NONE)
         hatInput->CustomOperation(hatInput);
 
-      ControllerReport extraOperationControllerReport = DontReportToController;
+      ControllerReport extraOperationControllerReport = ReportToController; //DontReportToController;
       // Hat position specific extra operations
       // We allow cancellation of bluetooth setting here so
       // we can use hat activities for onboard operations (such as menu navigation)

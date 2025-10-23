@@ -12,6 +12,7 @@
 #include <Screen.h>
 #include "Menus.h"
 
+char ControllerDeviceNameType[] = "Guitar";
 char ControllerType[] = "Guitar Controller";
 char ModelNumber[] = "Guitar 1.0";
 char FirmwareRevision[] = "1.0";
@@ -330,7 +331,7 @@ HatInput Hat0 =
     .Pins = { NONE, HAT1_Right_PIN, NONE, HAT1_Left_PIN }, .Label = "1", .BluetoothHat = 0, .DefaultValue = 0,
     .RenderOperation = RenderInput_Hat, .XPos = -4, .YPos = 25, .RenderWidth = 15, .RenderHeight = 15, .StartIcon = Icon_DPad_Neutral,
     .ExtraOperation = {
-        NONE,           // Centered
+        NONE,           // Centred
         NONE,           // Up
         NONE,           // Up Right
         Menus::MoveDown,   // Right
@@ -342,7 +343,7 @@ HatInput Hat0 =
       },
     .CustomOperation = Custom_RenderHatStrumState,
     .Statistics = {
-      NONE,             // Centered
+      NONE,             // Centred
       NONE,             // Up
       NONE,             // Up Right
       &Stats_HatLeft,   // Right

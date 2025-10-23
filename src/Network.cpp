@@ -13,17 +13,17 @@
 
 // TODO: If ndef WIFI then draw the icons for no wifi in main display setup
 
-char WiFi_HighSignal[] = "OK - High Signal";
-char WiFi_MediumSignal[] = "OK - Medium Signal";
-char WiFi_LowSignal[] = "OK - Low Signal";
-char WiFi_TraceSignal[] = "OK - Trace Signal";
-char WiFi_Query[] = "Problem checking access point";
-char WiFi_AccessPointUnavailable[] = "Access point not found";
-char WiFi_Disabled[] = "Disabled";
-char WiFi_Connecting[] = "Connecting...";
-char WiFi_ReConnecting[] = "Reconnecting...";
-char WiFi_Disconnected[] = "Disconnected";
-char WiFi_UnknownStatus[] = "Unknown Status";
+char WiFi_HighSignal[] = "WiFi OK - High Signal";
+char WiFi_MediumSignal[] = "WiFi OK - Medium Signal";
+char WiFi_LowSignal[] = "WiFi OK - Low Signal";
+char WiFi_TraceSignal[] = "WiFi OK - Trace Signal";
+char WiFi_Query[] = "WiFi Problem checking access point";
+char WiFi_AccessPointUnavailable[] = "WiFi Access point not found";
+char WiFi_Disabled[] = "WiFi Disabled";
+char WiFi_Connecting[] = "WiFi Connecting...";
+char WiFi_ReConnecting[] = "WiFi Reconnecting...";
+char WiFi_Disconnected[] = "WiFi Disconnected";
+char WiFi_UnknownStatus[] = "WiFi Unknown Status";
 
 // Wi-Fi credentials
 const char *Network::ssid = WIFI_SSID;

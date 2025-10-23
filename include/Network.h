@@ -25,20 +25,7 @@ public:
 
     static char *WiFiStatus;
 
-    // static WiFi_StatusCode WiFiStatusCode;
-    // static constexpr char* WiFiStatusText[WIFI_STATUS_COUNT] = {
-    // "OK - High Signal",
-    // "OK - Medium Signal",
-    // "OK - Low Signal",
-    // "OK - Trace Signal",
-    // "Problem checking access point",
-    // "Access point not found",
-    // "Disabled",
-    // "Connecting...",
-    // "Reconnecting...",
-    // "Disconnected",
-    // "Unknown Status"
-    // };
+
 
 private:
     static const char *ssid;

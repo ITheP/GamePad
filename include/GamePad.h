@@ -30,6 +30,7 @@ extern int DisplayRollover;
 
 extern char SerialNumber[];
 extern char DeviceName[];
+extern char FullDeviceName[];
 extern const char* DeviceNames[];
 extern int DeviceNamesCount;
 extern int ControllerIdle;
