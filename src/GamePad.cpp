@@ -10,6 +10,7 @@
 #include "Icons.h"
 #include "Stats.h"
 #include "RenderText.h"
+#include "RenderInput.h"
 #include "Benchmark.h"
 #include "Battery.h"
 #include "GamePad.h"
@@ -206,7 +207,7 @@ void setupBattery()
   // Make sure we have atleast one battery reading completed
   Battery::TakeReading();
 
-  setupShowBattery();
+  //setupShowBattery();
 }
 
 void setupUSB()
@@ -225,6 +226,7 @@ void setupUSB()
 
   Serial.begin(SERIAL_SPEED);
 
+  // Show battery stuff here early on, before waiting around for Serial visuals to render
   setupShowBattery();
 
   // Give the serial connection 0.5 seconds to do something - and bail if no connection during that time
@@ -670,7 +672,7 @@ void setupDeviceIdentifiers()
 
 void setupController()
 {
-  //snprintf(buffer, sizeof(buffer), "Guitar %s", DeviceName);
+  // snprintf(buffer, sizeof(buffer), "Guitar %s", DeviceName);
   bleGamepad = BleGamepad(FullDeviceName, ControllerType, 100);
 
   Serial.println("\nBluetooth configuration...");
@@ -753,8 +755,30 @@ void setup()
   setupRRE();
   setupRenderLogo();
   setupBattery();
-  setupUSB();
 
+
+  // We never continue if battery is too low - it's too critical - device will fail to operate soon! Spend that time warning people.
+  // We check previous battery level here as once its too low its too low. No point in re-processing other stuff, and recharging involves turning off device.
+  // Only in a live environment - test board might have no battery connected to produce a measurable voltage, meaning a permanent 0 battery level
+  // This may change if/when decent power while play is working (and charging gets us out of this loop)
+#ifdef LIVE_BATTERY
+  int currentBatteryLevel = Battery::GetLevel();
+  if (currentBatteryLevel == 0)
+  {
+    // Simulate SecondRollover and SecondFlipFlop
+    // + loop forever - they need to charge things up!
+    // This may change if/when decent power while play is working
+
+    int flipFlop = false;
+    while (1) {
+      Battery::DrawEmpty(true, flipFlop, false);
+      flipFlop = !flipFlop;
+      delay(1000);  // Wait a second
+    }
+  }
+#endif
+
+  setupUSB();
 
   // Clear battery text ready for icons
   Display.fillRect(HALF_SCREEN_WIDTH, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
@@ -772,10 +796,10 @@ void setup()
   Serial.println("PSRam: " + String(ESP.getPsramSize()) + " (" + String(ESP.getFreePsram()) + " free)");
 
   // Controls icon
-  RRE.drawChar(85, 50, (unsigned char)Icon_EmptyCircle_12);
+  RRE.drawChar(86, 50, (unsigned char)Icon_EmptyCircle_12);
   Display.display();
   delay(SETUP_DELAY / 2);
-  RRE.drawChar(87, 52, (unsigned char)Icon_FilledCircle_8);
+  RRE.drawChar(88, 52, (unsigned char)Icon_FilledCircle_8);
   Display.display();
 
   setupDigitalInputs();
@@ -794,7 +818,6 @@ void setup()
   Display.display();
   delay(SETUP_DELAY * 2);
 
-  
   Menus::Setup();
 
 // Screen flip control needs to be checked and set before main screen is drawn
@@ -1057,8 +1080,6 @@ void loop()
       // Compare current with previous, and timing, so we can de-bounce if required
       state = digitalRead(input->Pin);
 
-      // Serial.print(state);
-
       int skipCheck = false;
 
       // Digital inputs are easy, EXCEPT when using time delays
@@ -1072,28 +1093,36 @@ void loop()
       // if has linked input then
       if (input->LongPressChildInput != NONE)
       {
-        // input->ValueState.Value = LONG_PRESS_MONITORING;
         unsigned long timeDifference = timeCheck - input->ValueState.StateChangedWhen;
         // Serial.println("NAME - " + String(input->Label));
-        //     Serial.println("State - " + String(state) + " for " + String(input->ValueState.Value));
+        // Serial.println("State - " + String(state) + " for " + String(input->ValueState.Value));
+
         if (state == PRESSED)
         {
           if (input->ValueState.Value != LONG_PRESS_MONITORING)
           {
-            //Serial.println("LONG PRESS - MONITORING INITIATED");
+            // Serial.println("LONG PRESS - MONITORING INITIATED");
+
             input->ValueState.Value = LONG_PRESS_MONITORING;
             input->ValueState.StateChangedWhen = timeCheck;
           }
           else if (timeDifference >= input->LongPressTiming)
           {
             // Serial.println("LONG PRESSED TIMING TRIGGER " + String(timeDifference) + " vs " + String(input->LongPressTiming));
-            //  Past long press time, pass child on to main routine
+            
+            // Past long press time, pass child on to main routine
             input = input->LongPressChildInput;
           }
-          // else
-          // {
-          //   Serial.println("Waiting " + String(timeDifference) + " vs " + String(input->LongPressTiming));
-          // }
+          else
+          {
+            // Serial.println("Waiting " + String(timeDifference) + " vs " + String(input->LongPressTiming));
+
+            // Render icon to screen for initial press we MIGHT have, only a % visible in relation
+            // to length of time held to total length of time before becomes long press input
+            input->RenderOperation(input);
+            float percentage = static_cast<float>(timeDifference) / static_cast<float>(input->LongPressTiming);
+            RenderInput_BlankingArea(input, percentage);
+          }
         }
         else // if (state == NOT_PRESSED)
         {
@@ -1103,14 +1132,14 @@ void loop()
             {
               // We were monitoring a long press, so we need to release the child input
 
-              //Serial.println("LONG PRESS - ESCALATING TO CHILD");
-              // first, de-escalate the long press monitoring
+              // Serial.println("LONG PRESS - ESCALATING TO CHILD");
+              //  first, de-escalate the long press monitoring
               input->ValueState.Value = NOT_PRESSED;
 
               // pass along child input to have its release processed
               input = input->LongPressChildInput;
 
-              //Serial.println("LONG PRESS - LONG PRESSED");
+              // Serial.println("LONG PRESS - LONG PRESSED");
             }
             else
             {
@@ -1118,7 +1147,7 @@ void loop()
               input->ValueState.Value = NOT_PRESSED; // Will force a press when we process the input below
               state = PRESSED;                       // Force a pretend pressing for this cycle for this input
               // Next loop will pick up it is not pressed any more and do the release
-              //Serial.println("LONG PRESS - SHORT PRESSED");
+              // Serial.println("LONG PRESS - SHORT PRESSED");
 
               input->AutoHold = timeCheck + input->ShortPressReleaseTime;
             }
@@ -1137,7 +1166,7 @@ void loop()
       // Process when state has changed
       if (state != input->ValueState.Value && input->ValueState.Value != LONG_PRESS_MONITORING)
       {
-        //Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
+        // Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
         input->ValueState.PreviousValue = !state;
         input->ValueState.Value = state;
         input->ValueState.StateChangedWhen = timeCheck;
@@ -1360,7 +1389,7 @@ void loop()
       if (hatInput->CustomOperation != NONE)
         hatInput->CustomOperation(hatInput);
 
-      ControllerReport extraOperationControllerReport = ReportToController; //DontReportToController;
+      ControllerReport extraOperationControllerReport = ReportToController; // DontReportToController;
       // Hat position specific extra operations
       // We allow cancellation of bluetooth setting here so
       // we can use hat activities for onboard operations (such as menu navigation)
@@ -1541,7 +1570,7 @@ void loop()
     Display.display();
 
   Frame++;
-//Serial.println("Frame: " + String(Frame));
+// Serial.println("Frame: " + String(Frame));
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Snapshot("Loop.Display", showBenchmark);
 #endif

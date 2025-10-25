@@ -42,12 +42,13 @@ void MenuFunctions::InitName()
   Menus::DisplayMenuBasicCenteredText(DeviceName);
 }
 
+
+static char Menu_About[] = ABOUT;
+
 // About menu item
 void MenuFunctions::InitAbout()
 {
-  snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "About Text TODO");
-
-  Menus::InitMenuItemDisplay(Menus::MenuTextBuffer, ScrollDefinitelyNeeded);
+  Menus::InitMenuItemDisplay(Menu_About, ScrollDefinitelyNeeded);
 }
 
 // Version menu item

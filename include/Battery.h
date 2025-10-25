@@ -42,7 +42,7 @@ class Battery {
 public:
     static void TakeReading();
     static int GetLevel();
-    static void DrawEmpty(int secondRollover, int SecondFlipFlop);
+    static void DrawEmpty(int secondRollover, int SecondFlipFlop, bool IncludeLED = true);
 
     static int PreviousBatteryLevel;
     static int CurrentBatterySensorReading;

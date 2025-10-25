@@ -8,3 +8,5 @@ void RenderInput_DoubleIcon(Input* input);
 void RenderInput_Text(Input* input);
 void RenderInput_AnalogBar_Vert(Input* input);
 void RenderInput_Hat(HatInput* hatInput);
+
+void RenderInput_BlankingArea(Input* input, float percentage);

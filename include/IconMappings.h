@@ -71,6 +71,7 @@
 #define Icon_Start 0x8A
 #define Icon_Select1 0x8B
 #define Icon_Select2 0x8C
+#define Icon_Menu 0x78
 
 #define Icon_Tilt 0x57
 

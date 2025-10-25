@@ -16,11 +16,12 @@ int Battery::CumulativeBatterySensorReadings = 0;
 int Battery::BatteryLevelReadingsCount = 0;
 float Battery::Voltage = 0.0;
 
-int Battery::GetLevel() {
+int Battery::GetLevel()
+{
   // We have had multiple readings, so average them out and update current battery level
   CurrentBatterySensorReading = CumulativeBatterySensorReadings / BatteryLevelReadingsCount;
-  CumulativeBatterySensorReadings = 0;  // Ready for next round of readings
-  BatteryLevelReadingsCount = 0;        // Set up to start readings again
+  CumulativeBatterySensorReadings = 0; // Ready for next round of readings
+  BatteryLevelReadingsCount = 0;       // Set up to start readings again
 
   if (CurrentBatterySensorReading > BAT_MAX)
     CurrentBatterySensorReading = BAT_MAX;
@@ -46,7 +47,7 @@ IconRun BatteryEmptyGfx[] = {
 
 int BatteryEmptyGfx_RunCount = sizeof(BatteryEmptyGfx) / sizeof(BatteryEmptyGfx[0]);
 
-void Battery::DrawEmpty(int secondRollover, int SecondFlipFlop)
+void Battery::DrawEmpty(int secondRollover, int SecondFlipFlop, bool IncludeLED)
 {
   // Not very optimal drawing, but we don't care, we aren't doing anything else now
   if (secondRollover == true)
@@ -64,7 +65,7 @@ void Battery::DrawEmpty(int secondRollover, int SecondFlipFlop)
     //   RenderIcon((char)c, xPos, yPos, 0, 0);
     //   xPos += 16;
     //   c++;
-    // }
+    // }X
 
     if (SecondFlipFlop)
     {
@@ -76,18 +77,21 @@ void Battery::DrawEmpty(int secondRollover, int SecondFlipFlop)
     Display.display();
 
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
-    // ToDo: If LED's were turned on at time this instigated, might remain on. Double check to make sure these are turned off.
-    if (SecondFlipFlop)
-      StatusLed[0] = CRGB::Black;
-    else
-      StatusLed[0] = CRGB::Red;
+    if (IncludeLED)
+    {
+      // ToDo: If LED's were turned on at time this instigated, might remain on. Double check to make sure these are turned off.
+      if (SecondFlipFlop)
+        StatusLed[0] = CRGB::Black;
+      else
+        StatusLed[0] = CRGB::Red;
 
 #if defined(USE_EXTERNAL_LED) && defined(ExternalLED_StatusLED)
-    // Always make sure the external status LED is updated too
-    ExternalLeds[ExternalLED_StatusLED] = StatusLed[0];
+      // Always make sure the external status LED is updated too
+      ExternalLeds[ExternalLED_StatusLED] = StatusLed[0];
 #endif
 
-    FastLED.show();
+      FastLED.show();
+    }
 #endif
   }
 }

@@ -78,7 +78,7 @@ typedef struct Input {
   Input *LongPressChildInput;                   // Equivalent Input configuration that kicks in if a delayed operation is required and is triggered
   // Set automatically by code
   Input *LongPressParentInput;                  // Pointer back to the parent input that triggered the long press, so we can access the original input's timing
-  unsigned long ShortPressReleaseTime;          // If this was a short press, how long to auto-hold the button on for
+  unsigned long ShortPressReleaseTime;          // If this was a short press, how long to auto-hold the button on for. Can simulate someone pressing for a moment to e.g. let LEDs light up for a time period.
 
   unsigned long AutoHold;                       // Timer used to automatically hold a button for a time period after release *used with ShortPressReleaseTime)
 } Input;

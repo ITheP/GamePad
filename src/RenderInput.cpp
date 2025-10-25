@@ -1,4 +1,4 @@
-//#include <Adafruit_SH110X.h>
+// #include <Adafruit_SH110X.h>
 #include <RREFont.h>
 #include "Config.h"
 #include "GamePad.h"
@@ -6,15 +6,19 @@
 #include "Screen.h"
 
 // Draws a rectangle depending on value of Input (e.g. button press/release)
-void RenderInput_Rectangle(Input* input) {
+void RenderInput_Rectangle(Input *input)
+{
   int color;
-  if (input->ValueState.Value == HIGH) {
+  if (input->ValueState.Value == HIGH)
+  {
     color = C_BLACK;
 
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("Rec.Button up [" + String(input->BluetoothInput) + "]: " + String(input->Label));
 #endif
-  } else {
+  }
+  else
+  {
     color = C_WHITE;
 
 #ifdef EXTRA_SERIAL_DEBUG
@@ -25,9 +29,29 @@ void RenderInput_Rectangle(Input* input) {
   Display.fillRect(input->XPos, input->YPos, input->RenderWidth, input->RenderHeight, color);
 }
 
+// Lets us draw a scaling rectangle over a label - handy for Long press situations
+// where we can display a short press label, slowly have it disappear as button is
+// held down to indicate the move into the long press state
+void RenderInput_BlankingArea(Input *input, float percentage)
+{
+  int xPos = input->XPos;
+  int yPos = input->YPos;
+  int width = input->RenderWidth;
+  int height = input->RenderHeight;
+
+  if (percentage > 1.0)
+    percentage = 1.0;
+
+  int fillWidth = static_cast<int>(width * percentage);
+  int fillX = xPos + width - fillWidth;
+
+  Display.fillRect(fillX, yPos, fillWidth, height, C_BLACK);
+}
+
 // Draws specific icons depending on state of input
 // Assumes icon font is currently selected
-void RenderInput_Icon(Input* input) {
+void RenderInput_Icon(Input *input)
+{
   int xPos = input->XPos;
   int yPos = input->YPos;
   int width = input->RenderWidth;
@@ -36,7 +60,8 @@ void RenderInput_Icon(Input* input) {
   // Blank existing icon
   Display.fillRect(xPos, yPos, width, height, C_BLACK);
 
-  if (input->ValueState.Value == HIGH) {
+  if (input->ValueState.Value == HIGH)
+  {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("Icon.Button up [" + String(input->BluetoothInput) + "]: " + String(input->Label));
 #endif
@@ -44,7 +69,9 @@ void RenderInput_Icon(Input* input) {
     // Only draw if required - otherwise we might just be blanking previous icon
     if (input->FalseIcon != 0)
       RRE.drawChar(input->XPos, input->YPos, input->FalseIcon);
-  } else {
+  }
+  else
+  {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("Icon.Button down [" + String(input->BluetoothInput) + "]: " + String(input->Label));
 #endif
@@ -57,7 +84,8 @@ void RenderInput_Icon(Input* input) {
 
 // Renders icon + second icon next to it (i.e. double width)
 // Assumes icon font is currently selected
-void RenderInput_DoubleIcon(Input* input) {
+void RenderInput_DoubleIcon(Input *input)
+{
   int xPos = input->XPos;
   int yPos = input->YPos;
   int width = input->RenderWidth;
@@ -65,16 +93,20 @@ void RenderInput_DoubleIcon(Input* input) {
 
   Display.fillRect(xPos, yPos, width, height, C_BLACK);
 
-  if (input->ValueState.Value == HIGH) {
+  if (input->ValueState.Value == HIGH)
+  {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("Icon.Button up [" + String(input->BluetoothInput) + "]: " + String(input->Label));
 #endif
 
-    if (input->FalseIcon != NONE) {
+    if (input->FalseIcon != NONE)
+    {
       RRE.drawChar(input->XPos, input->YPos, input->FalseIcon);
       RRE.drawChar(input->XPos + 16, input->YPos, input->FalseIcon + 1);
     }
-  } else {
+  }
+  else
+  {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("Icon.Button down [" + String(input->BluetoothInput) + "]: " + String(input->Label));
 #endif
@@ -88,7 +120,8 @@ void RenderInput_DoubleIcon(Input* input) {
 
 // ToDo: Renders text output
 // assumes text font is currently selected
-void RenderInput_Text(Input* input) {
+void RenderInput_Text(Input *input)
+{
 #ifdef EXTRA_SERIAL_DEBUG
   Serial.println(input->Label);
 #endif
@@ -96,12 +129,14 @@ void RenderInput_Text(Input* input) {
   // CURRENTLY UNUSED
 }
 
-float mapFloat(float x, float in_min, float in_max, float out_min, float out_max) {
+float mapFloat(float x, float in_min, float in_max, float out_min, float out_max)
+{
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
 // Draws a rectangle, size varies by inputs value
-void RenderInput_AnalogBar_Vert(Input* input) {
+void RenderInput_AnalogBar_Vert(Input *input)
+{
   int xPos = input->XPos;
   int yPos = input->YPos;
   int width = input->RenderWidth;
@@ -122,7 +157,7 @@ void RenderInput_AnalogBar_Vert(Input* input) {
 
   float rangedValue = mapFloat(constrainedState, minValue, maxValue, 0.0, 1.0);
 
-  int barHeight = (rangedValue * (height-1));
+  int barHeight = (rangedValue * (height - 1));
   // Make sure bar is always at least 1 pixel high, and in our case here account for fractional rounding down to nearest pixel (which might otherwise cause a full value to miss final pixel of height)
   // Note that for some reason, .fillRect was creating a 2 pixel high rectangle with a funny offset when barHeight was set to 0
   barHeight++;
@@ -131,7 +166,8 @@ void RenderInput_AnalogBar_Vert(Input* input) {
 }
 
 // Renders a hat up/down/left/right or diagonal position icon depending on input value
-void RenderInput_Hat(HatInput* hatInput) {
+void RenderInput_Hat(HatInput *hatInput)
+{
   int xPos = hatInput->XPos;
   int yPos = hatInput->YPos;
   int width = hatInput->RenderWidth;
