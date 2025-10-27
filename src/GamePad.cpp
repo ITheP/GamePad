@@ -4,6 +4,9 @@
 #include <Adafruit_SH110X.h>
 #include <RREFont.h>
 #include <BleGamepad.h>
+#include <FS.h>
+#include <LittleFS.h>
+// #include <esp_private/panic_internal.h>
 #include "Config.h"
 #include "IconMappings.h"
 #include "Screen.h"
@@ -20,26 +23,11 @@
 #include "UI.h"
 #include "Utils.h"
 #include "Menus.h"
+#include "Debug.h"
+#include "Web.h"
 
 // #include "soc/soc.h"
 // #include "soc/rtc_cntl_reg.h"
-
-#define WIFI
-
-#define WEBSERVER
-
-#ifdef WEBSERVER
-#include "Web.h"
-#include <ESPAsyncWebServer.h>
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
-#include <SPIFFS.h>
-
-// Create AsyncWebServer on port 80
-AsyncWebServer WebServer(80);
-
-#endif
 
 // Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
 #include "DeviceConfig.h"
@@ -171,15 +159,9 @@ void setupDisplay()
   {
     // Alternative handling - Spit out an error over serial connection if problem with display
     Serial.begin(SERIAL_SPEED);
+    delay(200);
     Serial.println("Critical failure, display failed to start. Halting!");
-    while (1)
-    {
-      // Forever flash internal LED to let us know theres something wrong!
-      digitalWrite(LED_BUILTIN, HIGH);
-      delay(150);
-      digitalWrite(LED_BUILTIN, LOW);
-      delay(150);
-    }
+    Debug::WarningFlashes(LittleFSFailedToMount);
   }
 
   Display.clearDisplay();
@@ -193,11 +175,67 @@ void setupRRE()
   RRE.setScale(1);
 }
 
+constexpr int LOGO_WIDTH = 128;
+constexpr int LOGO_HEIGHT = 64;
+constexpr int MAX_GLEAM_PIXELS = 128; // conservative upper bound
+
+struct Pixel
+{
+  uint8_t x;
+  uint8_t y;
+};
+
+Pixel gleamPixels[MAX_GLEAM_PIXELS];
+int gleamCount = 0;
+
+void RenderGlint(int frame)
+{
+  // Step 1: Reset logo from any previous frame
+  Display.clearDisplay();
+  RenderIconRuns(Logo, Logo_RunCount);
+
+  // Step 2: Scan diagonal line
+  gleamCount = 0;
+  int x = -LOGO_HEIGHT + frame;
+
+  for (int y = LOGO_HEIGHT; y > 0; --y)
+  {
+    if (x >= 0 && x < LOGO_WIDTH)
+    {
+      if (Display.getPixel(x, y))
+        gleamPixels[gleamCount++] = {(uint8_t)x, (uint8_t)y};
+
+      if (gleamCount >= MAX_GLEAM_PIXELS)
+        break;
+    }
+    x++;
+  }
+
+  // Step 3: Glow pass
+  for (int i = 0; i < gleamCount; ++i)
+  {
+    uint8_t x = gleamPixels[i].x;
+    uint8_t y = gleamPixels[i].y;
+
+    Display.drawFastHLine(x - 1, y - 2, 3, C_WHITE);
+    Display.drawFastHLine(x - 2, y - 1, 5, C_WHITE);
+    Display.drawFastHLine(x - 3, y, 7, C_WHITE);
+    Display.drawFastHLine(x - 2, y + 1, 5, C_WHITE);
+    Display.drawFastHLine(x - 1, y + 2, 3, C_WHITE);
+  }
+
+  Display.display();
+}
+
 void setupRenderLogo()
 {
   SetFontCustom();
   RenderIconRuns(Logo, Logo_RunCount);
   Display.display();
+
+  // Fancy arse gleam effect on start up - just to look cool
+  for (int frame = 0; frame < LOGO_WIDTH + LOGO_HEIGHT + 3; frame += 3)
+    RenderGlint(frame);
 }
 
 void setupBattery()
@@ -207,7 +245,7 @@ void setupBattery()
   // Make sure we have atleast one battery reading completed
   Battery::TakeReading();
 
-  //setupShowBattery();
+  // setupShowBattery();
 }
 
 void setupUSB()
@@ -220,9 +258,6 @@ void setupUSB()
     Display.display();
     delay(10);
   }
-
-  Serial.println("Starting up...");
-  Serial.println("Checking serial...");
 
   Serial.begin(SERIAL_SPEED);
 
@@ -264,19 +299,42 @@ void setupUSB()
   }
 }
 
+#ifdef WIFI
+#ifdef WEBSERVER
+void setupWiFi()
+{
+  Serial.println("Initialising WiFi event monitoring");
+
+  esp_netif_init(); // Need to do this now else the web service throws a wobbler
+
+  WiFi.onEvent([](WiFiEvent_t event)
+               {
+    Serial.println("WIFI EVENT: " + String(event));
+  if (event == SYSTEM_EVENT_STA_GOT_IP) {
+    Serial.println("✅ Wi-Fi connected, starting server");
+    Web::StartServer();
+  } else if
+  (event == SYSTEM_EVENT_STA_DISCONNECTED) {
+    Serial.println("⚠️ Wi-Fi disconnected, stopping server");
+    Web::StopServer();
+  } });
+}
+#endif
+#endif
+
 #ifdef WEBSERVER
 void setupWebServer()
 {
-  if (!SPIFFS.begin(true))
-  {
-    Serial.println("SPIFFS Mount Failed");
-  }
+  // WiFi actually turns server on and off
 
-  Web::SetUpRoutes(WebServer);
+  // if (WiFi.status() != WL_CONNECTED)
+  //{
+  //   Serial.print("Web server not set up, WiFi is not yet connected");
+  //   return;
+  // }
 
-  Serial.println("Starting HTTP Server...");
-
-  esp_netif_init(); // Need to do this now else the web service throws a wobbler
+  Serial.println("Configuring HTTP Web Server");
+  Web::SetUpRoutes();
 
   // Full BT mode
   // esp_bt_controller_enable(ESP_BT_MODE_CLASSIC_BT);
@@ -291,7 +349,9 @@ void setupWebServer()
   // esp_wifi_init(&cfg);
 
   // Start server
-  WebServer.begin();
+  // WebServer.begin();
+  Serial.println("Web Site source files:");
+    Web::listDir("/");
 }
 #endif
 
@@ -742,6 +802,18 @@ void setupController()
   bleGamepad.begin(&bleGamepadConfig); // Note - changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
 }
 
+void SetupLittleFS()
+{
+  if (!LittleFS.begin(true))
+  {
+    // Alternative handling - Spit out an error over serial connection if problem with display
+    Serial.begin(SERIAL_SPEED);
+    delay(200);
+    Serial.println("Critical failure, LittleFS mount failed. Halting!");
+    Debug::WarningFlashes(LittleFSFailedToMount);
+  }
+}
+
 void setup()
 {
   // Development test specific
@@ -751,11 +823,21 @@ void setup()
 
   Wire.begin(I2C_SDA, I2C_SCL);
 
+  // if (!SPIFFS.begin(true))
+  // {
+  //   Serial.println("SPIFFS Mount Failed");
+  // }
+
+  SetupLittleFS(); // Set this up super early, used to write crashlogs etc.
   setupDisplay();
+
+  // Up to now, any h/w failure to initialise will be handled with flashing onboard LED warning codes.
+  // Now we have a display, we can attempt to get some visuals out of any errors that take place
+
   setupRRE();
   setupRenderLogo();
-  setupBattery();
 
+  setupBattery();
 
   // We never continue if battery is too low - it's too critical - device will fail to operate soon! Spend that time warning people.
   // We check previous battery level here as once its too low its too low. No point in re-processing other stuff, and recharging involves turning off device.
@@ -770,10 +852,11 @@ void setup()
     // This may change if/when decent power while play is working
 
     int flipFlop = false;
-    while (1) {
+    while (1)
+    {
       Battery::DrawEmpty(true, flipFlop, false);
       flipFlop = !flipFlop;
-      delay(1000);  // Wait a second
+      delay(1000); // Wait a second
     }
   }
 #endif
@@ -785,6 +868,10 @@ void setup()
 
 #ifdef WEBSERVER
   setupWebServer();
+#endif
+
+#ifdef WIFI
+  setupWiFi();
 #endif
 
   Display.display();
@@ -1109,7 +1196,7 @@ void loop()
           else if (timeDifference >= input->LongPressTiming)
           {
             // Serial.println("LONG PRESSED TIMING TRIGGER " + String(timeDifference) + " vs " + String(input->LongPressTiming));
-            
+
             // Past long press time, pass child on to main routine
             input = input->LongPressChildInput;
           }

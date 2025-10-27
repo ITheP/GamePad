@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 //#define EXTRA_SERIAL_DEBUG        // Enable to print loads of extra information to serial
 //#define EXTRA_SERIAL_DEBUG_PLUS   // ...further detail, but can flood serial output somewhat!
 //#define INCLUDE_BENCHMARKS        // Includes some basic performance statistics of running device over serial
@@ -44,3 +46,10 @@ enum ControllerReport {
 };
 
 #define NONE 0
+
+// class Config {
+//     public:
+//         static void Init();
+
+//         static uint32_t BootCount;
+// };

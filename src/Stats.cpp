@@ -1,5 +1,7 @@
 // Statistics counting
 #include <Preferences.h>
+#include <sstream>
+#include <iostream>
 #include "Config.h"
 #include "Stats.h"
 #include "DeviceConfig.h"
@@ -10,7 +12,7 @@ ControllerReport ResetAllCurrentStats()
   for (int i = 0; i < AllStats_Count; i++)
     AllStats[i]->ResetCurrentCounts();
 
-    return DontReportToController;
+  return DontReportToController;
 }
 
 void UpdateSecondStats(int second)
@@ -32,7 +34,7 @@ Stats::Stats(const char *description, float elasticReductionRate, float elasticM
 
 void Stats::AddCount()
 {
- // Serial.println("Adding count to " + String(Description));
+  // Serial.println("Adding count to " + String(Description));
   Current_SecondCount++;
   Current_TotalCount++;
   Session_TotalCount++;
@@ -74,6 +76,7 @@ void Stats::ResetEverCounts()
 void Stats::LoadFromFlash()
 {
 }
+
 void Stats::SaveToFlash()
 {
 }
@@ -182,9 +185,9 @@ void Stats::SubSecondPassed()
 
     ElasticPercentage = (float)ElasticCount / (float)ElasticMax;
 
-    //Serial.println("Elastic [" + String(Description) + "]- Increase: " + String(Current_SecondCount) + ", Count: " + String(ElasticCount) + ", Percentage: " + String(ElasticPercentage) + ", Max: " + String(ElasticMax) + ", Reduction Rate: " + String(ElasticReductionRate));
+    // Serial.println("Elastic [" + String(Description) + "]- Increase: " + String(Current_SecondCount) + ", Count: " + String(ElasticCount) + ", Percentage: " + String(ElasticPercentage) + ", Max: " + String(ElasticMax) + ", Reduction Rate: " + String(ElasticReductionRate));
 
-    //delay(25);
+    // delay(25);
   }
 
   SubCounts[SubCountPos++] = Current_SecondCount;
@@ -221,6 +224,22 @@ void Stats::SaveToPreferences()
   int Session_MaxPerSecond = Prefs::Handler.getInt((key + "Session_MaxPerSecond").c_str(), 0);
   int Ever_TotalCount = Prefs::Handler.getInt((key + "Ever_TotalCount").c_str(), 0);
   int Ever_MaxPerSecond = Prefs::Handler.getInt((key + "Ever_MaxPerSecond").c_str(), 0);
+}
+
+// Part of a table
+void Stats::WebDebug(std::ostringstream *stream)
+{
+  String key = "stats." + String(Description) + ".";
+
+  *stream
+         << "<tr><td>" << key << "Current_SecondCount</td><td>" << Current_SecondCount << "<td></tr>"
+         << "<tr><td>" << key << "Current_TotalCount</td><td>" << Current_TotalCount << "<td></tr>"
+         << "<tr><td>" << key << "Current_MaxPerSecond</td><td>" << Current_MaxPerSecond << "<td></tr>"
+         << "<tr><td>" << key << "Current_MaxPerSecondOverLastMinute</td><td>" << Current_MaxPerSecondOverLastMinute << "<td></tr>"
+         << "<tr><td>" << key << "Session_TotalCount</td><td>" << Session_TotalCount << "<td></tr>"
+         << "<tr><td>" << key << "Session_MaxPerSecond</td><td>" << Session_MaxPerSecond << "<td></tr>"
+         << "<tr><td>" << key << "Ever_TotalCount</td><td>" << Ever_TotalCount << "<td></tr>"
+         << "<tr><td>" << key << "Ever_MaxPerSecond</td><td>" << Ever_MaxPerSecond << "<td></tr>";
 }
 
 // int UpDownCurrentCount = 0;

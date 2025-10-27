@@ -2,7 +2,7 @@
 #include "GamePad.h"
 #include "Stats.h"
 #include <ESPAsyncWebServer.h>
-#include <SPIFFS.h>
+//#include <SPIFFS.h>
 #include <sstream>
 #include "Battery.h"
 #include "rapidjson/document.h"
@@ -15,14 +15,35 @@
 #include "Screen.h"
 #include "UI.h"
 #include "Utils.h"
+#include <LittleFS.h>
+#include <Prefs.h>
+
+#ifdef WEBSERVER
+
+// Create AsyncWebServer on port 80
+AsyncWebServer WebServer(80);
+int Web::WebServerEnabled = false;
+char WebServerIcon = Icon_Web_Disabled;
 
 extern Stats *AllStats[];
 extern int AllStats_Count;
 
+void Web::StartServer() {
+    WebServer.begin();
+    WebServerEnabled = true;
+    WebServerIcon = Icon_Web_Enabled;
+}
+
+void Web::StopServer() {
+    WebServer.end();
+    WebServerEnabled = false;
+    WebServerIcon = Icon_Web_Disabled;
+}
+
 // Number of sub second loops to display traffic for. E.g. 30fps = ~33ms * 5 = 165ms
 #define TrafficDisplayTime 5
 
-void Web::SetUpRoutes(AsyncWebServer &server)
+void Web::SetUpRoutes()
 {
     //     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
     //               {
@@ -44,7 +65,7 @@ void Web::SetUpRoutes(AsyncWebServer &server)
     // more easily slap in dynamic content. Can still put in special cases and
     // .on requests if required.
     // Also wanted extra flexibility to debug/print what was going on
-    server.onNotFound([](AsyncWebServerRequest *request)
+    WebServer.onNotFound([](AsyncWebServerRequest *request)
                       {
                           ShowTraffic = TrafficDisplayTime + 1000; // +1 gives us some leeway to try make sure separate thread doesn't reduce this in the RenderIcon before it displays something
 
@@ -80,7 +101,7 @@ void Web::SetUpRoutes(AsyncWebServer &server)
                           // Default page
                           if (path.equals("/"))
                               // Requires / in front of the filename to work with SPIFFS
-                              request->send(SPIFFS, "/root.html", "text/html");
+                              request->send(LittleFS, "/root.html", "text/html");
                           // special cases
                           else if (path.equals("/main"))
                               request->send(200, "text/html", GetPage_Main().c_str());
@@ -94,7 +115,7 @@ void Web::SetUpRoutes(AsyncWebServer &server)
                           {
                               // if (path.startsWith("/page/"))
                               // path = path.substring(6) + ".html"; // Convert /page/name to /name.html
-                              if (SPIFFS.exists(path))
+                              if (LittleFS.exists(path))
                               {
                                   if (path.endsWith(".html"))
                                       contentType = "text/html";
@@ -112,7 +133,7 @@ void Web::SetUpRoutes(AsyncWebServer &server)
                                       contentType = "text/plain";
                                   // else if (path.endsWith(".gif")) contentType = "image/gif";
 
-                                  request->send(SPIFFS, path, contentType);
+                                  request->send(LittleFS, path, contentType);
                               }
                               else
                               {
@@ -196,6 +217,7 @@ std::string Web::GetComponent_StatsTable()
 std::string Web::GetPage_Main()
 {
     std::ostringstream html;
+
     html
         << "<h1>GamePad - " << DeviceName << "</h1>"
         << "Core v" << getBuildVersion() << "<br/>"
@@ -222,9 +244,38 @@ std::string Web::GetPage_Main()
 std::string Web::GetPage_Debug()
 {
     std::ostringstream html;
+
     html
-        << "<h1>Debug</h1>"
-        << "<h2>TO DO</h2>";
+        << "<h1>Debug</h1>";
+
+    if (!LittleFS.exists("/crash.log"))
+       html << "No crash.log exists";
+    else
+    {
+        File file = LittleFS.open("/crash.log", FILE_READ);
+        if (!file) {
+            html << "crash.log exists but unable to open it";
+        }
+        else
+        {
+            html << "crash.log contents is as follows...<br/><br/>"
+                << "<pre><code>";
+
+            const size_t bufferSize = 512;
+            uint8_t buffer[bufferSize];
+
+            while (file.available()) {
+                size_t bytesRead = file.read(buffer, bufferSize);
+                html.write(reinterpret_cast<const char*>(buffer), bytesRead);
+            }
+
+            file.close();
+        }
+    }
+
+    html << "<hr>";
+
+    Prefs::WebDebug(&html);
 
     return html.str();
 }
@@ -292,17 +343,16 @@ void Web::SendJson_Stats(AsyncWebServerRequest *request)
 
 
 int Web::ShowTraffic = -1;
+char LastWebServerIcon;
 
 void Web::RenderIcons()
 {
-    // if (FinalWiFiCharacter != LastWiFiCharacter)
-    // {
-         RenderIcon(Icon_Web_Enabled, uiWebServer_xPos, uiWebServer_yPos, 16, 16);
-    //     LastWiFiCharacter = FinalWiFiCharacter;
-    // }
-    // if (WiFiStatusCharacter != LastWiFiStatusCharacter)
-    // {
-
+     if (WebServerIcon != LastWebServerIcon)
+     {
+        RenderIcon(WebServerIcon, uiWebServer_xPos, uiWebServer_yPos, 16, 16);
+         LastWebServerIcon = WebServerIcon;
+     }
+    
     // Show traffic when it first happens
     if (ShowTraffic > TrafficDisplayTime) {
          RenderIcon(Icon_Web_Traffic, uiWebServerStatus_xPos, uiWebServerStatus_yPos, 5, 11);
@@ -317,3 +367,27 @@ void Web::RenderIcons()
         ShowTraffic = -1;
     }
 }
+
+void Web::listDir(const char* dirname, uint8_t depth) {
+  File dir = LittleFS.open(dirname);
+  if (!dir || !dir.isDirectory()) {
+    Serial.printf("❌ Failed to open directory: %s\n", dirname);
+    return;
+  }
+
+  File file = dir.openNextFile();
+  while (file) {
+    for (uint8_t i = 0; i < depth; i++) Serial.print("  "); // Indent
+
+    if (file.isDirectory()) {
+      Serial.printf("📁 %s/\n", file.name());
+      listDir(file.name(), depth + 1); // Recurse into subdirectory
+    } else {
+      Serial.printf("📄 %s — %d bytes\n", file.name(), file.size());
+    }
+
+    file = dir.openNextFile();
+  }
+}
+
+#endif

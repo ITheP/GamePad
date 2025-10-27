@@ -3,6 +3,9 @@
 #include <ESPAsyncWebServer.h>
 #include <string>
 #include "Stats.h"
+#include "DeviceConfig.h"
+
+#ifdef WEBSERVER
 
 extern char ControllerType[];
 extern char ModelNumber[];
@@ -14,8 +17,9 @@ class Web
 {
 public:
     static const char *CSS;
+    static int WebServerEnabled;
 
-    static void SetUpRoutes(AsyncWebServer &server);
+    static void SetUpRoutes();
     static void SendPage_Root(AsyncWebServerRequest *request);
 
     static std::string GetComponent_StatsTable();
@@ -25,7 +29,12 @@ public:
 
     static void SendJson_Stats(AsyncWebServerRequest *request);
 
+    static void StartServer();
+    static void StopServer();
+
     static void RenderIcons();
+
+    static void listDir(const char* dirname, uint8_t depth = 0);
     
 private:
     static int ShowTraffic;
@@ -33,3 +42,5 @@ private:
     static void Get_Header(std::ostringstream &stream);
     static void Get_Footer(std::ostringstream &stream);
 };
+
+#endif

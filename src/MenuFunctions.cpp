@@ -12,6 +12,7 @@
 #include <GamePad.h>
 #include <Battery.h>
 #include <Network.h>
+#include <Web.h>
 
 extern CRGB ExternalLeds[];
 
@@ -153,11 +154,14 @@ void MenuFunctions::UpdateBluetooth()
     DrawBluetooth();
 }
 
+// WebServer menu item
+// Does slightly more than show WebServer state - will show IP address to connect to web server
 int LastWebServerMode = -999;
 
-// WebServer menu item
 void MenuFunctions::DrawWebServer()
 {
+
+
   WiFiMode_t mode = WiFi.getMode();
   // Serial.println("WEB: " + String(mode) + " cast " + String((int)mode));
 
@@ -176,7 +180,12 @@ void MenuFunctions::DrawWebServer()
   else if (mode == WIFI_AP_STA)
     snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "IP %s - Access Point %s - ", local.toString(), local.toString());
   else
-    snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "IP Address not found");
+  {
+    if (Web::WebServerEnabled)
+      snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "Web Server enabled but no IP Address found");
+    else
+      snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "Web Server disabled");
+  }
 
   Menus::UpdateMenuText(Menus::MenuTextBuffer, ScrollCheck);
 }

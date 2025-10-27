@@ -74,6 +74,7 @@ public:
 
     void LoadFromPreferences();
     void SaveToPreferences();
+    void WebDebug(std::ostringstream *stream);
 
     void AddCount();
 
