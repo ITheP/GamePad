@@ -72,15 +72,15 @@ void Prefs::Load()
 void Prefs::WebDebug(std::ostringstream *stream)
 {
     *stream << "<table border='1'>"
-           << "<tr>"
+           << "<thead><tr>"
            << "<th rowspan='2'>Name</th>"
            << "<th colspan='4'>Value</th>"
-           << "</tr>";
+           << "</tr></thead><tbody>";
 
     for (int i = 0; i < AllStats_Count; i++)
         AllStats[i]->WebDebug(stream);
 
-    *stream << "</table>";
+    *stream << "</tbody></table>";
 }
 
 void Prefs::SaveEverything()

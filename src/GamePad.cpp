@@ -309,13 +309,18 @@ void setupWiFi()
 
   WiFi.onEvent([](WiFiEvent_t event)
                {
-    Serial.println("WIFI EVENT: " + String(event));
   if (event == SYSTEM_EVENT_STA_GOT_IP) {
     Serial.println("✅ Wi-Fi connected, starting server");
+#ifdef EXTRA_SERIAL_DEBUG
+    Serial.println("✅ Wi-Fi connected, starting server");
+#endif
     Web::StartServer();
   } else if
   (event == SYSTEM_EVENT_STA_DISCONNECTED) {
     Serial.println("⚠️ Wi-Fi disconnected, stopping server");
+#ifdef EXTRA_SERIAL_DEBUG
+    Serial.println("⚠️ Wi-Fi disconnected, stopping server");
+#endif
     Web::StopServer();
   } });
 }
@@ -351,7 +356,7 @@ void setupWebServer()
   // Start server
   // WebServer.begin();
   Serial.println("Web Site source files:");
-    Web::listDir("/");
+  Web::listDir("/");
 }
 #endif
 
@@ -648,8 +653,11 @@ void setupBluetooth()
 #endif
       // Check if input has a defined LED that is also enabled
 #ifdef USE_EXTERNAL_LED
-      int ledNumber = overrideInput->LEDConfig->LEDNumber;
-      extLed = &overrideInput->LEDConfig->PrimaryColour;
+      int ledNumber = -1;
+      if (overrideInput->LEDConfig != NULL) {
+        ledNumber = overrideInput->LEDConfig->LEDNumber;
+        extLed = &overrideInput->LEDConfig->PrimaryColour;
+      }
 #endif
 
       for (int i = 0; i < 4; i++)

@@ -229,17 +229,22 @@ void Stats::SaveToPreferences()
 // Part of a table
 void Stats::WebDebug(std::ostringstream *stream)
 {
-  String key = "stats." + String(Description) + ".";
+
+  //String key = "stats." + String(Description) + ".";
+  std::string key = "stats." + std::string(Description) + ".";
+
+  //Serial.println("STATS: " + String(key));
 
   *stream
-         << "<tr><td>" << key << "Current_SecondCount</td><td>" << Current_SecondCount << "<td></tr>"
-         << "<tr><td>" << key << "Current_TotalCount</td><td>" << Current_TotalCount << "<td></tr>"
-         << "<tr><td>" << key << "Current_MaxPerSecond</td><td>" << Current_MaxPerSecond << "<td></tr>"
-         << "<tr><td>" << key << "Current_MaxPerSecondOverLastMinute</td><td>" << Current_MaxPerSecondOverLastMinute << "<td></tr>"
-         << "<tr><td>" << key << "Session_TotalCount</td><td>" << Session_TotalCount << "<td></tr>"
-         << "<tr><td>" << key << "Session_MaxPerSecond</td><td>" << Session_MaxPerSecond << "<td></tr>"
-         << "<tr><td>" << key << "Ever_TotalCount</td><td>" << Ever_TotalCount << "<td></tr>"
-         << "<tr><td>" << key << "Ever_MaxPerSecond</td><td>" << Ever_MaxPerSecond << "<td></tr>";
+      << "<tr><th colspan='2'>" << key << "</th></tr>"
+      << "<tr><td>" << key << "Current_SecondCount</td><td>" << Current_SecondCount << "</td></tr>"
+      << "<tr><td>" << key << "Current_TotalCount</td><td>" << Current_TotalCount << "</td></tr>"
+      << "<tr><td>" << key << "Current_MaxPerSecond</td><td>" << Current_MaxPerSecond << "</td></tr>"
+      << "<tr><td>" << key << "Current_MaxPerSecondOverLastMinute</td><td>" << Current_MaxPerSecondOverLastMinute << "</td></tr>"
+      << "<tr><td>" << key << "Session_TotalCount</td><td>" << Session_TotalCount << "</td></tr>"
+      << "<tr><td>" << key << "Session_MaxPerSecond</td><td>" << Session_MaxPerSecond << "</td></tr>"
+      << "<tr><td>" << key << "Ever_TotalCount</td><td>" << Ever_TotalCount << "</td></tr>"
+      << "<tr><td>" << key << "Ever_MaxPerSecond</td><td>" << Ever_MaxPerSecond << "</td></tr>";
 }
 
 // int UpDownCurrentCount = 0;

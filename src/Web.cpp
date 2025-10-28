@@ -2,7 +2,7 @@
 #include "GamePad.h"
 #include "Stats.h"
 #include <ESPAsyncWebServer.h>
-//#include <SPIFFS.h>
+// #include <SPIFFS.h>
 #include <sstream>
 #include "Battery.h"
 #include "rapidjson/document.h"
@@ -17,6 +17,7 @@
 #include "Utils.h"
 #include <LittleFS.h>
 #include <Prefs.h>
+#include <iomanip>
 
 #ifdef WEBSERVER
 
@@ -28,13 +29,15 @@ char WebServerIcon = Icon_Web_Disabled;
 extern Stats *AllStats[];
 extern int AllStats_Count;
 
-void Web::StartServer() {
+void Web::StartServer()
+{
     WebServer.begin();
     WebServerEnabled = true;
     WebServerIcon = Icon_Web_Enabled;
 }
 
-void Web::StopServer() {
+void Web::StopServer()
+{
     WebServer.end();
     WebServerEnabled = false;
     WebServerIcon = Icon_Web_Disabled;
@@ -66,98 +69,98 @@ void Web::SetUpRoutes()
     // .on requests if required.
     // Also wanted extra flexibility to debug/print what was going on
     WebServer.onNotFound([](AsyncWebServerRequest *request)
-                      {
-                          ShowTraffic = TrafficDisplayTime + 1000; // +1 gives us some leeway to try make sure separate thread doesn't reduce this in the RenderIcon before it displays something
+                         {
+                             ShowTraffic = TrafficDisplayTime + 1000; // +1 gives us some leeway to try make sure separate thread doesn't reduce this in the RenderIcon before it displays something
 
-                          String path = request->url();
-
-#ifdef EXTRA_SERIAL_DEBUG
-                          unsigned long start = millis();
-
-                          switch (request->method())
-                          {
-                          case HTTP_GET:
-                              Serial.print("GET ");
-                              break;
-                          case HTTP_POST:
-                              Serial.print("POST ");
-                              break;
-                          case HTTP_PUT:
-                              Serial.print("PUT ");
-                              break;
-                          case HTTP_DELETE:
-                              Serial.print("DELETE ");
-                              break;
-                          default:
-                              Serial.print("OTHER ");
-                              break;
-                          }
-                          Serial.println("WebRequest: HTTP " + request->url());
-#endif
-
-                          int success = 1;
-                          String contentType;
-
-                          // Default page
-                          if (path.equals("/"))
-                              // Requires / in front of the filename to work with SPIFFS
-                              request->send(LittleFS, "/root.html", "text/html");
-                          // special cases
-                          else if (path.equals("/main"))
-                              request->send(200, "text/html", GetPage_Main().c_str());
-                          else if (path.equals("/debug"))
-                              request->send(200, "text/html", GetPage_Debug().c_str());
-                          else if (path.equals("/component/stats"))
-                              request->send(200, "text/html", GetComponent_StatsTable().c_str());
-                          else if (path.equals("/json/stats"))
-                              Web::SendJson_Stats(request);
-                          else
-                          {
-                              // if (path.startsWith("/page/"))
-                              // path = path.substring(6) + ".html"; // Convert /page/name to /name.html
-                              if (LittleFS.exists(path))
-                              {
-                                  if (path.endsWith(".html"))
-                                      contentType = "text/html";
-                                  else if (path.endsWith(".js"))
-                                      contentType = "application/javascript";
-                                  else if (path.endsWith(".css"))
-                                      contentType = "text/css";
-                                  else if (path.endsWith(".png"))
-                                      contentType = "image/png";
-                                  else if (path.endsWith(".jpg"))
-                                      contentType = "image/jpeg";
-                                  else if (path.endsWith(".ico"))
-                                      contentType = "image/x-icon";
-                                  else
-                                      contentType = "text/plain";
-                                  // else if (path.endsWith(".gif")) contentType = "image/gif";
-
-                                  request->send(LittleFS, path, contentType);
-                              }
-                              else
-                              {
-                                  request->send(404, "text/plain", "File Not Found");
-#ifdef EXTRA_SERIAL_DEBUG
-                                  Serial.println("Request for " + request->url() + ": File Not Found (404 returned)");
-#endif
-
-                                  success = 0;
-                              }
-                          }
+                             String path = request->url();
 
 #ifdef EXTRA_SERIAL_DEBUG
-                          if (1 == success)
-                          {
-                              unsigned long end = millis();
-                              Serial.print("Request for " + request->url() + " took : " + String(end - start) + "ms");
-                              if (!contentType.isEmpty())
-                                  Serial.print(" - Content-Type: " + contentType);
+                             unsigned long start = millis();
 
-                              Serial.println();
-                          }
+                             switch (request->method())
+                             {
+                             case HTTP_GET:
+                                 Serial.print("GET ");
+                                 break;
+                             case HTTP_POST:
+                                 Serial.print("POST ");
+                                 break;
+                             case HTTP_PUT:
+                                 Serial.print("PUT ");
+                                 break;
+                             case HTTP_DELETE:
+                                 Serial.print("DELETE ");
+                                 break;
+                             default:
+                                 Serial.print("OTHER ");
+                                 break;
+                             }
+                             Serial.println("WebRequest: HTTP " + request->url());
 #endif
-                      });
+
+                             int success = 1;
+                             String contentType;
+
+                             // Default page
+                             if (path.equals("/"))
+                                 // Requires / in front of the filename to work with SPIFFS
+                                 request->send(LittleFS, "/root.html", "text/html");
+                             // special cases
+                             else if (path.equals("/main"))
+                                 request->send(200, "text/html", GetPage_Main().c_str());
+                             else if (path.equals("/debug"))
+                                 request->send(200, "text/html", GetPage_Debug().c_str());
+                             else if (path.equals("/component/stats"))
+                                 request->send(200, "text/html", GetComponent_StatsTable().c_str());
+                             else if (path.equals("/json/stats"))
+                                 Web::SendJson_Stats(request);
+                             else
+                             {
+                                 // if (path.startsWith("/page/"))
+                                 // path = path.substring(6) + ".html"; // Convert /page/name to /name.html
+                                 if (LittleFS.exists(path))
+                                 {
+                                     if (path.endsWith(".html"))
+                                         contentType = "text/html";
+                                     else if (path.endsWith(".js"))
+                                         contentType = "application/javascript";
+                                     else if (path.endsWith(".css"))
+                                         contentType = "text/css";
+                                     else if (path.endsWith(".png"))
+                                         contentType = "image/png";
+                                     else if (path.endsWith(".jpg"))
+                                         contentType = "image/jpeg";
+                                     else if (path.endsWith(".ico"))
+                                         contentType = "image/x-icon";
+                                     else
+                                         contentType = "text/plain";
+                                     // else if (path.endsWith(".gif")) contentType = "image/gif";
+
+                                     request->send(LittleFS, path, contentType);
+                                 }
+                                 else
+                                 {
+                                     request->send(404, "text/plain", "File Not Found");
+#ifdef EXTRA_SERIAL_DEBUG
+                                     Serial.println("Request for " + request->url() + ": File Not Found (404 returned)");
+#endif
+
+                                     success = 0;
+                                 }
+                             }
+
+#ifdef EXTRA_SERIAL_DEBUG
+                             if (1 == success)
+                             {
+                                 unsigned long end = millis();
+                                 Serial.print("Request for " + request->url() + " took : " + String(end - start) + "ms");
+                                 if (!contentType.isEmpty())
+                                     Serial.print(" - Content-Type: " + contentType);
+
+                                 Serial.println();
+                             }
+#endif
+                         });
 }
 
 std::string Web::GetComponent_StatsTable()
@@ -230,13 +233,13 @@ std::string Web::GetPage_Main()
         << ", Hardware version: v" << HardwareRevision
         << ", Software version: v" << SoftwareRevision << "<br/>"
         << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
-        // << "<h2>Statistics Overview</h2>"
-        // << "<p>Last update time: <span id='currentTime'></span></p>"
-        // << "<label><input type='checkbox' id='refreshBox' onchange='toggleRefresh()' checked> Auto-refresh stats every 5s</label>"
-        // << "<div id='countdownDisplay' style='margin-top:10px; font-size:16px; font-weight:bold;'></div>"
-        // << "<div id='statsTable'>"
-        // << Web::GetComponent_StatsTable()
-        // << "</div>";
+    // << "<h2>Statistics Overview</h2>"
+    // << "<p>Last update time: <span id='currentTime'></span></p>"
+    // << "<label><input type='checkbox' id='refreshBox' onchange='toggleRefresh()' checked> Auto-refresh stats every 5s</label>"
+    // << "<div id='countdownDisplay' style='margin-top:10px; font-size:16px; font-weight:bold;'></div>"
+    // << "<div id='statsTable'>"
+    // << Web::GetComponent_StatsTable()
+    // << "</div>";
 
     return html.str();
 }
@@ -249,31 +252,39 @@ std::string Web::GetPage_Debug()
         << "<h1>Debug</h1>";
 
     if (!LittleFS.exists("/crash.log"))
-       html << "No crash.log exists";
+        html << "No crash.log exists";
     else
     {
         File file = LittleFS.open("/crash.log", FILE_READ);
-        if (!file) {
+        if (!file)
+        {
             html << "crash.log exists but unable to open it";
         }
         else
         {
             html << "crash.log contents is as follows...<br/><br/>"
-                << "<pre><code>";
+                 << "<pre><code>";
 
             const size_t bufferSize = 512;
             uint8_t buffer[bufferSize];
 
-            while (file.available()) {
+            while (file.available())
+            {
                 size_t bytesRead = file.read(buffer, bufferSize);
-                html.write(reinterpret_cast<const char*>(buffer), bytesRead);
+                html.write(reinterpret_cast<const char *>(buffer), bytesRead);
             }
 
             file.close();
         }
     }
 
-    html << "<hr>";
+    html << "<hr>"
+         << "<h2>Web Files</h2>";
+
+    WebListDir(&html, "/");
+
+    html << "<hr>"
+         << "<h2>Statistics</h2>";
 
     Prefs::WebDebug(&html);
 
@@ -341,53 +352,101 @@ void Web::SendJson_Stats(AsyncWebServerRequest *request)
 //   }
 // }
 
-
 int Web::ShowTraffic = -1;
 char LastWebServerIcon;
 
 void Web::RenderIcons()
 {
-     if (WebServerIcon != LastWebServerIcon)
-     {
+    if (WebServerIcon != LastWebServerIcon)
+    {
         RenderIcon(WebServerIcon, uiWebServer_xPos, uiWebServer_yPos, 16, 16);
-         LastWebServerIcon = WebServerIcon;
-     }
-    
+        LastWebServerIcon = WebServerIcon;
+    }
+
     // Show traffic when it first happens
-    if (ShowTraffic > TrafficDisplayTime) {
-         RenderIcon(Icon_Web_Traffic, uiWebServerStatus_xPos, uiWebServerStatus_yPos, 5, 11);
-         ShowTraffic = TrafficDisplayTime;
+    if (ShowTraffic > TrafficDisplayTime)
+    {
+        RenderIcon(Icon_Web_Traffic, uiWebServerStatus_xPos, uiWebServerStatus_yPos, 5, 11);
+        ShowTraffic = TrafficDisplayTime;
     }
 
     if (ShowTraffic > 0)
-        ShowTraffic--;  // Little delay
+        ShowTraffic--; // Little delay
     else
     {
-        Display.fillRect(uiWebServerStatus_xPos, uiWebServerStatus_yPos + 1, 5, 11, C_BLACK ); // Top pixel doesn't need blanking
+        Display.fillRect(uiWebServerStatus_xPos, uiWebServerStatus_yPos + 1, 5, 11, C_BLACK); // Top pixel doesn't need blanking
         ShowTraffic = -1;
     }
 }
 
-void Web::listDir(const char* dirname, uint8_t depth) {
-  File dir = LittleFS.open(dirname);
-  if (!dir || !dir.isDirectory()) {
-    Serial.printf("❌ Failed to open directory: %s\n", dirname);
-    return;
-  }
-
-  File file = dir.openNextFile();
-  while (file) {
-    for (uint8_t i = 0; i < depth; i++) Serial.print("  "); // Indent
-
-    if (file.isDirectory()) {
-      Serial.printf("📁 %s/\n", file.name());
-      listDir(file.name(), depth + 1); // Recurse into subdirectory
-    } else {
-      Serial.printf("📄 %s — %d bytes\n", file.name(), file.size());
+void Web::listDir(const char *dirname, uint8_t depth)
+{
+    File dir = LittleFS.open(dirname);
+    if (!dir || !dir.isDirectory())
+    {
+        Serial.printf("❌ Failed to open directory: %s\n", dirname);
+        return;
     }
 
-    file = dir.openNextFile();
-  }
+    File file = dir.openNextFile();
+    while (file)
+    {
+        for (uint8_t i = 0; i < depth; i++)
+            Serial.print("  "); // Indent
+
+        if (file.isDirectory())
+        {
+            Serial.printf("📁 %s/\n", file.name());
+            listDir(file.name(), depth + 1); // Recurse into subdirectory
+        }
+        else
+        {
+            Serial.printf("📄 %s — %d bytes\n", file.name(), file.size());
+        }
+
+        file = dir.openNextFile();
+    }
+}
+
+void Web::WebListDir(std::ostringstream *stream, const char *dirname, uint8_t depth)
+{
+    File dir = LittleFS.open(dirname);
+    if (!dir || !dir.isDirectory())
+    {
+        *stream << "❌ Failed to open directory: " << dirname << "<br/>";
+        return;
+    }
+
+    File file = dir.openNextFile();
+    while (file)
+    {
+        for (uint8_t i = 0; i < depth; i++)
+            *stream << ("&nbsp;&nbsp;"); // Indent
+
+        if (file.isDirectory())
+        {
+            *stream << "📁 " << file.name() << "<br/>";
+            WebListDir(stream, file.name(), depth + 1); // Recurse into subdirectory
+        }
+        else
+        {
+            *stream << "📄 " << file.name() << " - ";
+
+            size_t size = file.size();
+
+            if (size < 1024)
+                *stream << size << " bytes";
+            else
+            {
+                float kb = static_cast<float>(size) / 1024.0f;
+                *stream << std::fixed << std::setprecision(1) << kb << " KB";
+            }
+
+            *stream << "<br/>";
+        }
+
+        file = dir.openNextFile();
+    }
 }
 
 #endif
