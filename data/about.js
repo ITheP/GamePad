@@ -183,7 +183,7 @@ function main() {
         animate();
     }
 
-    image.src = 'logo.2.png';
+    image.src = 'img/logo.2.png';
 }
 
 main();

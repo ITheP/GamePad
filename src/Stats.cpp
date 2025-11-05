@@ -27,10 +27,19 @@ void UpdateSubSecondStats()
     AllStats[i]->SubSecondPassed();
 }
 
-Stats::Stats(const char *description) : Description(description) {};
-Stats::Stats(const char *description, float elasticReductionRate, float elasticMax) : Description(description), ElasticReductionRate(elasticReductionRate), ElasticMax(elasticMax) {};
-Stats::Stats(const char *description, Stats *nextStats) : Description(description), NextStat(nextStats) {};
-Stats::Stats(const char *description, float elasticReductionRate, float elasticMax, Stats *nextStats) : Description(description), ElasticReductionRate(elasticReductionRate), ElasticMax(elasticMax), NextStat(nextStats) {};
+Stats::Stats(const char *description, const char *prefsKey) : Description(description) { InitPrefsKey(prefsKey); };
+Stats::Stats(const char *description, const char *prefsKey, float elasticReductionRate, float elasticMax) : Description(description), ElasticReductionRate(elasticReductionRate), ElasticMax(elasticMax) { InitPrefsKey(prefsKey); };
+Stats::Stats(const char *description, const char *prefsKey, Stats *nextStats) : Description(description), NextStat(nextStats) { InitPrefsKey(prefsKey); };
+Stats::Stats(const char *description, const char *prefsKey, float elasticReductionRate, float elasticMax, Stats *nextStats) : Description(description), ElasticReductionRate(elasticReductionRate), ElasticMax(elasticMax), NextStat(nextStats) { InitPrefsKey(prefsKey); };
+
+void Stats::InitPrefsKey(const char *prefsKey)
+{
+  // Prepend Stats. on it
+  const char *prefix = "Stats.";
+  size_t len = snprintf(nullptr, 0, "%s%s", prefix, prefsKey) + 1;
+  PrefsKey = new char[len]; // Not tracked, we never free this
+  snprintf(PrefsKey, len, "%s%s", prefix, prefsKey);
+}
 
 void Stats::AddCount()
 {
@@ -198,53 +207,65 @@ void Stats::SubSecondPassed()
   Current_SecondCount = 0;
 }
 
-void Stats::LoadFromPreferences()
-{
-  String key = "stats." + String(Description) + ".";
-
-  Prefs::Handler.putInt((key + "Current_SecondCount").c_str(), Current_SecondCount);
-  Prefs::Handler.putInt((key + "Current_TotalCount").c_str(), Current_TotalCount);
-  Prefs::Handler.putInt((key + "Current_MaxPerSecond").c_str(), Current_MaxPerSecond);
-  Prefs::Handler.putInt((key + "Current_MaxPerSecondOverLastMinute").c_str(), Current_MaxPerSecondOverLastMinute);
-  Prefs::Handler.putInt((key + "Session_TotalCount").c_str(), Session_TotalCount);
-  Prefs::Handler.putInt((key + "Session_MaxPerSecond").c_str(), Session_MaxPerSecond);
-  Prefs::Handler.putInt((key + "Ever_TotalCount").c_str(), Ever_TotalCount);
-  Prefs::Handler.putInt((key + "Ever_MaxPerSecond").c_str(), Ever_MaxPerSecond);
-}
-
+// REMINDER: Max Preferences key length = 15 chars
+// C_ Current value
+// S_ Session value
+// E_ Ever value
 void Stats::SaveToPreferences()
 {
-  String key = "stats." + String(Description) + ".";
+  auto &prefs = Prefs::Handler;
 
-  int Current_SecondCount = Prefs::Handler.getInt((key + "Current_SecondCount").c_str(), 0);
-  int Current_TotalCount = Prefs::Handler.getInt((key + "Current_TotalCount").c_str(), 0);
-  int Current_MaxPerSecond = Prefs::Handler.getInt((key + "Current_MaxPerSecond").c_str(), 0);
-  int Current_MaxPerSecondOverLastMinute = Prefs::Handler.getInt((key + "Current_MaxPerSecondOverLastMinute").c_str(), 0);
-  int Session_TotalCount = Prefs::Handler.getInt((key + "Session_TotalCount").c_str(), 0);
-  int Session_MaxPerSecond = Prefs::Handler.getInt((key + "Session_MaxPerSecond").c_str(), 0);
-  int Ever_TotalCount = Prefs::Handler.getInt((key + "Ever_TotalCount").c_str(), 0);
-  int Ever_MaxPerSecond = Prefs::Handler.getInt((key + "Ever_MaxPerSecond").c_str(), 0);
+  prefs.begin(PrefsKey);
+
+  prefs.putInt("C_SecondCount", Current_SecondCount);
+  prefs.putInt("C_TotalCount", Current_TotalCount);
+  prefs.putInt("C_MaxPerSecond", Current_MaxPerSecond);
+  prefs.putInt("C_MaxPerSecLMin", Current_MaxPerSecondOverLastMinute);
+  prefs.putInt("S_TotalCount", Session_TotalCount);
+  prefs.putInt("S_MaxPerSecond", Session_MaxPerSecond);
+  prefs.putInt("E_TotalCount", Ever_TotalCount);
+  prefs.putInt("E_MaxPerSecond", Ever_MaxPerSecond);
+
+  prefs.end();
+}
+
+void Stats::LoadFromPreferences()
+{
+  auto &prefs = Prefs::Handler;
+
+  prefs.begin(PrefsKey);
+
+  Current_SecondCount = prefs.getInt("C_SecondCount", 0);
+  Current_TotalCount = prefs.getInt("C_TotalCount", 0);
+  Current_MaxPerSecond = prefs.getInt("C_MaxPerSecond", 0);
+  Current_MaxPerSecondOverLastMinute = prefs.getInt("C_MaxPerSecLMin", 0);
+  Session_TotalCount = prefs.getInt("S_TotalCount", 0);
+  Session_MaxPerSecond = prefs.getInt("S_MaxPerSecond", 0);
+  Ever_TotalCount = prefs.getInt("E_TotalCount", 0);
+  Ever_MaxPerSecond = prefs.getInt("E_MaxPerSecond", 0);
+
+  prefs.end();
 }
 
 // Part of a table
 void Stats::WebDebug(std::ostringstream *stream)
 {
 
-  //String key = "stats." + String(Description) + ".";
+  // String key = "stats." + String(Description) + ".";
   std::string key = "stats." + std::string(Description) + ".";
 
-  //Serial.println("STATS: " + String(key));
+  // Serial.println("STATS: " + String(key));
 
   *stream
       << "<tr><th colspan='2'>" << key << "</th></tr>"
-      << "<tr><td>" << key << "Current_SecondCount</td><td>" << Current_SecondCount << "</td></tr>"
-      << "<tr><td>" << key << "Current_TotalCount</td><td>" << Current_TotalCount << "</td></tr>"
-      << "<tr><td>" << key << "Current_MaxPerSecond</td><td>" << Current_MaxPerSecond << "</td></tr>"
-      << "<tr><td>" << key << "Current_MaxPerSecondOverLastMinute</td><td>" << Current_MaxPerSecondOverLastMinute << "</td></tr>"
-      << "<tr><td>" << key << "Session_TotalCount</td><td>" << Session_TotalCount << "</td></tr>"
-      << "<tr><td>" << key << "Session_MaxPerSecond</td><td>" << Session_MaxPerSecond << "</td></tr>"
-      << "<tr><td>" << key << "Ever_TotalCount</td><td>" << Ever_TotalCount << "</td></tr>"
-      << "<tr><td>" << key << "Ever_MaxPerSecond</td><td>" << Ever_MaxPerSecond << "</td></tr>";
+      << "<tr><td>" << key << "Current - Second Count</td><td>" << Current_SecondCount << "</td></tr>"
+      << "<tr><td>" << key << "Current - Total Count</td><td>" << Current_TotalCount << "</td></tr>"
+      << "<tr><td>" << key << "Current - Max Per Second</td><td>" << Current_MaxPerSecond << "</td></tr>"
+      << "<tr><td>" << key << "Current - Max Per Second Over Last Minute</td><td>" << Current_MaxPerSecondOverLastMinute << "</td></tr>"
+      << "<tr><td>" << key << "Session - Total Count</td><td>" << Session_TotalCount << "</td></tr>"
+      << "<tr><td>" << key << "Session - Max Per Second</td><td>" << Session_MaxPerSecond << "</td></tr>"
+      << "<tr><td>" << key << "Ever - TotalCount</td><td>" << Ever_TotalCount << "</td></tr>"
+      << "<tr><td>" << key << "Ever - Max Per Second</td><td>" << Ever_MaxPerSecond << "</td></tr>";
 }
 
 // int UpDownCurrentCount = 0;

@@ -18,6 +18,9 @@ class Menus
 public:
     static MenuOption *CurrentMenuOption;
     
+    static Menu MainMenu;
+    static Menu ConfigMenu;
+
     static int MenusStatus;
     static Menu *RootMenu;
     static Menu *CurrentMenu;
@@ -26,13 +29,13 @@ public:
     static ControllerReport ToggleMenuMode();
     //static int SelectionOff();
 
+    static void InitMenuItemDisplay(int useMenuOptionLabel);
     static void InitMenuItemDisplay(char *text = NONE, MenuScrollState scrollStatus = NoScrollNeeded);
     static void UpdateMenuText(char *text, int scrollStatus);
     static void DisplayMenuText();
     static void DisplayMenuBasicCenteredText(char *text);
 
-
-    static void Setup();
+    static void Setup(Menu *menu);
     static void Handle();
 
     static ControllerReport MoveUp();

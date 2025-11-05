@@ -1,9 +1,12 @@
+
+#include <ESPAsyncWebServer.h>
+#include <sstream>
+#include <LittleFS.h>
+#include <Prefs.h>
+#include <iomanip>
 #include "Web.h"
 #include "GamePad.h"
 #include "Stats.h"
-#include <ESPAsyncWebServer.h>
-// #include <SPIFFS.h>
-#include <sstream>
 #include "Battery.h"
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
@@ -15,9 +18,7 @@
 #include "Screen.h"
 #include "UI.h"
 #include "Utils.h"
-#include <LittleFS.h>
-#include <Prefs.h>
-#include <iomanip>
+#include "Debug.h"
 
 #ifdef WEBSERVER
 
@@ -203,20 +204,6 @@ std::string Web::GetComponent_StatsTable()
     return table.str();
 }
 
-// void Web::Get_Header(std::ostringstream &stream)
-// {
-//     stream << "<header class='site-header'>"
-//            << "<h1>" << DeviceName << "</h1>"
-//            << "</header>";
-// }
-
-// void Web::Get_Footer(std::ostringstream &stream)
-// {
-//     stream << "<footer class='site-footer'>"
-//            << "<p><i>(c) 2025 MisterB @ I The P</i></p>"
-//            << "</footer>";
-// }
-
 std::string Web::GetPage_Main()
 {
     std::ostringstream html;
@@ -233,13 +220,6 @@ std::string Web::GetPage_Main()
         << ", Hardware version: v" << HardwareRevision
         << ", Software version: v" << SoftwareRevision << "<br/>"
         << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
-    // << "<h2>Statistics Overview</h2>"
-    // << "<p>Last update time: <span id='currentTime'></span></p>"
-    // << "<label><input type='checkbox' id='refreshBox' onchange='toggleRefresh()' checked> Auto-refresh stats every 5s</label>"
-    // << "<div id='countdownDisplay' style='margin-top:10px; font-size:16px; font-weight:bold;'></div>"
-    // << "<div id='statsTable'>"
-    // << Web::GetComponent_StatsTable()
-    // << "</div>";
 
     return html.str();
 }
@@ -251,18 +231,21 @@ std::string Web::GetPage_Debug()
     html
         << "<h1>Debug</h1>";
 
-    if (!LittleFS.exists("/crash.log"))
+    html << "Device has been booted "
+        << Prefs::BootCount << " times<hr/>";
+
+    if (!LittleFS.exists(Debug::CrashFile))
         html << "No crash.log exists";
     else
     {
-        File file = LittleFS.open("/crash.log", FILE_READ);
+        File file = LittleFS.open(Debug::CrashFile, FILE_READ);
         if (!file)
         {
-            html << "crash.log exists but unable to open it";
+            html << Debug::CrashFile << " exists but unable to open it";
         }
         else
         {
-            html << "crash.log contents is as follows...<br/><br/>"
+            html << Debug::CrashFile << " contents is as follows...<br/><br/>"
                  << "<pre><code>";
 
             const size_t bufferSize = 512;
@@ -279,11 +262,12 @@ std::string Web::GetPage_Debug()
     }
 
     html << "<hr>"
-         << "<h2>Web Files</h2>";
+         << "<h2>Web Files</h2>"
+         << "<div style='list-style-type: none'>";
 
     WebListDir(&html, "/");
 
-    html << "<hr>"
+    html << "</div><hr>"
          << "<h2>Statistics</h2>";
 
     Prefs::WebDebug(&html);
@@ -379,7 +363,7 @@ void Web::RenderIcons()
     }
 }
 
-void Web::listDir(const char *dirname, uint8_t depth)
+void Web::ListDir(const char *dirname, uint8_t depth)
 {
     File dir = LittleFS.open(dirname);
     if (!dir || !dir.isDirectory())
@@ -397,7 +381,13 @@ void Web::listDir(const char *dirname, uint8_t depth)
         if (file.isDirectory())
         {
             Serial.printf("📁 %s/\n", file.name());
-            listDir(file.name(), depth + 1); // Recurse into subdirectory
+
+            String subdir = String(file.name());
+            if (!subdir.startsWith("/"))
+                subdir = "/" + subdir;
+            ListDir(subdir.c_str(), depth + 1);
+
+            //ListDir(file.name(), depth + 1); // Recurse into subdirectory
         }
         else
         {
@@ -410,23 +400,32 @@ void Web::listDir(const char *dirname, uint8_t depth)
 
 void Web::WebListDir(std::ostringstream *stream, const char *dirname, uint8_t depth)
 {
+    *stream << "<ul>";
+
     File dir = LittleFS.open(dirname);
     if (!dir || !dir.isDirectory())
     {
-        *stream << "❌ Failed to open directory: " << dirname << "<br/>";
+        *stream << "❌ Failed to open directory: " << dirname << "</ul>";
         return;
     }
 
     File file = dir.openNextFile();
     while (file)
     {
-        for (uint8_t i = 0; i < depth; i++)
-            *stream << ("&nbsp;&nbsp;"); // Indent
+        // for (uint8_t i = 0; i < depth; i++)
+        //     *stream << ("&nbsp;&nbsp;"); // Indent
+        *stream << "<li>";
 
         if (file.isDirectory())
         {
             *stream << "📁 " << file.name() << "<br/>";
-            WebListDir(stream, file.name(), depth + 1); // Recurse into subdirectory
+
+            String subdir = String(file.name());
+            if (!subdir.startsWith("/"))
+                subdir = "/" + subdir;
+            WebListDir(stream, subdir.c_str(), depth + 1);
+
+            //WebListDir(stream, file.name(), depth + 1); // Recurse into subdirectory
         }
         else
         {
@@ -445,8 +444,12 @@ void Web::WebListDir(std::ostringstream *stream, const char *dirname, uint8_t de
             *stream << "<br/>";
         }
 
+        *stream << "</li>";
+
         file = dir.openNextFile();
     }
+
+    *stream << "</ul>";
 }
 
 #endif

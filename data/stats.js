@@ -264,7 +264,7 @@ function main() {
         animate();
     }
 
-    image.src = 'logo.' + Math.floor(Math.random() * 6) + '.png';
+    image.src = 'img/logo.' + Math.floor(Math.random() * 6) + '.png';   // logo.0-5.png
 
 }
 

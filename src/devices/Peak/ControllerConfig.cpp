@@ -31,18 +31,19 @@ IconRun ControllerGfx[] = {
 
 // Usage statistics
 // Stats used in various places, including any additional chain of other stats
-Stats Stats_Neck("Neck");
-Stats Stats_Green("Green", &Stats_Neck);
-Stats Stats_Red("Red", &Stats_Neck);
-Stats Stats_Yellow("Yellow", &Stats_Neck);
-Stats Stats_Blue("Blue", &Stats_Neck);
-Stats Stats_Orange("Orange", &Stats_Neck);
+// IMPORTANT: PrefsKey max length is 9 chars. This is used for saving stats into Preferences.
+Stats Stats_Neck("Neck", "Neck");
+Stats Stats_Green("Green", "Green", &Stats_Neck);
+Stats Stats_Red("Red", "Red", &Stats_Neck);
+Stats Stats_Yellow("Yellow", "Yellow", &Stats_Neck);
+Stats Stats_Blue("Blue", "Blue", &Stats_Neck);
+Stats Stats_Orange("Orange", "Orange", &Stats_Neck);
 
-Stats Stats_Start_LongPress("Start Long Press");
+Stats Stats_Start_LongPress("Start Long Press", "StartLP");
 
-Stats Stats_StrumBar("Strum Bar");
-Stats Stats_HatLeft("Strum Up", &Stats_StrumBar);
-Stats Stats_HatRight("Strum Down", &Stats_StrumBar);
+Stats Stats_StrumBar("Strum Bar", "StrumBar");
+Stats Stats_HatUp("Strum Up", "StrumUp", &Stats_StrumBar);
+Stats Stats_HatDown("Strum Down", "StrumDown", &Stats_StrumBar);
 
 // Collated list of all stats to easily go through them to load/save/clear and run once per second and updates etc.
 Stats *AllStats[] = {
@@ -53,13 +54,26 @@ Stats *AllStats[] = {
   &Stats_Blue,
   &Stats_Orange,
   &Stats_StrumBar,
-  &Stats_HatLeft,
-  &Stats_HatRight,
+  &Stats_HatUp,
+  &Stats_HatDown,
   &Stats_Start_LongPress
 };
 int AllStats_Count = sizeof(AllStats) / sizeof(AllStats[0]);
 
 // ToDo: RenderStats - what gets rendered where (icon/text, position, stats value, left/mid/right aligned)
+
+// Early boot - menu inputs
+// Very specific, low level handling
+// before device has booted (generally used to configure Wifi)
+uint8_t BootPin_StartInConfiguration = BUTTON_Select_PIN;
+uint8_t Menu_UpPin = HAT1_Up_PIN;
+char Menu_UpLabel[] = "Strum Up";
+uint8_t Menu_DownPin = HAT1_Down_PIN;
+char Menu_DownLabel[] = "Strum Down";
+uint8_t MenuSelectPin = BUTTON_Green_PIN;
+char Menu_SelectLabel[] = "Green Button";
+uint8_t Menu_BackPin = BUTTON_Red_PIN;
+char Menu_BackLabel[] = "Red Button";
 
 // Digital inputs
 
@@ -329,29 +343,29 @@ unsigned char HatValues[] = { 0, 0, 0, 0 };
 // Hat used for up/down strum bar
 HatInput Hat0 =
   {
-    .Pins = { NONE, HAT1_Right_PIN, NONE, HAT1_Left_PIN }, .Label = "1", .BluetoothHat = 0, .DefaultValue = 0,
+    .Pins = { HAT1_Up_PIN, NONE, HAT1_Down_PIN, NONE }, .Label = "Hat0", .BluetoothHat = 0, .DefaultValue = 0,
     .RenderOperation = RenderInput_Hat, .XPos = -4, .YPos = 25, .RenderWidth = 15, .RenderHeight = 15, .StartIcon = Icon_DPad_Neutral,
     .ExtraOperation = {
         NONE,           // Centred
-        NONE,           // Up
+        Menus::MoveDown,// Up
         NONE,           // Up Right
-        Menus::MoveDown,   // Right
+        NONE,           // Right
         NONE,           // Down Right
-        NONE,           // Down
+        Menus::MoveUp,  // Down
         NONE,           // Down Left
-        Menus::MoveUp, // Left
+        NONE,           // Left
         NONE            // Up Left
       },
     .CustomOperation = Custom_RenderHatStrumState,
     .Statistics = {
       NONE,             // Centred
-      NONE,             // Up
+      &Stats_HatUp,     // Up
       NONE,             // Up Right
-      &Stats_HatLeft,   // Right
+      NONE,             // Right
       NONE,             // Down Right
-      NONE,             // Down
+      &Stats_HatDown,   // Down
       NONE,             // Down Left
-      &Stats_HatRight,  // Left
+      NONE,             // Left
       NONE              // Up Left
     },
     .OnboardLED = {
@@ -392,15 +406,15 @@ HatInput *HatInputs[] = {
 // Miscellaneous LED effects
 ExternalLEDConfig *MiscLEDEffects[] = { };
 
-  ExternalLEDConfig *IdleLEDEffects[] = { };
+ExternalLEDConfig *IdleLEDEffects[] = { };
 
 // -----------------------------------------------------
 // Array sizes
 
 int ControllerGfx_RunCount = sizeof(ControllerGfx) / sizeof(ControllerGfx[0]);
+int DigitalInputs_Count = sizeof(DigitalInputs) / sizeof(DigitalInputs[0]);
 int AnalogInputs_Count = sizeof(AnalogInputs) / sizeof(AnalogInputs[0]);
 int HatInputs_Count = sizeof(HatInputs) / sizeof(HatInputs[0]);
-int DigitalInputs_Count = sizeof(DigitalInputs) / sizeof(DigitalInputs[0]);
 int MiscLEDEffects_Count = sizeof(MiscLEDEffects) / sizeof(MiscLEDEffects[0]);
 int IdleLEDEffects_Count = sizeof(IdleLEDEffects) / sizeof(IdleLEDEffects[0]);
 

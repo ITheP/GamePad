@@ -155,8 +155,8 @@ extern IconRun ControllerGfx[];
 #define BATTERY_MONITOR_PIN     PIN_02_D17_A8 // Battery Voltage - 20K ohm to Gnd + 10K ohm to +ve
 
 // Guitar Neck Buttons
-#define HAT1_Right_PIN          PIN_05_D02_A2 // [05] <Gray>
-#define HAT1_Left_PIN           PIN_06_D03_A3 // [06] <Brown>
+#define HAT1_Up_PIN             PIN_05_D02_A2 // [05] <Gray>
+#define HAT1_Down_PIN           PIN_06_D03_A3 // [06] <Brown>
 #define BUTTON_Blue_PIN         PIN_07_D04_A4 // [07] <Blue> 4th
 #define BUTTON_Green_PIN        PIN_15_D05    // [15] <Green> 1st
 #define BUTTON_Orange_PIN       PIN_16_D06    // [16] <Orange> 5th
@@ -212,6 +212,17 @@ extern IconRun ControllerGfx[];
 //#define FLIP_SCREEN_TOGGLE 1 // FlipScreen can either toggle on and off with a button press (enable), or holding a button down sets its flipped state (disable)
 extern Input DigitalInput_FlipScreen;
 
+// For controlling configuration menu
+extern uint8_t BootPin_StartInConfiguration;
+extern uint8_t Menu_UpPin;
+extern char Menu_UpLabel[];
+extern uint8_t Menu_DownPin;
+extern char Menu_DownLabel[];
+extern uint8_t MenuSelectPin;
+extern char Menu_SelectLabel[];
+extern uint8_t Menu_BackPin;
+extern char Menu_BackLabel[];
+
 // DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
 extern Input *DigitalInputs[];
 
@@ -255,8 +266,8 @@ extern Stats Stats_Blue;
 extern Stats Stats_Orange;
 
 extern Stats Stats_StrumBar;
-extern Stats Stats_HatLeft;
-extern Stats Stats_HatRight;
+extern Stats Stats_HatUp;
+extern Stats Stats_HatDown;
 
 extern Stats *AllStats[];
 extern int AllStats_Count;

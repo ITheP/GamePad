@@ -25,7 +25,7 @@ extern CRGB ExternalLeds[];
 
 unsigned int MenuFrame = 0;
 float MenuStartTime = 0.0;
-#define MenuStartDelay 0.75   // Seconds before menu starts scrolling (if it scrolls)
+#define MenuStartDelay 0.75 // Seconds before menu starts scrolling (if it scrolls)
 
 int Menus::MenusStatus = OFF;
 Menu *Menus::RootMenu = NONE;
@@ -50,9 +50,25 @@ MenuOption MainMenuOptions[] = {
     {"Debug", Icon_Menu_Debug, "Debug", MenuFunctions::InitDebug, NONE, NONE},
     {"Stats", Icon_Menu_Stats, "Stats", MenuFunctions::InitStats, NONE, NONE}};
 
-Menu MainMenu = {
+Menu Menus::MainMenu = {
     MainMenuOptions,
     sizeof(MainMenuOptions) / sizeof(MainMenuOptions[0]),
+    NoMenuOption,
+    -1,
+    0};
+
+MenuOption ConfigMenuOptions[] = {
+    {"Help", NONE, NONE, MenuFunctions::InitConfigHelp, NONE, NONE}, // Name is first menu item we initialise to to make sure Device Name is drawn. Has own special rendering of text so we don't get menu icons etc. being drawn
+    {"Profile", Icon_Menu_WiFi, "Profile", MenuFunctions::InitProfile, MenuFunctions::UpdateProfile, NONE},
+    {"WiFi Saved", Icon_Menu_WiFi, "WiFi Saved Settings", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
+    {"WiFi Access Point", Icon_Menu_WiFi, "WiFi Access Point", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
+    {"WiFi Username", Icon_Menu_WiFi, "WiFi Username", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
+    {"WiFi Password", Icon_Menu_WiFi, "WiFi Password", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
+    {"Save Config", Icon_Menu_WiFi, "Save Settings", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE}};
+
+Menu Menus::ConfigMenu = {
+    ConfigMenuOptions,
+    sizeof(ConfigMenuOptions) / sizeof(ConfigMenuOptions[0]),
     NoMenuOption,
     -1,
     0};
@@ -79,9 +95,9 @@ ControllerReport Menus::ToggleMenuMode()
   return DontReportToController;
 }
 
-#define MaxCharsFitOnScreen ((SCREEN_WIDTH / 2) + 1)  // Theoretical max number of chars on screen (1 pixel wide) + 1 pixel spacings +1 for /0
-                                                      // Number of chars that fit on screen + 1 to account for partial offsets to the left;
-char Menus::MenuTextBuffer[MenuTextBufferSize + 4];   // General use Menu display text buffer to render dynamic content into - +4 to make sure there is space for ' - \0'
+#define MaxCharsFitOnScreen ((SCREEN_WIDTH / 2) + 1) // Theoretical max number of chars on screen (1 pixel wide) + 1 pixel spacings +1 for /0
+                                                     // Number of chars that fit on screen + 1 to account for partial offsets to the left;
+char Menus::MenuTextBuffer[MenuTextBufferSize + 4];  // General use Menu display text buffer to render dynamic content into - +4 to make sure there is space for ' - \0'
 
 int ScrollMenuText = OFF;
 int DisplayTextStart = MenuTextStartX;
@@ -90,12 +106,20 @@ int MenuTextCharPos = 0;
 int MenuTextStartCharWidth = 0;
 int MenuTextPixelPos = MenuTextStartCharWidth;
 
+void Menus::InitMenuItemDisplay(int useMenuOptionLabel)
+{
+  if (useMenuOptionLabel)
+    Menus::InitMenuItemDisplay(CurrentMenuOption->Label, ScrollCheck);
+  else
+    Menus::InitMenuItemDisplay(NONE);
+}
+
 // Menu auto-scrolls text if too long to fit on screen
 void Menus::InitMenuItemDisplay(char *text, MenuScrollState scrollStatus)
 {
   // WORK OUT ICONS OR LEFT MENU TEXT STUFF HERE
   SetFontCustom();
-  Display.fillRect(0, 0, MenuTextStartX-1, 13, C_BLACK); //SCREEN_WIDTH, 12, C_BLACK);
+  Display.fillRect(0, 0, MenuTextStartX - 1, 13, C_BLACK); // SCREEN_WIDTH, 12, C_BLACK);
 
   RRE.drawChar(0, 2, CurrentMenuOption->Icon);
   // 15 pixels for icon, 3 spacer pixels, 4 for separator, 3 spacer pixels
@@ -143,15 +167,13 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
       c = text[MenuTextLength];
     }
   }
-   else if (scrollStatus == ScrollDefinitelyNeeded)
-   {
-    MenuTextLength = std::strlen(text); 
-   }
+  else if (scrollStatus == ScrollDefinitelyNeeded)
+  {
+    MenuTextLength = std::strlen(text);
+  }
 
   if (scrollStatus == ScrollDefinitelyNeeded)
   {
-    Serial.println("SCROLL DEFINITELY NEEDED: " + String(scrollStatus) + " ON TEXT " + String(text));
-
     // For scrolling text, stick a " - " on to visually separate end of text from start on wrap
     // Already MenuTextBuffer we can just amend it. For other strings, won't have buffer
     // space at the end so we copy into the MenuTextBuffer.
@@ -160,7 +182,7 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     if (text != MenuTextBuffer)
       strcpy(MenuTextBuffer, text); // Shouldn't need strncopy()
 
-      strcat(MenuTextBuffer, " - ");
+    strcat(MenuTextBuffer, " - ");
 
     MenuTextLength += 3; // include the " - " above
 
@@ -172,15 +194,7 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     MenuTextPixelPos = 0;
     ScrollMenuText = ON;
 
-    MenuStartTime = Now + MenuStartDelay;  // start scrolling in 2.5 seconds
-
-    // CurrentMenuText = MenuTextBuffer;
-    // MenuTextLength = std::strlen(MenuTextBuffer);
-
-    // Serial.println("UpdateMenuText + tooWide = " + String(scrollStatus));
-    // Serial.println("End buffer: " + String(CurrentMenuText));
-
-    Serial.println("SCROLL TEXT SETUP: " + String(MenuTextBuffer));
+    MenuStartTime = Now + MenuStartDelay; // start scrolling in 2.5 seconds
 
     // Draw initial text, which will stick around till the MenuStartTime kicks in with actual scrolling updates
     DrawScrollingText();
@@ -190,8 +204,6 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     // No scrolling needed - display now
     ScrollMenuText = OFF;
 
-    Serial.println("NO SCROLL TEXT: " + String(text));
-
     // Redraw static text
     Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
     // Display.fillRect(DisplayTextStart, 0, 10, RREHeight_fixed_8x16, C_WHITE);
@@ -199,9 +211,6 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
   }
 
   SetFontCustom();
-
-  Serial.println("----------------------");
-  Serial.println();
 }
 
 void Menus::DisplayMenuText()
@@ -215,48 +224,48 @@ void Menus::DisplayMenuText()
 
 void Menus::DrawScrollingText()
 {
-      // Scroll the text
-    Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
-    SetFontFixed();
+  // Scroll the text
+  Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
+  SetFontFixed();
 
-    int currentX = DisplayTextStart + MenuTextPixelPos;
-    int maxX = SCREEN_WIDTH;
-    int charWidth;
+  int currentX = DisplayTextStart + MenuTextPixelPos;
+  int maxX = SCREEN_WIDTH;
+  int charWidth;
 
-    int i = MenuTextCharPos;
-    while (currentX < maxX) // MenuTextBuffer[i] != '\0'; i++)
-    {
-      RRE.drawChar(currentX, -1, MenuTextBuffer[i]);
-      currentX += RRE.charWidth(MenuTextBuffer[i]) + 1; // +1 for character spacing
+  int i = MenuTextCharPos;
+  while (currentX < maxX) // MenuTextBuffer[i] != '\0'; i++)
+  {
+    RRE.drawChar(currentX, -1, MenuTextBuffer[i]);
+    currentX += RRE.charWidth(MenuTextBuffer[i]) + 1; // +1 for character spacing
 
-      i++;
-      if (i >= MenuTextLength)
-        i = 0;
-      // if (CurrentMenuText[i] == '\0')
-      //   i = 0;
+    i++;
+    if (i >= MenuTextLength)
+      i = 0;
+    // if (CurrentMenuText[i] == '\0')
+    //   i = 0;
 
-      // if (currentX > maxX)
-      //   break; // Stop if next char exceeds width
-    }
+    // if (currentX > maxX)
+    //   break; // Stop if next char exceeds width
+  }
 
-    MenuTextPixelPos--;
-    if (MenuTextPixelPos < MenuTextStartCharWidth)
-    {
-      MenuTextPixelPos = 0;
-      MenuTextCharPos++;
+  MenuTextPixelPos--;
+  if (MenuTextPixelPos < MenuTextStartCharWidth)
+  {
+    MenuTextPixelPos = 0;
+    MenuTextCharPos++;
 
-      if (MenuTextCharPos >= MenuTextLength)
-        MenuTextCharPos = 0;
+    if (MenuTextCharPos >= MenuTextLength)
+      MenuTextCharPos = 0;
 
-      MenuTextStartCharWidth = -RRE.charWidth(MenuTextBuffer[MenuTextCharPos]);
-    }
+    MenuTextStartCharWidth = -RRE.charWidth(MenuTextBuffer[MenuTextCharPos]);
+  }
 
-    SetFontCustom();
+  SetFontCustom();
 
-    // After scrolling content, the left edge rendering will creep into where the menu separator is - so we re-draw this to keep everything neat
-    Display.fillRect(16-7, 0, 9, 13, C_BLACK); // Believe its 7 pixels we need to blank, could be 8 - TBC
-     RRE.drawChar(0, 2, CurrentMenuOption->Icon);
-    //RRE.drawChar(18, 3, Icon_Menu_Separator);
+  // After scrolling content, the left edge rendering will creep into where the menu separator is - so we re-draw this to keep everything neat
+  Display.fillRect(16 - 7, 0, 9, 13, C_BLACK); // Believe its 7 pixels we need to blank, could be 8 - TBC
+  RRE.drawChar(0, 2, CurrentMenuOption->Icon);
+  // RRE.drawChar(18, 3, Icon_Menu_Separator);
 }
 
 // Super simple display of basic centered text - no icons or anything (e.g. used for Device Name)
@@ -276,11 +285,11 @@ int LineOffset = -16;
 int LineWidth = 8;
 int DoubleLineWidth = 16;
 
-void Menus::Setup()
+void Menus::Setup(Menu *rootMenu)
 {
-  MenuFunctions::Setup();
+  // MenuFunctions::Setup();
 
-  RootMenu = &MainMenu;
+  RootMenu = rootMenu; //&MainMenu;
   CurrentMenu = RootMenu;
 }
 

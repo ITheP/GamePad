@@ -13,9 +13,19 @@ enum WarningFlashCodes
 
 // Low level warning flashing of LED to indicate errors
 void WarningFlashes(WarningFlashCodes code);
-extern "C" void esp_panic_handler(void* frame);
+extern "C" void panic_handler(void *frame);
 
-class Debug {
-    public:
-        static void WarningFlashes(WarningFlashCodes code);
+class Debug
+{
+public:
+  static char CrashFile[];
+  static RTC_NOINIT_ATTR char CrashInfo[1024];
+
+  static void Mark(int mark);
+  static void RecordMark();
+
+  static void PowerOnInit();
+  static void WarningFlashes(WarningFlashCodes code);
+  static void CheckForCrashInfo();
+  static void CrashOnPurpose();
 };

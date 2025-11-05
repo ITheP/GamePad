@@ -280,8 +280,8 @@ extern Stats Stats_Blue;
 extern Stats Stats_Orange;
 
 extern Stats Stats_StrumBar;
-extern Stats Stats_HatLeft;
-extern Stats Stats_HatRight;
+extern Stats Stats_HatUp;
+extern Stats Stats_HatDown;
 
 extern Stats *AllStats[];
 extern int AllStats_Count;

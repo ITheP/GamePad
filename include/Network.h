@@ -22,10 +22,7 @@ class Network
 {
 public:
     static void HandleWiFi(int second);
-
     static char *WiFiStatus;
-
-
 
 private:
     static const char *ssid;

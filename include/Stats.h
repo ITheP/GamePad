@@ -17,12 +17,15 @@ class Stats
 {
 public:
     // Constructors
-    Stats(const char *description);
-    Stats(const char *description, float elasticReductionRate, float elasticMax);
-    Stats(const char *description, Stats *nextStat);
-    Stats(const char *description, float elasticReductionRate, float elasticMax, Stats *nextStat);
+    // description is generally used in Web interface, Serial debugging etc.
+    // IMPORTANT: prefsKey please start with "Stats." and max length is 15 chars INCLUDING the "Stats.". This is used for saving stats into Preferences
+    Stats(const char *description, const char *prefsKey);
+    Stats(const char *description, const char *prefsKey, float elasticReductionRate, float elasticMax);
+    Stats(const char *description, const char *prefsKey, Stats *nextStat);
+    Stats(const char *description, const char *prefsKey, float elasticReductionRate, float elasticMax, Stats *nextStat);
 
     const char *Description;
+    char *PrefsKey;
     
     // Elastic stat, useful for things like certain LED effects
     // Elastic as the value stretches towards the max value as counts are increased, but there is a constant reduction rate too so over time it will naturally return back to nothing
@@ -95,4 +98,6 @@ private:
     int SubCounts[STATS_SUBCOUNTS_COUNT];
     int SubCountPos = 0;
     float ElasticCount;
+
+    void InitPrefsKey(const char* prefsKey);
 };

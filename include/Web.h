@@ -34,7 +34,7 @@ public:
 
     static void RenderIcons();
 
-    static void listDir(const char* dirname, uint8_t depth = 0);
+    static void ListDir(const char* dirname, uint8_t depth = 0);
     static void WebListDir(std::ostringstream *stream, const char* dirname, uint8_t depth = 0);
     
 private:

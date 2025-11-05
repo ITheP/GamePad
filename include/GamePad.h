@@ -9,10 +9,14 @@
                                  // Keep the About message < 256 characters
 #define ABOUT "The Controller - multi-purpose controller software primarily to bodge and duct tape old legacy controllers back into life or make new ones in weird and wacky ways! Connect to the embedded web server for more information."
 
-
 void FlipScreen(Input* input);
 
 void DrawMainScreen();
+void MainLoop();
+void DrawMenuScreen();
+void MenuLoop();
+void DrawConfigScreen();
+void ConfigLoop();
 void DrawEmpty();
 
 extern RREFont RRE;

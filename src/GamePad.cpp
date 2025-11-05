@@ -26,6 +26,8 @@
 #include "Debug.h"
 #include "Web.h"
 
+#define DebugMarks
+
 // #include "soc/soc.h"
 // #include "soc/rtc_cntl_reg.h"
 
@@ -37,6 +39,8 @@ char FullDeviceName[32];
 char SerialNumber[22]; // SerialNumber = large enough to hold the uint64_t value as a string 20 chars + 1 for ESPChipIdOffset + null terminator. Tests showed serial coming from esp32-s3 was 14 chars + the ESPChipIdOffset
 uint64_t ESPChipId;
 int ESPChipIdOffset;
+
+void (*LoopOperation)(void);
 
 // When configured for use, set of random names for controller. Actual name is picked using ESP32-S3's unique identity as a key to the name - means we can flash to multiple
 // devices and they should all get decently unique names.
@@ -123,6 +127,7 @@ int SubSecondFlipFlop = false;
 char LastBatteryIcon = 0;
 int LastSerialState = -1;
 
+float FractionalSeconds = 0;
 float PreviousFractionalSeconds = 0;
 float CurrentFractionalSeconds = 0;
 float ExtendedFractionalSeconds = 0;
@@ -163,6 +168,8 @@ void setupDisplay()
     Serial.println("Critical failure, display failed to start. Halting!");
     Debug::WarningFlashes(LittleFSFailedToMount);
   }
+
+  // Display.invertDisplay(true);
 
   Display.clearDisplay();
   Display.display();
@@ -310,16 +317,16 @@ void setupWiFi()
   WiFi.onEvent([](WiFiEvent_t event)
                {
   if (event == SYSTEM_EVENT_STA_GOT_IP) {
-    Serial.println("✅ Wi-Fi connected, starting server");
+    Serial.println("✅ WiFi connected, starting web server");
 #ifdef EXTRA_SERIAL_DEBUG
-    Serial.println("✅ Wi-Fi connected, starting server");
+    Serial.println("✅ WiFi connected, starting web server");
 #endif
     Web::StartServer();
   } else if
   (event == SYSTEM_EVENT_STA_DISCONNECTED) {
-    Serial.println("⚠️ Wi-Fi disconnected, stopping server");
+    Serial.println("⚠️ WiFi disconnected, stopping web server");
 #ifdef EXTRA_SERIAL_DEBUG
-    Serial.println("⚠️ Wi-Fi disconnected, stopping server");
+    Serial.println("⚠️ WiFi disconnected, stopping web server");
 #endif
     Web::StopServer();
   } });
@@ -356,7 +363,7 @@ void setupWebServer()
   // Start server
   // WebServer.begin();
   Serial.println("Web Site source files:");
-  Web::listDir("/");
+  Web::ListDir("/");
 }
 #endif
 
@@ -634,7 +641,7 @@ void setupBluetooth()
   {
     // Extra Bluetooth iconography to show that one of the extra bluetooth Id variants is active
     SetFontFixed();
-    RRE.drawChar(65, 50, '+');
+    RRE.drawChar(uiBTStatus_xPos, 50, '+');
     delay(100);
     Display.display();
     snprintf(buffer, sizeof(buffer), "%d", ESPChipIdOffset);
@@ -654,7 +661,8 @@ void setupBluetooth()
       // Check if input has a defined LED that is also enabled
 #ifdef USE_EXTERNAL_LED
       int ledNumber = -1;
-      if (overrideInput->LEDConfig != NULL) {
+      if (overrideInput->LEDConfig != NULL)
+      {
         ledNumber = overrideInput->LEDConfig->LEDNumber;
         extLed = &overrideInput->LEDConfig->PrimaryColour;
       }
@@ -663,7 +671,7 @@ void setupBluetooth()
       for (int i = 0; i < 4; i++)
       {
         // Draw bluetooth number
-        RRE.printStr(73, 50, buffer);
+        RRE.printStr(uiBTStatus_xPos + 8, 50, buffer);
         Display.display();
 
         // Flash LED's
@@ -679,7 +687,7 @@ void setupBluetooth()
         delay(150);
 
         // Blank Bluetooth number
-        Display.fillRect(73, 50, 8, 16, C_BLACK);
+        Display.fillRect(uiBTStatus_xPos + 8, 50, 8, 16, C_BLACK);
         Display.display();
 
 #ifdef USE_ONBOARD_LED
@@ -697,7 +705,7 @@ void setupBluetooth()
     }
 #endif
 
-    RRE.printStr(73, 50, buffer);
+    RRE.printStr(uiBTStatus_xPos + 8, 50, buffer);
     Display.display();
     SetFontCustom();
   }
@@ -836,7 +844,6 @@ void setup()
   //   Serial.println("SPIFFS Mount Failed");
   // }
 
-  SetupLittleFS(); // Set this up super early, used to write crashlogs etc.
   setupDisplay();
 
   // Up to now, any h/w failure to initialise will be handled with flashing onboard LED warning codes.
@@ -871,6 +878,57 @@ void setup()
 
   setupUSB();
 
+  // Set this up super early, used to write crashlogs etc.
+  SetupLittleFS();
+
+  // Handle potential previous crash details
+  esp_reset_reason_t reason = esp_reset_reason();
+  if (reason == ESP_RST_POWERON)
+  {
+    Serial.println("Debug - Device initial power on");
+    Debug::PowerOnInit();
+  }
+  else
+  {
+
+    Serial.println("Debug - Device rebooted");
+    Debug::CheckForCrashInfo();
+  }
+
+  DumpFileToSerial(Debug::CrashFile); // Output any previous crash file we might have had for info purposes
+
+  // We need inputs set up now before anything else
+  // so we can check for boot up redirection to configuration screen
+  Serial.println("\nHardware...");
+  Serial.println("SRam: " + String(ESP.getHeapSize()) + " (" + String(ESP.getFreeHeap()) + " free)");
+  // May need compile time configure to get PSRam support - https://thingpulse.com/esp32-how-to-use-psram/?form=MG0AV3
+  Serial.println("PSRam: " + String(ESP.getPsramSize()) + " (" + String(ESP.getFreePsram()) + " free)");
+
+  // Controls icon
+  RRE.drawChar(56, 50, (unsigned char)Icon_EmptyCircle_12);
+  Display.display();
+  delay(SETUP_DELAY / 2);
+  RRE.drawChar(58, 52, (unsigned char)Icon_FilledCircle_8);
+  Display.display();
+
+  setupDigitalInputs();
+  setupAnalogInputs();
+  setupHatInputs();
+
+  delay(SETUP_DELAY);
+
+  // Check if pin up for menu mode
+  int mode = 0;
+  if (mode == 0)
+  {
+    DrawConfigScreen();
+    Menus::Setup(&Menus::ConfigMenu);
+    LoopOperation = &ConfigLoop;
+    return;
+  }
+
+  LoopOperation = &MainLoop;
+
   // Clear battery text ready for icons
   Display.fillRect(HALF_SCREEN_WIDTH, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
 
@@ -885,24 +943,6 @@ void setup()
   Display.display();
   delay(SETUP_DELAY);
 
-  Serial.println("\nHardware...");
-  Serial.println("SRam: " + String(ESP.getHeapSize()) + " (" + String(ESP.getFreeHeap()) + " free)");
-  // May need compile time configure to get PSRam support - https://thingpulse.com/esp32-how-to-use-psram/?form=MG0AV3
-  Serial.println("PSRam: " + String(ESP.getPsramSize()) + " (" + String(ESP.getFreePsram()) + " free)");
-
-  // Controls icon
-  RRE.drawChar(86, 50, (unsigned char)Icon_EmptyCircle_12);
-  Display.display();
-  delay(SETUP_DELAY / 2);
-  RRE.drawChar(88, 52, (unsigned char)Icon_FilledCircle_8);
-  Display.display();
-
-  setupDigitalInputs();
-  setupAnalogInputs();
-  setupHatInputs();
-
-  delay(SETUP_DELAY);
-
   setupLEDs();
 
   setupBluetooth();
@@ -913,7 +953,7 @@ void setup()
   Display.display();
   delay(SETUP_DELAY * 2);
 
-  Menus::Setup();
+  Menus::Setup(&Menus::MainMenu);
 
 // Screen flip control needs to be checked and set before main screen is drawn
 #ifdef ENABLE_FLIP_SCREEN
@@ -928,6 +968,30 @@ void setup()
   SetFontCustom();
 
   Serial.println("\nSetup complete!");
+}
+
+void DrawConfigScreen()
+{
+  Display.clearDisplay();
+
+  /// RRE.setScale(2);
+
+  SetFontFixed();
+  ResetPrintDisplayLine();
+  PrintDisplayLineCenter("Device Config.");
+  PrintDisplayLine((sprintf(buffer, "Up - %s", Menu_UpLabel), buffer));
+  PrintDisplayLine((sprintf(buffer, "Down - %s", Menu_DownLabel), buffer));
+  PrintDisplayLine((sprintf(buffer, "Select - %s", Menu_SelectLabel), buffer));
+  PrintDisplayLine((sprintf(buffer, "Back - %s", Menu_BackLabel), buffer));
+  // Display till button is released
+
+  Display.display();
+
+  int state;
+  while ((state = digitalRead(BootPin_StartInConfiguration)) == PRESSED);
+
+  Display.clearDisplay();
+  Display.display();
 }
 
 // Draw main screen
@@ -968,8 +1032,12 @@ void DrawMainScreen()
 
 void loop()
 {
+#ifdef DebugMarks
+  Debug::Mark(10);
+#endif
+
   unsigned long currentMicroS = micros(); // + 4294967295UL - 10000000;
-  double FractionalSeconds = (double)(currentMicroS / 1000000.0);
+  FractionalSeconds = (double)(currentMicroS / 1000000.0);
 
   // micros() overflows after ~ 71.58 minutes (4294.97 seconds) when it reaches its maximum value of 4,294,967,295 - in testing caused some weird stuff to happen for time dependant code which suddenly hops back in time!
   // millis() overflows after around 49.7 days however doesn't have the timing resolution we want
@@ -1000,6 +1068,28 @@ void loop()
     Frame = 0;
   }
 
+  // Throttle display updates
+  DisplayRollover = (Now > NextDisplayUpdatePoint);
+  if (DisplayRollover)
+    NextDisplayUpdatePoint += DISPLAY_UPDATE_RATE;
+
+  LoopOperation();
+}
+
+void ConfigLoop()
+{
+  TextYPos = 16; //ResetPrintDisplayLine();
+  PrintDisplayLineCenter("Menu stuff here");
+  Display.display();
+
+
+  if (DisplayRollover)
+    Menus::Handle();
+}
+
+void MainLoop()
+{
+
 #ifdef INCLUDE_BENCHMARKS
   int showBenchmark = SubSecondRollover;
   MainBenchmark.Start("Loop", showBenchmark);
@@ -1025,10 +1115,9 @@ void loop()
     Web::RenderIcons();
   }
 
-  // Throttle display updates
-  DisplayRollover = (Now > NextDisplayUpdatePoint);
-  if (DisplayRollover)
-    NextDisplayUpdatePoint += DISPLAY_UPDATE_RATE;
+#ifdef DebugMarks
+  Debug::Mark(20);
+#endif
 
   // Throttle LED updates
   LEDUpdateRollover = (Now > NextLEDUpdatePoint);
@@ -1053,7 +1142,9 @@ void loop()
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Snapshot("Loop.Init", showBenchmark);
 #endif
-
+#ifdef DebugMarks
+  Debug::Mark(30);
+#endif
   // Things we don't do so often, like every second. Reduce overhead. Would it make a difference if we didn't throttle things like this? Probably not :)
   if (SecondRollover)
   {
@@ -1107,7 +1198,9 @@ void loop()
 
       Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, width, 5, C_WHITE);
     }
-
+#ifdef DebugMarks
+    Debug::Mark(40);
+#endif
     // UpDownCount_SecondPassed(Second);
     UpdateSecondStats(Second);
 
@@ -1130,6 +1223,9 @@ void loop()
       else
         RenderIcon(Icon_USB_Disconnected, 0, 53, 16, 9);
     }
+#ifdef DebugMarks
+    Debug::Mark(50);
+#endif
   }
 
 #ifdef INCLUDE_BENCHMARKS
@@ -1152,7 +1248,10 @@ void loop()
   MainBenchmark.Snapshot("Loop.SubSecondRollover", showBenchmark);
 #endif
 
-  // Digital inputs
+// Digital inputs
+#ifdef DebugMarks
+  Debug::Mark(100);
+#endif
   uint16_t state;
   Input *input;
 
@@ -1168,7 +1267,9 @@ void loop()
     }
 
     input->ValueState.StateJustChanged = false;
-
+#ifdef DebugMarks
+    Debug::Mark(110);
+#endif
     unsigned long timeCheck = micros();
     if ((timeCheck - input->ValueState.StateChangedWhen) > DEBOUNCE_DELAY)
     {
@@ -1191,7 +1292,9 @@ void loop()
         unsigned long timeDifference = timeCheck - input->ValueState.StateChangedWhen;
         // Serial.println("NAME - " + String(input->Label));
         // Serial.println("State - " + String(state) + " for " + String(input->ValueState.Value));
-
+#ifdef DebugMarks
+        Debug::Mark(120);
+#endif
         if (state == PRESSED)
         {
           if (input->ValueState.Value != LONG_PRESS_MONITORING)
@@ -1257,10 +1360,15 @@ void loop()
           }
         }
       }
-
+#ifdef DebugMarks
+      Debug::Mark(130);
+#endif
       // Process when state has changed
       if (state != input->ValueState.Value && input->ValueState.Value != LONG_PRESS_MONITORING)
       {
+#ifdef DebugMarks
+        Debug::Mark(140);
+#endif
         // Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
         input->ValueState.PreviousValue = !state;
         input->ValueState.Value = state;
@@ -1325,7 +1433,9 @@ void loop()
         else
         {
           // RELEASED!!
-
+#ifdef DebugMarks
+          Debug::Mark(150);
+#endif
           // Any extra special custom to specific controller code
           if (input->CustomOperationReleased != NONE)
             customOperationControllerReport = input->CustomOperationReleased();
@@ -1351,12 +1461,17 @@ void loop()
   MainBenchmark.Snapshot("Loop.DigitalInputs", showBenchmark);
 #endif
 
-  // Analog Inputs
+// Analog Inputs
+#ifdef DebugMarks
+  Debug::Mark(200);
+#endif
   for (int i = 0; i < AnalogInputs_Count; i++)
   {
     input = AnalogInputs[i];
     state = analogRead(input->Pin);
-
+#ifdef DebugMarks
+    Debug::Mark(210);
+#endif
     // We only register a change if it is above a certain level of change (kind of like smoothing it but without smoothing it)
     float threshold = .03 * 4095; // 3% change required
     int previousValue = input->ValueState.Value;
@@ -1364,6 +1479,9 @@ void loop()
     {
       if (state != input->ValueState.Value)
       {
+#ifdef DebugMarks
+        Debug::Mark(220);
+#endif
         input->ValueState.Value = state;
         input->ValueState.PreviousValue = previousValue;
         input->ValueState.StateChangedWhen = micros(); // ToDo: More accurate setting here, as there have been delays
@@ -1385,6 +1503,9 @@ void loop()
           input->CustomOperationPressed();
 
         sendReport = true;
+#ifdef DebugMarks
+        Debug::Mark(230);
+#endif
       }
     }
 
@@ -1396,6 +1517,9 @@ void loop()
 #endif
 
   // Hat inputs
+#ifdef DebugMarks
+  Debug::Mark(300);
+#endif
 
   // bool hatChanged = false;
   int hatPreviousState;
@@ -1407,6 +1531,10 @@ void loop()
 
   for (int i = 0; i < HatInputs_Count; i++)
   {
+#ifdef DebugMarks
+    Debug::Mark(310);
+#endif
+
     hatInput = HatInputs[i];
     hatInput->ValueState.StateJustChanged = false;
 
@@ -1436,7 +1564,9 @@ void loop()
       }
       // else state remains same as last time
     }
-
+#ifdef DebugMarks
+    Debug::Mark(320);
+#endif
     // Step 2, copy first pin state to extra buffer pin in states (faster/easier calculations, no wrapping needed)
     hatInput->IndividualStates[4] = hatInput->IndividualStates[0];
 
@@ -1448,6 +1578,10 @@ void loop()
       hatCurrentState = 8;
     else
     {
+#ifdef DebugMarks
+      Debug::Mark(330);
+#endif
+
       // Step 3, check values accounting for 2 press diagonals. We go backwards so other states are checked before the 0 button, which lets us check the 3+0 button combination extra buffer thingy
       for (int j = 0; j < 4; j++)
       {
@@ -1465,12 +1599,17 @@ void loop()
         subState += 2; // Hat values go 1, 3, 5, 7 for Up, Right, Down, Left, diagonals go 2, 4, 6, 8
       }
     }
-
+#ifdef DebugMarks
+    Debug::Mark(340);
+#endif
     // Final check to see if things have changed since last time
     // Serial.print("Hat current state: " + String(hatPreviousState) + "" - New State: " + String(hatCurrentState));
 
     if (hatCurrentState != hatPreviousState)
     {
+#ifdef DebugMarks
+      Debug::Mark(350);
+#endif
       hatInput->ValueState.Value = hatCurrentState;
       hatInput->ValueState.PreviousValue = hatPreviousState;
       hatInput->ValueState.StateChangedWhen = micros(); // TODO make this when hat last read took place though realistically bog all time will have passed
@@ -1485,11 +1624,13 @@ void loop()
         hatInput->CustomOperation(hatInput);
 
       ControllerReport extraOperationControllerReport = ReportToController; // DontReportToController;
-      // Hat position specific extra operations
-      // We allow cancellation of bluetooth setting here so
-      // we can use hat activities for onboard operations (such as menu navigation)
-      // without it being reported back via bluetooth
-
+                                                                            // Hat position specific extra operations
+                                                                            // We allow cancellation of bluetooth setting here so
+                                                                            // we can use hat activities for onboard operations (such as menu navigation)
+                                                                            // without it being reported back via bluetooth
+#ifdef DebugMarks
+      Debug::Mark(360);
+#endif
       if (hatInput->ExtraOperation[hatCurrentState] != NONE)
         extraOperationControllerReport = hatInput->ExtraOperation[hatCurrentState]();
 
@@ -1506,6 +1647,9 @@ void loop()
           hatInput->Statistics[hatCurrentState]->AddCount();
       }
     }
+#ifdef DebugMarks
+    Debug::Mark(370);
+#endif
   }
 
   if (hatInput->ValueState.StateJustChanged)
@@ -1514,7 +1658,9 @@ void loop()
     Serial.print("Hat Change: ");
     Serial.println(HatValues[0]);
 #endif
-
+#ifdef DebugMarks
+    Debug::Mark(380);
+#endif
     bleGamepad.setHats(HatValues[0], HatValues[1], HatValues[2], HatValues[3]);
     sendReport = true;
   }
@@ -1551,12 +1697,17 @@ void loop()
       ControllerIdle = false;
     }
   }
-
+#ifdef DebugMarks
+  Debug::Mark(400);
+#endif
   // Bluetooth
   BTConnectionState = bleGamepad.isConnected();
 
   if (BTConnectionState == true)
   {
+#ifdef DebugMarks
+    Debug::Mark(410);
+#endif
     if (sendReport)
     {
       bleGamepad.sendReport();
@@ -1578,7 +1729,9 @@ void loop()
       ExternalLedsEnabled[ExternalLED_StatusLED] = false;
 #endif
     }
-
+#ifdef DebugMarks
+    Debug::Mark(420);
+#endif
     // #if defined(USE_ONBOARD_LED) && !defined(USE_ONBOARD_LED_STATUS_ONLY)
     //     if (AnalogInputs_Whammy.Value > 2048) {
     //       StatusLed[0] = CRGB(StatusLED_R * 0.25, StatusLED_G * 0.25, StatusLED_B * 0.25);
@@ -1590,6 +1743,10 @@ void loop()
   else
   {
     // No Bluetooth - always be updating the searching icons
+#ifdef DebugMarks
+    Debug::Mark(430);
+#endif
+
     if (SecondRollover)
       RenderIcon(SecondFlipFlop ? Icon_EyesLeft : Icon_EyesRight, uiBTStatus_xPos, uiBTStatus_yPos, 16, 12); // Blanking area big enough to cover the `OK` if required
 
@@ -1613,14 +1770,18 @@ void loop()
     }
 #endif
   }
-
+#ifdef DebugMarks
+  Debug::Mark(500);
+#endif
   PreviousBTConnectionState = BTConnectionState;
 
 #ifdef WIFI
   if (SecondRollover)
     Network::HandleWiFi(Second);
 #endif
-
+#ifdef DebugMarks
+  Debug::Mark(550);
+#endif
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Snapshot("Loop.Bluetooth", showBenchmark);
 #endif
@@ -1639,7 +1800,9 @@ void loop()
   if (LEDUpdateRollover)
     UpdateLEDs = true;
 #endif
-
+#ifdef DebugMarks
+  Debug::Mark(600);
+#endif
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Snapshot("Loop.LEDStuff", showBenchmark);
 #endif
@@ -1663,7 +1826,9 @@ void loop()
   // And finally update the display with all the lovely changes above - throttled as quite high overhead
   if (DisplayRollover)
     Display.display();
-
+#ifdef DebugMarks
+  Debug::Mark(700);
+#endif
   Frame++;
 // Serial.println("Frame: " + String(Frame));
 #ifdef INCLUDE_BENCHMARKS

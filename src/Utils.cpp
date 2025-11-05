@@ -2,6 +2,7 @@
 #include <cstring>
 #include <cstdio>
 #include <GamePad.h>
+#include <LittleFS.h>
 
 float fmap(float x, float in_min, float in_max, float out_min, float out_max)
 {
@@ -41,4 +42,26 @@ const char *getBuildVersion()
   snprintf(version, sizeof(version), "v%s.%02d%02d%02d.%02d%02d", COREVERSION, year % 100, month, day, hour, minute);
 
   return version;
+}
+
+void DumpFileToSerial(const char* path) {
+if (LittleFS.exists(path))
+{
+
+  File file = LittleFS.open(path, FILE_READ);
+  if (!file) {
+    Serial.printf("ℹ️ Failed to open %s\n", path);   // ❌
+    return;
+  }
+
+  Serial.printf("📄 Dumping %s (%d bytes):\n", path, file.size());
+
+  while (file.available()) {
+    Serial.write(file.read());
+  }
+
+  file.close();
+}
+else
+  Serial.printf("ℹ️ %s doesn't exist to dump to serial", path);
 }

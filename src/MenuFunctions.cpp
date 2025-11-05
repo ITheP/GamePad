@@ -9,14 +9,16 @@
 #include "Icons.h"
 #include "DeviceConfig.h"
 #include "Utils.h"
-#include <GamePad.h>
-#include <Battery.h>
-#include <Network.h>
-#include <Web.h>
+#include "GamePad.h"
+#include "Battery.h"
+#include "Network.h"
+#include "Web.h"
+#include "Debug.h"
 
 extern CRGB ExternalLeds[];
 
 #define MenuContentStartX 22
+#define MenuContentStartY 20
 
 // NOTE
 // Careful with your choice of Scroll checking choices. If your text is a little bit too long
@@ -36,6 +38,40 @@ void MenuFunctions::Setup()
 
   // startCharWidth = RRE.charWidth(AboutDetails[aboutCharPos]);
 }
+
+// Config Menu Functions
+void MenuFunctions::InitConfigHelp()
+{
+  Menus::InitMenuItemDisplay();
+}
+
+char Profile_Text[] = "Save and restart\nto apply changes";
+
+// Profile selector Menu Functions
+void MenuFunctions::InitProfile()
+{
+  Menus::InitMenuItemDisplay("PROFILE", ScrollCheck);
+}
+
+void MenuFunctions::UpdateProfile()
+{
+  if (SecondRollover)
+    MenuFunctions::DrawBatteryLevel();
+}
+
+void MenuFunctions::DrawProfile()
+{
+  Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
+
+  RRE.setScale(2);
+
+  sprintf(buffer, "%d", 1);
+  RRE.printStr(ALIGN_CENTER, MenuContentStartY, buffer);
+
+  RRE.setScale(1);
+}
+
+// Main Menu Functions
 
 // Name menu item
 void MenuFunctions::InitName()
@@ -96,7 +132,10 @@ void MenuFunctions::DrawBatteryLevel()
            Battery::CurrentBatteryPercentage,
            Battery::Voltage);
 
-  Menus::UpdateMenuText(Menus::MenuTextBuffer, NoScrollNeeded);
+    Menus::UpdateMenuText(Menus::MenuTextBuffer, NoScrollNeeded);
+
+    // For testing device crash handling - handy trigger point here
+    //Debug::CrashOnPurpose();
 }
 
 void MenuFunctions::InitBattery()
@@ -260,7 +299,7 @@ static char test[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ012345
 
 void MenuFunctions::InitDebug()
 {
-  Menus::InitMenuItemDisplay(test, ScrollDefinitelyNeeded);
+  Menus::InitMenuItemDisplay(Debug::CrashInfo, ScrollDefinitelyNeeded);
 }
 
 static char stats[] = "STATISTICS - TODO";

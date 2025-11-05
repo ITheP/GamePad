@@ -11,6 +11,23 @@ public:
 
     static void Setup();
 
+// Generally speaking there are 2-3 functions for each menu function, but it isn't compulsory
+// Init...() generally draws initial menu information, or initialises anything that menu function needs
+// Update...() is called each display frame, so can do things like animate a menu function or keep display updated with changing values
+// Draw...() is sometimes used as a helper function that Init...() and Update...() can use to draw core content of that menu with shared code
+
+// Config Menu Functions
+    static void InitConfigHelp();
+
+    static void InitProfile();
+    static void UpdateProfile();
+    static void DrawProfile();
+
+    // ToDo: ClearProfile()
+    // ToDo: CloneProfile() (mark a profile, then copy marked to current)
+
+// Main Menu Functions
+
     static void InitName();
 
     static void InitAbout();
