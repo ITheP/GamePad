@@ -171,7 +171,7 @@ extern IconRun ControllerGfx[];
 
 // End Buttons
 #define BUTTON_Start_PIN        PIN_13_D14    // [13] <Red>
-#define BUTTON_Select_PIN       PIN_12_D13 // PIN_14_D15    // [14] <White>
+#define BUTTON_Select_PIN       PIN_12_D13    // PIN_14_D15    // [14] <White>
 // Gnd                                        // [G ]
 
 #define BUTTON_FlipScreen_PIN   PIN_41_D19
@@ -222,6 +222,14 @@ extern uint8_t MenuSelectPin;
 extern char Menu_SelectLabel[];
 extern uint8_t Menu_BackPin;
 extern char Menu_BackLabel[];
+
+// Buttons used for configuration menu
+extern Input *DigitalInputs_ConfigMenu[];
+extern Input DigitalInput_Config_Up;
+extern Input DigitalInput_Config_Down;
+extern Input DigitalInput_Config_Select;
+extern Input DigitalInput_Config_Back;
+
 
 // DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
 extern Input *DigitalInputs[];
@@ -284,6 +292,7 @@ extern int ControllerGfx_RunCount;
 extern int AnalogInputs_Count;
 extern int HatInputs_Count;
 extern int DigitalInputs_Count;
+extern int DigitalInputs_ConfigMenu_Count;
 extern int MiscLEDEffects_Count;
 extern int IdleLEDEffects_Count;
 
@@ -300,3 +309,48 @@ extern char ModelNumber[];
 extern char FirmwareRevision[];
 extern char HardwareRevision[];
 extern char SoftwareRevision[];
+
+static const char *ConfigHelpText[] = {
+    "Hold Green + strum",
+    "up/down to scroll this",
+    "help text.",
+    "",
+    "Strum up/down to change menu.",
+    "Green to go into an option,",
+    "Red, to back out again.",
+    "",
+    "Once changes are complete,",
+    "don't forget to go to the save",
+    "menu option to save your",
+    "changes.",
+    "",
+    "Profile",
+    "Select a profile 0-5",
+    "Profile 0 is default",
+    "1-5 are accessed on",
+    "device startup by holding",
+    "down corresponding green,",
+    "red, yellow, blue or orange",
+    "buttons on the guitar neck.",
+    "This lets you e.g. have a",
+    "separate controller profile",
+    "for different devices.",
+    "You can copy profile settings",
+    "to make it easy to duplicate",
+    "WiFi settings etc.",
+    "Note that controller will",
+    "automatically have different",
+    "bluetooth device name per",
+    "profile on boot, and will",
+    "need pairing for each profile",
+    "",
+    "WiFi Set-up",
+    "- Check current status",
+    "- Select access point",
+    "- Set username",
+    "- Set password",
+    "Note that username and",
+    "password are saved in flash",
+    "memory in an encrypted format.",
+    ""
+};

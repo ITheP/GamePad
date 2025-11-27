@@ -21,6 +21,8 @@ void Menu::Handle()
 {
   if (CurrentMenuOffset != RequiredMenuOffset)
   {
+Serial.println("Handling menu: " + String(CurrentMenuOption->Description) + ", required offset: " + String(RequiredMenuOffset));
+
     if (CurrentMenuOption->ExitOperation != nullptr)
       CurrentMenuOption->ExitOperation();
 
@@ -28,8 +30,10 @@ void Menu::Handle()
     Menus::CurrentMenuOption = CurrentMenuOption; // Menus can reference directly, if needed without needing to push around all over the place or force all menu options to have an initiation call to record this.
     CurrentMenuOffset = RequiredMenuOffset;
 
-    if (CurrentMenuOption->InitOperation != nullptr)
+    if (CurrentMenuOption->InitOperation != nullptr) {
+      Serial.println("Calling init operation for menu: " + String(CurrentMenuOption->Description));
       CurrentMenuOption->InitOperation();
+    }
   }
 
   if (CurrentMenuOption->Operation != nullptr)

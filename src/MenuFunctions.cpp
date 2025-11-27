@@ -40,33 +40,306 @@ void MenuFunctions::Setup()
 }
 
 // Config Menu Functions
-void MenuFunctions::InitConfigHelp()
+
+// Config.Help
+
+int ConfigHelpTextSize = sizeof(ConfigHelpText) / sizeof(ConfigHelpText[0]);
+int ConfigHelpTextPos = 0;
+int ConfigHelpPixelOffset = 0;
+
+void MenuFunctions::Config_Init_Help()
 {
-  Menus::InitMenuItemDisplay();
+  Menus::InitMenuItemDisplay(true);
+}
+
+void MenuFunctions::Config_Update_Help()
+{
+  int showScrollIcons = false;
+
+  // if (SecondRollover)
+  if (PRESSED == Menus::SelectState())
+  {
+    Serial.println("SELECT PRESSED - ConfigHelpPixelOffset: " + String(ConfigHelpPixelOffset) + " ConfigHelpTextPos: " + String(ConfigHelpTextPos));
+    //  Check for buttons being held down
+    if (PRESSED == Menus::UpState())
+      ConfigHelpPixelOffset += 2;
+    if (PRESSED == Menus::DownState())
+      ConfigHelpPixelOffset -= 2;
+
+    SetFontLineHeightTiny();
+
+    if (ConfigHelpPixelOffset >= TextLineHeight)
+    {
+      ConfigHelpPixelOffset -= TextLineHeight;
+      ConfigHelpTextPos++;
+    }
+    else if (ConfigHelpPixelOffset < 0)
+    {
+      ConfigHelpPixelOffset += (TextLineHeight - 1);
+      ConfigHelpTextPos--;
+      if (ConfigHelpTextPos < 0)
+        ConfigHelpTextPos = ConfigHelpTextSize - 1;
+    }
+
+    SetFontLineHeightFixed();
+
+    showScrollIcons = true;
+  }
+  else
+  {
+    Menus::Config_CheckForMenuChange(); // Handle changing menu option
+  }
+
+  MenuFunctions::Config_Draw_Help(showScrollIcons);
+}
+
+// int tempDirection = 1;
+// int tempTimer = 500;
+
+void MenuFunctions::Config_Draw_Help(int showScrollIcons)
+{
+  SetFontTiny();
+  SetFontLineHeightTiny(); // IMPORTANT - BELOW DEPENDS ON THIS SETTING AND SUBSEQUENT USAGE OF GLOBAL TextLineHeight
+
+  // Special case - the rendering of a scrollable window can overlap with menu name/icon/scrolling line area
+  // (RREFont won't allow for clipping regions)
+  // so we make sure this area is included when blanking things - and note relevant content will need to be redrawn after
+
+  // CLear main area
+  Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
+
+  // Clear out anything scrolling off the top, and ready for menu area to be (re)drawn
+  Display.fillRect(0, MenuContentStartY - TextLineHeight, SCREEN_WIDTH, TextLineHeight, C_BLACK);
+
+  int offset = RREHeight_fixed_8x16 + 6 - ConfigHelpPixelOffset;
+  // Serial.println("Before DrawConfigHelp Pos: " + String(ConfigHelpTextPos) + " PixelOffset: " + String(ConfigHelpPixelOffset) + " offset: " + String(offset) + " tempDirection: " + String(tempDirection) + " tempTimer: " + String(tempTimer) + " textLineHeight: " + String(TextLineHeight));
+  ResetPrintDisplayLine(offset);
+  int pos = ConfigHelpTextPos;
+  for (int i = 0; i < 6; i++)
+    PrintDisplayLine((char *)ConfigHelpText[(ConfigHelpTextPos + i) % ConfigHelpTextSize]);
+
+  // Clear out anything scrolling off the top, and ready for menu area to be (re)drawn
+  Display.fillRect(0, MenuContentStartY - TextLineHeight, SCREEN_WIDTH, TextLineHeight, C_BLACK);
+
+  SetFontLineHeightFixed();
+
+  if (showScrollIcons)
+  {
+    SetFontCustom();
+    RRE.setColor(C_BLACK);
+    RRE.drawChar(SCREEN_WIDTH - 9, MenuContentStartY - 2, Icon_Arrow_Up_Outline);
+    RRE.drawChar(SCREEN_WIDTH - 9, SCREEN_HEIGHT - 8, Icon_Arrow_Down_Outline);
+
+    RRE.setColor(C_WHITE);
+    RRE.drawChar(SCREEN_WIDTH - 7, MenuContentStartY, Icon_Arrow_Up);
+    RRE.drawChar(SCREEN_WIDTH - 7, SCREEN_HEIGHT - 7, Icon_Arrow_Down);
+  }
+
+  SetFontFixed();
+
+  // Serial.println("After DrawConfigHelp Pos: " + String(ConfigHelpTextPos) + " PixelOffset: " + String(ConfigHelpPixelOffset) + " offset: " + String(offset) + " tempDirection: " + String(tempDirection) + " tempTimer: " + String(tempTimer) + " textLineHeight: " + String(TextLineHeight));
+  // Serial.println();
+
+  // if (--tempTimer == 0)
+  // {
+  //   tempTimer = 500;
+  //   tempDirection = -tempDirection;
+  // }
 }
 
 char Profile_Text[] = "Save and restart\nto apply changes";
 
 // Profile selector Menu Functions
-void MenuFunctions::InitProfile()
+void MenuFunctions::Config_Init_Profile()
 {
-  Menus::InitMenuItemDisplay("PROFILE", ScrollCheck);
+  Menus::InitMenuItemDisplay(true);
+  Config_Draw_Profile(false);
 }
 
-void MenuFunctions::UpdateProfile()
+int Profile_Selected = 0;
+
+void MenuFunctions::Config_Update_Profile()
 {
   if (SecondRollover)
-    MenuFunctions::DrawBatteryLevel();
+    MenuFunctions::Config_Draw_Profile();
+
+  int showScrollIcons = false;
+
+  // if (SecondRollover)
+  if (PRESSED == Menus::SelectState())
+  {
+    if (PRESSED == Menus::UpState() && Menus::UpJustChanged())
+      Profile_Selected++;
+    else if (PRESSED == Menus::DownState() && Menus::DownJustChanged())
+      Profile_Selected--;
+
+    if (Profile_Selected < 0)
+      Profile_Selected = 5;
+    else if (Profile_Selected > 5)
+      Profile_Selected = 0;
+
+    showScrollIcons = true;
+  }
+  else
+  {
+    Menus::Config_CheckForMenuChange(); // Handle changing menu option
+  }
+
+  MenuFunctions::Config_Draw_Profile(showScrollIcons);
 }
 
-void MenuFunctions::DrawProfile()
+char Text_Profile_Default[] = "Default";
+
+void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
 {
   Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
 
   RRE.setScale(2);
 
-  sprintf(buffer, "%d", 1);
-  RRE.printStr(ALIGN_CENTER, MenuContentStartY, buffer);
+  if (Profile_Selected == 0)
+    RRE.printStr(ALIGN_CENTER, MenuContentStartY, Text_Profile_Default);
+  else
+  {
+    sprintf(buffer, "%d", Profile_Selected);
+    RRE.printStr(ALIGN_CENTER, MenuContentStartY, buffer);
+  }
+
+  RRE.setScale(1);
+
+  if (showScrollIcons)
+  {
+    SetFontCustom();
+    // Base size of left/right arrow icons is 7x7 px
+    static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) +  MenuContentStartY;
+    int iconOffset = (Menus::MenuFrame >> 2) % 3;
+    RenderIcon(Icon_Arrow_Left + iconOffset, 0, middle, 7, 7);
+    RenderIcon(Icon_Arrow_Right + iconOffset, SCREEN_WIDTH - 7, middle, 7, 7);
+    
+    SetFontFixed();
+  }
+}
+
+// WiFi Saved Settings
+void MenuFunctions::Config_Init_WiFi_Settings()
+{
+  Menus::InitMenuItemDisplay(true);
+}
+
+void MenuFunctions::Config_Update_WiFi_Settings()
+{
+  if (SecondRollover)
+    MenuFunctions::Config_Draw_WiFi_Settings();
+
+  Menus::Config_CheckForMenuChange();
+}
+
+void MenuFunctions::Config_Draw_WiFi_Settings()
+{
+  Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
+
+  RRE.setScale(2);
+
+  RRE.printStr(ALIGN_CENTER, MenuContentStartY, "WiFi Settings");
+
+  RRE.setScale(1);
+}
+
+// WiFi Access Point Settings
+void MenuFunctions::Config_Init_WiFi_AccessPoint()
+{
+  Menus::InitMenuItemDisplay(true);
+}
+
+void MenuFunctions::Config_Update_WiFi_AccessPoint()
+{
+  if (SecondRollover)
+    MenuFunctions::Config_Draw_WiFi_AccessPoint();
+
+  Menus::Config_CheckForMenuChange();
+}
+
+void MenuFunctions::Config_Draw_WiFi_AccessPoint()
+{
+  Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
+
+  RRE.setScale(2);
+
+  RRE.printStr(ALIGN_CENTER, MenuContentStartY, "WiFi Access Point");
+
+  RRE.setScale(1);
+}
+
+// WiFi Username
+void MenuFunctions::Config_Init_WiFi_Username()
+{
+  Menus::InitMenuItemDisplay(true);
+}
+
+void MenuFunctions::Config_Update_WiFi_Username()
+{
+  if (SecondRollover)
+    MenuFunctions::Config_Draw_WiFi_Username();
+
+  Menus::Config_CheckForMenuChange();
+}
+
+void MenuFunctions::Config_Draw_WiFi_Username()
+{
+  Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
+
+  RRE.setScale(2);
+
+  RRE.printStr(ALIGN_CENTER, MenuContentStartY, "WiFi Username");
+
+  RRE.setScale(1);
+}
+
+// WiFi Password
+void MenuFunctions::Config_Init_WiFi_Password()
+{
+  Menus::InitMenuItemDisplay(true);
+}
+
+void MenuFunctions::Config_Update_WiFi_Password()
+{
+  if (SecondRollover)
+    MenuFunctions::Config_Draw_WiFi_Password();
+
+  Menus::Config_CheckForMenuChange();
+}
+
+void MenuFunctions::Config_Draw_WiFi_Password()
+{
+  Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
+
+  RRE.setScale(2);
+
+  RRE.printStr(ALIGN_CENTER, MenuContentStartY, "WiFi Password");
+
+  RRE.setScale(1);
+}
+
+// Save Settings
+void MenuFunctions::Config_Init_SaveSettings()
+{
+  Menus::InitMenuItemDisplay(true);
+}
+
+void MenuFunctions::Config_Update_SaveSettings()
+{
+  if (SecondRollover)
+    MenuFunctions::Config_Draw_SaveSettings();
+
+  Menus::Config_CheckForMenuChange();
+}
+
+void MenuFunctions::Config_Draw_SaveSettings()
+{
+  Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
+
+  RRE.setScale(2);
+
+  RRE.printStr(ALIGN_CENTER, MenuContentStartY, "Save Settings");
 
   RRE.setScale(1);
 }
@@ -78,7 +351,6 @@ void MenuFunctions::InitName()
 {
   Menus::DisplayMenuBasicCenteredText(DeviceName);
 }
-
 
 static char Menu_About[] = ABOUT;
 
@@ -132,10 +404,10 @@ void MenuFunctions::DrawBatteryLevel()
            Battery::CurrentBatteryPercentage,
            Battery::Voltage);
 
-    Menus::UpdateMenuText(Menus::MenuTextBuffer, NoScrollNeeded);
+  Menus::UpdateMenuText(Menus::MenuTextBuffer, NoScrollNeeded);
 
-    // For testing device crash handling - handy trigger point here
-    //Debug::CrashOnPurpose();
+  // For testing device crash handling - handy trigger point here
+  // Debug::CrashOnPurpose();
 }
 
 void MenuFunctions::InitBattery()
@@ -199,7 +471,6 @@ int LastWebServerMode = -999;
 
 void MenuFunctions::DrawWebServer()
 {
-
 
   WiFiMode_t mode = WiFi.getMode();
   // Serial.println("WEB: " + String(mode) + " cast " + String((int)mode));

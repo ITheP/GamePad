@@ -62,19 +62,31 @@ int AllStats_Count = sizeof(AllStats) / sizeof(AllStats[0]);
 
 // ToDo: RenderStats - what gets rendered where (icon/text, position, stats value, left/mid/right aligned)
 
-// Early boot - menu inputs
+// Early boot - config initiation and menu buttons
 // Very specific, low level handling
-// before device has booted (generally used to configure Wifi)
-uint8_t BootPin_StartInConfiguration = BUTTON_Select_PIN;
-uint8_t Menu_UpPin = HAT1_Up_PIN;
-char Menu_UpLabel[] = "Strum Up";
-uint8_t Menu_DownPin = HAT1_Down_PIN;
-char Menu_DownLabel[] = "Strum Down";
-uint8_t MenuSelectPin = BUTTON_Green_PIN;
-char Menu_SelectLabel[] = "Green Button";
-uint8_t Menu_BackPin = BUTTON_Red_PIN;
-char Menu_BackLabel[] = "Red Button";
+// before device has booted (generally used to configure WiFi)
 
+// Assumes this pin is defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
+uint8_t BootPin_StartInConfiguration = BUTTON_Select_PIN;
+
+// Assumes these pins are defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
+Input DigitalInput_Config_Up = { .Pin = HAT1_Up_PIN, .Label = "Strum Up" };
+Input DigitalInput_Config_Down = { .Pin = HAT1_Down_PIN, .Label = "Strum Down" };
+Input DigitalInput_Config_Select = { .Pin = BUTTON_Green_PIN, .Label = "Green Button" };
+Input DigitalInput_Config_Back = { .Pin = BUTTON_Red_PIN, .Label = "Red Button" };
+
+// Input DigitalInput_Config_MenuUp = { .Pin = HAT1_Up_PIN, .Label = "Strum Up", .CustomOperationPressed = &Menus::Config_UpPressed, .CustomOperationReleased = &Menus::Config_UpReleased };
+// Input DigitalInput_Config_MenuDown = { .Pin = HAT1_Down_PIN, .Label = "Strum Down", .CustomOperationPressed = &Menus::Config_DownPressed, .CustomOperationReleased = &Menus::Config_DownReleased };
+// Input DigitalInput_Config_Select = { .Pin = BUTTON_Green_PIN, .Label = "Green Button", .CustomOperationPressed = &Menus::Config_SelectPressed, .CustomOperationReleased = &Menus::Config_SelectReleased };
+// Input DigitalInput_Config_Back = { .Pin = BUTTON_Red_PIN, .Label = "Red Button", .CustomOperationPressed = &Menus::Config_BackPressed, .CustomOperationReleased = &Menus::Config_BackReleased };
+
+
+Input *DigitalInputs_ConfigMenu[] = {
+  &DigitalInput_Config_Up,
+  &DigitalInput_Config_Down,
+  &DigitalInput_Config_Select,   
+  &DigitalInput_Config_Back
+};
 // Digital inputs
 
 Input DigitalInput_Green = // Green button on guitar neck
@@ -412,6 +424,7 @@ ExternalLEDConfig *IdleLEDEffects[] = { };
 // Array sizes
 
 int ControllerGfx_RunCount = sizeof(ControllerGfx) / sizeof(ControllerGfx[0]);
+int DigitalInputs_ConfigMenu_Count = sizeof(DigitalInputs_ConfigMenu) / sizeof(DigitalInputs_ConfigMenu[0]);
 int DigitalInputs_Count = sizeof(DigitalInputs) / sizeof(DigitalInputs[0]);
 int AnalogInputs_Count = sizeof(AnalogInputs) / sizeof(AnalogInputs[0]);
 int HatInputs_Count = sizeof(HatInputs) / sizeof(HatInputs[0]);

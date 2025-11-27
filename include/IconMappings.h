@@ -222,3 +222,20 @@
 #define Icon_Menu_Smile 0xE9
 #define Icon_Menu_Debug 0xEA
 #define Icon_Menu_Separator 0xEB
+
+#define Icon_Arrow_Up_Outline 0xF0
+#define Icon_Arrow_Up 0xF1
+#define Icon_Arrow_Down_Outline 0xF2
+#define Icon_Arrow_Down 0xF3
+#define Icon_Arrow_Left_Outline 0xF4
+#define Icon_Arrow_Left_Outline_Medium 0xF5
+#define Icon_Arrow_Left_Outline_Small 0xF6
+#define Icon_Arrow_Left 0xF7
+#define Icon_Arrow_Left_Medium 0xF8
+#define Icon_Arrow_Left_Small 0xF9
+#define Icon_Arrow_Right_Outline 0xFA
+#define Icon_Arrow_Right_Outline_Medium 0xFB
+#define Icon_Arrow_Right_Outline_Small 0xFC
+#define Icon_Arrow_Right 0xFD
+#define Icon_Arrow_Right_Medium 0xFE
+#define Icon_Arrow_Right_Small 0xFF

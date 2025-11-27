@@ -23,7 +23,7 @@ extern CRGB ExternalLeds[];
 
 #define MenuTextStartX 18 // 15 pixels for icon, 2 spacer pixels, 4 for separator, 2 spacer pixels
 
-unsigned int MenuFrame = 0;
+unsigned int Menus::MenuFrame = 0;
 float MenuStartTime = 0.0;
 #define MenuStartDelay 0.75 // Seconds before menu starts scrolling (if it scrolls)
 
@@ -57,14 +57,24 @@ Menu Menus::MainMenu = {
     -1,
     0};
 
+// MenuOption ConfigMenuOptions[] = {
+//     {"Help", Icon_Menu_QuestionMark, "Help", MenuFunctions::Config_Init_Help, MenuFunctions::Config_Update_Help, NONE}, // Name is first menu item we initialise to to make sure Device Name is drawn. Has own special rendering of text so we don't get menu icons etc. being drawn
+//     {"Profile", Icon_Menu_WiFi, "Profile", MenuFunctions::Config_Init_Profile, MenuFunctions::Config_Update_Profile, NONE},
+//     {"WiFi Settings", Icon_Menu_WiFi, "WiFi Settings", MenuFunctions::Config_Init_WiFi_Settings, MenuFunctions::Config_Update_WiFi_Settings, NONE},
+//     {"WiFi Access Point", Icon_Menu_WiFi, "WiFi Access Point", MenuFunctions::Config_Init_WiFi_AccessPoint, MenuFunctions::Config_Update_WiFi_AccessPoint, NONE},
+//     {"WiFi Username", Icon_Menu_WiFi, "WiFi Username", MenuFunctions::Config_Init_WiFi_Username, MenuFunctions::Config_Update_WiFi_Username, NONE},
+//     {"WiFi Password", Icon_Menu_WiFi, "WiFi Password", MenuFunctions::Config_Init_WiFi_Password, MenuFunctions::Config_Update_WiFi_Password, NONE},
+//     {"Save Config", Icon_Menu_WiFi, "Save Settings", MenuFunctions::Config_Init_SaveSettings, MenuFunctions::Config_Update_SaveSettings, NONE}};
+
 MenuOption ConfigMenuOptions[] = {
-    {"Help", NONE, NONE, MenuFunctions::InitConfigHelp, NONE, NONE}, // Name is first menu item we initialise to to make sure Device Name is drawn. Has own special rendering of text so we don't get menu icons etc. being drawn
-    {"Profile", Icon_Menu_WiFi, "Profile", MenuFunctions::InitProfile, MenuFunctions::UpdateProfile, NONE},
-    {"WiFi Saved", Icon_Menu_WiFi, "WiFi Saved Settings", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
-    {"WiFi Access Point", Icon_Menu_WiFi, "WiFi Access Point", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
-    {"WiFi Username", Icon_Menu_WiFi, "WiFi Username", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
-    {"WiFi Password", Icon_Menu_WiFi, "WiFi Password", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
-    {"Save Config", Icon_Menu_WiFi, "Save Settings", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE}};
+    {"Help", Icon_Menu_QuestionMark, "Help", MenuFunctions::Config_Init_Help, MenuFunctions::Config_Update_Help, NONE}, // Name is first menu item we initialise to to make sure Device Name is drawn. Has own special rendering of text so we don't get menu icons etc. being drawn
+    {"Profile", Icon_Menu_WiFi, "Profile", MenuFunctions::Config_Init_Profile, MenuFunctions::Config_Update_Profile, NONE},
+    {"WiFi Settings", Icon_Menu_WiFi, "WiFi Settings", MenuFunctions::Config_Init_WiFi_Settings, MenuFunctions::Config_Update_WiFi_Settings, NONE},
+    {"WiFi Access Point", Icon_Menu_WiFi, "WiFi Access Point", MenuFunctions::Config_Init_WiFi_AccessPoint, MenuFunctions::Config_Update_WiFi_AccessPoint, NONE},
+    {"WiFi Username", Icon_Menu_WiFi, "WiFi Username", MenuFunctions::Config_Init_WiFi_Username, MenuFunctions::Config_Update_WiFi_Username, NONE},
+    {"WiFi Password", Icon_Menu_WiFi, "WiFi Password", MenuFunctions::Config_Init_WiFi_Password, MenuFunctions::Config_Update_WiFi_Password, NONE},
+    {"Save Config", Icon_Menu_WiFi, "Save Settings", MenuFunctions::Config_Init_SaveSettings, MenuFunctions::Config_Update_SaveSettings, NONE}};
+
 
 Menu Menus::ConfigMenu = {
     ConfigMenuOptions,
@@ -79,6 +89,7 @@ Menu Menus::ConfigMenu = {
 // Value selection operations for menu items that have values to select from (make this a reusable other menus, e.g. true/false
 // Breadcrumb trail display of menu hierarchy
 
+// Menu mode within main app
 ControllerReport Menus::ToggleMenuMode()
 {
   if (MenusStatus == ON)
@@ -172,6 +183,10 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     MenuTextLength = std::strlen(text);
   }
 
+  // Make sure MenuTextBuffer contains the text, for redraws, scrolling, etc.
+  if (text != MenuTextBuffer)
+    strcpy(MenuTextBuffer, text); // Shouldn't need strncopy()
+
   if (scrollStatus == ScrollDefinitelyNeeded)
   {
     // For scrolling text, stick a " - " on to visually separate end of text from start on wrap
@@ -179,8 +194,6 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     // space at the end so we copy into the MenuTextBuffer.
     // Note that text could get used elsewhere (logs, serial output, web output)
     // so we don't go round sticking the separator on everything in advance as we might not want it.
-    if (text != MenuTextBuffer)
-      strcpy(MenuTextBuffer, text); // Shouldn't need strncopy()
 
     strcat(MenuTextBuffer, " - ");
 
@@ -204,16 +217,22 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     // No scrolling needed - display now
     ScrollMenuText = OFF;
 
-    // Redraw static text
-    Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
-    // Display.fillRect(DisplayTextStart, 0, 10, RREHeight_fixed_8x16, C_WHITE);
-    RRE.printStr(ALIGN_RIGHT, -1, text);
+    DrawStaticMenuText();
   }
 
-  SetFontCustom();
+  //SetFontCustom();
 }
 
-void Menus::DisplayMenuText()
+void Menus::DrawStaticMenuText()
+{
+  // Redraw static text
+  Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
+  // Display.fillRect(DisplayTextStart, 0, 10, RREHeight_fixed_8x16, C_WHITE);
+  RRE.printStr(ALIGN_RIGHT, -1, MenuTextBuffer);
+}
+
+// Optimised to draw less when in Main screen
+void Menus::DisplayMenuTextOptimised()
 {
   // Throttle scrolling to every other frame
   if (ScrollMenuText == ON && (MenuFrame & 0x01) == 0 && (MenuStartTime < Now))
@@ -222,7 +241,42 @@ void Menus::DisplayMenuText()
   }
 }
 
+// Always draw here to account for possible overwriting of menu area
+void Menus::DisplayMenuText()
+{
+  // Throttle scrolling to every other frame
+  // but redraw menu text as is each time to counter possible overwriting of menu area
+  if (ScrollMenuText == ON)
+  {
+    if ((MenuFrame & 0x01 == 0) || MenuStartTime < Now)
+      ReDrawScrollingText();
+    else
+      DrawScrollingText();
+  }
+  else
+  {
+    // Redraw static text
+    Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
+    RRE.printStr(ALIGN_RIGHT, -1, MenuTextBuffer);
+  }
+}
+
 void Menus::DrawScrollingText()
+{
+  RenderScrollingText();
+  UpdateScrollingText();
+  FinishScrollingText();
+}
+
+// Redraws current text without scrolling (e.g. we want the scroll rate to be slower
+// than the display refresh rate, but we need to re-render it)
+void Menus::ReDrawScrollingText()
+{
+  RenderScrollingText();
+  FinishScrollingText();
+}
+
+void Menus::RenderScrollingText()
 {
   // Scroll the text
   Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
@@ -241,13 +295,11 @@ void Menus::DrawScrollingText()
     i++;
     if (i >= MenuTextLength)
       i = 0;
-    // if (CurrentMenuText[i] == '\0')
-    //   i = 0;
-
-    // if (currentX > maxX)
-    //   break; // Stop if next char exceeds width
   }
+}
 
+void Menus::UpdateScrollingText()
+{
   MenuTextPixelPos--;
   if (MenuTextPixelPos < MenuTextStartCharWidth)
   {
@@ -259,13 +311,15 @@ void Menus::DrawScrollingText()
 
     MenuTextStartCharWidth = -RRE.charWidth(MenuTextBuffer[MenuTextCharPos]);
   }
+}
 
+void Menus::FinishScrollingText()
+{
   SetFontCustom();
 
   // After scrolling content, the left edge rendering will creep into where the menu separator is - so we re-draw this to keep everything neat
   Display.fillRect(16 - 7, 0, 9, 13, C_BLACK); // Believe its 7 pixels we need to blank, could be 8 - TBC
   RRE.drawChar(0, 2, CurrentMenuOption->Icon);
-  // RRE.drawChar(18, 3, Icon_Menu_Separator);
 }
 
 // Super simple display of basic centered text - no icons or anything (e.g. used for Device Name)
@@ -293,11 +347,14 @@ void Menus::Setup(Menu *rootMenu)
   CurrentMenu = RootMenu;
 }
 
-void Menus::Handle()
-{
-  DisplayMenuText();
+// CONSOLIDATE REPEAT CODE IN 2 BELOW!
 
+// Optimised to draw less when being used with main screen
+void Menus::HandleMain()
+{
   CurrentMenu->Handle();
+
+  DisplayMenuTextOptimised();
 
   if (MenusStatus == ON)
   {
@@ -314,6 +371,35 @@ void Menus::Handle()
         Display.drawFastHLine(i, 14, LineWidth, C_WHITE);
         Display.drawFastHLine(i + LineWidth, 14, LineWidth, C_BLACK);
       }
+    }
+  }
+
+  MenuFrame++;
+}
+
+// Optimised to draw more when in config screen to allow for re-draws (where
+// content might overwrite menu area)
+void Menus::Handle_Config()
+{
+  CurrentMenu->Handle();
+
+  DisplayMenuText();
+
+  if (MenusStatus == ON)
+  {
+    if ((MenuFrame & 0x07) == 0)
+    {
+      // Used for animated Menu line
+      LineOffset++;
+      if (LineOffset == 0)
+        // LineDirection = -LineDirection;
+        LineOffset = -16;
+    }
+
+    for (int i = LineOffset; i < SCREEN_WIDTH; i += DoubleLineWidth)
+    {
+      Display.drawFastHLine(i, 14, LineWidth, C_WHITE);
+      Display.drawFastHLine(i + LineWidth, 14, LineWidth, C_BLACK);
     }
   }
 
@@ -338,4 +424,68 @@ ControllerReport Menus::MoveDown()
   CurrentMenu->MoveDown();
 
   return DontReportToController;
+}
+
+void Menus::Config_CheckForMenuChange()
+{
+  if (PRESSED == UpState() && UpJustChanged())
+  //{
+    CurrentMenu->MoveUp();
+    //UpPressed = false;
+  //}
+  else if (PRESSED == DownState() && DownJustChanged())
+  //{
+    CurrentMenu->MoveDown();
+    //DownPressed = false;
+  //}
+}
+
+// Simplified check for digital inputs
+// Simply set's flags if something is pressed
+// It's up to individual menu options to work out how to handle. Could be different for different menu options!
+void Menus::Config_CheckInputs()
+{
+  uint16_t state;
+  Input *input;
+
+  for (int i = 0; i < DigitalInputs_ConfigMenu_Count; i++)
+  {
+    input = DigitalInputs_ConfigMenu[i];
+
+    input->ValueState.StateJustChanged = false;
+
+    unsigned long timeCheck = micros();
+    if ((timeCheck - input->ValueState.StateChangedWhen) > DEBOUNCE_DELAY)
+    {
+      // Compare current with previous, and timing, so we can de-bounce if required
+      state = digitalRead(input->Pin);
+
+      // Process when state has changed
+      if (state != input->ValueState.Value)
+      {
+        Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
+        input->ValueState.PreviousValue = !state;
+        input->ValueState.Value = state;
+        input->ValueState.StateChangedWhen = timeCheck;
+        input->ValueState.StateJustChanged = true;
+
+        if (state == PRESSED)
+        {
+          // PRESSED!
+
+          // Any extra special custom to specific controller code
+          if (input->CustomOperationPressed != NONE)
+            input->CustomOperationPressed();
+        }
+        else
+        {
+          // RELEASED!
+
+          // Any extra special custom to specific controller code
+          if (input->CustomOperationReleased != NONE)
+            input->CustomOperationReleased();
+        }
+      } 
+    }
+  }
 }

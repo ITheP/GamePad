@@ -15,7 +15,7 @@ void DrawMainScreen();
 void MainLoop();
 void DrawMenuScreen();
 void MenuLoop();
-void DrawConfigScreen();
+void DrawConfigHelpScreen();
 void ConfigLoop();
 void DrawEmpty();
 

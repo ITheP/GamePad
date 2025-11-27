@@ -5,28 +5,52 @@
 class MenuFunctions
 {
 public:
-// Init... - functions called when entering menu option (e.g. draw static elements)
+    // Init... - functions called when entering menu option (e.g. draw static elements)
     // Update... - functions called repeatedly while in menu option (e.g. update changing elements)
     // Draw... - functions to draw specific elements that might be used across the above
 
     static void Setup();
 
-// Generally speaking there are 2-3 functions for each menu function, but it isn't compulsory
-// Init...() generally draws initial menu information, or initialises anything that menu function needs
-// Update...() is called each display frame, so can do things like animate a menu function or keep display updated with changing values
-// Draw...() is sometimes used as a helper function that Init...() and Update...() can use to draw core content of that menu with shared code
+    // Generally speaking there are 2-3 functions for each menu function, but it isn't compulsory
+    // Init...() generally draws initial menu information, or initialises anything that menu function needs
+    // Update...() is called each display frame, so can do things like animate a menu function or keep display updated with changing values
+    // Draw...() is sometimes used as a helper function that Init...() and Update...() can use to draw core content of that menu with shared code
 
-// Config Menu Functions
-    static void InitConfigHelp();
+    // Config Menu Functions
+    static void Config_Init_Help();
+    static void Config_Update_Help();
+    static void Config_Draw_Help(int showScrollIcons = false);
 
-    static void InitProfile();
-    static void UpdateProfile();
-    static void DrawProfile();
+    static void Config_Init_Profile();
+    static void Config_Update_Profile();
+    static void Config_Draw_Profile(int showScrollIcons = false);
+
+static void Config_Init_WiFi_Settings();
+static void Config_Update_WiFi_Settings();
+static void Config_Draw_WiFi_Settings();
+
+static void Config_Init_WiFi_AccessPoint();
+static void Config_Update_WiFi_AccessPoint();
+static void Config_Draw_WiFi_AccessPoint();
+
+static void Config_Init_WiFi_Username();
+static void Config_Update_WiFi_Username();
+static void Config_Draw_WiFi_Username();
+
+static void Config_Init_WiFi_Password();
+static void Config_Update_WiFi_Password();
+static void Config_Draw_WiFi_Password();
+
+static void Config_Init_SaveSettings();
+static void Config_Update_SaveSettings();
+static void Config_Draw_SaveSettings();
 
     // ToDo: ClearProfile()
     // ToDo: CloneProfile() (mark a profile, then copy marked to current)
 
-// Main Menu Functions
+
+
+    // Main Menu Functions
 
     static void InitName();
 

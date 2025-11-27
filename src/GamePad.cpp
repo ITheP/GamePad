@@ -180,6 +180,8 @@ void setupRRE()
   RRE.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
   RRE.setCR(0);
   RRE.setScale(1);
+  SetFontFixed();
+  SetFontLineHeightFixed();
 }
 
 constexpr int LOGO_WIDTH = 128;
@@ -517,6 +519,7 @@ void setupInitExternalLEDs()
 
 void setupLEDs()
 {
+  SetFontCustom();
 #ifdef USE_EXTERNAL_LED
   void setupInitExternalLEDs();
 #endif
@@ -613,7 +616,7 @@ void setupLEDs()
 void setupBluetooth()
 {
   // Bluetooth and other general config
-
+  SetFontCustom();
   RRE.drawChar(uiBT_xPos, uiBT_yPos, (unsigned char)Icon_BTLogo);
   Display.display();
 
@@ -830,6 +833,19 @@ void SetupLittleFS()
   }
 }
 
+void SetupComplete()
+{
+  // Init timestamp so its reasonably accurate for a start point, otherwise
+  // initial time dependant processing may be quirky
+  unsigned long currentMicroS = micros(); // + 4294967295UL - 10000000;
+  FractionalSeconds = (double)(currentMicroS / 1000000.0);
+
+  PreviousNow = Now;
+  Now = FractionalSeconds + ExtendedFractionalSeconds;
+
+  NextDisplayUpdatePoint = Now + DISPLAY_UPDATE_RATE;
+}
+
 void setup()
 {
   // Development test specific
@@ -917,13 +933,24 @@ void setup()
 
   delay(SETUP_DELAY);
 
-  // Check if pin up for menu mode
-  int mode = 0;
-  if (mode == 0)
+  // Check if button pushed for menu mode
+  // ASSUMES BootPin_StartInConfiguration is defined as a valid pin!
+  //if (digitalRead(BootPin_StartInConfiguration) == PRESSED)
+  if (1==1)
   {
-    DrawConfigScreen();
+    DrawConfigHelpScreen();
     Menus::Setup(&Menus::ConfigMenu);
     LoopOperation = &ConfigLoop;
+    Menus::MenusStatus = ON;
+
+    // We stay on this screen until button released
+    //while (digitalRead(BootPin_StartInConfiguration) == PRESSED);
+
+    Display.clearDisplay();
+    Display.display();
+
+    SetupComplete();
+
     return;
   }
 
@@ -968,29 +995,40 @@ void setup()
   SetFontCustom();
 
   Serial.println("\nSetup complete!");
+
+  SetupComplete();
 }
 
-void DrawConfigScreen()
+void DrawConfigHelpScreen()
 {
   Display.clearDisplay();
 
   /// RRE.setScale(2);
 
-  SetFontFixed();
+  SetFontTiny();
+  SetFontLineHeightTiny();
   ResetPrintDisplayLine();
   PrintDisplayLineCenter("Device Config.");
-  PrintDisplayLine((sprintf(buffer, "Up - %s", Menu_UpLabel), buffer));
-  PrintDisplayLine((sprintf(buffer, "Down - %s", Menu_DownLabel), buffer));
-  PrintDisplayLine((sprintf(buffer, "Select - %s", Menu_SelectLabel), buffer));
-  PrintDisplayLine((sprintf(buffer, "Back - %s", Menu_BackLabel), buffer));
+  TextYPos += 2;
+  PrintDisplayLineCenter("Navigate menu using...");
+  TextYPos += 2;
+
+  int temp = TextYPos;
+  PrintDisplayLine("Up:");
+  PrintDisplayLine("Down:");
+  PrintDisplayLine("Select:");
+  PrintDisplayLine("Back:");
+
+  TextXPos = 60;
+  TextYPos = temp;
+  PrintDisplayLine(DigitalInput_Config_Up.Label);
+  PrintDisplayLine(DigitalInput_Config_Down.Label);
+  PrintDisplayLine(DigitalInput_Config_Select.Label);
+  PrintDisplayLine(DigitalInput_Config_Back.Label);
+
   // Display till button is released
-
-  Display.display();
-
-  int state;
-  while ((state = digitalRead(BootPin_StartInConfiguration)) == PRESSED);
-
-  Display.clearDisplay();
+  SetFontFixed();
+  SetFontLineHeightFixed();
   Display.display();
 }
 
@@ -1070,21 +1108,26 @@ void loop()
 
   // Throttle display updates
   DisplayRollover = (Now > NextDisplayUpdatePoint);
-  if (DisplayRollover)
+  if (DisplayRollover) {
     NextDisplayUpdatePoint += DISPLAY_UPDATE_RATE;
+  }
 
   LoopOperation();
 }
 
 void ConfigLoop()
 {
-  TextYPos = 16; //ResetPrintDisplayLine();
-  PrintDisplayLineCenter("Menu stuff here");
-  Display.display();
+  // SetFontFixed();
+  // TextYPos = 16; //ResetPrintDisplayLine();
+  // PrintDisplayLineCenter("Menu stuff here");
+  // Display.display();
 
 
-  if (DisplayRollover)
-    Menus::Handle();
+  if (DisplayRollover || SecondRollover) {
+    Menus::Config_CheckInputs();
+    Menus::Handle_Config();
+    Display.display();
+  }
 }
 
 void MainLoop()
@@ -1808,7 +1851,7 @@ void MainLoop()
 #endif
 
   if (DisplayRollover || SecondRollover)
-    Menus::Handle();
+    Menus::HandleMain();
 
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Snapshot("Loop.MenuHandled", showBenchmark);

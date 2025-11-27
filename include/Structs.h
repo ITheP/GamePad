@@ -40,7 +40,7 @@ typedef struct State {
 // General input (Digital and Analog - e.g. buttons)
 typedef struct Input {
   uint8_t Pin;
-  const char* Label;
+  char* Label;
   int BluetoothInput;
   int16_t DefaultValue;
 
