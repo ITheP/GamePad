@@ -19,7 +19,7 @@
 
 uint32_t Prefs::BootCount;
 
-Preferences Handler;
+Preferences Prefs::Handler;
 
 void Prefs::Init()
 {

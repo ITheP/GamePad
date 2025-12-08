@@ -34,12 +34,15 @@
 // REMINDER: Max Preferences key length = 15 chars
 // Each namespace can store ~4000bytes max
 
-Profile::Profile(int id, char icon, char *description) : Id(id), Icon(icon), Description(description)
+Profile::Profile(int id, char icon, String description) : Id(id), Icon(icon), Description(description)
 {
     const char *prefix = "Profile.";
     size_t len = strlen(prefix) + snprintf(nullptr, 0, "%d", id) + 1;
     PrefsKey = new char[len]; // Not tracked, we never free this
     snprintf(PrefsKey, len, "%s%d", prefix, id);
+
+    Icon = icon;
+    Description = description;
 };
 
 const char* CustomDeviceName_Key = "Cust.DeviceName";
@@ -49,6 +52,8 @@ const char* WiFi_Password_Key = "WiFi.Password";
 
 void Profile::Save()
 {
+    Serial.println("Saving Profile " + Description + " to preferences");
+
     auto &prefs = Prefs::Handler;
 
     prefs.begin(PrefsKey);
@@ -62,6 +67,8 @@ void Profile::Save()
 
 void Profile::Load()
 {
+    Serial.println("Loading Profile " + Description + " from saved preferences");
+
     auto &prefs = Prefs::Handler;
 
     prefs.begin(PrefsKey);

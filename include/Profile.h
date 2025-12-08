@@ -4,11 +4,11 @@ class Profile
 {
 public:
     // Constructors
-    Profile(int id, char icon, char *description);
+    Profile(int id, char icon, String description);
 
     int Id;
-    char Icon;
-    const char *Description;
+    char Icon;  // Not currently used - need some icons!
+    String Description;
 
     String WiFi_Name;
     String WiFi_Password;

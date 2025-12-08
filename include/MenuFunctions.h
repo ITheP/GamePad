@@ -17,6 +17,7 @@ public:
     // Draw...() is sometimes used as a helper function that Init...() and Update...() can use to draw core content of that menu with shared code
 
     // Config Menu Functions
+    static void Config_Setup();
     static void Config_Init_Help();
     static void Config_Update_Help();
     static void Config_Draw_Help(int showScrollIcons = false);

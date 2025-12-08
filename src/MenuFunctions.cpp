@@ -14,6 +14,7 @@
 #include "Network.h"
 #include "Web.h"
 #include "Debug.h"
+#include <Profiles.h>
 
 extern CRGB ExternalLeds[];
 
@@ -25,21 +26,22 @@ extern CRGB ExternalLeds[];
 // and you select NoScroll - remembering it renders from the right of the screen - there is a chance
 // it will draw into the menu icon area.
 
+int Profile_Selected = 0;
+Profile *Current_Profile;
+
 void MenuFunctions::Setup()
 {
-  // AboutDetailsLength = snprintf(AboutDetails, sizeof(AboutDetails), "%s - Core %s - FW v%s - HW v%s - SW v%s - ",
-  //                               ModelNumber, getBuildVersion(), FirmwareRevision, HardwareRevision, SoftwareRevision);
-
-  // // Copy start of AboutDetails to end of itself so when scrolling we can overrun the end without having to wrap to the start
-  // AboutDetailsCopyLength = (SCREEN_WIDTH / 8) + 1; // Number of chars that fit on screen + 1 to account for partial offsets to the left
-
-  // // if (AboutDetailsLength + copyLength < sizeof(Menu::AboutDetails)) {
-  // strncat(AboutDetails, AboutDetails, AboutDetailsCopyLength);
-
-  // startCharWidth = RRE.charWidth(AboutDetails[aboutCharPos]);
 }
 
 // Config Menu Functions
+
+void MenuFunctions::Config_Setup()
+{
+    // Even if not required, we kick off WiFi scanning for config mode
+    Network::Config_InitiWifi();
+    Profiles::LoadAll();
+    Current_Profile = Profiles::AllProfiles[Profile_Selected];
+}
 
 // Config.Help
 
@@ -156,13 +158,8 @@ void MenuFunctions::Config_Init_Profile()
   Config_Draw_Profile(false);
 }
 
-int Profile_Selected = 0;
-
 void MenuFunctions::Config_Update_Profile()
 {
-  if (SecondRollover)
-    MenuFunctions::Config_Draw_Profile();
-
   int showScrollIcons = false;
 
   // if (SecondRollover)
@@ -178,6 +175,8 @@ void MenuFunctions::Config_Update_Profile()
     else if (Profile_Selected > 5)
       Profile_Selected = 0;
 
+    Current_Profile = Profiles::AllProfiles[Profile_Selected];
+
     showScrollIcons = true;
   }
   else
@@ -185,38 +184,70 @@ void MenuFunctions::Config_Update_Profile()
     Menus::Config_CheckForMenuChange(); // Handle changing menu option
   }
 
-  MenuFunctions::Config_Draw_Profile(showScrollIcons);
+  if (DisplayRollover)
+    MenuFunctions::Config_Draw_Profile(showScrollIcons);
 }
 
-char Text_Profile_Default[] = "Default";
+//char Text_Profile_Default[] = "Default";
 
 void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
 {
-  Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
+  Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK);
 
   RRE.setScale(2);
 
-  if (Profile_Selected == 0)
-    RRE.printStr(ALIGN_CENTER, MenuContentStartY, Text_Profile_Default);
-  else
-  {
-    sprintf(buffer, "%d", Profile_Selected);
-    RRE.printStr(ALIGN_CENTER, MenuContentStartY, buffer);
-  }
+//  if (Profile_Selected == 0)
+  //  RRE.printStr(ALIGN_CENTER, MenuContentStartY, Text_Profile_Default);
+//  else
+ // {
+ //   sprintf(buffer, "%d", Profile_Selected);
+ //   RRE.printStr(ALIGN_CENTER, MenuContentStartY, buffer);
+ // }
+
+    sprintf(buffer, "%s", Current_Profile->Description);
+    RRE.printStr(ALIGN_CENTER, MenuContentStartY - 4, buffer);
 
   RRE.setScale(1);
+
+  SetFontTiny();
+  SetFontLineHeightTiny();
+
+  ResetPrintDisplayLine(SCREEN_HEIGHT - (TextLineHeight * 2) + 2 );
+
+  if (Current_Profile->WiFi_Name.length() == 0) {
+    PrintDisplayLineCenter("No WiFi set");
+    
+    PrintDisplayLineCenter("AbCdgjp,.");
+  }
+  else
+  {
+    sprintf(buffer, "WiFi: %s", Current_Profile->WiFi_Name.c_str());
+    PrintDisplayLineCenter(buffer);
+
+    auto it = Network::AccessPointList.find(Current_Profile->WiFi_Name);
+    if (it != Network::AccessPointList.end())
+    {
+      // Mapping exists
+      AccessPoint &ap = it->second;
+      PrintDisplayLine(ap.WiFiStatus);
+    }
+    else
+      PrintDisplayLineCenter("WiFi Not Found");
+  }
+
+  SetFontLineHeightFixed();
 
   if (showScrollIcons)
   {
     SetFontCustom();
     // Base size of left/right arrow icons is 7x7 px
-    static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) +  MenuContentStartY;
+    static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) + MenuContentStartY;
     int iconOffset = (Menus::MenuFrame >> 2) % 3;
     RenderIcon(Icon_Arrow_Left + iconOffset, 0, middle, 7, 7);
     RenderIcon(Icon_Arrow_Right + iconOffset, SCREEN_WIDTH - 7, middle, 7, 7);
-    
-    SetFontFixed();
   }
+
+  SetFontFixed();
 }
 
 // WiFi Saved Settings
@@ -248,6 +279,8 @@ void MenuFunctions::Config_Draw_WiFi_Settings()
 void MenuFunctions::Config_Init_WiFi_AccessPoint()
 {
   Menus::InitMenuItemDisplay(true);
+
+  Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK); // clears a bit of extra space in case other menu displayed outside usual boundaries
 }
 
 void MenuFunctions::Config_Update_WiFi_AccessPoint()

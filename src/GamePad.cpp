@@ -61,6 +61,8 @@ CRGB ExternalLeds[ExternalLED_Count];
 int ExternalLedsEnabled[ExternalLED_Count];
 
 #include "LED.h"
+#include <Profiles.h>
+#include <MenuFunctions.h>
 
 // Task for handling FastLED updates
 void UpdateExternalLEDs(void *parameter)
@@ -488,6 +490,8 @@ void setupHatInputs()
       else
         Serial.print("X");
     }
+
+    Serial.println();
 #endif
   }
 }
@@ -938,6 +942,8 @@ void setup()
   //if (digitalRead(BootPin_StartInConfiguration) == PRESSED)
   if (1==1)
   {
+    MenuFunctions::Config_Setup();
+
     DrawConfigHelpScreen();
     Menus::Setup(&Menus::ConfigMenu);
     LoopOperation = &ConfigLoop;
@@ -1128,6 +1134,8 @@ void ConfigLoop()
     Menus::Handle_Config();
     Display.display();
   }
+  
+  Network::Config_UpdateScanResults();
 }
 
 void MainLoop()
