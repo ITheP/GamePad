@@ -23,6 +23,7 @@
 #define PID 4748
 
 #define SERIAL_SPEED 921600             // 115200 also common
+#define SERIAL_USE_COLOURS              // Enable coloured output in serial monitor
 
 #define SUB_SECOND_COUNT         30     // Number of sub-samples to take across a second when calculating clicks per second counts. Higher number = more accurate but more overhead.
 #define DISPLAY_UPDATE_RATE      0.016  // Fraction of a second to wait between display updates - 0.016 = 16ms = ~60FPS

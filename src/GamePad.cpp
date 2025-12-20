@@ -898,20 +898,27 @@ void setup()
 
   setupUSB();
 
+  Serial_INFO;
+  Serial.printf("ESP SDK Version: %s\n", ESP.getSdkVersion());   // prints IDF version used by Arduino core
+  Serial_INFO;
+  Serial.printf("Arduino IDF ESP SDK Version: %s\n",  esp_get_idf_version());    
+  Serial_INFO;
+  Serial.printf("Arduino Core Version: %d\n",  ARDUINO);    
+
   // Set this up super early, used to write crashlogs etc.
   SetupLittleFS();
 
   // Handle potential previous crash details
   esp_reset_reason_t reason = esp_reset_reason();
+  Serial_INFO;
   if (reason == ESP_RST_POWERON)
   {
-    Serial.println("Debug - Device initial power on");
+    Serial.println("Device initial power on");
     Debug::PowerOnInit();
   }
   else
   {
-
-    Serial.println("Debug - Device rebooted");
+    Serial.println("Device rebooted");
     Debug::CheckForCrashInfo();
   }
 
@@ -919,7 +926,9 @@ void setup()
 
   // We need inputs set up now before anything else
   // so we can check for boot up redirection to configuration screen
-  Serial.println("\nHardware...");
+  Serial.println();
+  Serial_INFO;
+  Serial.println("Hardware...");
   Serial.println("SRam: " + String(ESP.getHeapSize()) + " (" + String(ESP.getFreeHeap()) + " free)");
   // May need compile time configure to get PSRam support - https://thingpulse.com/esp32-how-to-use-psram/?form=MG0AV3
   Serial.println("PSRam: " + String(ESP.getPsramSize()) + " (" + String(ESP.getFreePsram()) + " free)");
@@ -1000,6 +1009,7 @@ void setup()
   // Custom font is default used everywhere for icons - set to this by default. If using text font at all, remember to reset back to custom.
   SetFontCustom();
 
+  Serial_INFO;
   Serial.println("\nSetup complete!");
 
   SetupComplete();
@@ -1014,9 +1024,9 @@ void DrawConfigHelpScreen()
   SetFontTiny();
   SetFontLineHeightTiny();
   ResetPrintDisplayLine();
-  PrintDisplayLineCenter("Device Config.");
+  PrintDisplayLineCentered("Device Config.");
   TextYPos += 2;
-  PrintDisplayLineCenter("Navigate menu using...");
+  PrintDisplayLineCentered("Navigate menu using...");
   TextYPos += 2;
 
   int temp = TextYPos;
@@ -1051,7 +1061,7 @@ void DrawMainScreen()
 
   // SetFontFixed();
   // ResetPrintDisplayLine();
-  // PrintDisplayLineCenter(DeviceName);
+  // PrintDisplayLineCentered(DeviceName);
 
   SetFontCustom();
   if (ControllerGfx_RunCount > 0)
@@ -1125,7 +1135,7 @@ void ConfigLoop()
 {
   // SetFontFixed();
   // TextYPos = 16; //ResetPrintDisplayLine();
-  // PrintDisplayLineCenter("Menu stuff here");
+  // PrintDisplayLineCentered("Menu stuff here");
   // Display.display();
 
 

@@ -13,6 +13,7 @@
 #include "Icons.h"
 #include "Web.h"
 #include "UI.h"
+#include "debug.h"
 
 #include "Secrets.h"
 
@@ -34,8 +35,9 @@ char WiFi_SignalLevel_Low[] = "Low Signal";
 char WiFi_SignalLevel_Trace[] = "Trace Signal";
 
 // Dynamic list of APs
-std::vector<AccessPoint> Network::AllAccessPointList;
-std::map<String, AccessPoint> Network::AccessPointList;
+std::vector<AccessPoint*> Network::AllAccessPointList;
+std::map<String, AccessPoint*> Network::AccessPointList;
+int Network::AccessPointListUpdated = false;
 
 const char* AuthModeToStr(wifi_auth_mode_t auth) {
     switch (auth) {
@@ -56,6 +58,7 @@ const char* AuthModeToStr(wifi_auth_mode_t auth) {
 // when the scan is complete, so we can't get partial results as it's happening
 void Network::Config_StartScan()
 {
+    Serial_INFO;
     Serial.println("Starting async WiFi scan...");
     WiFi.scanNetworks(true, true); // async=true, hidden=true
 }
@@ -74,58 +77,72 @@ void Network::Config_UpdateScanResults()
     if (scanStatus >= 0)
     {
         // Scan finished, results available
+        // Clean up old entries first
+        for (auto* ap : AllAccessPointList)
+            delete ap;
+
         AllAccessPointList.clear();
 
         for (int i = 0; i < scanStatus; ++i)
         {
-            AccessPoint ap;
-            ap.ssid = WiFi.SSID(i);
-            ap.bssid = WiFi.BSSIDstr(i);
-            ap.rssi = WiFi.RSSI(i);
-            ap.authMode = WiFi.encryptionType(i);
-            ap.selected = false;
+            AccessPoint* ap = new AccessPoint();
 
-            if (ap.rssi > -50)
+            ap->ssid = WiFi.SSID(i);
+            ap->bssid = WiFi.BSSIDstr(i);
+            ap->rssi = WiFi.RSSI(i);
+            ap->authMode = WiFi.encryptionType(i);
+            ap->selected = false;
+
+            if (ap->rssi > -50)
             {
-                ap.WiFiCharacter = Icon_WiFi_HighSignal;
-                ap.WiFiStatus = WiFi_SignalLevel_High;
+                ap->WiFiCharacter = Icon_WiFi_HighSignal;
+                ap->WiFiStatus = WiFi_SignalLevel_High;
             }
-            else if (ap.rssi > -67)
+            else if (ap->rssi > -67)
             {
-                ap.WiFiCharacter = Icon_WiFi_MediumSignal;
-                ap.WiFiStatus = WiFi_SignalLevel_Medium;
+                ap->WiFiCharacter = Icon_WiFi_MediumSignal;
+                ap->WiFiStatus = WiFi_SignalLevel_Medium;
             }
-            else if (ap.rssi > -75)
+            else if (ap->rssi > -75)
             {
-                ap.WiFiCharacter = Icon_WiFi_LowSignal;
-                ap.WiFiStatus = WiFi_SignalLevel_Low;
+                ap->WiFiCharacter = Icon_WiFi_LowSignal;
+                ap->WiFiStatus = WiFi_SignalLevel_Low;
             }
             else
             {
-                ap.WiFiCharacter = Icon_WiFi_TraceSignal;
-                ap.WiFiStatus = WiFi_SignalLevel_Trace;
+                ap->WiFiCharacter = Icon_WiFi_TraceSignal;
+                ap->WiFiStatus = WiFi_SignalLevel_Trace;
             }
 
             AllAccessPointList.push_back(ap);
         }
 
+        Serial_INFO;
         Serial.printf("Async scan complete: %d networks found\n", scanStatus);
 
         // Generate final list of access points, removing duplicates (keeping strongest signal only)
         // and ignoring hidden SSIDs
+        // Clean up old AccessPointList entries before clearing
+        // for (auto& entry : AccessPointList)
+        // {
+        //     if (entry.second && AllAccessPointList.end() == std::find(AllAccessPointList.begin(), AllAccessPointList.end(), entry.second))
+        //         delete entry.second;
+        // }
         AccessPointList.clear();
 
-        for (auto &ap : AllAccessPointList)
+        for (auto *ap : AllAccessPointList)
         {
-            if (ap.ssid.length() == 0)
+            if (!ap || ap->ssid.length() == 0)
                 continue; // skip hidden
-            if (AccessPointList.find(ap.ssid) == AccessPointList.end() || ap.rssi > AccessPointList[ap.ssid].rssi)
+            
+            auto it = AccessPointList.find(ap->ssid);
+            if (it == AccessPointList.end() || ap->rssi > it->second->rssi)
             {
-                AccessPointList[ap.ssid] = ap; // keep strongest
+                AccessPointList[ap->ssid] = ap; // keep strongest
             }
         }
 
-        Config_SelectAccessPoint("Sparkles");
+        //Config_SelectAccessPoint("Sparkles");
 
         // Show all access points
 
@@ -155,30 +172,39 @@ void Network::Config_UpdateScanResults()
 
         // Show optimised list of access points, unique and strongest signals only
 
-        for (const auto &entry : AccessPointList)
-        {
-            const String &ssid = entry.first;     // the key
-            const AccessPoint &ap = entry.second; // the value
+        Serial_INFO;
+        Serial.printf("%d network entries usable after removing duplicates and hidden entries\n", AccessPointList.size());
 
-            // Skip hidden/empty SSIDs
-            if (ssid.length() == 0)
-                continue;
+        // for (auto &entry : AccessPointList)
+        // {
+        //     const String &ssid = entry.first;     // the key
+        //     AccessPoint *ap = entry.second; // the value
 
-            Serial.printf("SSID: %s | BSSID: %s | RSSI: %s (%d dBm) | Auth: %s (%d) | Selected: %s\n",
-                          ssid.c_str(),
-                          ap.bssid.c_str(),
-                          ap.WiFiStatus,
-                          ap.rssi,
-                          AuthModeToStr(ap.authMode),
-                          ap.authMode,
-                          ap.selected ? "YES" : "NO");
-        }
+        //     // Skip hidden/empty SSIDs
+        //     if (ssid.length() == 0)
+        //         continue;
 
-        // Start next scan automatically
+        //     Serial.printf("SSID: %s | BSSID: %s | RSSI: %s (%d dBm) | Auth: %s (%d) | Selected: %s\n",
+        //                   ssid.c_str(),
+        //                   ap->bssid.c_str(),
+        //                   ap->WiFiStatus,
+        //                   ap->rssi,
+        //                   AuthModeToStr(ap->authMode),
+        //                   ap->authMode,
+        //                   ap->selected ? "YES" : "NO");
+        // }
+
+        AccessPointListUpdated = true;
+
+        // Explicitly delete WiFi scan results to free the library's internal buffer
+        WiFi.scanDelete();
+        
+        // Start next scan automatically (with interval enforcement)
         Config_StartScan();
     }
 }
 
+// NOT NEEDED?
 void Network::Config_SelectAccessPoint(const String &ssid)
 {
     //   for (auto &ap : AllAccessPointList) {
@@ -188,14 +214,15 @@ void Network::Config_SelectAccessPoint(const String &ssid)
     for (auto &entry : Network::AccessPointList)
     {
         const String &key = entry.first; // the SSID key
-        AccessPoint &ap = entry.second;  // the AccessPoint object
+        AccessPoint *ap = entry.second;  // the AccessPoint object
 
-        ap.selected = (key == ssid);
+        ap->selected = (key == ssid);
     }
 }
 
 void Network::Config_InitiWifi()
 {
+    Serial_INFO;
     Serial.println("Config: Initializing WiFi");
     Serial.begin(115200);
     WiFi.mode(WIFI_STA);
@@ -203,6 +230,7 @@ void Network::Config_InitiWifi()
 
     // delay(1000);
 
+    Serial_INFO;
     Serial.println("Config: Starting WiFi scanning");
     Config_StartScan();
 }

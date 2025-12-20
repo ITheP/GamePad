@@ -57,21 +57,11 @@ Menu Menus::MainMenu = {
     -1,
     0};
 
-// MenuOption ConfigMenuOptions[] = {
-//     {"Help", Icon_Menu_QuestionMark, "Help", MenuFunctions::Config_Init_Help, MenuFunctions::Config_Update_Help, NONE}, // Name is first menu item we initialise to to make sure Device Name is drawn. Has own special rendering of text so we don't get menu icons etc. being drawn
-//     {"Profile", Icon_Menu_WiFi, "Profile", MenuFunctions::Config_Init_Profile, MenuFunctions::Config_Update_Profile, NONE},
-//     {"WiFi Settings", Icon_Menu_WiFi, "WiFi Settings", MenuFunctions::Config_Init_WiFi_Settings, MenuFunctions::Config_Update_WiFi_Settings, NONE},
-//     {"WiFi Access Point", Icon_Menu_WiFi, "WiFi Access Point", MenuFunctions::Config_Init_WiFi_AccessPoint, MenuFunctions::Config_Update_WiFi_AccessPoint, NONE},
-//     {"WiFi Username", Icon_Menu_WiFi, "WiFi Username", MenuFunctions::Config_Init_WiFi_Username, MenuFunctions::Config_Update_WiFi_Username, NONE},
-//     {"WiFi Password", Icon_Menu_WiFi, "WiFi Password", MenuFunctions::Config_Init_WiFi_Password, MenuFunctions::Config_Update_WiFi_Password, NONE},
-//     {"Save Config", Icon_Menu_WiFi, "Save Settings", MenuFunctions::Config_Init_SaveSettings, MenuFunctions::Config_Update_SaveSettings, NONE}};
-
-MenuOption ConfigMenuOptions[] = {
+    MenuOption ConfigMenuOptions[] = {
     {"Help", Icon_Menu_QuestionMark, "Help", MenuFunctions::Config_Init_Help, MenuFunctions::Config_Update_Help, NONE}, // Name is first menu item we initialise to to make sure Device Name is drawn. Has own special rendering of text so we don't get menu icons etc. being drawn
     {"Profile", Icon_Menu_WiFi, "Profile", MenuFunctions::Config_Init_Profile, MenuFunctions::Config_Update_Profile, NONE},
-    {"WiFi Settings", Icon_Menu_WiFi, "WiFi Settings", MenuFunctions::Config_Init_WiFi_Settings, MenuFunctions::Config_Update_WiFi_Settings, NONE},
+    //{"WiFi Settings", Icon_Menu_WiFi, "WiFi Settings", MenuFunctions::Config_Init_WiFi_Settings, MenuFunctions::Config_Update_WiFi_Settings, NONE},
     {"WiFi Access Point", Icon_Menu_WiFi, "WiFi Access Point", MenuFunctions::Config_Init_WiFi_AccessPoint, MenuFunctions::Config_Update_WiFi_AccessPoint, NONE},
-    {"WiFi Username", Icon_Menu_WiFi, "WiFi Username", MenuFunctions::Config_Init_WiFi_Username, MenuFunctions::Config_Update_WiFi_Username, NONE},
     {"WiFi Password", Icon_Menu_WiFi, "WiFi Password", MenuFunctions::Config_Init_WiFi_Password, MenuFunctions::Config_Update_WiFi_Password, NONE},
     {"Save Config", Icon_Menu_WiFi, "Save Settings", MenuFunctions::Config_Init_SaveSettings, MenuFunctions::Config_Update_SaveSettings, NONE}};
 

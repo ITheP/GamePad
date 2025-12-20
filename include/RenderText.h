@@ -66,9 +66,9 @@ inline void PrintCenteredNumber(int xpos, int ypos, unsigned long val)
 
 // For very basic automated text layout on screen
 
-inline void ResetPrintDisplayLine(int yOffset = 0)
+inline void ResetPrintDisplayLine(int yOffset = 0, int xOffset = 0)
 {
-  TextXPos = 0;
+  TextXPos = xOffset;
   TextYPos = yOffset;
 }
 
@@ -78,7 +78,7 @@ inline void PrintDisplayLine(char *text)
   TextYPos += TextLineHeight;
 }
 
-inline void PrintDisplayLineCenter(char *text)
+inline void PrintDisplayLineCentered(char *text)
 {
   RRE.printStr(ALIGN_CENTER, TextYPos, text);
   TextYPos += TextLineHeight;

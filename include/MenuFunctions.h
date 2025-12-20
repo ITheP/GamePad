@@ -1,10 +1,17 @@
 #pragma once
 
 #include "config.h"
+#include "Profiles.h"
+
+#define MenuContentStartX 22
+#define MenuContentStartY 20
 
 class MenuFunctions
 {
 public:
+    static Profile *Current_Profile;
+    static int Profile_Selected;
+
     // Init... - functions called when entering menu option (e.g. draw static elements)
     // Update... - functions called repeatedly while in menu option (e.g. update changing elements)
     // Draw... - functions to draw specific elements that might be used across the above
@@ -26,30 +33,26 @@ public:
     static void Config_Update_Profile();
     static void Config_Draw_Profile(int showScrollIcons = false);
 
-static void Config_Init_WiFi_Settings();
-static void Config_Update_WiFi_Settings();
-static void Config_Draw_WiFi_Settings();
+    // static void Config_Init_WiFi_Settings();
+    // static void Config_Update_WiFi_Settings();
+    // static void Config_Draw_WiFi_Settings();
 
-static void Config_Init_WiFi_AccessPoint();
-static void Config_Update_WiFi_AccessPoint();
-static void Config_Draw_WiFi_AccessPoint();
+    static void Config_Init_WiFi_AccessPoint();
+    static void Config_Update_WiFi_AccessPoint();
+    static void Config_Draw_WiFi_AccessPoint(int showScrollIcons = false);
 
-static void Config_Init_WiFi_Username();
-static void Config_Update_WiFi_Username();
-static void Config_Draw_WiFi_Username();
+    static void Config_Init_WiFi_Password();
+    static void Config_Update_WiFi_Password();
+    static void Config_Draw_WiFi_Password(int showScrollIcons = false);
 
-static void Config_Init_WiFi_Password();
-static void Config_Update_WiFi_Password();
-static void Config_Draw_WiFi_Password();
-
-static void Config_Init_SaveSettings();
-static void Config_Update_SaveSettings();
-static void Config_Draw_SaveSettings();
+    static void Config_Init_SaveSettings();
+    static void Config_Update_SaveSettings();
+    static void Config_Draw_SaveSettings();
 
     // ToDo: ClearProfile()
     // ToDo: CloneProfile() (mark a profile, then copy marked to current)
 
-
+    static void DrawScrollArrows();
 
     // Main Menu Functions
 
@@ -85,4 +88,6 @@ static void Config_Draw_SaveSettings();
     static void InitStats();
 
     static void InitDebug();
+
+private:
 };

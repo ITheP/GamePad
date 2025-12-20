@@ -8,6 +8,10 @@
 #include "config.h"
 #include "Prefs.h"
 
+// Possible extra debug assistance on crashes
+// https://kotyara12.ru/iot/remote_esp32_backtrace/
+
+
 char Debug::CrashFile[] = "/debug/crash.log";
 RTC_NOINIT_ATTR char Debug::CrashInfo[1024];
 RTC_NOINIT_ATTR int MarkVal;

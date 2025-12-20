@@ -40,8 +40,9 @@ public:
     static void HandleWiFi(int second);
     static char *WiFiStatus;
 
-    static std::vector<AccessPoint> AllAccessPointList;
-    static std::map<String, AccessPoint> AccessPointList;
+    static std::vector<AccessPoint*> AllAccessPointList;
+    static std::map<String, AccessPoint*> AccessPointList;
+    static int AccessPointListUpdated;
 
     static void Config_InitiWifi();
     static void Config_StartScan();

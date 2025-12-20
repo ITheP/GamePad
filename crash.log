@@ -1,0 +1,23 @@
+abort() was called at PC 0x4208802f on core 1
+
+
+Backtrace: 0x40377d1e:0x3fcf5dc0 0x4037cd0d:0x3fcf5de0 0x40382c81:0x3fcf5e00 0x4208802f:0x3fcf5e80 0x42088076:0x3fcf5ea0 0x42078873:0x3fcf5ec0 0x420783e6:0x3fcf5ee0 0x420788cd:0x3fcf5f00 0x4200b441:0x3fcf5f20 0x4200a9d9:0x3fcf5f40 0x4200ad05:0x3fcf60d0
+
+
+
+
+ELF file SHA256: fa71c10f6f4772d1
+
+Rebooting...
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0xa (SPI_FAST_FLASH_BOOT)
+Saved PC:0x420ba0b2
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce3808,len:0x4bc
+load:0x403c9700,len:0xbd8
+load:0x403cc700,len:0x2a0c
+entry 0x403c98d0
+Serial connected
+Debug - Device rebooted
