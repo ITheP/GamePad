@@ -17,31 +17,35 @@
 #include <Profiles.h>
 #include <Arduino.h>
 
-int MenuFunctions::Profile_Selected = 0;
-Profile* MenuFunctions::Current_Profile = nullptr;
+// int MenuFunctions::Profile_Selected = 0;
+// Profile *MenuFunctions::Current_Profile = nullptr;
 
-char Profile_Text[] = "Save and restart\nto apply changes";
+// char Profile_Text[] = "Save and restart\nto apply changes";
 
 // WiFi Password entry state variables
 #define PASSWORD_MAX_LENGTH 63
 #define ASCII_MIN 32
 #define ASCII_MAX 126
-#define SCROLL_HOLD_TIME 500  // milliseconds before auto-scroll begins
+#define SCROLL_HOLD_TIME 500   // milliseconds before auto-scroll begins
+#define SCROLL_REPEAT_TIME 100 // milliseconds between auto-scroll repeats
 
-static char passwordBuffer[64] = {0};  // Password buffer, null-terminated
-static int cursorPos = 0;              // Current cursor position (0-63)
-static int currentCharIndex = 0;       // Current character being scrolled through (0-94 for ASCII 32-126)
-static bool selectHeld = false;        // Whether select is currently held
-static unsigned long selectPressTime = 0;  // When select was first pressed
-static bool autoScrolling = false;     // Whether we're currently auto-scrolling
-static int scrollDirection = 0;        // 1 for forward, -1 for back, 0 for none
-static char previousCharAtCursor = 0;  // The previous character at cursor position
+static char passwordBuffer[PASSWORD_MAX_LENGTH + 1] = {0}; // Password buffer, null-terminated
+static int cursorPos = 0;                                  // Current cursor position (0-63)
+static int currentCharIndex = 0;                           // Current character being scrolled through (0-94 for ASCII 32-126)
+static bool selectHeld = false;                            // Whether select is currently held
+static unsigned long upPressTime = 0;                      // When up button was first pressed (while select held)
+static unsigned long downPressTime = 0;                    // When down button was first pressed (while select held)
+static unsigned long lastUpScrollTime = 0;                 // Last time up auto-scroll occurred
+static unsigned long lastDownScrollTime = 0;               // Last time down auto-scroll occurred
+static bool upAutoScrolling = false;                       // Whether up button is auto-scrolling
+static bool downAutoScrolling = false;                     // Whether down button is auto-scrolling
+static char previousCharAtCursor = 0;                      // The previous character at cursor position
 
 // Helper function to convert ASCII character to index (0-94)
 static int charToIndex(char c)
 {
   if (c == 0x00)
-    return 0;  // Default to 'a'
+    return 0; // Default to 'a'
   return (int)c - ASCII_MIN;
 }
 
@@ -59,15 +63,17 @@ void MenuFunctions::Config_Init_WiFi_Password()
   // Initialize password buffer from current profile
   memset(passwordBuffer, 0x00, sizeof(passwordBuffer));
   if (Current_Profile->WiFi_Password.length() > 0)
-  {
     strncpy(passwordBuffer, Current_Profile->WiFi_Password.c_str(), PASSWORD_MAX_LENGTH);
-  }
 
   cursorPos = 0;
   currentCharIndex = 0;
   selectHeld = false;
-  autoScrolling = false;
-  scrollDirection = 0;
+  upPressTime = 0;
+  downPressTime = 0;
+  lastUpScrollTime = 0;
+  lastDownScrollTime = 0;
+  upAutoScrolling = false;
+  downAutoScrolling = false;
   previousCharAtCursor = passwordBuffer[0];
 
   Config_Draw_WiFi_Password(false);
@@ -81,76 +87,108 @@ void MenuFunctions::Config_Update_WiFi_Password()
   // Check if select button state has changed
   int selectState = Menus::SelectState();
   bool selectJustChanged = Menus::SelectJustChanged();
-  bool upJustChanged = Menus::UpJustChanged();
-  bool downJustChanged = Menus::DownJustChanged();
   int upState = Menus::UpState();
+  bool upJustChanged = Menus::UpJustChanged();
   int downState = Menus::DownState();
+  bool downJustChanged = Menus::DownJustChanged();
 
   // Select button handling - character scrolling
   if (selectState == PRESSED)
   {
     if (!selectHeld)
     {
-      // Select just pressed
+      // Select just pressed, assume we are starting a new letter
       selectHeld = true;
-      selectPressTime = now;
-      autoScrolling = false;
-      scrollDirection = 0;
+      upPressTime = 0;
+      downPressTime = 0;
+      lastUpScrollTime = 0;
+      lastDownScrollTime = 0;
+      upAutoScrolling = false;
+      downAutoScrolling = false;
 
       // Get the character at current cursor position
       char charAtCursor = passwordBuffer[cursorPos];
       if (charAtCursor == 0x00)
-      {
-        currentCharIndex = charToIndex('a');  // Start at 'a' if character is empty
-      }
+        currentCharIndex = charToIndex('a'); // Start at 'a' if character is empty
       else
-      {
         currentCharIndex = charToIndex(charAtCursor);
-      }
     }
     else
     {
-      // Select is still held
-      // Check if we should start auto-scrolling
-      if (!autoScrolling && (now - selectPressTime) >= SCROLL_HOLD_TIME)
-      {
-        autoScrolling = true;
-      }
+      // Select is still held - handle up/down button scrolling
 
-      // Handle up/down button clicks while select is held (forward/back scrolling)
-      if (upJustChanged && upState == PRESSED && downState == PRESSED)
+      // Up button handling
+      if (upJustChanged && upState == PRESSED)
       {
-        // Both up and down pressed simultaneously - scroll backwards
+        // Up button just pressed - immediately scroll up
         currentCharIndex--;
         if (currentCharIndex < 0)
           currentCharIndex = (ASCII_MAX - ASCII_MIN);
-        scrollDirection = -1;
+        upPressTime = now;
+        lastUpScrollTime = now;
+        upAutoScrolling = false;
       }
-      else if (downJustChanged && downState == PRESSED && upState == PRESSED)
+      else if (upState == PRESSED && upPressTime != 0)
       {
-        // Both up and down pressed simultaneously - scroll forwards
-        currentCharIndex++;
-        if (currentCharIndex > (ASCII_MAX - ASCII_MIN))
-          currentCharIndex = 0;
-        scrollDirection = 1;
-      }
-      else if (autoScrolling)
-      {
-        // Auto-scroll based on which direction was held
-        if (upState == PRESSED && downState != PRESSED)
+        // Up button is held
+        if (!upAutoScrolling && (now - upPressTime) >= SCROLL_HOLD_TIME)
         {
+          // Start auto-scrolling after hold time
+          upAutoScrolling = true;
+          lastUpScrollTime = now;
+        }
+
+        if (upAutoScrolling && (now - lastUpScrollTime) >= SCROLL_REPEAT_TIME)
+        {
+          // Auto-scroll at repeat interval
           currentCharIndex--;
           if (currentCharIndex < 0)
             currentCharIndex = (ASCII_MAX - ASCII_MIN);
-          scrollDirection = -1;
+          lastUpScrollTime = now;
         }
-        else if (downState == PRESSED && upState != PRESSED)
+      }
+      else if (upState == NOT_PRESSED)
+      {
+        // Up button released
+        upPressTime = 0;
+        upAutoScrolling = false;
+      }
+
+      // Down button handling
+      if (downJustChanged && downState == PRESSED)
+      {
+        // Down button just pressed - immediately scroll down
+        currentCharIndex++;
+        if (currentCharIndex > (ASCII_MAX - ASCII_MIN))
+          currentCharIndex = 0;
+        downPressTime = now;
+        lastDownScrollTime = now;
+        downAutoScrolling = false;
+      }
+      else if (downState == PRESSED && downPressTime != 0)
+      {
+        // Down button is held
+        if (!downAutoScrolling && (now - downPressTime) >= SCROLL_HOLD_TIME)
         {
+          // Start auto-scrolling after hold time
+          downAutoScrolling = true;
+          lastDownScrollTime = now;
+        }
+
+        if (downAutoScrolling && (now - lastDownScrollTime) >= SCROLL_REPEAT_TIME)
+        {
+          // Auto-scroll at repeat interval
           currentCharIndex++;
           if (currentCharIndex > (ASCII_MAX - ASCII_MIN))
             currentCharIndex = 0;
-          scrollDirection = 1;
+          lastDownScrollTime = now;
         }
+      }
+      else if (downState == NOT_PRESSED)
+      {
+        // Down button released
+        downPressTime = 0;
+        downAutoScrolling = false;
       }
     }
 
@@ -160,8 +198,10 @@ void MenuFunctions::Config_Update_WiFi_Password()
   {
     // Select just released
     selectHeld = false;
-    autoScrolling = false;
-    scrollDirection = 0;
+    upPressTime = 0;
+    downPressTime = 0;
+    upAutoScrolling = false;
+    downAutoScrolling = false;
 
     // Save the current character to the password buffer
     if (cursorPos <= PASSWORD_MAX_LENGTH)
@@ -176,19 +216,15 @@ void MenuFunctions::Config_Update_WiFi_Password()
         // Get character at new cursor position for next iteration
         char charAtNewPos = passwordBuffer[cursorPos];
         if (charAtNewPos == 0x00)
-        {
           currentCharIndex = charToIndex('a');
-        }
         else
-        {
           currentCharIndex = charToIndex(charAtNewPos);
-        }
       }
     }
   }
 
   // Back button handling - cursor backward and ignore character
-  if (selectState == NOT_PRESSED && Menus::BackState == PRESSED && Menus::BackJustChanged())
+  if (Menus::BackState() == PRESSED && Menus::BackJustChanged())
   {
     if (cursorPos > 0)
     {
@@ -205,7 +241,7 @@ void MenuFunctions::Config_Update_WiFi_Password()
   }
 
   // Save password to current profile
-  Current_Profile->WiFi_Password = String((const char*)passwordBuffer);
+  Current_Profile->WiFi_Password = String((const char *)passwordBuffer);
 
   if (DisplayRollover)
     MenuFunctions::Config_Draw_WiFi_Password(showScrollIcons);
@@ -215,89 +251,31 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
 {
   Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK);
 
-  RRE.setScale(2);
-
-  sprintf(buffer, "%s", Current_Profile->Description);
-  RRE.printStr(ALIGN_CENTER, MenuContentStartY - 4, buffer);
-
-  RRE.setScale(1);
-
-  SetFontTiny();
-  SetFontLineHeightTiny();
-
-  ResetPrintDisplayLine(SCREEN_HEIGHT - (TextLineHeight * 2) + 2);
-
-  if (Current_Profile->WiFi_Name.length() == 0)
-  {
-    PrintDisplayLineCentered("No WiFi selected");
-  }
-  else
-  {
-    sprintf(buffer, "WiFi: %s", Current_Profile->WiFi_Name.c_str());
-    PrintDisplayLineCentered(buffer);
-
-    auto it = Network::AccessPointList.find(Current_Profile->WiFi_Name);
-    if (it != Network::AccessPointList.end())
-    {
-      AccessPoint *ap = it->second;
-      PrintDisplayLineCentered(ap->WiFiStatus);
-    }
-    else
-      PrintDisplayLineCentered("WiFi Not Found");
-  }
-
-  SetFontLineHeightFixed();
-  SetFontFixed();
-
   // Draw password buffer at the bottom of the screen
   // Show only last 3 characters, previous ones replaced with *
   int passwordDisplayY = SCREEN_HEIGHT - 10;
   int passwordDisplayX = 2;
 
-  int displayStart = (cursorPos > 3) ? (cursorPos - 3) : 0;
-  int displayEnd = cursorPos + 1;
-  if (displayEnd > PASSWORD_MAX_LENGTH)
-    displayEnd = PASSWORD_MAX_LENGTH;
+  // Show whole password - was going to hide certain characters BTW how to check it if can't see it!
+  SetFontFixed();
 
-  int drawX = passwordDisplayX;
-  for (int i = displayStart; i < displayEnd; i++)
-  {
-    char charToDraw;
-    if (i < cursorPos)
-    {
-      charToDraw = '*';  // Show asterisk for previous characters
-    }
-    else
-    {
-      charToDraw = passwordBuffer[i];
-      if (charToDraw == 0x00)
-        charToDraw = '_';  // Show underscore for empty positions
-    }
+  RRE.printStr(0, SCREEN_HEIGHT - TextLineHeight, passwordBuffer);
+    
+  // Get length of pixel width of password up to cursor position
+    int passwordUpToCursorWidth = RRE.strWidth(passwordBuffer);
+    // Draw cursor under current character
 
-    RRE.drawChar(drawX, passwordDisplayY, charToDraw);
-    drawX += RRE.charWidth(charToDraw) + 1;
-  }
-
-  // Draw underline cursor at the current position
-  int cursorDrawX = passwordDisplayX;
-  for (int i = displayStart; i < cursorPos; i++)
-  {
-    char c = passwordBuffer[i];
-    if (c == 0x00)
-      c = '_';
-    cursorDrawX += RRE.charWidth(c) + 1;
-  }
-  // Draw underline under current character position
-  Display.drawLine(cursorDrawX, passwordDisplayY + 11, cursorDrawX + 5, passwordDisplayY + 11, C_WHITE);
+    if ((Second >> 2) %2 == 0) // Blink every half second
+      Display.drawFastHLine(passwordUpToCursorWidth, SCREEN_HEIGHT - 2, 8, C_WHITE);
 
   // Draw scrolling character selection in the middle of the screen
   if (selectHeld)
   {
     SetFontFixed();
-    
+
     // Middle of screen Y position
-    int middleY = (SCREEN_HEIGHT - MenuContentStartY) / 2 + MenuContentStartY;
-    
+    int middleY = MenuContentStartY + 10;
+
     // Draw current character in the middle with scale 2
     RRE.setScale(2);
     char currentChar = indexToChar(currentCharIndex);
@@ -323,7 +301,7 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     charIdx = (currentCharIndex - 1);
     if (charIdx < 0)
       charIdx = (ASCII_MAX - ASCII_MIN);
-    
+
     while (drawX > 10)
     {
       char c = indexToChar(charIdx);
@@ -343,6 +321,19 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) + MenuContentStartY;
     RenderIcon(Icon_Arrow_Left, 0, middle, 7, 7);
     RenderIcon(Icon_Arrow_Right, SCREEN_WIDTH - 7, middle, 7, 7);
-    SetFontFixed();
+
+
   }
+  else
+  {
+    SetFontTiny();
+    SetFontLineHeightTiny();
+    ResetPrintDisplayLine(MenuContentStartY);
+
+    PrintDisplayLine("Green + up/down for next");
+    PrintDisplayLine("Red to delete character");
+  }
+  
+  SetFontFixed();
+  SetFontLineHeightFixed();
 }

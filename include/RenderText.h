@@ -53,7 +53,7 @@ inline void SetFontCustom()
   RRE.setFont(&rre_CustomIcons16);
 }
 
-extern char buffer[64];
+extern char buffer[128];
 
 // XPos should specify centre render point
 inline void PrintCenteredNumber(int xpos, int ypos, unsigned long val)

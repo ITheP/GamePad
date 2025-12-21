@@ -95,7 +95,7 @@ bool PreviousBTConnectionState;
 // -----------------------------------------------------
 // Buffers
 
-char buffer[64]; // General purpose buffer for formatting text into
+char buffer[128]; // General purpose buffer for formatting text into
 
 // -----------------------------------------------------
 // Benchmarks
