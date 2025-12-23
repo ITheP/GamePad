@@ -27,6 +27,8 @@ extern int Second;
 extern int SecondRollover; // Flag to easily sync operations that run once per second
 extern int SecondFlipFlop; // Flag flipping between 0 and 1 every second to allow for things like blinking icons
 
+extern float FractionalSeconds;
+
 extern int PreviousSubSecond;
 extern int SubSecond;
 extern int SubSecondRollover; // SubSecond flag for things like statistics sampling
