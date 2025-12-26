@@ -52,11 +52,11 @@ int SelectedAccessPointIndex = 0;
 
 void UpdateConfigAccessPointList(int listMovement = 0)
 {
+    ConfigAccessPointList.clear();
+    
     // Just incase called when no list is available
     if (Network::AccessPointList.size() == 0)
         return;
-
-    ConfigAccessPointList.clear();
 
     // Rebuild list
     AccessPoint *lastUISelectdAccessPoint = nullptr;
@@ -152,6 +152,10 @@ void MenuFunctions::Config_Init_WiFi_AccessPoint()
     Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK); // clears a bit of extra space in case other menu displayed outside usual boundaries
 
     LastUISelectedAccessPointName = MenuFunctions::Current_Profile->WiFi_Name;
+    
+    // Refresh the access point list to ensure pointers are valid
+    // This is critical when returning from other menus where WiFi scans may have updated Network::AccessPointList
+    UpdateConfigAccessPointList();
 }
 
 void MenuFunctions::Config_Update_WiFi_AccessPoint()
@@ -214,7 +218,8 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
     if (apSize == 0)
     {
         RRE.setColor(C_WHITE);
-        RRE.printStr(ALIGN_CENTER, MenuContentStartY + 20, "No Access Points");
+        RRE.printStr(ALIGN_CENTER, MenuContentStartY + 12, "Scanning");
+        RRE.printStr(ALIGN_CENTER, MenuContentStartY + 22, "Please Wait...");
     }
     else
     {
@@ -235,26 +240,29 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
                 continue;
             }
 
-            if (ap->selected)
-                RRE.setColor(C_WHITE);
-            else
-                RRE.setColor(C_WHITE);
+            // if (ap->selected)
+            //     RRE.setColor(C_WHITE);
+            // else
+            //     RRE.setColor(C_WHITE);
 
             sprintf(buffer, "%s (%d)", ap->ssid.c_str(), ap->rssi);
             PrintDisplayLine(buffer); // (char*)ap->ssid.c_str());
                                       // PrintDisplayLine(&ap->ssid[0]);
         }
+
+        SetFontFixed();
+        SetFontLineHeightFixed();
+
+        // selected item indicator
+        SetFontCustom();
+        // Base size of left/right arrow icons is 7x7 px
+        static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) + MenuContentStartY + 2;
+        int iconOffset = (Menus::MenuFrame >> 2) % 3;
+        RenderIcon(Icon_Arrow_Right + iconOffset, 0, middle, 7, 7);
     }
 
     SetFontFixed();
     SetFontLineHeightFixed();
-
-    // selected item indicator
-    SetFontCustom();
-    // Base size of left/right arrow icons is 7x7 px
-    static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) + MenuContentStartY + 2;
-    int iconOffset = (Menus::MenuFrame >> 2) % 3;
-    RenderIcon(Icon_Arrow_Right + iconOffset, 0, middle, 7, 7);
 
     if (showScrollIcons)
         DrawScrollArrows();

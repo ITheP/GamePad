@@ -62,7 +62,7 @@ Menu Menus::MainMenu = {
     {"Profile", Icon_Menu_WiFi, "Profile", MenuFunctions::Config_Init_Profile, MenuFunctions::Config_Update_Profile, NONE},
     //{"WiFi Settings", Icon_Menu_WiFi, "WiFi Settings", MenuFunctions::Config_Init_WiFi_Settings, MenuFunctions::Config_Update_WiFi_Settings, NONE},
     {"WiFi Access Point", Icon_Menu_WiFi, "WiFi Access Point", MenuFunctions::Config_Init_WiFi_AccessPoint, MenuFunctions::Config_Update_WiFi_AccessPoint, NONE},
-    {"WiFi Password", Icon_Menu_WiFi, "WiFi Password", MenuFunctions::Config_Init_WiFi_Password, MenuFunctions::Config_Update_WiFi_Password, NONE},
+    {"WiFi Password", Icon_Menu_WiFi, "WiFi Password", MenuFunctions::Config_Init_WiFi_Password, MenuFunctions::Config_Update_WiFi_Password, MenuFunctions::Config_Exit_WiFi_Password},
     {"Save Config", Icon_Menu_WiFi, "Save Settings", MenuFunctions::Config_Init_SaveSettings, MenuFunctions::Config_Update_SaveSettings, NONE}};
 
 

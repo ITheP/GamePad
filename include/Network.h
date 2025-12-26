@@ -48,6 +48,22 @@ public:
     static void Config_StartScan();
     static void Config_UpdateScanResults();
     static void Config_SelectAccessPoint(const String& ssid);
+    
+    // WiFi connection testing
+    enum WiFiTestResult {
+        TEST_CONNECTING,      // Test is in progress
+        TEST_SUCCESS,         // Successfully connected
+        TEST_INVALID_PASSWORD, // Authentication failed
+        TEST_SSID_NOT_FOUND,  // Network not available
+        TEST_TIMEOUT,         // Connection attempt timed out
+        TEST_FAILED,          // Other connection failure
+        TEST_NOT_STARTED      // Test hasn't been initiated
+    };
+    
+    static WiFiTestResult TestWiFiConnection(const String& testSSID, const String& testPassword);
+    static bool IsWiFiTestInProgress();
+    static WiFiTestResult GetLastTestResult();
+    static void CancelWiFiTest();  // Cancel any in-progress test
 
 private:
     static const char *ssid;
@@ -64,6 +80,12 @@ private:
     static unsigned char FinalWiFiCharacter;
 
     static int WiFiStatusIterations;
+    
+    // WiFi test state variables
+    static WiFiTestResult LastTestResult;
+    static bool TestInProgress;
+    static unsigned long TestStartTime;
+    static const unsigned long TEST_TIMEOUT_MS = 15000; // 15 second timeout for WiFi test
 
     static void RenderIcons();
 };

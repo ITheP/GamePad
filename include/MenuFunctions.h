@@ -44,6 +44,7 @@ public:
     static void Config_Init_WiFi_Password();
     static void Config_Update_WiFi_Password();
     static void Config_Draw_WiFi_Password(int showScrollIcons = false);
+    static void Config_Exit_WiFi_Password();
 
     static void Config_Init_SaveSettings();
     static void Config_Update_SaveSettings();
