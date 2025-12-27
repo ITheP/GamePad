@@ -52,7 +52,10 @@ const char* WiFi_Password_Key = "WiFi.Password";
 
 void Profile::Save()
 {
-    Serial.println("Saving Profile " + Description + " to preferences");
+    Serial.print("Saving Profile " + Description + " to preferences: ");
+    Serial.print("DeviceName='" + CustomDeviceName + "', ");
+    Serial.print("WiFi_Name='" + WiFi_Name + "', ");
+    Serial.println("WiFi_Password='" + WiFi_Password + "'");
 
     auto &prefs = Prefs::Handler;
 
@@ -67,8 +70,6 @@ void Profile::Save()
 
 void Profile::Load()
 {
-    Serial.println("Loading Profile " + Description + " from saved preferences");
-
     auto &prefs = Prefs::Handler;
 
     prefs.begin(PrefsKey);
@@ -78,4 +79,9 @@ void Profile::Load()
     WiFi_Password = prefs.getString(WiFi_Password_Key, "");
 
     prefs.end();
+
+    Serial.print("Loaded Profile " + Description + " from saved preferences: ");
+    Serial.print("DeviceName='" + CustomDeviceName + "', ");
+    Serial.print("WiFi_Name='" + WiFi_Name + "', ");
+    Serial.println("WiFi_Password='" + WiFi_Password + "'");
 }

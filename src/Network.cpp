@@ -490,10 +490,40 @@ void Network::RenderIcons()
 // WiFi Connection Testing Functions
 Network::WiFiTestResult Network::TestWiFiConnection(const String& testSSID, const String& testPassword)
 {
-    // If a test is already in progress, return the current state
-    if (TestInProgress)
+    // Cancel any existing test first
+    if (TestInProgress || TestStartTime > 0)
     {
-        return TEST_CONNECTING;
+        Serial_INFO;
+        Serial.println("WiFi Test: Cancelling previous test");
+        CancelWiFiTest();
+    }
+
+    Serial_INFO;
+    Serial.println("WiFi Test: Starting connection test");
+    Serial.printf("WiFi Test: SSID='%s', Password length=%d\n", testSSID.c_str(), testPassword.length());
+    
+    TestInProgress = true;
+    TestStartTime = millis();
+    LastTestResult = TEST_CONNECTING;
+
+    // Disconnect from any existing connection first
+    WiFi.disconnect(true);
+    //delay(100);
+
+    // Set to station mode and initiate connection
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(testSSID.c_str(), testPassword.c_str());
+    
+    return TEST_CONNECTING;
+}
+
+// Check the status of the current WiFi test and return results
+Network::WiFiTestResult Network::CheckTestResults()
+{
+    // If no test is in progress, return the last result
+    if (!TestInProgress)
+    {
+        return LastTestResult;
     }
 
     // Check if test has timed out
@@ -512,74 +542,47 @@ Network::WiFiTestResult Network::TestWiFiConnection(const String& testSSID, cons
         return LastTestResult;
     }
 
-    // Start a new test
-    if (!TestInProgress && TestStartTime == 0)
+    // Check connection status
+    wl_status_t status = WiFi.status();
+    
+    if (status == WL_CONNECTED)
     {
+        TestInProgress = false;
+        LastTestResult = TEST_SUCCESS;
+        TestStartTime = 0;
+        
         Serial_INFO;
-        Serial.println("WiFi Test: Starting connection test");
-        Serial.printf("WiFi Test: SSID='%s', Password length=%d\n", testSSID.c_str(), testPassword.length());
+        Serial.printf("WiFi Test: SUCCESS - Connected with IP: %s\n", WiFi.localIP().toString().c_str());
         
-        TestInProgress = true;
-        TestStartTime = millis();
-        LastTestResult = TEST_CONNECTING;
-
-        // Disconnect from any existing connection first
-        WiFi.disconnect(true);
-        delay(100);
-
-        // Set to station mode and initiate connection
-        WiFi.mode(WIFI_STA);
-        WiFi.begin(testSSID.c_str(), testPassword.c_str());
-        
-        return TEST_CONNECTING;
+        return TEST_SUCCESS;
     }
-
-    // Check connection status during the test
-    if (TestInProgress && TestStartTime > 0)
+    else if (status == WL_CONNECT_FAILED)
     {
-        wl_status_t status = WiFi.status();
+        TestInProgress = false;
+        LastTestResult = TEST_INVALID_PASSWORD;
+        TestStartTime = 0;
         
-        if (status == WL_CONNECTED)
-        {
-            TestInProgress = false;
-            LastTestResult = TEST_SUCCESS;
-            TestStartTime = 0;
-            
-            Serial_INFO;
-            Serial.printf("WiFi Test: SUCCESS - Connected with IP: %s\n", WiFi.localIP().toString().c_str());
-            
-            return TEST_SUCCESS;
-        }
-        else if (status == WL_CONNECT_FAILED)
-        {
-            TestInProgress = false;
-            LastTestResult = TEST_INVALID_PASSWORD;
-            TestStartTime = 0;
-            
-            Serial_INFO;
-            Serial.println("WiFi Test: FAILED - Connection attempt failed (likely invalid password)");
-            WiFi.disconnect(true);
-            
-            return TEST_INVALID_PASSWORD;
-        }
-        else if (status == WL_NO_SSID_AVAIL)
-        {
-            TestInProgress = false;
-            LastTestResult = TEST_SSID_NOT_FOUND;
-            TestStartTime = 0;
-            
-            Serial_INFO;
-            Serial.printf("WiFi Test: FAILED - SSID '%s' not found/available\n", testSSID.c_str());
-            WiFi.disconnect(true);
-            
-            return TEST_SSID_NOT_FOUND;
-        }
+        Serial_INFO;
+        Serial.println("WiFi Test: FAILED - Connection attempt failed (likely invalid password)");
+        WiFi.disconnect(true);
         
-        // Still connecting...
-        return TEST_CONNECTING;
+        return TEST_INVALID_PASSWORD;
     }
-
-    return LastTestResult;
+    else if (status == WL_NO_SSID_AVAIL)
+    {
+        TestInProgress = false;
+        LastTestResult = TEST_SSID_NOT_FOUND;
+        TestStartTime = 0;
+        
+        Serial_INFO;
+        Serial.println("WiFi Test: FAILED - SSID not found/available");
+        WiFi.disconnect(true);
+        
+        return TEST_SSID_NOT_FOUND;
+    }
+    
+    // Still connecting...
+    return TEST_CONNECTING;
 }
 
 bool Network::IsWiFiTestInProgress()
