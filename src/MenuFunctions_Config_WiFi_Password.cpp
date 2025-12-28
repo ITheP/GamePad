@@ -73,7 +73,7 @@ void MenuFunctions::Config_Init_WiFi_Password()
     strncpy(passwordBuffer, Current_Profile->WiFi_Password.c_str(), PASSWORD_MAX_LENGTH);
 
   // For testing, pre-fill with a known password
-  strncpy(passwordBuffer, "TestPassword\0", PASSWORD_MAX_LENGTH);
+  //strncpy(passwordBuffer, "TestPassword\0", PASSWORD_MAX_LENGTH);
 
   // Position cursor at end of current password
   cursorPos = strlen(passwordBuffer);
@@ -324,7 +324,7 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     SetFontFixed();
 
     // Middle of screen Y position
-    int middleY = MenuContentStartY + 8;
+    int middleY = MenuContentStartY;
 
     // Draw current character in the middle with scale 2
     RRE.setScale(2);
@@ -332,10 +332,10 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     int currentCharWidth = RRE.charWidth(currentChar) * 2;
     int centerX = SCREEN_WIDTH / 2;
     int currentCharX = centerX - (currentCharWidth / 2);
-    RRE.drawChar(currentCharX, middleY - 8, currentChar);
+    RRE.drawChar(currentCharX, middleY + 1, currentChar);
     RRE.setScale(1);
 
-    middleY += 4;
+    middleY += 13;
 
     // Draw characters to the right (ASCII_MIN onwards)
     int drawX = centerX + (currentCharWidth / 2) + 4;
@@ -375,12 +375,24 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     int iconOffset = (Menus::MenuFrame >> 2) % 3;
 
       RRE.setColor(C_BLACK);
-      RenderIcon(Icon_Arrow_Left_Outline + iconOffset,-2, middle -2, 0,0); //7, 7);
-      RenderIcon(Icon_Arrow_Right_Outline + iconOffset, SCREEN_WIDTH - 7 -1, middle -2, 0,0); //7, 7);
+      RenderIcon(Icon_Arrow_Left_Outline + iconOffset,-3, middle -3, 0,0);
+      RenderIcon(Icon_Arrow_Right_Outline + iconOffset, SCREEN_WIDTH - 7 -2, middle -3, 0,0);
+
+      // RenderIcon(Icon_Arrow_Left_Outline + iconOffset,-2, middle -3, 0,0);
+      // RenderIcon(Icon_Arrow_Right_Outline + iconOffset, SCREEN_WIDTH - 7 -1, middle -3, 0,0);
+
+      // RenderIcon(Icon_Arrow_Left_Outline + iconOffset,-2, middle -1, 0,0);
+      // RenderIcon(Icon_Arrow_Right_Outline + iconOffset, SCREEN_WIDTH - 7 -1, middle -1, 0,0);
+
+      // RenderIcon(Icon_Arrow_Left_Outline + iconOffset,-3, middle -2, 0,0);
+      // RenderIcon(Icon_Arrow_Right_Outline + iconOffset, SCREEN_WIDTH - 7 -2, middle -2, 0,0);
+
+      // RenderIcon(Icon_Arrow_Left_Outline + iconOffset,-1, middle -2, 0,0);
+      // RenderIcon(Icon_Arrow_Right_Outline + iconOffset, SCREEN_WIDTH - 7, middle -2, 0,0);
 
       RRE.setColor(C_WHITE);
-      RenderIcon(Icon_Arrow_Left + iconOffset, 0, middle,0,0); //7, 7);
-      RenderIcon(Icon_Arrow_Right + iconOffset, SCREEN_WIDTH - 7, middle, 0,0); //7, 7);
+      RenderIcon(Icon_Arrow_Left + iconOffset, 0, middle,0,0);
+      RenderIcon(Icon_Arrow_Right + iconOffset, SCREEN_WIDTH - 7, middle, 0,0);
   }
   else
   {

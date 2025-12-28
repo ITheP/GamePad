@@ -33,6 +33,14 @@
 #define Icon_EyesRight 0x7A
 #define Icon_OK 0x7B
 
+// Yes/No Animated Check Box
+#define Icon_Check_Spin1 0xEC
+#define Icon_Check_Spin2 0xED
+#define Icon_Check_Spin3 0xEE
+#define Icon_Check_Spin4 0xEF
+#define Icon_Check_Yes 0x96
+#define Icon_Check_No 0x86
+
 // Bluetooth
 #define Icon_BTLogo 0x7C
 //#define Icon_Heart 0x7C

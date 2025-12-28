@@ -29,22 +29,34 @@
 
 std::vector<AccessPoint *> ConfigAccessPointList;
 
-AccessPoint UnavailableAccessPoint = {
-    "<Can't find>",
+// Placeholder access point if saved access point is not available
+AccessPoint UnavailableSavedAccessPoint = {
+    "", // Name get's set dynamically
     "",
-    -1000,
+    0,
     WIFI_AUTH_OPEN,
     false,
-    ' ',
+    Icon_WiFi_LostSignal,
     "Unavailable"};
 
+// Placeholder for last selected access point if it suddenly disappears but we still want to see an entry for it
 AccessPoint LastSelectedAccessPoint = {
-    "<Can't find>",
+    "", // Name get's set dynamically
     "",
-    -1000,
+    0,
     WIFI_AUTH_OPEN,
     false,
-    ' ',
+    Icon_WiFi_LostSignal,
+    "Unavailable"};
+
+// No access point selected (e.g. nothing saved in prefs)
+AccessPoint NoAccessPoint = {
+    "...select access point",
+    "",
+    1,
+    WIFI_AUTH_OPEN,
+    false,
+    Icon_WiFi_Disabled,
     "Unavailable"};
 
 String LastUISelectedAccessPointName = "";
@@ -53,7 +65,7 @@ int SelectedAccessPointIndex = 0;
 void UpdateConfigAccessPointList(int listMovement = 0)
 {
     ConfigAccessPointList.clear();
-    
+
     // Just incase called when no list is available
     if (Network::AccessPointList.size() == 0)
         return;
@@ -85,15 +97,20 @@ void UpdateConfigAccessPointList(int listMovement = 0)
     if (lastUISelectdAccessPoint == nullptr)
     {
         // No match? Stick in an error entry
-        LastSelectedAccessPoint.ssid = LastUISelectedAccessPointName;
-        ConfigAccessPointList.push_back(&LastSelectedAccessPoint);
+        if (LastUISelectedAccessPointName == "")
+            ConfigAccessPointList.push_back(&NoAccessPoint);
+        else
+        {
+            LastSelectedAccessPoint.ssid = LastUISelectedAccessPointName;
+            ConfigAccessPointList.push_back(&LastSelectedAccessPoint);
+        }
     }
 
     // Add in saved access point if missing (and isn't the missing last match from above)
     if (savedAccessPoint == nullptr && LastUISelectedAccessPointName != MenuFunctions::Current_Profile->WiFi_Name)
     {
-        UnavailableAccessPoint.ssid = MenuFunctions::Current_Profile->WiFi_Name;
-        ConfigAccessPointList.push_back(&UnavailableAccessPoint);
+        UnavailableSavedAccessPoint.ssid = MenuFunctions::Current_Profile->WiFi_Name;
+        ConfigAccessPointList.push_back(&UnavailableSavedAccessPoint);
     }
 
     // So right now we should have a list of access points including the currently selected one and saved one added if either were missing
@@ -103,17 +120,35 @@ void UpdateConfigAccessPointList(int listMovement = 0)
     std::sort(ConfigAccessPointList.begin(), ConfigAccessPointList.end(),
               [](const AccessPoint *a, const AccessPoint *b)
               {
-                  return a->rssi > b->rssi;
+                  // Sort alphabetically
+                  return a->ssid > b->ssid;
+                  // Sort by signal strength
+                  //return a->rssi > b->rssi;
               });
 
     // Find offset of currently selected access point
     SelectedAccessPointIndex = 0;
-    for (int i = 0; i < ConfigAccessPointList.size(); i++)
+    if (LastUISelectedAccessPointName == "")
     {
-        if (ConfigAccessPointList[i]->ssid == LastUISelectedAccessPointName)
+        // No previously selected AP - find the NoAccessPoint entry
+        for (int i = 0; i < ConfigAccessPointList.size(); i++)
         {
-            SelectedAccessPointIndex = i;
-            break;
+            if (ConfigAccessPointList[i] == &NoAccessPoint)
+            {
+                SelectedAccessPointIndex = i;
+                break;
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < ConfigAccessPointList.size(); i++)
+        {
+            if (ConfigAccessPointList[i]->ssid == LastUISelectedAccessPointName)
+            {
+                SelectedAccessPointIndex = i;
+                break;
+            }
         }
     }
 
@@ -152,7 +187,7 @@ void MenuFunctions::Config_Init_WiFi_AccessPoint()
     Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK); // clears a bit of extra space in case other menu displayed outside usual boundaries
 
     LastUISelectedAccessPointName = MenuFunctions::Current_Profile->WiFi_Name;
-    
+
     // Refresh the access point list to ensure pointers are valid
     // This is critical when returning from other menus where WiFi scans may have updated Network::AccessPointList
     UpdateConfigAccessPointList();
@@ -187,22 +222,6 @@ void MenuFunctions::Config_Update_WiFi_AccessPoint()
 
     if (DisplayRollover)
         Config_Draw_WiFi_AccessPoint(showScrollIcons);
-
-    // if (listMovement != 0)
-    // {
-    //   Serial.println("Config screen access point list:");
-    //   for (auto *ap : ConfigAccessPointList)
-    //   {
-
-    //     Serial.printf("SSID: %s | BSSID: %s | RSSI: %s (%d dBm) | Auth: %d | Selected: %s\n",
-    //                   ap->ssid.c_str(),
-    //                   ap->bssid.c_str(),
-    //                   ap->WiFiStatus,
-    //                   ap->rssi,
-    //                   ap->authMode,
-    //                   ap->selected ? "YES" : "NO");
-    //   }
-    // }
 }
 
 void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
@@ -212,7 +231,7 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
     SetFontTiny();
     SetFontLineHeightTiny();
 
-    ResetPrintDisplayLine(MenuContentStartY, 10);
+    ResetPrintDisplayLine(MenuContentStartY, 10 + 12);
 
     int apSize = ConfigAccessPointList.size();
     if (apSize == 0)
@@ -240,14 +259,35 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
                 continue;
             }
 
-            // if (ap->selected)
-            //     RRE.setColor(C_WHITE);
-            // else
-            //     RRE.setColor(C_WHITE);
+            // if signal == 0 then something wrong (e.g. can't find, disconnected)
 
-            sprintf(buffer, "%s (%d)", ap->ssid.c_str(), ap->rssi);
-            PrintDisplayLine(buffer); // (char*)ap->ssid.c_str());
-                                      // PrintDisplayLine(&ap->ssid[0]);
+            if (ap->rssi == 0)
+                RRE.drawChar(10, TextYPos - 1, 'x');
+            else if (ap->rssi < 0)
+            {
+                // Convert signal strength into a little bar 1->8 pixels wide
+                int w;
+                if (ap->rssi > -50)
+                    w = 8;
+                else if (ap->rssi < -75)
+                    w = 1;
+                else
+                    w = 2 + ((ap->rssi + 75) * 7) / 25;
+
+                if (w > 8)
+                    w = 8;
+
+                Display.fillRect(10, TextYPos, w, 7, C_WHITE);
+                // Serial.printf("RSSI %s: %d -> %d\n", ap->ssid.c_str(), ap->rssi, w);
+            }
+
+            // Serial.printf("RSSI %s: %d\n", ap->ssid.c_str(), ap->rssi);
+
+            // Don't forget, PrintDisplayLine alters TextYPos so make sure we call AFTER the above
+            PrintDisplayLine((char *)ap->ssid.c_str());
+
+            // sprintf(buffer, "%s (%d)", ap->ssid.c_str(), ap->rssi);
+            // PrintDisplayLine(buffer);
         }
 
         SetFontFixed();

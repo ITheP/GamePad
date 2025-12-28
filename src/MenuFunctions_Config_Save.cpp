@@ -53,6 +53,7 @@ static const char FilledCircleIcons[] = {
 void MenuFunctions::Config_Init_SaveSettings()
 {
   Menus::InitMenuItemDisplay(true);
+  currentSaveState = SAVE_WAITING;
   Config_Draw_SaveSettings();
 }
 
@@ -61,7 +62,7 @@ void MenuFunctions::Config_Update_SaveSettings()
   int showScrollIcons = false;
 
   // if (SecondRollover)
-  if (PRESSED == Menus::SelectState())
+  if (PRESSED == Menus::SelectState() && currentSaveState != SAVE_COMPLETED)
   {
     if (Menus::SelectJustChanged())
     {
@@ -108,31 +109,41 @@ void MenuFunctions::Config_Draw_SaveSettings()
 {
   Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK);
 
-  RRE.printStr(ALIGN_CENTER, MenuContentStartY - 4, "Hold green to save");
-
   SetFontCustom();
 
   // Save circle
-  RenderIcon(Icon_EmptyCircle_13, (SCREEN_WIDTH / 2) - 7, MenuContentStartY + 12, 14, 14);
+  int checkX = (SCREEN_WIDTH / 2) - 7;
+  int checkY = MenuContentStartY + 13;
+  RenderIcon(Icon_Check_Spin1 + ((Menus::MenuFrame % 8) >> 1), checkX, checkY, 14, 14);
 
   if (currentSaveState == SAVE_SAVING)
   {
     // Get width of the growing icon and center it dynamically
     int iconOffset = RRE.charWidth(SavingIcon) / 2;
     int centeredX = (SCREEN_WIDTH / 2) - iconOffset;
-    int centeredY = MenuContentStartY + 19 - iconOffset;
+    int centeredY = MenuContentStartY + 20 - iconOffset;
     RenderIcon(SavingIcon, centeredX, centeredY, 0, 0);
+    SetFontFixed();
+    RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Saving...");
   }
   else if (currentSaveState == SAVE_COMPLETED)
   {
-    RenderIcon(Icon_FilledCircle_13, (SCREEN_WIDTH / 2) - 7, MenuContentStartY + 12, 14, 14);
+    RenderIcon(Icon_Check_Yes, checkX, checkY, 0,0);
     SetFontFixed();
-    RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "Save Successful");
+    RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "All done!");
+    RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "Save Complete");
   }
   else if (currentSaveState == SAVE_CANCELLED)
   {
+    RenderIcon(Icon_Check_No, checkX, checkY, 0,0);
     SetFontFixed();
+    RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Hold green to save");
     RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "Save Cancelled");
+  }
+  else
+  {
+    SetFontFixed();
+    RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Hold green to save");
   }
 
   SetFontFixed();
