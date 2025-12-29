@@ -310,10 +310,20 @@ extern char FirmwareRevision[];
 extern char HardwareRevision[];
 extern char SoftwareRevision[];
 
+// Config menu stuff
+
+// Config menu text - injected into UI in relevant places
+#define DIGITALINPUT_CONFIG_UP_LABEL "Strum Up"
+#define DIGITALINPUT_CONFIG_DOWN_LABEL "Strum Down"
+#define DIGITALINPUT_CONFIG_SELECT_LABEL "Green Button"
+#define DIGITALINPUT_CONFIG_BACK_LABEL "Red Button"
+
+// Message that appears in Config help menu
+// Will include controller specific instructions
 static const char *ConfigHelpText[] = {
-    "Hold Green + strum",
-    "up/down to scroll this",
-    "help text.",
+    "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL " +",
+    DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL,
+    "to scroll this help text.",
     "",
     "Strum up/down to change menu.",
     "Green to go into an option,",

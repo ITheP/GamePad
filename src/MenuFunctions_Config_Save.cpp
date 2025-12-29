@@ -25,29 +25,11 @@ enum SaveState
   SAVE_COMPLETED
 };
 
-SaveState currentSaveState = SAVE_WAITING;
-char SavingIcon;
-int SavingFrameIndex = 0;  // Index for tracking current frame (0-13)
-int FrameDelay = 0;
-int DelayBetweenFrames = 75; // milliseconds between icon frames
-
-// Array of filled circle icons in order
-static const char FilledCircleIcons[] = {
-  Icon_FilledCircle_1,
-  Icon_FilledCircle_2,
-  Icon_FilledCircle_3,
-  Icon_FilledCircle_4,
-  Icon_FilledCircle_5,
-  Icon_FilledCircle_6,
-  Icon_FilledCircle_7,
-  Icon_FilledCircle_8,
-  Icon_FilledCircle_9,
-  Icon_FilledCircle_10,
-  Icon_FilledCircle_11,
-  Icon_FilledCircle_12,
-  Icon_FilledCircle_13,
-  Icon_FilledCircle_14
-};
+static SaveState currentSaveState = SAVE_WAITING;
+char Icon;
+int AnimationFrameIndex = 0; // Index for tracking current frame (0-13)
+int FrameTimer = 0;
+int DelayBetweenFrames = 125; // milliseconds between icon frames - total time to save = this * 7 animation frames
 
 // Save Settings
 void MenuFunctions::Config_Init_SaveSettings()
@@ -67,34 +49,37 @@ void MenuFunctions::Config_Update_SaveSettings()
     if (Menus::SelectJustChanged())
     {
       // Kick off save
-      SavingFrameIndex = 0;
-      SavingIcon = FilledCircleIcons[SavingFrameIndex];
-      FrameDelay = millis();
+      AnimationFrameIndex = 0;
+      Icon = FilledCircleIcons[AnimationFrameIndex];
+      FrameTimer = millis();
       currentSaveState = SAVE_SAVING;
     }
     else if (currentSaveState == SAVE_SAVING)
     {
-      unsigned long elapsed = millis() - FrameDelay;
+      unsigned long elapsed = millis() - FrameTimer;
       if (elapsed >= DelayBetweenFrames)
       {
         // After a short delay, increase animation frame towards a final saving goal
-        FrameDelay = millis();
-        SavingFrameIndex += 2;
-        if (SavingFrameIndex > 13) // Got past last frame of animation - we save
+        FrameTimer = millis();
+        AnimationFrameIndex += 2;
+        if (AnimationFrameIndex > 13) // Got past last frame of animation - we save
         {
           // Initiate save
           Profiles::SaveAll();
           currentSaveState = SAVE_COMPLETED;
         }
         else
-          SavingIcon = FilledCircleIcons[SavingFrameIndex];
+          Icon = FilledCircleIcons[AnimationFrameIndex];
       }
     }
   }
   else
   {
     if (currentSaveState == SAVE_SAVING)
+    {
       currentSaveState = SAVE_CANCELLED;
+      FrameTimer = millis();
+    }
 
     Menus::Config_CheckForMenuChange(); // Handle changing menu option
   }
@@ -119,31 +104,37 @@ void MenuFunctions::Config_Draw_SaveSettings()
   if (currentSaveState == SAVE_SAVING)
   {
     // Get width of the growing icon and center it dynamically
-    int iconOffset = RRE.charWidth(SavingIcon) / 2;
+    int iconOffset = RRE.charWidth(Icon) / 2;
     int centeredX = (SCREEN_WIDTH / 2) - iconOffset;
     int centeredY = MenuContentStartY + 20 - iconOffset;
-    RenderIcon(SavingIcon, centeredX, centeredY, 0, 0);
+    RenderIcon(Icon, centeredX, centeredY, 0, 0);
     SetFontFixed();
     RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Saving...");
+    RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "release to cancel");
   }
   else if (currentSaveState == SAVE_COMPLETED)
   {
-    RenderIcon(Icon_Check_Yes, checkX, checkY, 0,0);
+    RenderIcon(Icon_Check_Yes, checkX, checkY, 0, 0);
     SetFontFixed();
     RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "All done!");
     RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "Save Complete");
   }
   else if (currentSaveState == SAVE_CANCELLED)
   {
-    RenderIcon(Icon_Check_No, checkX, checkY, 0,0);
+    RenderIcon(Icon_Check_No, checkX, checkY, 0, 0);
     SetFontFixed();
-    RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Hold green to save");
+    RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL);
     RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "Save Cancelled");
+
+    unsigned long elapsed = millis() - FrameTimer;
+    if (elapsed > 2000)
+      currentSaveState = SAVE_WAITING;
   }
   else
   {
     SetFontFixed();
-    RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Hold green to save");
+    RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL);
+    RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "to save");
   }
 
   SetFontFixed();

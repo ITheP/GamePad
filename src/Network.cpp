@@ -14,6 +14,7 @@
 #include "Web.h"
 #include "UI.h"
 #include "debug.h"
+#include "Defaults.h"
 
 #include "Secrets.h"
 
@@ -240,8 +241,8 @@ void Network::Config_InitiWifi()
 
 
 // Wi-Fi credentials
-const char *Network::ssid = WIFI_SSID;
-const char *Network::password = WIFI_PASSWORD;
+const char *Network::ssid = WIFI_DEFAULT_SSID;
+const char *Network::password = WIFI_DEFAULT_PASSWORD;
 
 int Network::WiFiConnecting = 0;
 wl_status_t Network::WiFiConnectionState;

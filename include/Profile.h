@@ -16,6 +16,7 @@ public:
 
     void Save();
     void Load();
+    void CopySettingsFrom(Profile *other);
 
 private:
     char *PrefsKey;

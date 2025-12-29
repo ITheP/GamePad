@@ -91,4 +91,9 @@ public:
     static void InitDebug();
 
 private:
+    static char Icon;
+    static int AnimationFrameIndex; // Index for tracking animated components
+    static int FrameTimer;
+    static int DelayBetweenFrames; // milliseconds between animation frames
+    static String Message;          // General purpose message
 };

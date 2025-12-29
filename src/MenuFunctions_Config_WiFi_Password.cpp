@@ -435,7 +435,7 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
         resultText = "Pending Test!";
         break;
       case Network::TEST_SUCCESS:
-        resultText = "SUCCESS!";
+        resultText = "Success!";
         break;
       case Network::TEST_CONNECTING:
         resultText = "Testing...";

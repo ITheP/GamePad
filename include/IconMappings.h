@@ -247,3 +247,21 @@
 #define Icon_Arrow_Right 0xFD
 #define Icon_Arrow_Right_Medium 0xFE
 #define Icon_Arrow_Right_Small 0xFF
+
+// Array of filled circle icons in order
+static const char FilledCircleIcons[] = {
+    Icon_FilledCircle_1,
+    Icon_FilledCircle_2,
+    Icon_FilledCircle_3,
+    Icon_FilledCircle_4,
+    Icon_FilledCircle_5,
+    Icon_FilledCircle_6,
+    Icon_FilledCircle_7,
+    Icon_FilledCircle_8,
+    Icon_FilledCircle_9,
+    Icon_FilledCircle_10,
+    Icon_FilledCircle_11,
+    Icon_FilledCircle_12,
+    Icon_FilledCircle_13,
+    Icon_FilledCircle_14
+};

@@ -16,8 +16,6 @@
 #include "Debug.h"
 #include <Profiles.h>
 
-// Config.Help
-
 int ConfigHelpTextSize = sizeof(ConfigHelpText) / sizeof(ConfigHelpText[0]);
 int ConfigHelpTextPos = 0;
 int ConfigHelpPixelOffset = 0;
@@ -31,10 +29,8 @@ void MenuFunctions::Config_Update_Help()
 {
   int showScrollIcons = false;
 
-  // if (SecondRollover)
   if (PRESSED == Menus::SelectState())
   {
-    Serial.println("SELECT PRESSED - ConfigHelpPixelOffset: " + String(ConfigHelpPixelOffset) + " ConfigHelpTextPos: " + String(ConfigHelpTextPos));
     //  Check for buttons being held down
     if (PRESSED == Menus::UpState())
       ConfigHelpPixelOffset += 2;
@@ -61,15 +57,10 @@ void MenuFunctions::Config_Update_Help()
     showScrollIcons = true;
   }
   else
-  {
-    Menus::Config_CheckForMenuChange(); // Handle changing menu option
-  }
+    Menus::Config_CheckForMenuChange();
 
-  MenuFunctions::Config_Draw_Help(showScrollIcons);
+    MenuFunctions::Config_Draw_Help(showScrollIcons);
 }
-
-// int tempDirection = 1;
-// int tempTimer = 500;
 
 void MenuFunctions::Config_Draw_Help(int showScrollIcons)
 {
@@ -87,7 +78,7 @@ void MenuFunctions::Config_Draw_Help(int showScrollIcons)
   Display.fillRect(0, MenuContentStartY - TextLineHeight, SCREEN_WIDTH, TextLineHeight, C_BLACK);
 
   int offset = RREHeight_fixed_8x16 + 6 - ConfigHelpPixelOffset;
-  // Serial.println("Before DrawConfigHelp Pos: " + String(ConfigHelpTextPos) + " PixelOffset: " + String(ConfigHelpPixelOffset) + " offset: " + String(offset) + " tempDirection: " + String(tempDirection) + " tempTimer: " + String(tempTimer) + " textLineHeight: " + String(TextLineHeight));
+  
   ResetPrintDisplayLine(offset);
   int pos = ConfigHelpTextPos;
   for (int i = 0; i < 6; i++)
@@ -100,13 +91,4 @@ void MenuFunctions::Config_Draw_Help(int showScrollIcons)
 
   if (showScrollIcons)
     DrawScrollArrows();
-
-  // Serial.println("After DrawConfigHelp Pos: " + String(ConfigHelpTextPos) + " PixelOffset: " + String(ConfigHelpPixelOffset) + " offset: " + String(offset) + " tempDirection: " + String(tempDirection) + " tempTimer: " + String(tempTimer) + " textLineHeight: " + String(TextLineHeight));
-  // Serial.println();
-
-  // if (--tempTimer == 0)
-  // {
-  //   tempTimer = 500;
-  //   tempDirection = -tempDirection;
-  // }
 }

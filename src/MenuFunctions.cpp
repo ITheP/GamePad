@@ -18,6 +18,12 @@
 
 extern CRGB ExternalLeds[];
 
+char MenuFunctions::Icon;
+int MenuFunctions::AnimationFrameIndex = 0; // Index for tracking current frame (0-13)
+int MenuFunctions::FrameTimer = 0;
+int MenuFunctions::DelayBetweenFrames = 125; // milliseconds between icon frames - total time to save = this * 7 animation frames
+String MenuFunctions::Message;
+
 // NOTE
 // Careful with your choice of Scroll checking choices. If your text is a little bit too long
 // and you select NoScroll - remembering it renders from the right of the screen - there is a chance

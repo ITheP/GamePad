@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "Profile.h"
 #include "Prefs.h"
+#include "Defaults.h"
 
 // Note we save data encrypted
 
@@ -45,10 +46,9 @@ Profile::Profile(int id, char icon, String description) : Id(id), Icon(icon), De
     Description = description;
 };
 
-const char* CustomDeviceName_Key = "Cust.DeviceName";
-const char* WiFi_Name_Key = "WiFi.Name";
-const char* WiFi_Password_Key = "WiFi.Password";
-
+const char *CustomDeviceName_Key = "Cust.DeviceName";
+const char *WiFi_Name_Key = "WiFi.Name";
+const char *WiFi_Password_Key = "WiFi.Password";
 
 void Profile::Save()
 {
@@ -75,12 +75,24 @@ void Profile::Load()
     prefs.begin(PrefsKey);
 
     CustomDeviceName = prefs.getString(CustomDeviceName_Key, "");
-    WiFi_Name = prefs.getString(WiFi_Name_Key,"");
-    WiFi_Password = prefs.getString(WiFi_Password_Key, "");
+    WiFi_Name = prefs.getString(WiFi_Name_Key, WIFI_DEFAULT_SSID);
+    WiFi_Password = prefs.getString(WiFi_Password_Key, WIFI_DEFAULT_PASSWORD);
 
     prefs.end();
 
     Serial.print("Loaded Profile " + Description + " from saved preferences: ");
+    Serial.print("DeviceName='" + CustomDeviceName + "', ");
+    Serial.print("WiFi_Name='" + WiFi_Name + "', ");
+    Serial.println("WiFi_Password='" + WiFi_Password + "'");
+}
+
+void Profile::CopySettingsFrom(Profile *other)
+{
+    CustomDeviceName = other->CustomDeviceName;
+    WiFi_Name = other->WiFi_Name;
+    WiFi_Password = other->WiFi_Password;
+
+    Serial.print("Copied Profile Settings from " + other->Description + " to " + Description);
     Serial.print("DeviceName='" + CustomDeviceName + "', ");
     Serial.print("WiFi_Name='" + WiFi_Name + "', ");
     Serial.println("WiFi_Password='" + WiFi_Password + "'");

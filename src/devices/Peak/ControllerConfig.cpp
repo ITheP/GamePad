@@ -70,10 +70,10 @@ int AllStats_Count = sizeof(AllStats) / sizeof(AllStats[0]);
 uint8_t BootPin_StartInConfiguration = BUTTON_Select_PIN;
 
 // Assumes these pins are defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
-Input DigitalInput_Config_Up = { .Pin = HAT1_Up_PIN, .Label = "Strum Up" };
-Input DigitalInput_Config_Down = { .Pin = HAT1_Down_PIN, .Label = "Strum Down" };
-Input DigitalInput_Config_Select = { .Pin = BUTTON_Green_PIN, .Label = "Green Button" };
-Input DigitalInput_Config_Back = { .Pin = BUTTON_Red_PIN, .Label = "Red Button" };
+Input DigitalInput_Config_Up = { .Pin = HAT1_Up_PIN, .Label = DIGITALINPUT_CONFIG_UP_LABEL};
+Input DigitalInput_Config_Down = { .Pin = HAT1_Down_PIN, .Label = DIGITALINPUT_CONFIG_DOWN_LABEL };
+Input DigitalInput_Config_Select = { .Pin = BUTTON_Green_PIN, .Label = DIGITALINPUT_CONFIG_SELECT_LABEL };
+Input DigitalInput_Config_Back = { .Pin = BUTTON_Red_PIN, .Label = DIGITALINPUT_CONFIG_BACK_LABEL };
 
 // Input DigitalInput_Config_MenuUp = { .Pin = HAT1_Up_PIN, .Label = "Strum Up", .CustomOperationPressed = &Menus::Config_UpPressed, .CustomOperationReleased = &Menus::Config_UpReleased };
 // Input DigitalInput_Config_MenuDown = { .Pin = HAT1_Down_PIN, .Label = "Strum Down", .CustomOperationPressed = &Menus::Config_DownPressed, .CustomOperationReleased = &Menus::Config_DownReleased };

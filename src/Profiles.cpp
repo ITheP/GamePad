@@ -7,8 +7,8 @@ Profile *Profiles::AllProfiles[MAX_PROFILES] = { nullptr };
 
 void Profiles::SaveAll()
 {
-    Serial.println("Saving all profiles");
-
+    Serial.println("Loading all profiles");
+    
     for (int i = 0; i < MAX_PROFILES; i++)
         AllProfiles[i]->Save();
 }
