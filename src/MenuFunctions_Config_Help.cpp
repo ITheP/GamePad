@@ -82,7 +82,10 @@ void MenuFunctions::Config_Draw_Help(int showScrollIcons)
   ResetPrintDisplayLine(offset);
   int pos = ConfigHelpTextPos;
   for (int i = 0; i < 6; i++)
-    PrintDisplayLine((char *)ConfigHelpText[(ConfigHelpTextPos + i) % ConfigHelpTextSize]);
+  {
+    const TextLine *line = &ConfigHelpText[(ConfigHelpTextPos + i) % ConfigHelpTextSize];
+    PrintDisplayLine(line);
+  }
 
   // Clear out anything scrolling off the top, and ready for menu area to be (re)drawn
   Display.fillRect(0, MenuContentStartY - TextLineHeight, SCREEN_WIDTH, TextLineHeight, C_BLACK);

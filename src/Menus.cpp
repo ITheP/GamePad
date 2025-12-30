@@ -218,6 +218,7 @@ void Menus::DrawStaticMenuText()
   // Redraw static text
   Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
   // Display.fillRect(DisplayTextStart, 0, 10, RREHeight_fixed_8x16, C_WHITE);
+  SetFontFixed();
   RRE.printStr(ALIGN_RIGHT, -1, MenuTextBuffer);
 }
 
@@ -234,6 +235,8 @@ void Menus::DisplayMenuTextOptimised()
 // Always draw here to account for possible overwriting of menu area
 void Menus::DisplayMenuText()
 {
+  SetFontFixed();
+
   // Throttle scrolling to every other frame
   // but redraw menu text as is each time to counter possible overwriting of menu area
   if (ScrollMenuText == ON)

@@ -95,5 +95,8 @@ private:
     static int AnimationFrameIndex; // Index for tracking animated components
     static int FrameTimer;
     static int DelayBetweenFrames; // milliseconds between animation frames
-    static String Message;          // General purpose message
+    static String MessageTop;          // General purpose message
+    static String MessageBottom;          // General purpose message
+
+    static void DrawMessages();
 };

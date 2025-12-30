@@ -2,6 +2,24 @@
 
 #include <RREFont.h>
 
+enum TextStyle : uint16_t {
+    STYLE_NONE      = 0,
+    STYLE_BOLD      = 1 << 0,   // TODO: Impliment
+    STYLE_ITALIC    = 1 << 1,   // TODO: Impliment
+    STYLE_UNDERLINE = 1 << 2,   // TODO: Impliment
+    STYLE_CENTERED  = 1 << 3,
+    STYLE_HIGHLIGHT = 1 << 4,  // Up to code how it want's to do this
+    STYLE_H1        = 1 << 5,
+    STYLE_H2        = 1 << 6,
+    STYLE_SEPARATOR = 1 << 7,    // Horizontal separator line
+    STYLE_BULLET    = 1 << 8    // Bullet point
+};
+
+struct TextLine {
+    TextStyle style;
+    const char* text;
+};
+
 extern RREFont RRE;
 extern RRE_Font rre_CustomIcons16;
 extern RRE_Font rre_5x8;
@@ -89,3 +107,5 @@ inline void PrintDisplayLineRight(char *text)
   RRE.printStr(ALIGN_RIGHT, TextYPos, text);
   TextYPos += TextLineHeight;
 }
+
+void PrintDisplayLine(const TextLine *line);

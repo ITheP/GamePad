@@ -85,7 +85,10 @@ void MenuFunctions::Config_Update_Profile()
         AnimationFrameIndex = 0;
         Icon = FilledCircleIcons[AnimationFrameIndex];
         FrameTimer = millis();
+
         currentCopyPasteState = CP_COPYING;
+        MessageTop = "Copying " + Current_Profile->Description + "...";
+        MessageBottom = "Release to cancel";
       }
       else if (currentCopyPasteState == CP_COPYING)
       {
@@ -102,12 +105,13 @@ void MenuFunctions::Config_Update_Profile()
             // Copy profile
             Copy_Profile = Current_Profile;
             currentCopyPasteState = CP_COPIED;
-            Message = "Copied " + Copy_Profile->Description;
+            MessageTop = Copy_Profile->Description + " copied";
+            MessageBottom = "Ready to paste";
           }
           else
           {
             Icon = FilledCircleIcons[AnimationFrameIndex];
-            Message = "Copying " + Current_Profile->Description;
+            MessageBottom = "Release to cancel";
           }
         }
       }
@@ -117,11 +121,30 @@ void MenuFunctions::Config_Update_Profile()
       // Paste operation - if held long enough copy the CopyProfile to the current profile
       if (Menus::DownJustChanged())
       {
-        // Kick off save
-        AnimationFrameIndex = 0;
-        Icon = FilledCircleIcons[AnimationFrameIndex];
-        FrameTimer = millis();
-        currentCopyPasteState = CP_PASTING;
+        if (Copy_Profile == nullptr)
+        {
+          currentCopyPasteState = CP_CANCELLED;
+          FrameTimer = millis();
+          MessageTop = "Copy source";
+          MessageBottom = "before pasting"; // + " to " + Current_Profile->Description;
+        } // Paste profile
+        else if (Copy_Profile == Current_Profile)
+        {
+          currentCopyPasteState = CP_CANCELLED;
+          FrameTimer = millis();
+          MessageTop = "Can't copy profile";
+          MessageBottom = "On to itself";
+        }
+        else
+        {
+          // Kick off save
+          AnimationFrameIndex = 0;
+          Icon = FilledCircleIcons[AnimationFrameIndex];
+          FrameTimer = millis();
+          currentCopyPasteState = CP_PASTING;
+          MessageTop = "Pasting from " + Copy_Profile->Description;
+          MessageBottom = "Release to cancel";
+        }
       }
       else if (currentCopyPasteState == CP_PASTING)
       {
@@ -135,23 +158,16 @@ void MenuFunctions::Config_Update_Profile()
           AnimationFrameIndex += 2;
           if (AnimationFrameIndex > 13) // Got past last frame of animation - we save
           {
-            // Paste profile
-            if (Copy_Profile == Current_Profile)
-            {
-              Message = "Ignored copying to self";
-              currentCopyPasteState = CP_CANCELLED;
-            }
-            else
-            {
-              Current_Profile->CopySettingsFrom(Copy_Profile);
-              currentCopyPasteState = CP_PASTED;
-              Message = "Copied from " + Copy_Profile->Description; // + " to " + Current_Profile->Description;
-            }
+            Current_Profile->CopySettingsFrom(Copy_Profile);
+            currentCopyPasteState = CP_PASTED;
+            MessageTop = "Copied from " + Copy_Profile->Description; // + " to " + Current_Profile->Description;
+            MessageBottom = "into " + Current_Profile->Description;
           }
           else
           {
             Icon = FilledCircleIcons[AnimationFrameIndex];
-            Message = "Copying " + Copy_Profile->Description; // + " to " + Current_Profile->Description;
+            MessageTop = "Pasting from " + Copy_Profile->Description;
+            MessageBottom = "Release to cancel";
           }
         }
       }
@@ -161,13 +177,19 @@ void MenuFunctions::Config_Update_Profile()
       // Nothing pressed, make sure all timers are static
       if (currentCopyPasteState == CP_COPYING || currentCopyPasteState == CP_PASTING)
       {
+        FrameTimer = millis();
+        if (currentCopyPasteState == CP_COPYING)
+          MessageTop = "Copy of " + Current_Profile->Description;
+        else
+          MessageTop = "Paste of " + Copy_Profile->Description;
+        MessageBottom = "Cancelled";
         currentCopyPasteState = CP_CANCELLED;
-        Message = "Cancelled";
       }
-      else
+      else if (currentCopyPasteState != CP_CANCELLED)
       {
         currentCopyPasteState = CP_WAITING;
-        //Message = "Cancelled";
+        MessageTop = "Copy: " DIGITALINPUT_CONFIG_UP_LABEL;
+        MessageBottom = "Paste: " DIGITALINPUT_CONFIG_DOWN_LABEL;
       }
     }
   }
@@ -182,12 +204,15 @@ void MenuFunctions::Config_Update_Profile()
     MenuFunctions::Config_Draw_Profile(showScrollIcons);
 }
 
+// Draw profile called less than update profile, so Update_ above may update several times before _Draw is called
 void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
 {
   Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK);
 
   if (currentCopyPasteState == CP_NONE)
   {
+    SetFontFixed();
+
     RRE.setScale(2);
 
     sprintf(buffer, "%s", Current_Profile->Description);
@@ -245,38 +270,17 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
 
     if (currentCopyPasteState == CP_COPYING || currentCopyPasteState == CP_PASTING)
     {
-      if (currentCopyPasteState == CP_PASTING && Copy_Profile == nullptr)
-      {
-        RenderIcon(Icon_Check_No, checkX, checkY, 0, 0);
-        SetFontFixed();
-        RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Copy before");
-        RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "trying to paste");
-      }
-      else
-      {
-        // Get width of the growing icon and center it dynamically
-        int iconOffset = RRE.charWidth(Icon) / 2;
-        int centeredX = (SCREEN_WIDTH / 2) - iconOffset;
-        int centeredY = MenuContentStartY + 20 - iconOffset;
-        RenderIcon(Icon, centeredX, centeredY, 0, 0);
-        SetFontFixed();
-        RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, (char *)Message.c_str());
-        RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "release to cancel");
-      }
+      // Get width of the growing icon and center it dynamically
+      int iconOffset = RRE.charWidth(Icon) / 2;
+      int centeredX = (SCREEN_WIDTH / 2) - iconOffset;
+      int centeredY = MenuContentStartY + 20 - iconOffset;
+      RenderIcon(Icon, centeredX, centeredY, 0, 0);
     }
     else if (currentCopyPasteState == CP_COPIED || currentCopyPasteState == CP_PASTED)
-    {
       RenderIcon(Icon_Check_Yes, checkX, checkY, 0, 0);
-      SetFontFixed();
-      RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "All done!");
-      RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, (char *)Message.c_str());
-    }
     else if (currentCopyPasteState == CP_CANCELLED)
     {
       RenderIcon(Icon_Check_No, checkX, checkY, 0, 0);
-      SetFontFixed();
-      RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Hold " DIGITALINPUT_CONFIG_BACK_LABEL);
-      RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "Cancelled");
 
       unsigned long elapsed = millis() - FrameTimer;
       if (elapsed > 2000)
@@ -284,14 +288,18 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
     }
     else
     {
+      // Show a filled copy area to represent copy buffer set
       if (Copy_Profile != nullptr)
         RenderIcon(Icon_FilledCircle_9, checkX + 2, checkY + 2, 0, 0);
-
-      SetFontFixed();
-      RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Copy: " DIGITALINPUT_CONFIG_UP_LABEL);
-      RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "Paste: " DIGITALINPUT_CONFIG_DOWN_LABEL);
     }
-  }
 
+    DrawMessages();
+  }
+}
+
+void MenuFunctions::DrawMessages()
+{
   SetFontFixed();
+  RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, (char *)MessageTop.c_str());
+  RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, (char *)MessageBottom.c_str());
 }

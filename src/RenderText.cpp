@@ -17,3 +17,10 @@ void RRERect(int x, int y, int width, int height, int colour)
   Display.fillRect(x, y, width, height, colour);
 }
 
+// Much juicier (but slower) text rendering than inline variants in . h file
+void PrintDisplayLine(const TextLine *line)
+{
+  RRE.printStr(TextXPos, TextYPos, (char *)line->text);
+  TextYPos += TextLineHeight;
+}
+
