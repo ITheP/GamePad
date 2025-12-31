@@ -177,15 +177,6 @@ void setupDisplay()
   Display.display();
 }
 
-void setupRRE()
-{
-  RRE.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
-  RRE.setCR(0);
-  RRE.setScale(1);
-  SetFontFixed();
-  SetFontLineHeightFixed();
-}
-
 constexpr int LOGO_WIDTH = 128;
 constexpr int LOGO_HEIGHT = 64;
 constexpr int MAX_GLEAM_PIXELS = 128; // conservative upper bound
@@ -1021,9 +1012,8 @@ void DrawConfigHelpScreen()
 
   /// RRE.setScale(2);
 
-  SetFontTiny();
-  SetFontLineHeightTiny();
-  ResetPrintDisplayLine();
+  //SetFontSmall();
+  ResetPrintDisplayLine(0,0,SetFontSmall);
   PrintDisplayLineCentered("Device Config.");
   TextYPos += 2;
   PrintDisplayLineCentered("Navigate menu using...");
@@ -1043,8 +1033,8 @@ void DrawConfigHelpScreen()
   PrintDisplayLine(DigitalInput_Config_Back.Label);
 
   // Display till button is released
-  SetFontFixed();
-  SetFontLineHeightFixed();
+  //SetFontFixed();
+
   Display.display();
 }
 

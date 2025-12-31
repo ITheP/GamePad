@@ -228,17 +228,15 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
 {
     Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
 
-    SetFontTiny();
-    SetFontLineHeightTiny();
-
-    ResetPrintDisplayLine(MenuContentStartY, 10 + 12);
+    //SetFontSmall();
+    ResetPrintDisplayLine(MenuContentStartY, 10 + 12, SetFontSmall);
 
     int apSize = ConfigAccessPointList.size();
     if (apSize == 0)
     {
-        RRE.setColor(C_WHITE);
-        RRE.printStr(ALIGN_CENTER, MenuContentStartY + 12, "Scanning");
-        RRE.printStr(ALIGN_CENTER, MenuContentStartY + 22, "Please Wait...");
+        //RRESmall.setColor(C_WHITE);
+        RRESmall.printStr(ALIGN_CENTER, MenuContentStartY + 12, "Scanning");
+        RRESmall.printStr(ALIGN_CENTER, MenuContentStartY + 22, "Please Wait...");
     }
     else
     {
@@ -262,7 +260,7 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
             // if signal == 0 then something wrong (e.g. can't find, disconnected)
 
             if (ap->rssi == 0)
-                RRE.drawChar(10, TextYPos - 1, 'x');
+                RRESmall.drawChar(10, TextYPos - 1, 'x');
             else if (ap->rssi < 0)
             {
                 // Convert signal strength into a little bar 1->8 pixels wide
@@ -290,22 +288,22 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
             // PrintDisplayLine(buffer);
         }
 
-        SetFontFixed();
-        SetFontLineHeightFixed();
+        // SetFontFixed();
+        // SetFontLineHeightFixed();
 
         // selected item indicator
-        SetFontCustom();
+       //SetFontCustom();
         // Base size of left/right arrow icons is 7x7 px
         static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) + MenuContentStartY + 2;
         int iconOffset = (Menus::MenuFrame >> 2) % 3;
         RenderIcon(Icon_Arrow_Right + iconOffset, 0, middle, 7, 7);
     }
 
-    SetFontFixed();
-    SetFontLineHeightFixed();
+    //SetFontFixed();
+    //SetFontLineHeightFixed();
 
     if (showScrollIcons)
         DrawScrollArrows();
 
-    SetFontFixed();
+    //SetFontFixed();
 }

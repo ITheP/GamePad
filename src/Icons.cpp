@@ -3,13 +3,14 @@
 
 #include <Screen.h>
 #include <GamePad.h>
+#include "RenderText.h"
 
 void RenderIcon(unsigned char icon, int xPos, int yPos, int clearWidth, int clearHeight)
 {
   if ((clearWidth + clearHeight) > 0)
     Display.fillRect(xPos, yPos, clearWidth, clearHeight, C_BLACK);
 
-  RRE.drawChar(xPos, yPos, icon);
+  RRECustom.drawChar(xPos, yPos, icon);
 }
 
 // Assumes correct font is selected
@@ -24,7 +25,7 @@ void RenderIconRuns(IconRun runs[], int count)
 
     for (int j = 0; j < run.Count; j++)
     {
-      RRE.drawChar(xPos, yPos, c);
+      RRECustom.drawChar(xPos, yPos, c);
       xPos += 16;
       // Serial.print(c, HEX);
       // Serial.print(" ");

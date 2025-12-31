@@ -213,17 +213,16 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
   {
     SetFontFixed();
 
-    RRE.setScale(2);
+    RREDefault.setScale(2);
 
     sprintf(buffer, "%s", Current_Profile->Description);
-    RRE.printStr(ALIGN_CENTER, MenuContentStartY - 4, buffer);
+    RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 4, buffer);
 
-    RRE.setScale(1);
+    RREDefault.setScale(1);
 
-    SetFontTiny();
-    SetFontLineHeightTiny();
-
-    ResetPrintDisplayLine(SCREEN_HEIGHT - (TextLineHeight * 2) + 2);
+    //SetFontSmall();
+    //SetFontLineHeightTiny();
+    ResetPrintDisplayLine(SCREEN_HEIGHT - 18, 0, SetFontSmall);
 
     if (Current_Profile->WiFi_Name.length() == 0)
     {
@@ -241,17 +240,18 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
       {
         // Mapping exists
         AccessPoint *ap = it->second;
-        PrintDisplayLineCentered(ap->WiFiStatus);
+        sprintf(buffer, "OK (%s)", ap->WiFiStatus);
+        PrintDisplayLineCentered(buffer);
       }
       else
         PrintDisplayLineCentered("Searching for WiFi...");
     }
 
-    SetFontLineHeightFixed();
+    //SetFontLineHeightFixed();
 
     if (showScrollIcons)
     {
-      SetFontCustom();
+      //SetFontCustom();
       // Base size of left/right arrow icons is 7x7 px
       static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) + MenuContentStartY;
       int iconOffset = (Menus::MenuFrame >> 2) % 3;
@@ -261,7 +261,7 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
   }
   else
   {
-    SetFontCustom();
+    //SetFontCustom();
 
     // Save circle
     int checkX = (SCREEN_WIDTH / 2) - 7;
@@ -299,7 +299,7 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
 
 void MenuFunctions::DrawMessages()
 {
-  SetFontFixed();
-  RRE.printStr(ALIGN_CENTER, MenuContentStartY - 3, (char *)MessageTop.c_str());
-  RRE.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, (char *)MessageBottom.c_str());
+  //SetFontFixed();
+  RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 3, (char *)MessageTop.c_str());
+  RREDefault.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, (char *)MessageBottom.c_str());
 }

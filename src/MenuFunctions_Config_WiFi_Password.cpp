@@ -297,15 +297,9 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
   // If password wider than screen, shrink font
   // TODO: improve this to scroll the password if too long
   if (RRE.strWidth(displayBuffer) + 10 > SCREEN_WIDTH)
-  {
-    SetFontTiny();
-    SetFontLineHeightTiny();
-  }
+    SetFontSmall();
   else
-  {
     SetFontFixed();
-    SetFontLineHeightFixed();
-  }
 
   RRE.printStr(0, SCREEN_HEIGHT - TextLineHeight, displayBuffer);
 
@@ -316,24 +310,24 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
   if ((millis() & 512) == 0) // Blink every half second
     Display.drawFastHLine(passwordUpToCursorWidth, SCREEN_HEIGHT - 2, 8, C_WHITE);
 
-  SetFontLineHeightFixed();
+  //SetFontLineHeightFixed();
 
   // Draw scrolling character selection in the middle of the screen
   if (selectHeld)
   {
-    SetFontFixed();
+    //SetFontFixed();
 
     // Middle of screen Y position
     int middleY = MenuContentStartY;
 
     // Draw current character in the middle with scale 2
-    RRE.setScale(2);
+    RREDefault.setScale(2);
     char currentChar = indexToChar(currentCharIndex);
     int currentCharWidth = RRE.charWidth(currentChar) * 2;
     int centerX = SCREEN_WIDTH / 2;
     int currentCharX = centerX - (currentCharWidth / 2);
-    RRE.drawChar(currentCharX, middleY + 1, currentChar);
-    RRE.setScale(1);
+    RREDefault.drawChar(currentCharX, middleY + 1, currentChar);
+    RREDefault.setScale(1);
 
     middleY += 13;
 
@@ -343,8 +337,8 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     while (drawX < SCREEN_WIDTH) // - 10)
     {
       char c = indexToChar(charIdx);
-      RRE.drawChar(drawX, middleY, c);
-      drawX += RRE.charWidth(c) + 2;
+      RREDefault.drawChar(drawX, middleY, c);
+      drawX += RREDefault.charWidth(c) + 2;
       charIdx = (charIdx + 1) % (ASCII_MAX - ASCII_MIN + 1);
     }
 
@@ -357,11 +351,11 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     while (drawX > 0)
     {
       char c = indexToChar(charIdx);
-      int cWidth = RRE.charWidth(c);
+      int cWidth = RREDefault.charWidth(c);
       drawX -= (cWidth + 2);
       //if (drawX >= 0)
       //{
-        RRE.drawChar(drawX, middleY, c);
+        RREDefault.drawChar(drawX, middleY, c);
       //}
       charIdx--;
       if (charIdx < 0)
@@ -369,12 +363,12 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     }
 
     // Draw left and right arrows if select is held
-    SetFontCustom();
+    //SetFontCustom();
     static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) + MenuContentStartY;
 
     int iconOffset = (Menus::MenuFrame >> 2) % 3;
 
-      RRE.setColor(C_BLACK);
+      RRECustom.setColor(C_BLACK);
       RenderIcon(Icon_Arrow_Left_Outline + iconOffset,-3, middle -3, 0,0);
       RenderIcon(Icon_Arrow_Right_Outline + iconOffset, SCREEN_WIDTH - 7 -2, middle -3, 0,0);
 
@@ -390,15 +384,13 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
       // RenderIcon(Icon_Arrow_Left_Outline + iconOffset,-1, middle -2, 0,0);
       // RenderIcon(Icon_Arrow_Right_Outline + iconOffset, SCREEN_WIDTH - 7, middle -2, 0,0);
 
-      RRE.setColor(C_WHITE);
+      RRECustom.setColor(C_WHITE);
       RenderIcon(Icon_Arrow_Left + iconOffset, 0, middle,0,0);
       RenderIcon(Icon_Arrow_Right + iconOffset, SCREEN_WIDTH - 7, middle, 0,0);
   }
   else
   {
-    SetFontTiny();
-    SetFontLineHeightTiny();
-    ResetPrintDisplayLine(MenuContentStartY);
+    ResetPrintDisplayLine(MenuContentStartY, 0, SetFontSmall);
 
     PrintDisplayLine("Green + up/down for next");
     PrintDisplayLine("Red to delete character");
@@ -422,8 +414,8 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
       // if (timeSinceTestResult < WIFI_TEST_RESULT_DISPLAY_DURATION)
       //{
       //  Display the test result in a visible area (below the instructions)
-      SetFontTiny();
-      SetFontLineHeightTiny();
+      //SetFontSmall();
+
       int resultY = MenuContentStartY + 50;
 
       // Clear the result area
@@ -465,8 +457,8 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     PrintDisplayLineCentered(buffer);
   }
 
-  SetFontFixed();
-  SetFontLineHeightFixed();
+  // SetFontFixed();
+  // SetFontLineHeightFixed();
 }
 
 void MenuFunctions::Config_Exit_WiFi_Password()
