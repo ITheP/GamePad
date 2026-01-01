@@ -10,7 +10,7 @@ void RenderIcon(unsigned char icon, int xPos, int yPos, int clearWidth, int clea
   if ((clearWidth + clearHeight) > 0)
     Display.fillRect(xPos, yPos, clearWidth, clearHeight, C_BLACK);
 
-  RRECustom.drawChar(xPos, yPos, icon);
+  RREIcon.drawChar(xPos, yPos, icon);
 }
 
 // Assumes correct font is selected
@@ -25,7 +25,7 @@ void RenderIconRuns(IconRun runs[], int count)
 
     for (int j = 0; j < run.Count; j++)
     {
-      RRECustom.drawChar(xPos, yPos, c);
+      RREIcon.drawChar(xPos, yPos, c);
       xPos += 16;
       // Serial.print(c, HEX);
       // Serial.print(" ");

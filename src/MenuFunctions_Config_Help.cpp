@@ -59,26 +59,25 @@ void MenuFunctions::Config_Update_Help()
   else
     Menus::Config_CheckForMenuChange();
 
-    MenuFunctions::Config_Draw_Help(showScrollIcons);
+  MenuFunctions::Config_Draw_Help(showScrollIcons);
 }
 
 void MenuFunctions::Config_Draw_Help(int showScrollIcons)
 {
-  //SetFontSmall(); // IMPORTANT - BELOW DEPENDS ON THIS AND SUBSEQUENT USAGE OF GLOBAL TextLineHeight
-
   // Special case - the rendering of a scrollable window can overlap with menu name/icon/scrolling line area
   // (RREFont won't allow for clipping regions)
   // so we make sure this area is included when blanking things - and note relevant content will need to be redrawn after
 
-  // CLear main area
+  SetFontSmall(); // IMPORTANT - BELOW DEPENDS ON THIS AND SUBSEQUENT USAGE OF GLOBAL TextLineHeight
+  // Clear main area
   Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
 
   // Clear out anything scrolling off the top, and ready for menu area to be (re)drawn
   Display.fillRect(0, MenuContentStartY - TextLineHeight, SCREEN_WIDTH, TextLineHeight, C_BLACK);
 
   int offset = 20 - ConfigHelpPixelOffset;
-  
-  ResetPrintDisplayLine(offset,0,SetFontSmall);
+
+  ResetPrintDisplayLine(offset, 0, SetFontSmall);
   int pos = ConfigHelpTextPos;
   for (int i = 0; i < 6; i++)
   {

@@ -64,7 +64,7 @@
 #define Icon_WiFi_Disabled 0x9F
 
 // WebServer
-#define Icon_Web_Traffic 0x77
+#define Icon_Web_Traffic 0x66
 #define Icon_Web_Enabled 0x67
 #define Icon_Web_Disabled 0x68
 
@@ -229,7 +229,8 @@
 #define Icon_Menu_Bluetooth 0xE8
 #define Icon_Menu_Smile 0xE9
 #define Icon_Menu_Debug 0xEA
-#define Icon_Menu_Separator 0xEB
+#define Icon_Menu_Save 0xEB
+#define Icon_Menu_Key 0x77
 
 #define Icon_Arrow_Up_Outline 0xF0
 #define Icon_Arrow_Up 0xF1

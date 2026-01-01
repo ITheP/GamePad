@@ -48,13 +48,13 @@ void MenuFunctions::Config_Setup()
 void MenuFunctions::DrawScrollArrows()
 {
     //SetFontCustom();
-    RRECustom.setColor(C_BLACK);
-    RRECustom.drawChar(SCREEN_WIDTH - 9, MenuContentStartY - 2, Icon_Arrow_Up_Outline);
-    RRECustom.drawChar(SCREEN_WIDTH - 9, SCREEN_HEIGHT - 8, Icon_Arrow_Down_Outline);
+    RREIcon.setColor(C_BLACK);
+    RREIcon.drawChar(SCREEN_WIDTH - 9, MenuContentStartY - 2, Icon_Arrow_Up_Outline);
+    RREIcon.drawChar(SCREEN_WIDTH - 9, SCREEN_HEIGHT - 8, Icon_Arrow_Down_Outline);
 
-    RRECustom.setColor(C_WHITE);
-    RRECustom.drawChar(SCREEN_WIDTH - 7, MenuContentStartY, Icon_Arrow_Up);
-    RRECustom.drawChar(SCREEN_WIDTH - 7, SCREEN_HEIGHT - 7, Icon_Arrow_Down);
+    RREIcon.setColor(C_WHITE);
+    RREIcon.drawChar(SCREEN_WIDTH - 7, MenuContentStartY, Icon_Arrow_Up);
+    RREIcon.drawChar(SCREEN_WIDTH - 7, SCREEN_HEIGHT - 7, Icon_Arrow_Down);
 
     //SetFontFixed();
 }

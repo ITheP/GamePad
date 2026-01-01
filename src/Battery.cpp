@@ -53,7 +53,7 @@ void Battery::DrawEmpty(int secondRollover, int SecondFlipFlop, bool IncludeLED)
   if (secondRollover == true)
   {
     Display.clearDisplay();
-    SetFontCustom();
+    SetFontIcon();
 
     int xPos = (SCREEN_WIDTH - 48) >> 1;
     // int yPos = (SCREEN_HEIGHT - 16) >> 1;

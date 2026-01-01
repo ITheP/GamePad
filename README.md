@@ -48,24 +48,37 @@ Includes...
 - [x] Benchmarking for performance
 - [x] Extra debug information
 - [x] Support for multiple controllers (via configuration files)
-- [X] WiFi support
-- [X] Embedded web service
-- [X] Better stats calculation with better decoupling of hardcoded stats counting
+- [x] WiFi support
+- [x] Embedded web service
+- [x] Better stats calculation with better decoupling of hardcoded stats counting
 - [ ] Wired gamepad support
-- [ ] Run time user selectable options in controller and/or web
-- [ ] Save user options (and stats) to I2C Non-Volatile FRAM
-- [ ] Save user options (and stats) to onboard Flash (query around power brownout on off)
+- [x] User selectable configuration in controller
+- [x] Scrollable help text in controller configuration
+- [x] Basic text style formatting of Help text
+- [x] User selectable configuration in web
+- [x] Save user config to flash
+- [x] Save user stats to flash
+- [ ] Query around power brownout on off and saving
+- [x] Multiple profiles
+- [x] Controller config profile handling
+- [x] Controller config profile copy/paste
+- [x] Controller config WiFi access point selection
+- [x] Controller config WiFi set password
+- [ ] Save to flash encryption
+- [ ] Hiding of existing password (show 1st/last chars only) - UI specific, don't overwrite saved passwords
+- [ ] Default Device Names from default Profiles
+- [ ] Controller config set custom Device Name
 - [ ] Support for more LED effects
-- [X] Idle LED effects
+- [x] Idle LED effects
 - [ ] Independent LED effects (e.g. based on Stats)
-- [X] Trigger on button down, and button up, and alternative long press triggers (so can e.g. hold button to access menus while retaining its ability to be used in game)
+- [x] Trigger on button down, and button up, and alternative long press triggers (so can e.g. hold button to access menus while retaining its ability to be used in game)
 - [ ] One effect can affect others - e.g. buttons held down affect colour of another effect
 - [ ] Run time configurable LEDs (disable if power below certain level, turn on/off in options)
 - [ ] More accurate battery life indicator
 - [ ] HAT code needs tweaking to finish it completely
 - [ ] Impliment analog stick support
 - [ ] Add more stats tracking
-- [ ] Add alternative screens (for more detailed stats etc.)
+- [ ] Add alternative screens (for more detailed stats etc.) though possibly not needed with web server
 - [ ] Inactivity screen blanking/LED blanking [power saving]
 - [ ] Activity screen blanking (unlikely to see screen if playing) [power saving]
 - [ ] Test/debug screen - show pins etc. on button presses (access via boot option?)

@@ -155,7 +155,7 @@ void setupShowBattery()
            Battery::Voltage);
 
   RRE.printStr(ALIGN_RIGHT, SCREEN_HEIGHT - RREHeight_fixed_8x16, buffer);
-  SetFontCustom();
+  SetFontIcon();
 }
 
 void setupDisplay()
@@ -231,7 +231,7 @@ void RenderGlint(int frame)
 
 void setupRenderLogo()
 {
-  SetFontCustom();
+  SetFontIcon();
   RenderIconRuns(Logo, Logo_RunCount);
   Display.display();
 
@@ -514,7 +514,7 @@ void setupInitExternalLEDs()
 
 void setupLEDs()
 {
-  SetFontCustom();
+  SetFontIcon();
 #ifdef USE_EXTERNAL_LED
   void setupInitExternalLEDs();
 #endif
@@ -611,7 +611,7 @@ void setupLEDs()
 void setupBluetooth()
 {
   // Bluetooth and other general config
-  SetFontCustom();
+  SetFontIcon();
   RRE.drawChar(uiBT_xPos, uiBT_yPos, (unsigned char)Icon_BTLogo);
   Display.display();
 
@@ -705,7 +705,7 @@ void setupBluetooth()
 
     RRE.printStr(uiBTStatus_xPos + 8, 50, buffer);
     Display.display();
-    SetFontCustom();
+    SetFontIcon();
   }
 }
 
@@ -998,7 +998,7 @@ void setup()
   DrawMainScreen();
 
   // Custom font is default used everywhere for icons - set to this by default. If using text font at all, remember to reset back to custom.
-  SetFontCustom();
+  SetFontIcon();
 
   Serial_INFO;
   Serial.println("\nSetup complete!");
@@ -1053,7 +1053,7 @@ void DrawMainScreen()
   // ResetPrintDisplayLine();
   // PrintDisplayLineCentered(DeviceName);
 
-  SetFontCustom();
+  SetFontIcon();
   if (ControllerGfx_RunCount > 0)
     RenderIconRuns(ControllerGfx, ControllerGfx_RunCount);
 
@@ -1261,7 +1261,7 @@ void MainLoop()
     // Display.fillRect(88, 50, 16, 16, C_BLACK);
     // PrintCenteredNumber(96, 50, Stats_StrumBar.Current_MaxPerSecond); // UpDownMaxPerSecondEver);
 
-    SetFontCustom();
+    SetFontIcon();
 
     // Serial State
     if (LastSerialState != Serial)
@@ -1293,7 +1293,7 @@ void MainLoop()
     // PrintCenteredNumber(27, 50, Stats_StrumBar.Current_TotalCount); // UpDownTotalCount);
   }
 
-  SetFontCustom();
+  SetFontIcon();
 
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Snapshot("Loop.SubSecondRollover", showBenchmark);

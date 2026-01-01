@@ -86,7 +86,7 @@ typedef struct Input {
 // DPad input - Hat's have 4 inputs for Up/Down/Left/Right
 typedef struct HatInput {
   uint8_t Pins[4];
-  const char* Label;
+  char* Label;
   int BluetoothHat;                             // 0->3
   int16_t DefaultValue;
 

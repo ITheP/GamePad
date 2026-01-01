@@ -94,7 +94,7 @@ void MenuFunctions::Config_Draw_SaveSettings()
 {
   Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK);
 
-  SetFontCustom();
+  SetFontIcon();
 
   // Save circle
   int checkX = (SCREEN_WIDTH / 2) - 7;

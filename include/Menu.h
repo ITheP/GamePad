@@ -4,7 +4,7 @@
 
 typedef struct MenuOption
 {
-    const char *Description;
+    char *Description;
     unsigned char Icon;
     char *Label;
     void (*InitOperation)();
