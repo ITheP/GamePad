@@ -4,6 +4,13 @@
 
 static const int IdleParticleCount = 256;       // 256 particles benchmarked at under 1ms overhead with current effect
 
+struct IdleSpawnPoint {
+    int x;
+    int y;
+    int w;
+    int h;
+};
+
 struct IdleParticle {
     float x;
     float y;

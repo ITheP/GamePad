@@ -3,13 +3,22 @@
 #include <Screen.h>
 #include <Benchmark.h>
 
+// Safe spawn points, not part of any small area. Area will appear will be from top left (point itself) to random extra pixels in x + y direction from it
+// x, y, width of random area, height of random area
+IdleSpawnPoint IdleSpawnPoints[] = {
+    {1, 20, 10, 30},        // Left of guitar...
+    {13, 28, 9, 9},         // Special case within the guitar body :)
+    {60, 15, 50, 10},       // Top right of guitar...
+    {60, 48, 50, 10}};
+int IdleSpawnPointCount = sizeof(IdleSpawnPoints) / sizeof(IdleSpawnPoints[0]);
+
 IdleParticle particles[IdleParticleCount];
-//uint8_t *screenBuf = nullptr;
+
 int currentParticleCount;
 unsigned long nextSpawnTime = 0;
 unsigned long spawnRate = 500;
 
-//Benchmark IdleBenchmark("Idle");
+// Benchmark IdleBenchmark("Idle");
 
 // Random +/- 0.15 to 0.3
 static float randVel()
@@ -24,43 +33,49 @@ static float randPosVel()
     return 0.15f + (rand() * (1.0f / RAND_MAX)) * 0.15f;
 }
 
-// void InitDisplayBuffer()
-// {
-//     screenBuf = Display.getBuffer();
-// }
-
 void InitIdleEffect()
 {
-    //InitDisplayBuffer();
+    // InitDisplayBuffer();
+
+    IdleSpawnPoint *sp = &IdleSpawnPoints[ rand() % IdleSpawnPointCount];
+    // Only need to set the position of first particle - others spawn off from this particle
+    IdleParticle *p = &particles[0];
+
+    // Find an initial black pixel to start on in that area
+    while (true)
+    {
+        p->x = sp->x + (rand() % (sp->w));
+        p->y = sp->y + (rand() % (sp->h));
+
+        if (Display.getPixel((int)p->x, (int)p->y) == 0)
+            break;
+    }
 
     for (int i = 0; i < IdleParticleCount; i++)
     {
-        IdleParticle &p = particles[i];
+        p = &particles[i];
 
-        // Random starting position on a black pixel
-        while (true)
-        {
-            p.x = rand() % SCREEN_WIDTH;
-            p.y = rand() % SCREEN_HEIGHT;
+        // // Random starting position on a black pixel
+        // while (true)
+        // {
+        //     p.x = rand() % SCREEN_WIDTH;
+        //     p.y = rand() % SCREEN_HEIGHT;
 
-            // if (getPixelFast((int)p.x, (int)p.y) == 0)
-            if (Display.getPixel((int)p.x, (int)p.y) == 0)
-                break;
-        }
+        //     // if (getPixelFast((int)p.x, (int)p.y) == 0)
+        //     if (Display.getPixel((int)p.x, (int)p.y) == 0)
+        //         break;
+        // }
 
         // Random velocity
-        p.vx = randVel();
-        p.vy = randVel();
-        p.lastX = (int)p.x;
-        p.lastY = (int)p.y;
+        p->vx = randVel();
+        p->vy = randVel();
+        p->lastX = (int)p->x;
+        p->lastY = (int)p->y;
     }
 
     currentParticleCount = 1;
-    nextSpawnTime = millis() + nextSpawnTime;
+    nextSpawnTime = millis() + spawnRate;
 }
-
-// TODO - INITIAL SPAWN POINT OF PIXEL - MAKE IT FROM A RANDOM POSITION FROM A SET OF 10 USER DEFINED POSITIONS SO WE DONT
-// EVER SPAWN A START INSIDE A TINY SPACE ACCIDENTALLY
 
 // Over engineered bouncing pixel effect.
 // Assumes never move > 1 pixel at a time (easier collision detection then)
@@ -73,7 +88,13 @@ void InitIdleEffect()
 
 void RenderIdleEffect()
 {
-    //IdleBenchmark.Start("Idle Start");
+    // IdleBenchmark.Start("Idle Start");
+
+    // Test to check layout of screen to help work out particle start positions
+    // for (int i = 0; i < SCREEN_WIDTH; i += 10)
+    //     Display.drawFastVLine(i, 0, SCREEN_HEIGHT, C_WHITE);
+    // for (int j = 0; j < SCREEN_HEIGHT; j += 10)
+    //     Display.drawFastHLine(0, j, SCREEN_WIDTH, C_WHITE);
 
     for (int i = 0; i < currentParticleCount; i++)
     {
@@ -100,7 +121,7 @@ void RenderIdleEffect()
             // Comes from same spot as parent particle, but has it's own velocities
             if (currentParticleCount < IdleParticleCount && millis() > nextSpawnTime)
             {
-                IdleParticle &newP = particles[currentParticleCount];   // Points to next in line already
+                IdleParticle &newP = particles[currentParticleCount]; // Points to next in line already
 
                 newP.x = p.x;
                 newP.y = p.y;
@@ -115,15 +136,6 @@ void RenderIdleEffect()
             newVx = -newVx;
 
             // Force a 1‑pixel rebound
-            // if (p.x < 1.0f)
-            //     p.x += 1.0f;
-            // else if (p.x >= SCREEN_WIDTH - 1.0f)
-            //     p.x -= 1.0f;
-
-            // tryXf = p.x + newVx;
-            // xi_try = (int)tryXf;
-
-                        // Force a 1‑pixel rebound
             if (tryXf < 1.0f)
                 tryXf += 1.0f;
             else if (tryXf >= SCREEN_WIDTH - 1.0f)
@@ -133,23 +145,14 @@ void RenderIdleEffect()
             xi_try = (int)tryXf;
         }
 
-        // Vertical collision
-
+        // Vertical bounces
         if (yi_try < 0 || yi_try >= SCREEN_HEIGHT ||
             Display.getPixel(p.lastX, yi_try) == C_WHITE)
         {
             newVy = -newVy;
 
             // // Force a 1‑pixel rebound
-            // if (p.y < 1.0f)
-            //     p.y += 1.0f;
-            // else if (p.y >= SCREEN_HEIGHT - 1.0f)
-            //     p.y -= 1.0f;
-
-            // tryYf = p.y + newVy;
-            // yi_try = (int)tryYf;
-
-                        if (tryYf < 1.0f)
+            if (tryYf < 1.0f)
                 tryYf += 1.0f;
             else if (tryYf >= SCREEN_WIDTH - 1.0f)
                 tryYf -= 1.0f;
@@ -190,8 +193,8 @@ void RenderIdleEffect()
         p.vx = newVx;
         p.vy = newVy;
 
-        //p.x += p.vx;
-        //p.y += p.vy;
+        // p.x += p.vx;
+        // p.y += p.vy;
         p.x = tryXf;
         p.y = tryYf;
 
@@ -202,12 +205,12 @@ void RenderIdleEffect()
         p.lastY = yi_final;
     }
 
-    //IdleBenchmark.Snapshot("Idle Stop");
+    // IdleBenchmark.Snapshot("Idle Stop");
 }
 
 void StopIdleEffect()
 {
-    for (int i = 0; i < currentParticleCount; i++) //IdleParticleCount; i++)
+    for (int i = 0; i < currentParticleCount; i++) // IdleParticleCount; i++)
         Display.writePixel((int)particles[i].x, (int)particles[i].y, C_BLACK);
 }
 

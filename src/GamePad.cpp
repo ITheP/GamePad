@@ -964,7 +964,7 @@ void setup()
   LoopOperation = &MainLoop;
 
   // Clear battery text ready for icons
-  Display.fillRect(HALF_SCREEN_WIDTH, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
+  Display.fillRect(HALF_SCREEN_WIDTH + 8, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH - 8, RREHeight_fixed_8x16, C_BLACK);
 
 #ifdef WEBSERVER
   setupWebServer();
@@ -1752,6 +1752,8 @@ void MainLoop()
     {
       ControllerIdle = true;
 
+      Serial_INFO;
+      Serial.println( "Idle Triggered");
       // And get ready to show display idle effect
       InitIdleEffect();
     }
@@ -1762,6 +1764,9 @@ void MainLoop()
     {
       ControllerIdleJustUnset = true;
       ControllerIdle = false;
+
+      Serial_INFO;
+      Serial.println( "Idle Stopped");
 
       StopIdleEffect();
     }

@@ -18,7 +18,7 @@
 // and remembering standard USB 2.0 ports are typically rated for 500mA, and USB 3.0 ports 900 mA
 
 // General configuration - reminder some config options are in Config.h
-// #define LIVE_BATTERY                // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
+//#define LIVE_BATTERY                // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
 #define USE_ONBOARD_LED           // Enable onboard Neopixel LED
 #define STATUS_LED_COMBINE_INPUTS // Status LED includes a generalised colour made up of Status colour + other LED's (in an approximately additive way)
 #define USE_EXTERNAL_LED          // Enable external LEDs - may want to check the ExternalLED_FastLEDCount below too
