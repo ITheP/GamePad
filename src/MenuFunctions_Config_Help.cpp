@@ -14,7 +14,8 @@
 #include "Network.h"
 #include "Web.h"
 #include "Debug.h"
-#include <Profiles.h>
+#include "Profiles.h"
+#include "Idle.h"
 
 int ConfigHelpTextSize = sizeof(ConfigHelpText) / sizeof(ConfigHelpText[0]);
 int ConfigHelpTextPos = 0;

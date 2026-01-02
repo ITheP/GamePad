@@ -77,7 +77,7 @@ void PrintDisplayLine(const TextLine *line)
       // Icons are drawn and width calculated
       RREIcon.drawChar(0, TextYPos -1, icon);
       if (textPos == 0)
-        textPos += 14;
+        textPos += 16;
     }
 
     RRE.printStr(textPos, TextYPos, text);
@@ -107,7 +107,7 @@ void PrintDisplayLine(const TextLine *line)
       // but don't draw any icon - allows for
       // indenting of a single bullet point text
       // over multiple lines
-      if (icon != -1) {
+      if (icon != Icon_IGNORE) {
         char c = (icon == 0 ? Icon_FilledCircle_2 : icon);
         RREIcon.drawChar(textPos + 4, TextYPos + 3, c);
       }

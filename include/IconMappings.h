@@ -2,6 +2,8 @@
 
 // Reminders:
 // Top left start letter is 0x20
+// Any values less than this we can use for other purposes
+#define Icon_IGNORE 0x01
 
 #define Icon_Test1 0x90
 #define Icon_Test2 0x91

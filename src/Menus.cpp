@@ -12,6 +12,7 @@
 #include <GamePad.h>
 #include <Battery.h>
 #include <Network.h>
+#include <Idle.h>
 
 // NOTE what seems like needlessly complicated optimisations here faffing around with buffers and screen width checks etc.
 // to display menu items is all to cut down overheads
@@ -379,6 +380,8 @@ void Menus::Handle_Config()
       Display.drawFastHLine(i, 14, LineWidth, C_WHITE);
       Display.drawFastHLine(i + LineWidth, 14, LineWidth, C_BLACK);
     }
+
+      RenderIdleEffect();
   }
 
   MenuFrame++;

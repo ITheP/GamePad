@@ -44,7 +44,7 @@ public:
     static std::map<String, AccessPoint*> AccessPointList;
     static int AccessPointListUpdated;
 
-    static void Config_InitiWifi();
+    static void Config_InitWifi();
     static void Config_StartScan();
     static void Config_UpdateScanResults();
     static void Config_SelectAccessPoint(const String& ssid);

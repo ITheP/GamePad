@@ -40,7 +40,7 @@ void MenuFunctions::Setup()
 void MenuFunctions::Config_Setup()
 {
   // Even if not required, we kick off WiFi scanning for config mode
-  Network::Config_InitiWifi();
+  Network::Config_InitWifi();
   Profiles::LoadAll();
   Current_Profile = Profiles::AllProfiles[MenuFunctions::Profile_Selected];
 }

@@ -63,6 +63,7 @@ int ExternalLedsEnabled[ExternalLED_Count];
 #include "LED.h"
 #include <Profiles.h>
 #include <MenuFunctions.h>
+#include <Idle.h>
 
 // Task for handling FastLED updates
 void UpdateExternalLEDs(void *parameter)
@@ -832,7 +833,7 @@ void SetupComplete()
 {
   // Init timestamp so its reasonably accurate for a start point, otherwise
   // initial time dependant processing may be quirky
-  unsigned long currentMicroS = micros(); // + 4294967295UL - 10000000;
+  unsigned long currentMicroS = micros();
   FractionalSeconds = (double)(currentMicroS / 1000000.0);
 
   PreviousNow = Now;
@@ -890,11 +891,11 @@ void setup()
   setupUSB();
 
   Serial_INFO;
-  Serial.printf("ESP SDK Version: %s\n", ESP.getSdkVersion());   // prints IDF version used by Arduino core
+  Serial.printf("ESP SDK Version: %s\n", ESP.getSdkVersion()); // prints IDF version used by Arduino core
   Serial_INFO;
-  Serial.printf("Arduino IDF ESP SDK Version: %s\n",  esp_get_idf_version());    
+  Serial.printf("Arduino IDF ESP SDK Version: %s\n", esp_get_idf_version());
   Serial_INFO;
-  Serial.printf("Arduino Core Version: %d\n",  ARDUINO);    
+  Serial.printf("Arduino Core Version: %d\n", ARDUINO);
 
   // Set this up super early, used to write crashlogs etc.
   SetupLittleFS();
@@ -939,8 +940,8 @@ void setup()
 
   // Check if button pushed for menu mode
   // ASSUMES BootPin_StartInConfiguration is defined as a valid pin!
-  //if (digitalRead(BootPin_StartInConfiguration) == PRESSED)
-  if (1==1)
+  if (digitalRead(BootPin_StartInConfiguration) == PRESSED)
+  // if (1 == 1)
   {
     MenuFunctions::Config_Setup();
 
@@ -950,7 +951,7 @@ void setup()
     Menus::MenusStatus = ON;
 
     // We stay on this screen until button released
-    //while (digitalRead(BootPin_StartInConfiguration) == PRESSED);
+    // while (digitalRead(BootPin_StartInConfiguration) == PRESSED);
 
     Display.clearDisplay();
     Display.display();
@@ -1012,8 +1013,8 @@ void DrawConfigHelpScreen()
 
   /// RRE.setScale(2);
 
-  //SetFontSmall();
-  ResetPrintDisplayLine(0,0,SetFontSmall);
+  // SetFontSmall();
+  ResetPrintDisplayLine(0, 0, SetFontSmall);
   PrintDisplayLineCentered("Device Config.");
   TextYPos += 2;
   PrintDisplayLineCentered("Navigate menu using...");
@@ -1033,7 +1034,7 @@ void DrawConfigHelpScreen()
   PrintDisplayLine(DigitalInput_Config_Back.Label);
 
   // Display till button is released
-  //SetFontFixed();
+  // SetFontFixed();
 
   Display.display();
 }
@@ -1080,7 +1081,7 @@ void loop()
   Debug::Mark(10);
 #endif
 
-  unsigned long currentMicroS = micros(); // + 4294967295UL - 10000000;
+  unsigned long currentMicroS = micros();
   FractionalSeconds = (double)(currentMicroS / 1000000.0);
 
   // micros() overflows after ~ 71.58 minutes (4294.97 seconds) when it reaches its maximum value of 4,294,967,295 - in testing caused some weird stuff to happen for time dependant code which suddenly hops back in time!
@@ -1114,27 +1115,34 @@ void loop()
 
   // Throttle display updates
   DisplayRollover = (Now > NextDisplayUpdatePoint);
-  if (DisplayRollover) {
+  if (DisplayRollover)
+  {
     NextDisplayUpdatePoint += DISPLAY_UPDATE_RATE;
   }
 
   LoopOperation();
 }
 
+// int IdleEffectTemp = 1;
+
 void ConfigLoop()
 {
-  // SetFontFixed();
-  // TextYPos = 16; //ResetPrintDisplayLine();
-  // PrintDisplayLineCentered("Menu stuff here");
-  // Display.display();
+  // TEST - should be done when going into Idle Mode
+  // if (IdleEffectTemp == 1) {
+  //   InitIdleEffect();
+  //   IdleEffectTemp--;
+  // }
 
-
-  if (DisplayRollover || SecondRollover) {
+  if (DisplayRollover || SecondRollover)
+  {
     Menus::Config_CheckInputs();
     Menus::Handle_Config();
+
+    // RenderIdleEffect();
+
     Display.display();
   }
-  
+
   Network::Config_UpdateScanResults();
 }
 
@@ -1739,13 +1747,23 @@ void MainLoop()
 
   // Call idle LED effects etc. if controllers not had anything pressed for a while
   if (Now - LastTimeAnyButtonPressed > IDLE_TIMEOUT)
-    ControllerIdle = true;
+  {
+    if (!ControllerIdle)
+    {
+      ControllerIdle = true;
+
+      // And get ready to show display idle effect
+      InitIdleEffect();
+    }
+  }
   else
   {
     if (ControllerIdle)
     {
       ControllerIdleJustUnset = true;
       ControllerIdle = false;
+
+      StopIdleEffect();
     }
   }
 #ifdef DebugMarks
@@ -1876,13 +1894,29 @@ void MainLoop()
 
   // And finally update the display with all the lovely changes above - throttled as quite high overhead
   if (DisplayRollover)
+  {
+    if (ControllerIdle)
+    {
+      RenderIdleEffect();
+#ifdef INCLUDE_BENCHMARKS
+      MainBenchmark.Snapshot("Loop.IdleEffect", showBenchmark);
+#endif
+    }
+
     Display.display();
+
+#ifdef INCLUDE_BENCHMARKS
+    MainBenchmark.Snapshot("Loop.DisplayUpdated", showBenchmark);
+#endif
+  }
+
 #ifdef DebugMarks
   Debug::Mark(700);
 #endif
+
   Frame++;
-// Serial.println("Frame: " + String(Frame));
+
 #ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.Display", showBenchmark);
+  MainBenchmark.Snapshot("Loop.End", showBenchmark);
 #endif
 }

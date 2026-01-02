@@ -470,5 +470,5 @@ void MenuFunctions::Config_Exit_WiFi_Password()
   }
 
   // Just in case
-  Network::Config_InitiWifi();
+  Network::Config_InitWifi();
 }

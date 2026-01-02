@@ -221,7 +221,7 @@ void Network::Config_SelectAccessPoint(const String &ssid)
     }
 }
 
-void Network::Config_InitiWifi()
+void Network::Config_InitWifi()
 {
     Serial_INFO;
     Serial.println("Config: Initializing WiFi");
