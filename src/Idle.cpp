@@ -3,16 +3,18 @@
 #include <Screen.h>
 #include <Benchmark.h>
 
+int IdleParticleCount = IDLE_MAX_PARTICLE_COUNT;
+
 // Safe spawn points, not part of any small area. Area will appear will be from top left (point itself) to random extra pixels in x + y direction from it
 // x, y, width of random area, height of random area
 IdleSpawnPoint IdleSpawnPoints[] = {
-    {1, 20, 10, 30},        // Left of guitar...
-    {13, 28, 9, 9},         // Special case within the guitar body :)
-    {60, 15, 50, 10},       // Top right of guitar...
-    {60, 48, 50, 10}};
+    {1, 20, 10, 30, IDLE_MAX_PARTICLE_COUNT},        // Left of guitar...
+    {13, 28, 9, 9, 32},         // Special case within the guitar body :)
+    {60, 15, 50, 10, IDLE_MAX_PARTICLE_COUNT},       // Top right of guitar...
+    {60, 48, 50, 10, IDLE_MAX_PARTICLE_COUNT}};
 int IdleSpawnPointCount = sizeof(IdleSpawnPoints) / sizeof(IdleSpawnPoints[0]);
 
-IdleParticle particles[IdleParticleCount];
+IdleParticle particles[IDLE_MAX_PARTICLE_COUNT];
 
 int currentParticleCount;
 unsigned long nextSpawnTime = 0;
@@ -38,6 +40,8 @@ void InitIdleEffect()
     // InitDisplayBuffer();
 
     IdleSpawnPoint *sp = &IdleSpawnPoints[ rand() % IdleSpawnPointCount];
+    IdleParticleCount = sp->maxParticles;
+
     // Only need to set the position of first particle - others spawn off from this particle
     IdleParticle *p = &particles[0];
 

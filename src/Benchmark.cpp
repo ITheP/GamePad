@@ -2,15 +2,17 @@
 #include <Benchmark.h>
 #include <string>
 
-Benchmark::Benchmark(const char* name) : Name(name) {};
+Benchmark::Benchmark(const char *name) : Name(name) {};
 
-void Benchmark::Start(const char* description, int showIt)
+void Benchmark::Start(const char *description, int showIt)
 {
     StartTime = micros();
     SnapTime = StartTime;
 
     if (showIt)
-        Serial.println(String(Name) + ": Start @ " + String(description));
+        Serial.printf("⏱ %s: Start @ %s\n",
+                      Name,
+                      description);
 }
 
 void Benchmark::Snapshot(const char *description, int showIt)
@@ -21,7 +23,12 @@ void Benchmark::Snapshot(const char *description, int showIt)
     unsigned long timeTaken = (now - SnapTime);
 
     if (showIt)
-        Serial.println(String(Name) + ": " + String(timeTaken * 0.001, 2) + "ms / " + String(totalTimeTaken * 0.001, 2) + "ms " + String(description));
+        Serial.printf(
+            "⏱ %s: %.2fms / %.2fms %s\n",
+            Name,
+            timeTaken * 0.001,
+            totalTimeTaken * 0.001,
+            description);
 
     SnapTime = now;
 }

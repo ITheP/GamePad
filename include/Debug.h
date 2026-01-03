@@ -55,4 +55,6 @@ public:
   static void WarningFlashes(WarningFlashCodes code);
   static void CheckForCrashInfo();
   static void CrashOnPurpose();
+
+  static void printUnicodeRange();
 };

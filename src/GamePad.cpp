@@ -168,7 +168,7 @@ void setupDisplay()
     // Alternative handling - Spit out an error over serial connection if problem with display
     Serial.begin(SERIAL_SPEED);
     delay(200);
-    Serial.println("Critical failure, display failed to start. Halting!");
+    Serial.println("⛔ Critical failure, display failed to start. Halting!");
     Debug::WarningFlashes(LittleFSFailedToMount);
   }
 
@@ -232,7 +232,7 @@ void RenderGlint(int frame)
 
 void setupRenderLogo()
 {
-  SetFontIcon();
+  //SetFontIcon();
   RenderIconRuns(Logo, Logo_RunCount);
   Display.display();
 
@@ -280,12 +280,12 @@ void setupUSB()
   unsigned char usbState;
   if (Serial)
   {
-    Serial.println("Serial connected");
+    Serial.println("🔌✅ Serial connected");
     usbState = Icon_USB_Connected;
   }
   else
   {
-    Serial.println("Serial disconnected");
+    Serial.println("🔌❌ Serial disconnected");
     usbState = Icon_USB_Disconnected;
   }
 
@@ -306,23 +306,25 @@ void setupUSB()
 #ifdef WEBSERVER
 void setupWiFi()
 {
-  Serial.println("Initialising WiFi event monitoring");
+  // Set up web server to start/stop on WiFi connect/disconnect
+  Serial_INFO;
+  Serial.println("🛜 Initialising WiFi event monitoring");
 
   esp_netif_init(); // Need to do this now else the web service throws a wobbler
 
   WiFi.onEvent([](WiFiEvent_t event)
                {
   if (event == SYSTEM_EVENT_STA_GOT_IP) {
-    Serial.println("✅ WiFi connected, starting web server");
 #ifdef EXTRA_SERIAL_DEBUG
-    Serial.println("✅ WiFi connected, starting web server");
+    Serial.println("🛜 ✅ WiFi connected...");
+    Serial.println("🌐 ✅ ...Starting web server");
 #endif
     Web::StartServer();
   } else if
   (event == SYSTEM_EVENT_STA_DISCONNECTED) {
-    Serial.println("⚠️ WiFi disconnected, stopping web server");
 #ifdef EXTRA_SERIAL_DEBUG
-    Serial.println("⚠️ WiFi disconnected, stopping web server");
+    Serial.println("🛜 ❌ WiFi disconnected...");
+    Serial.println("🌐 ⚠️ ...stopping web server");
 #endif
     Web::StopServer();
   } });
@@ -341,7 +343,7 @@ void setupWebServer()
   //   return;
   // }
 
-  Serial.println("Configuring HTTP Web Server");
+  Serial.println("🌐 Configuring HTTP Web Server");
   Web::SetUpRoutes();
 
   // Full BT mode
@@ -356,17 +358,17 @@ void setupWebServer()
   // wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   // esp_wifi_init(&cfg);
 
-  // Start server
-  // WebServer.begin();
-  Serial.println("Web Site source files:");
+#ifdef EXTRA_SERIAL_DEBUG
+  Serial.println("🌐 Web Site source files:");
   Web::ListDir("/");
+#endif
 }
 #endif
 
 void setupDigitalInputs()
 {
   // Digital Inputs
-  Serial.println("\nButton/Digital Inputs: " + String(DigitalInputs_Count));
+  Serial.println("\n🔘 Button/Digital Inputs: " + String(DigitalInputs_Count));
 
   Input *input;
   for (int i = 0; i < DigitalInputs_Count; i++)
@@ -405,7 +407,7 @@ void setupDigitalInputs()
 void setupAnalogInputs()
 {
   // Analog Inputs
-  Serial.println("\nAnalog Inputs: " + String(AnalogInputs_Count));
+  Serial.println("\n🎚 Analog Inputs: " + String(AnalogInputs_Count));
 
   Input *input;
   for (int i = 0; i < AnalogInputs_Count; i++)
@@ -436,7 +438,7 @@ void setupAnalogInputs()
 void setupHatInputs()
 {
   // Hat inputs
-  Serial.println("\nHat Inputs: " + String(HatInputs_Count));
+  Serial.println("\n🎩 Hat Inputs: " + String(HatInputs_Count));
   HatInput *hatInput;
   for (int i = 0; i < HatInputs_Count; i++)
   {
@@ -492,7 +494,7 @@ void setupHatInputs()
 void setupInitExternalLEDs()
 {
   // Misc LEDs
-  Serial.println("Misc LED Effects: " + String(MiscLEDEffects_Count));
+  Serial.println("💡 Misc LED Effects: " + String(MiscLEDEffects_Count));
   for (int i = 0; i < MiscLEDEffects_Count; i++)
   {
     ExternalLEDConfig *config = MiscLEDEffects[i];
@@ -502,7 +504,7 @@ void setupInitExternalLEDs()
   }
 
   // Idle LEDs
-  Serial.println("Idle LED Effects: " + String(IdleLEDEffects_Count));
+  Serial.println("💡 Idle LED Effects: " + String(IdleLEDEffects_Count));
   for (int i = 0; i < IdleLEDEffects_Count; i++)
   {
     ExternalLEDConfig *config = IdleLEDEffects[i];
@@ -543,7 +545,7 @@ void setupLEDs()
 
 // Add and flash onboard led if enabled
 #ifdef USE_ONBOARD_LED
-  Serial.println("\n\nLED pins\nOnboard: pin " + String(ONBOARD_LED_PIN));
+  Serial.println("\n\n💡 LED pins\nOnboard: pin " + String(ONBOARD_LED_PIN));
   FastLED.addLeds<NEOPIXEL, ONBOARD_LED_PIN>(StatusLed, 1);
 
   for (hue = 0; hue < 255; hue++)
@@ -557,7 +559,7 @@ void setupLEDs()
 
 // Add and flash external led's if enabled
 #ifdef USE_EXTERNAL_LED
-  Serial.println("External: pin " + String(EXTERNAL_LED_PIN));
+  Serial.println("🔦 External: pin " + String(EXTERNAL_LED_PIN));
   FastLED.addLeds<EXTERNAL_LED_TYPE, EXTERNAL_LED_PIN, EXTERNAL_LED_COLOR_ORDER>(ExternalLeds, ExternalLED_FastLEDCount); // ExternalLED_Count);
 
   // Knightrider the external LED's
@@ -611,9 +613,11 @@ void setupLEDs()
 
 void setupBluetooth()
 {
+  Serial.println("🔗 Bluetooth init");
+
   // Bluetooth and other general config
-  SetFontIcon();
-  RRE.drawChar(uiBT_xPos, uiBT_yPos, (unsigned char)Icon_BTLogo);
+  //SetFontIcon();
+  RREIcon.drawChar(uiBT_xPos, uiBT_yPos, (unsigned char)Icon_BTLogo);
   Display.display();
 
   // Dedicated checks to Inputs that allow buttons held on startup to switch between variants of Bluetooth Id's
@@ -631,7 +635,7 @@ void setupBluetooth()
       {
         ESPChipIdOffset = input->BluetoothIdOffset;
         overrideInput = input;
-        Serial.println("Bluetooth Id Override : " + String(ESPChipIdOffset));
+        Serial.println("🔗 Bluetooth Id Override : " + String(ESPChipIdOffset));
       }
     }
   }
@@ -639,8 +643,8 @@ void setupBluetooth()
   if (ESPChipIdOffset > 0)
   {
     // Extra Bluetooth iconography to show that one of the extra bluetooth Id variants is active
-    SetFontFixed();
-    RRE.drawChar(uiBTStatus_xPos, 50, '+');
+    //SetFontFixed();
+    RREDefault.drawChar(uiBTStatus_xPos, 50, '+');
     delay(100);
     Display.display();
     snprintf(buffer, sizeof(buffer), "%d", ESPChipIdOffset);
@@ -670,7 +674,7 @@ void setupBluetooth()
       for (int i = 0; i < 4; i++)
       {
         // Draw bluetooth number
-        RRE.printStr(uiBTStatus_xPos + 8, 50, buffer);
+        RREDefault.printStr(uiBTStatus_xPos + 8, 50, buffer);
         Display.display();
 
         // Flash LED's
@@ -704,9 +708,9 @@ void setupBluetooth()
     }
 #endif
 
-    RRE.printStr(uiBTStatus_xPos + 8, 50, buffer);
+    RREDefault.printStr(uiBTStatus_xPos + 8, 50, buffer);
     Display.display();
-    SetFontIcon();
+    //SetFontIcon();
   }
 }
 
@@ -726,7 +730,7 @@ void setupDeviceIdentifiers()
   else
   {
     snprintf(DeviceName, sizeof(DeviceName), "%s %d", DEVICE_NAME, ESPChipIdOffset);
-    Serial.println("Bluetooth device Id/name - custom value: " + String(ESPChipIdOffset));
+    Serial.println("🔗 Bluetooth device Id/name - custom value: " + String(ESPChipIdOffset));
   }
 #else
   // Random Device Name
@@ -735,7 +739,7 @@ void setupDeviceIdentifiers()
   else
   {
     snprintf(DeviceName, sizeof(DeviceName), "%s %d.%d", DeviceNames[offset], offset, ESPChipIdOffset);
-    Serial.println("Bluetooth device Id/Name - system selected: " + String(ESPChipIdOffset));
+    Serial.println("🔗 Bluetooth device Id/Name - system selected: " + String(ESPChipIdOffset));
   }
 
   snprintf(FullDeviceName, sizeof(FullDeviceName), "%s %s", ControllerDeviceNameType, DeviceName);
@@ -750,7 +754,7 @@ void setupController()
   // snprintf(buffer, sizeof(buffer), "Guitar %s", DeviceName);
   bleGamepad = BleGamepad(FullDeviceName, ControllerType, 100);
 
-  Serial.println("\nBluetooth configuration...");
+  Serial.println("\n🔗 Bluetooth configuration...");
   Serial.println("... Name: " + String(buffer));
   Serial.println("... Type: " + String(ControllerType));
   BleGamepadConfiguration bleGamepadConfig;
@@ -824,7 +828,7 @@ void SetupLittleFS()
     // Alternative handling - Spit out an error over serial connection if problem with display
     Serial.begin(SERIAL_SPEED);
     delay(200);
-    Serial.println("Critical failure, LittleFS mount failed. Halting!");
+    Serial.println("⛔ Critical failure, LittleFS mount failed. Halting!");
     Debug::WarningFlashes(LittleFSFailedToMount);
   }
 }
@@ -891,11 +895,11 @@ void setup()
   setupUSB();
 
   Serial_INFO;
-  Serial.printf("ESP SDK Version: %s\n", ESP.getSdkVersion()); // prints IDF version used by Arduino core
+  Serial.printf("ℹ️  ESP SDK Version: %s\n", ESP.getSdkVersion()); // prints IDF version used by Arduino core
   Serial_INFO;
-  Serial.printf("Arduino IDF ESP SDK Version: %s\n", esp_get_idf_version());
+  Serial.printf("ℹ️  Arduino IDF ESP SDK Version: %s\n", esp_get_idf_version());
   Serial_INFO;
-  Serial.printf("Arduino Core Version: %d\n", ARDUINO);
+  Serial.printf("ℹ️  Arduino Core Version: %d\n", ARDUINO);
 
   // Set this up super early, used to write crashlogs etc.
   SetupLittleFS();
@@ -905,12 +909,12 @@ void setup()
   Serial_INFO;
   if (reason == ESP_RST_POWERON)
   {
-    Serial.println("Device initial power on");
+    Serial.println("ℹ️  Device initial power on");
     Debug::PowerOnInit();
   }
   else
   {
-    Serial.println("Device rebooted");
+    Serial.println("ℹ️  Device rebooted");
     Debug::CheckForCrashInfo();
   }
 
@@ -920,16 +924,16 @@ void setup()
   // so we can check for boot up redirection to configuration screen
   Serial.println();
   Serial_INFO;
-  Serial.println("Hardware...");
+  Serial.println("🎮 Hardware...");
   Serial.println("SRam: " + String(ESP.getHeapSize()) + " (" + String(ESP.getFreeHeap()) + " free)");
   // May need compile time configure to get PSRam support - https://thingpulse.com/esp32-how-to-use-psram/?form=MG0AV3
   Serial.println("PSRam: " + String(ESP.getPsramSize()) + " (" + String(ESP.getFreePsram()) + " free)");
 
   // Controls icon
-  RRE.drawChar(56, 50, (unsigned char)Icon_EmptyCircle_12);
+  RREIcon.drawChar(56, 50, (unsigned char)Icon_EmptyCircle_12);
   Display.display();
   delay(SETUP_DELAY / 2);
-  RRE.drawChar(58, 52, (unsigned char)Icon_FilledCircle_8);
+  RREIcon.drawChar(58, 52, (unsigned char)Icon_FilledCircle_8);
   Display.display();
 
   setupDigitalInputs();
@@ -967,6 +971,7 @@ void setup()
   Display.fillRect(HALF_SCREEN_WIDTH + 8, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH - 8, RREHeight_fixed_8x16, C_BLACK);
 
 #ifdef WEBSERVER
+  Serial.println();
   setupWebServer();
 #endif
 
@@ -1002,7 +1007,7 @@ void setup()
   SetFontIcon();
 
   Serial_INFO;
-  Serial.println("\nSetup complete!");
+  Serial.println("\n✅ Setup complete!");
 
   SetupComplete();
 }
@@ -1753,7 +1758,7 @@ void MainLoop()
       ControllerIdle = true;
 
       Serial_INFO;
-      Serial.println( "Idle Triggered");
+      Serial.println("Idle Triggered");
       // And get ready to show display idle effect
       InitIdleEffect();
     }
@@ -1766,7 +1771,7 @@ void MainLoop()
       ControllerIdle = false;
 
       Serial_INFO;
-      Serial.println( "Idle Stopped");
+      Serial.println("Idle Stopped");
 
       StopIdleEffect();
     }

@@ -8,6 +8,272 @@
 #include "config.h"
 #include "Prefs.h"
 
+// Serial friendly characters (show fine in VSCode terminal)
+
+// Common ones used...
+// ❌ Failed/false/stop/bad
+// ✅ Yes/OK/Success
+// ⚠️ Warning
+// ℹ️ Information
+// ❔ Query
+// ❓ Query
+// 🛑 Stop
+// ⛔ Blocked
+// 🚫 Prohibited / Rejected
+// ✋ Raised Hand
+// ⭐ Star
+// 🌟 Glowing Star
+// 🌐 Web
+// 📨 Request
+// 🌍 Planet
+// 💾 Save
+// 🔢 Numbers
+// 🔣 Symbols
+// 📊 Stats/Graph
+// 📄 File
+// 📁 Folder
+// ⏳ Waiting
+// ⌛ Done
+// 🕒 Time
+// ⏱ Stopwatch
+// 📺 Display
+// 🛜 WiFi
+// 📶 Signal Strength
+// 🔗 Link
+// 🔌 Serial
+// 🔢 Digital
+// 🎚 Analog
+// 🎩 Hat
+// 🔘 Buttons
+// 🎛 Inputs
+// 🎤 Microphone
+// ⌨️ Keyboard
+// 🎧 Headphones
+// 🎮 Controller
+// ⚙️ Settings
+// 🔧 Tool
+// 👤 Profile
+// 👥 Profiles
+// 💡 Internal LED
+// 🔦 External LED
+
+// Serial output in VSCode appears to be able to display following OK - though editor font and terminal font may differ...
+
+//  !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
+// `abcdefghijklmnopqrstuvwxyz{|}~☀☁☂☃☄★☆☇☈☉☊☋☌☍☎☏☐☑☒☓☔☕☖☗☘☙☚☛☜☝☞☟☠
+// ☡☢☣☤☥☦☧☨☩☪☫☬☭☮☯☰☱☲☳☴☵☶☷☸☹☺☻☼☽☾☿♀♁♂♃♄♅♆♇♈♉♊♋♌♍♎♏♐♑♒♓♔♕♖♗♘♙♚♛♜♝♞♟♠
+// ♡♢♣♤♥♦♧♨♩♪♫♬♭♮♯♰♱♲♳♴♵♶♷♸♹♺♻♼♽♾♿⚀⚁⚂⚃⚄⚅⚆⚇⚈⚉⚊⚋⚌⚍⚎⚏⚐⚑⚒⚓⚔⚕⚖⚗⚘⚙⚚⚛⚜⚝⚞⚟⚠
+// ⚡⚢⚣⚤⚥⚦⚧⚨⚩⚪⚫⚬⚭⚮⚯⚰⚱⚲⚳⚴⚵⚶⚷⚸⚹⚺⚻⚼⚽⚾⚿⛀⛁⛂⛃⛄⛅⛆⛇⛈⛉⛊⛋⛌⛍⛎⛏⛐⛑⛒⛓⛔⛕⛖⛗⛘⛙⛚⛛⛜⛝⛞⛟⛠
+// ⛡⛢⛣⛤⛥⛦⛧⛨⛩⛪⛫⛬⛭⛮⛯⛰⛱⛲⛳⛴⛵⛶⛷⛸⛹⛺⛻⛼⛽⛾⛿✀✁✂✃✄✅✆✇✈✉✊✋✌✍✎✏✐✑✒✓✔✕✖✗✘✙✚✛✜✝✞✟✠
+// ✡✢✣✤✥✦✧✨✩✪✫✬✭✮✯✰✱✲✳✴✵✶✷✸✹✺✻✼✽✾✿❀❁❂❃❄❅❆❇❈❉❊❋❌❍❎❏❐❑❒❓❔❕❖❗❘❙❚❛❜❝❞❟❠
+// ❡❢❣❤❥❦❧❨❩❪❫❬❭❮❯❰❱❲❳❴❵❶❷❸❹❺❻❼❽❾❿➀➁➂➃➄➅➆➇➈➉➊➋➌➍➎➏➐➑➒➓➔➕➖➗➘➙➚➛➜➝➞➟➠
+// ➡➢➣➤➥➦➧➨➩➪➫➬➭➮➯➰➱➲➳➴➵➶➷➸➹➺➻➼➽➾➿⬀⬁⬂⬃⬄⬅⬆⬇⬈⬉⬊⬋⬌⬍⬎⬏⬐⬑⬒⬓⬔⬕⬖⬗⬘⬙⬚⬛⬜⬝⬞⬟⬠
+// ⬡⬢⬣⬤⬥⬦⬧⬨⬩⬪⬫⬬⬭⬮⬯⬰⬱⬲⬳⬴⬵⬶⬷⬸⬹⬺⬻⬼⬽⬾⬿⭀⭁⭂⭃⭄⭅⭆⭇⭈⭉⭊⭋⭌⭍⭎⭏⭐⭑⭒⭓⭔⭕⭖⭗⭘⭙⭚⭛⭜⭝⭞⭟⭠
+// ⮡⮢⮣⮤⮥⮦⮧⮨⮩⮪⮫⮬⮭⮮⮯⮰⮱⮲⮳⮴⮵⮶⮷⮸⮹⮽⮾⮿⯀⯁⯂⯃⯄⯅⯆⯇⯈⯉⯊⯋⯌⯍⯎⯏⯐⯑
+// 🇦🇧🇨🇩🇪🇫🇬🇭🇮🇯🇰🇱🇲🇳🇴🇵🇶🇷🇸🇹🇺🇻🇼🇽🇾🇿🌀🌁🌂🌃🌄🌅
+// 🌆🌇🌈🌉🌊🌋🌌🌍🌎🌏🌐🌑🌒🌓🌔🌕🌖🌗🌘🌙🌚🌛🌜🌝🌞🌟🌠🌡🌢🌣🌤🌥🌦🌧🌨🌩🌪🌭🌮🌯🌰🌱🌲🌳🌴🌵🌶🌷🌸 🌹🌺🌻🌼🌽🌾🌿🍀🍁🍂🍃🍄🍅
+// 🍆🍇🍈🍉🍊🍋🍌🍍🍎🍏🍐🍑🍒🍓🍔🍕🍖🍗🍘🍙🍚🍛🍜🍝🍞🍟🍠🍡🍢🍣🍤🍥🍦🍧🍨🍩🍪🍫🍬🍭🍮🍯🍰🍱🍲🍳🍴🍵🍶🍷🍸🍹🍺🍻🍼🍽🍾🍿🎀 🎁🎂🎃🎄🎅
+// 🎆🎇🎈🎉🎊🎋🎌🎍🎎🎏🎐🎑🎒🎓🎔🎕🎖🎗🎘🎙🎚🎛🎜🎝🎞🎟🎠🎡🎢🎣🎤🎥🎦🎧🎨🎩🎪🎫🎬🎭🎮🎯🎰🎱🎲🎳🎴🎵🎶🎷🎸🎹🎺🎻🎼🎽🎾🎿🏀🏁🏂🏃🏄🏅
+// 🏆🏇🏈🏉🏊🏋🏌🏍🏎🏏🏐🏑🏒🏓🏔🏕🏖🏗🏘🏙🏚🏛🏜🏝🏞🏟🏠🏡🏢🏣 🏤🏥🏦🏧🏨🏩🏪🏫🏬🏭🏮🏯🏰🏱🏲🏳🏴🏵🏶🏷🏸🏹🏺🏻🏼🏽🏾🏿🐀🐁🐂🐃🐄🐅
+// 🐆🐇🐈🐉🐊🐋🐌🐍🐎🐏🐐🐑🐒🐓🐔🐕🐖🐗🐘🐙🐚🐛🐜🐝🐞🐟🐠🐡🐢🐣🐤🐥🐦🐧🐨🐩🐪🐫🐬🐭🐮🐯🐰🐱🐲🐳🐴🐵🐶🐷🐸🐹🐺🐻🐼🐽🐾🐿👀👁  👂👃👄👅
+// 👆👇👈👉👊👋👌👍👎👏👐👑👒👓👔👕👖👗👘👙👚👛👜👝👞👟👠👡👢👣👤👥👦👧👨👩👪👫👬👭👮👯👰👱👲👳👴👵👶👷👸👹👺👻👼👽👾👿💀💁💂💃💄💅
+// 💆💇💈💉💊💋💌💍💎💏💐💑💒💓💔💕💖💗💘💙💚💛💜💝💞💟💠💡💢💣💤💥💦💧💨💩💪💫💬💭💮💯💰💱💲💳💴💵💶💷💸💹💺💻💼💽💾💿📀📁📂📃📄📅
+// 📆📇📈📉📊📋📌📍📎📏📐📑📒📓📔📕📖📗📘📙📚📛📜📝📞📟📠📡📢📣📤📥📦📧📨📩📪📫📬📭📮📯📰📱📲📳📴📵📶📷📸📹📺📻📼📽📾📿🔀🔁🔂🔃🔄🔅
+// 🔆🔇🔈🔉🔊🔋🔌🔍🔎🔏🔐🔑🔒🔓🔔🔕🔖🔗🔘🔙🔚🔛🔜🔝🔞🔟🔠🔡🔢🔣🔤🔥🔦🔧🔨🔩🔪🔫🔬🔭🔮🔯🔰🔱🔲🔳🔴🔵🔶🔷🔸🔹🔺🔻🔼🔽🔾🔿🕀🕁🕂🕃🕄🕅
+// 🕆🕇🕈🕉🕊🕋🕌🕍🕎🕏🕐🕑 🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛🕜🕝🕞🕟🕠🕡🕢🕣🕤🕥🕦🕧🕨🕩🕪🕫🕬🕭🕮🕯🕰🕱🕲🕳🕴🕵🕶🕷🕸🕹🕺🕻🕼🕽🕾🕿🖀🖁🖂🖃🖄🖅
+// 🖆🖇🖈🖉🖊🖋🖌🖍🖎🖏🖐🖑🖒🖓🖔🖕🖖🖗🖘🖙🖚🖛🖜🖝🖞🖟🖠🖡🖢🖣🖤🖥🖦🖧🖨🖩🖪🖫🖬🖭🖮🖯🖰🖱🖲🖳🖴🖵🖶🖷🖸🖹🖺🖻🖼🖽🖾🖿🗀🗁🗂🗃🗄🗅
+// 🗆🗇🗈🗉🗊🗋🗌🗍🗎🗏🗐🗑🗒🗓🗔🗕🗖🗗🗘🗙🗚🗛🗜🗝🗞🗟🗠🗡🗢🗣🗤🗥🗦🗧🗨🗩🗪🗫🗬🗭🗮🗯🗰🗱🗲🗳🗴🗵🗶🗷🗸🗹🗺🗻🗼🗽🗾 🗿😀😁😂😃😄😅
+// 😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮😯😰😱😲😳😴😵😶😷😸😹😺😻😼😽😾😿🙀🙁🙂🙃🙄🙅
+// 🙆🙇🙈🙉🙊🙋🙌🙍🙎🙏🚀🚁🚂🚃🚄🚅🚆🚇🚈🚉🚊🚋🚌🚍🚎🚏🚐🚑🚒🚓🚔🚕🚖🚗🚘🚙🚚🚛🚜🚝🚞🚟🚠🚡🚢🚣🚤🚥🚦🚧🚨🚩🚪🚫🚬🚭🚮🚯🚰🚱🚲🚳🚴🚵
+// 🚶🚷🚸🚹🚺🚻🚼🚽🚾🚿🛀🛁🛂🛃🛄🛅🛆🛇🛈🛉🛊🛋🛌🛍🛎🛏🛐🛑🛒🛕🛖🛗🛜🛝🛞🛟🛠🛡🛢🛣🛤🛥🛦🛧🛨🛩🛪🛫🛬🛴🛵
+// 🛶🛷🛸🛹🛺🛻🛼🤌🤍🤎🤏🤐🤑🤒🤓🤔🤕🤖🤗🤘🤙🤚🤛🤜🤝🤞🤟🤠🤡🤢🤣🤤🤥🤦🤧🤨🤩🤪🤫🤬🤭🤮🤯🤰🤱🤲🤳🤴🤵
+// 🤶🤷🤸🤹🤺🤻🤼🤽🤾🤿🥀🥁🥂🥃🥄🥅🥇🥈🥉🥊🥋🥌🥍🥎🥏🥐🥑🥒🥓🥔🥕🥖🥗🥘🥙🥚🥛🥜🥝🥞🥟🥠🥡🥢🥣🥤🥥🥦🥧🥨🥩🥪🥫🥬🥭🥮🥯🥰🥱🥲🥳🥴🥵
+// 🥶🥷🥸🥹🥺🥻🥼🥽🥾🥿🦀🦁🦂🦃🦄🦅🦆🦇🦈🦉🦊🦋🦌🦍🦎🦏🦐🦑🦒🦓🦔🦕🦖🦗🦘🦙🦚🦛🦜🦝🦞🦟🦠🦡🦢🦣🦤🦥🦦🦧🦨🦩🦪🦫🦬🦭🦮🦯🦰🦱🦲🦳🦴🦵
+// 🦶🦷🦸🦹🦺🦻🦼🦽🦾🦿🧀🧁🧂🧃🧄🧅🧆🧇🧈🧉🧊🧋🧌🧍🧎🧏🧐🧑🧒🧓🧔🧕🧖🧗🧘🧙🧚🧛🧜🧝🧞🧟🧠🧡🧢🧣🧤🧥🧦🧧🧨🧩🧪🧫🧬🧭🧮🧯🧰🧱🧲🧳🧴🧵
+// 🧶🧷🧸🧹🧺🧻🧼🧽🧾🧿🩰🩱🩲🩳🩴🩵🩶🩷🩸🩹🩺🩻🩼🪀🪁🪂🪃🪄🪅🪆🪇🪈🪐🪑🪒🪓🪔🪕🪖🪗🪘🪙🪚🪛🪜🪝🪞🪟🪠🪡🪢🪣🪤🪥
+// 🪦🪧🪨🪩🪪🪫🪬🪭🪮🪯🪰🪱🪲🪳🪴🪵🪶🪷🪸🪹🪺🪻🪼🪽🫂🫃🫄🫅🫒🫓🫔🫕🫖🫗🫘🫙🫚🫛🫠🫡🫢🫣🫤🫥
+// 🫦🫧🫨🫱🫲🫳🫴🫵🫶🫷🫸
+
+// // Convert a Unicode codepoint (0–0x10FFFF) to UTF‑8 bytes
+// int utf8Encode(uint32_t cp, char* out)
+// {
+//     if (cp <= 0x7F) {
+//         out[0] = cp;
+//         return 1;
+//     }
+//     else if (cp <= 0x7FF) {
+//         out[0] = 0xC0 | (cp >> 6);
+//         out[1] = 0x80 | (cp & 0x3F);
+//         return 2;
+//     }
+//     else if (cp <= 0xFFFF) {
+//         out[0] = 0xE0 | (cp >> 12);
+//         out[1] = 0x80 | ((cp >> 6) & 0x3F);
+//         out[2] = 0x80 | (cp & 0x3F);
+//         return 3;
+//     }
+//     else {
+//         out[0] = 0xF0 | (cp >> 18);
+//         out[1] = 0x80 | ((cp >> 12) & 0x3F);
+//         out[2] = 0x80 | ((cp >> 6) & 0x3F);
+//         out[3] = 0x80 | (cp & 0x3F);
+//         return 4;
+//     }
+// }
+
+// // Included for our purposes
+// // - ASCII
+// // - Latin‑1
+// // - arrows
+// // - box‑drawing
+// // - block elements
+// // - geometric shapes
+// // - misc symbols
+// // - dingbats
+// // - emoji
+// // - math symbols
+// // - music notation
+// // Excluded for our purposes
+// // - control codes
+// // - combining marks
+// // - surrogate halves
+// // - private‑use areas
+// // - CJK
+// // - Hangul
+// // - ancient scripts
+// // - variation selectors (except FE0F)
+
+// bool excludeCP(uint32_t cp)
+// {
+//     // Control characters
+//     if (cp < 0x20) return true;
+//     if (cp >= 0x7F && cp <= 0x9F) return true;
+
+//     // Combining diacritics
+//     if (cp >= 0x0300 && cp <= 0x036F) return true;
+//     if (cp >= 0x1AB0 && cp <= 0x1AFF) return true;
+//     if (cp >= 0x1DC0 && cp <= 0x1DFF) return true;
+
+//     // UTF‑16 surrogate range
+//     if (cp >= 0xD800 && cp <= 0xDFFF) return true;
+
+//     // Private Use Areas
+//     if (cp >= 0xE000 && cp <= 0xF8FF) return true;
+//     if (cp >= 0xF0000 && cp <= 0xFFFFD) return true;
+//     if (cp >= 0x100000 && cp <= 0x10FFFD) return true;
+
+//     // CJK Unified Ideographs
+//     if (cp >= 0x3400 && cp <= 0x4DBF) return true;
+//     if (cp >= 0x4E00 && cp <= 0x9FFF) return true;
+//     if (cp >= 0x20000 && cp <= 0x2A6DF) return true;
+//     if (cp >= 0x2A700 && cp <= 0x2B73F) return true;
+//     if (cp >= 0x2B740 && cp <= 0x2B81F) return true;
+//     if (cp >= 0x2B820 && cp <= 0x2CEAF) return true;
+//     if (cp >= 0x2CEB0 && cp <= 0x2EBEF) return true;
+
+//     // Hangul syllables
+//     if (cp >= 0xAC00 && cp <= 0xD7AF) return true;
+
+//     // Variation selectors (except FE0F)
+//     if (cp >= 0xFE00 && cp <= 0xFE0E) return true;
+//     if (cp >= 0xE0100 && cp <= 0xE01EF) return true;
+
+//     // Ancient scripts (skip)
+//     if (cp >= 0x10000 && cp <= 0x102FF) return true; // Linear B etc.
+//     if (cp >= 0x10300 && cp <= 0x1034F) return true; // Old Italic
+//     if (cp >= 0x10400 && cp <= 0x1044F) return true; // Deseret
+//     if (cp >= 0x10800 && cp <= 0x10FFF) return true; // Misc ancient
+
+//     //if (cp >= 0x1D400 && cp <= 0x1D7FF) return true; // Mathematical Alphanumeric Symbols
+//     //if (cp >= 0x1D100 && cp <= 0x1D1FF) return true; // Musical Symbols
+
+//     return false;
+// }
+
+// // Returns true if the codepoint should be included in the font/renderer
+// bool includeCP(uint32_t cp)
+// {
+//     // --- BASIC ASCII PRINTABLES ---
+//     // Space (0x20) through tilde (0x7E)
+//     if (cp >= 0x20 && cp <= 0x7E)
+//         return true;
+
+//     // --- NEWLINE / TAB (optional) ---
+//     //if (cp == '\n' || cp == '\r' || cp == '\t')
+//     //    return true;
+
+//     // --- EXTENDED EMOJI / SYMBOL RANGES (VSCode‑safe) ---
+//     // Add only the ranges you want to support.
+//     // These are the safe ones for Windows + VSCode terminal.
+
+//     // Misc Symbols + Dingbats
+//     if (cp >= 0x2600 && cp <= 0x27BF)
+//         return true;
+
+//     // Arrows + geometric shapes (safe subset)
+//     if (cp >= 0x2B00 && cp <= 0x2BFF)
+//         return true;
+
+//     // Emoji blocks
+//     if (cp >= 0x1F300 && cp <= 0x1F5FF)  // Misc symbols & pictographs
+//         return true;
+
+//     if (cp >= 0x1F600 && cp <= 0x1F64F)  // Emoticons
+//         return true;
+
+//     if (cp >= 0x1F680 && cp <= 0x1F6FF)  // Transport & map
+//         return true;
+
+//     if (cp >= 0x1F900 && cp <= 0x1F9FF)  // Supplemental symbols
+//         return true;
+
+//     if (cp >= 0x1FA70 && cp <= 0x1FAFF)  // Emoji Extended-A
+//         return true;
+
+//     // Skin tones
+//     if (cp >= 0x1F3FB && cp <= 0x1F3FF)
+//         return true;
+
+//     // Regional indicator flags
+//     if (cp >= 0x1F1E6 && cp <= 0x1F1FF)
+//         return true;
+
+//     // Emoji presentation selector
+//     if (cp == 0xFE0F)
+//         return true;
+
+//     // Everything else excluded
+//     return false;
+// }
+
+// // Outputs characters to Serial - we can see what comes out other end as supported chars in terminal
+// void Debug::printUnicodeRange()
+// {
+//     const int maxPerLine = 64;
+//     int count = 0;
+//     char buf[5] = {0};
+
+//     for (uint32_t cp = 0x0020; cp <= 0x1FFFF; cp++)
+//     {
+//         //if (excludeCP(cp))
+//         if (!includeCP(cp))
+//             continue;
+
+//         int len = utf8Encode(cp, buf);
+//         Serial.write((uint8_t*)buf, len);
+//         count++;
+
+//         if (count >= maxPerLine) {
+//             Serial.println();
+//             count = 0;
+//         }
+//     }
+
+//     if (count > 0)
+//         Serial.println();
+
+// }
+
 // Possible extra debug assistance on crashes
 // https://kotyara12.ru/iot/remote_esp32_backtrace/
 

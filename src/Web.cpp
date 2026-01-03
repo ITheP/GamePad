@@ -81,19 +81,19 @@ void Web::SetUpRoutes()
                              switch (request->method())
                              {
                              case HTTP_GET:
-                                 Serial.print("GET ");
+                                 Serial.print("🌐 GET ");
                                  break;
                              case HTTP_POST:
-                                 Serial.print("POST ");
+                                 Serial.print("🌐 POST ");
                                  break;
                              case HTTP_PUT:
-                                 Serial.print("PUT ");
+                                 Serial.print("🌐 PUT ");
                                  break;
                              case HTTP_DELETE:
-                                 Serial.print("DELETE ");
+                                 Serial.print("🌐 DELETE ");
                                  break;
                              default:
-                                 Serial.print("OTHER ");
+                                 Serial.print("🌐 OTHER ");
                                  break;
                              }
                              Serial.println("WebRequest: HTTP " + request->url());
@@ -143,7 +143,7 @@ void Web::SetUpRoutes()
                                  {
                                      request->send(404, "text/plain", "File Not Found");
 #ifdef EXTRA_SERIAL_DEBUG
-                                     Serial.println("Request for " + request->url() + ": File Not Found (404 returned)");
+                                     Serial.println("🚫 Request for " + request->url() + ": File Not Found (404 returned)");
 #endif
 
                                      success = 0;
@@ -154,7 +154,7 @@ void Web::SetUpRoutes()
                              if (1 == success)
                              {
                                  unsigned long end = millis();
-                                 Serial.print("Request for " + request->url() + " took : " + String(end - start) + "ms");
+                                 Serial.print("📨 Request for " + request->url() + " took : " + String(end - start) + "ms");
                                  if (!contentType.isEmpty())
                                      Serial.print(" - Content-Type: " + contentType);
 

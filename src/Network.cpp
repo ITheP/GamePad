@@ -36,22 +36,34 @@ char WiFi_SignalLevel_Low[] = "Low Signal";
 char WiFi_SignalLevel_Trace[] = "Trace Signal";
 
 // Dynamic list of APs
-std::vector<AccessPoint*> Network::AllAccessPointList;
-std::map<String, AccessPoint*> Network::AccessPointList;
+std::vector<AccessPoint *> Network::AllAccessPointList;
+std::map<String, AccessPoint *> Network::AccessPointList;
 int Network::AccessPointListUpdated = false;
 
-const char* AuthModeToStr(wifi_auth_mode_t auth) {
-    switch (auth) {
-        case WIFI_AUTH_OPEN: return "Open";
-        case WIFI_AUTH_WEP: return "WEP";
-        case WIFI_AUTH_WPA_PSK: return "WPA-PSK";
-        case WIFI_AUTH_WPA2_PSK: return "WPA2-PSK";
-        case WIFI_AUTH_WPA_WPA2_PSK: return "WPA/WPA2-PSK";
-        case WIFI_AUTH_WPA2_ENTERPRISE: return "WPA2-Enterprise";
-        case WIFI_AUTH_WPA3_PSK: return "WPA3-PSK";
-        case WIFI_AUTH_WPA2_WPA3_PSK: return "WPA2/WPA3-PSK";
-        case WIFI_AUTH_WAPI_PSK: return "WAPI-PSK";
-        default: return "Unknown";
+const char *AuthModeToStr(wifi_auth_mode_t auth)
+{
+    switch (auth)
+    {
+    case WIFI_AUTH_OPEN:
+        return "Open";
+    case WIFI_AUTH_WEP:
+        return "WEP";
+    case WIFI_AUTH_WPA_PSK:
+        return "WPA-PSK";
+    case WIFI_AUTH_WPA2_PSK:
+        return "WPA2-PSK";
+    case WIFI_AUTH_WPA_WPA2_PSK:
+        return "WPA/WPA2-PSK";
+    case WIFI_AUTH_WPA2_ENTERPRISE:
+        return "WPA2-Enterprise";
+    case WIFI_AUTH_WPA3_PSK:
+        return "WPA3-PSK";
+    case WIFI_AUTH_WPA2_WPA3_PSK:
+        return "WPA2/WPA3-PSK";
+    case WIFI_AUTH_WAPI_PSK:
+        return "WAPI-PSK";
+    default:
+        return "Unknown";
     }
 }
 
@@ -59,8 +71,11 @@ const char* AuthModeToStr(wifi_auth_mode_t auth) {
 // when the scan is complete, so we can't get partial results as it's happening
 void Network::Config_StartScan()
 {
+#ifdef EXTRA_SERIAL_DEBUG
     Serial_INFO;
-    Serial.println("Starting async WiFi scan...");
+    Serial.println("🛜 Starting async WiFi scan...");
+#endif
+
     WiFi.scanNetworks(true, true); // async=true, hidden=true
 }
 
@@ -79,14 +94,14 @@ void Network::Config_UpdateScanResults()
     {
         // Scan finished, results available
         // Clean up old entries first
-        for (auto* ap : AllAccessPointList)
+        for (auto *ap : AllAccessPointList)
             delete ap;
 
         AllAccessPointList.clear();
 
         for (int i = 0; i < scanStatus; ++i)
         {
-            AccessPoint* ap = new AccessPoint();
+            AccessPoint *ap = new AccessPoint();
 
             ap->ssid = WiFi.SSID(i);
             ap->bssid = WiFi.BSSIDstr(i);
@@ -118,8 +133,10 @@ void Network::Config_UpdateScanResults()
             AllAccessPointList.push_back(ap);
         }
 
+#ifdef EXTRA_SERIAL_DEBUG
         Serial_INFO;
-        Serial.printf("Async scan complete: %d networks found\n", scanStatus);
+        Serial.printf("🛜 ℹ️ Async scan complete: %d networks found\n", scanStatus);
+#endif
 
         // Generate final list of access points, removing duplicates (keeping strongest signal only)
         // and ignoring hidden SSIDs
@@ -135,7 +152,7 @@ void Network::Config_UpdateScanResults()
         {
             if (!ap || ap->ssid.length() == 0)
                 continue; // skip hidden
-            
+
             auto it = AccessPointList.find(ap->ssid);
             if (it == AccessPointList.end() || ap->rssi > it->second->rssi)
             {
@@ -143,7 +160,7 @@ void Network::Config_UpdateScanResults()
             }
         }
 
-        //Config_SelectAccessPoint("Sparkles");
+        // Config_SelectAccessPoint("Sparkles");
 
         // Show all access points
 
@@ -173,8 +190,10 @@ void Network::Config_UpdateScanResults()
 
         // Show optimised list of access points, unique and strongest signals only
 
+#ifdef EXTRA_SERIAL_DEBUG
         Serial_INFO;
-        Serial.printf("%d network entries usable after removing duplicates and hidden entries\n", AccessPointList.size());
+        Serial.printf("🛜 %d network entries usable after removing duplicates and hidden entries\n", AccessPointList.size());
+#endif
 
         // for (auto &entry : AccessPointList)
         // {
@@ -199,7 +218,7 @@ void Network::Config_UpdateScanResults()
 
         // Explicitly delete WiFi scan results to free the library's internal buffer
         WiFi.scanDelete();
-        
+
         // Start next scan automatically (with interval enforcement)
         Config_StartScan();
     }
@@ -223,22 +242,25 @@ void Network::Config_SelectAccessPoint(const String &ssid)
 
 void Network::Config_InitWifi()
 {
+#ifdef EXTRA_SERIAL_DEBUG
     Serial_INFO;
-    Serial.println("Config: Initializing WiFi");
-    Serial.begin(115200);
+    Serial.println("🛜 Config: Initializing WiFi");
+#endif
+
+    // Serial.begin(115200);
     WiFi.mode(WIFI_STA);
     WiFi.disconnect(true); // Make sure no previous connections remain
 
-    // delay(1000);
-
+// delay(1000);
+#ifdef EXTRA_SERIAL_DEBUG
     Serial_INFO;
-    Serial.println("Config: Starting WiFi scanning");
+    Serial.println("🛜 Config: Starting WiFi scanning");
+#endif
+
     Config_StartScan();
 }
 
 // TODO: If ndef WIFI then draw the icons for no wifi in main display setup
-
-
 
 // Wi-Fi credentials
 const char *Network::ssid = WIFI_DEFAULT_SSID;
@@ -283,17 +305,17 @@ void Network::HandleWiFi(int second)
         if (PreviousWiFiConnectionState != WiFiConnectionState)
         {
 #ifdef EXTRA_SERIAL_DEBUG
-            Serial.println("Connected to WiFi...");
+            Serial.println("🛜 Connected to WiFi...");
 
             if (state == ESP_OK)
             {
-                Serial.println("Signal strength: " + String(ap_info.rssi) + " dBm");
-                Serial.println("Channel: " + String(ap_info.primary));
+                Serial.println("🛜 📶 Signal strength: " + String(ap_info.rssi) + " dBm");
+                Serial.println("🛜 📶 Channel: " + String(ap_info.primary));
             }
 
             // WiFi.setSleep(false);
 
-            Serial.print("IP Address: ");
+            Serial.print("🛜 IP Address: ");
             Serial.println(WiFi.localIP());
 
             // esp_wifi_set_ps(WIFI_PS_NONE); // Throws wobbler if you try and use BT and WiFi at same time if WiFi isn't in a lower power mode
@@ -303,19 +325,19 @@ void Network::HandleWiFi(int second)
 
             if (ps_mode == WIFI_PS_NONE)
             {
-                Serial.println("Wi-Fi is not in any power-saving mode.");
+                Serial.println("🛜 WiFi is not in any power-saving mode.");
             }
             else if (ps_mode == WIFI_PS_MIN_MODEM)
             {
-                Serial.println("Wi-Fi is in minimum modem power-saving mode.");
+                Serial.println("🛜 WiFi is in minimum modem power-saving mode.");
             }
             else if (ps_mode == WIFI_PS_MAX_MODEM)
             {
-                Serial.println("Wi-Fi is in maximum modem power-saving mode.");
+                Serial.println("🛜 WiFi is in maximum modem power-saving mode.");
             }
             else
             {
-                Serial.println("Wi-Fi power saving mode is unknown.");
+                Serial.println("🛜 WiFi power saving mode is unknown.");
             }
 #endif
             WiFiConnecting = false;
@@ -359,8 +381,10 @@ void Network::HandleWiFi(int second)
         }
         else
         {
+
 #ifdef EXTRA_SERIAL_DEBUG
-            Serial.println("ERROR: Bad state checking ap info: " + String(state));
+            Serial_ERROR;
+            Serial.println("🛜 ❌ ERROR: Bad state checking Access Point info: " + String(state));
 #endif
 
             // Somethings gone pretty wrong!
@@ -399,8 +423,8 @@ void Network::HandleWiFi(int second)
                 if (WiFiConnecting == false)
                 {
 #ifdef EXTRA_SERIAL_DEBUG
-                    Serial.println("WIFI: Idle");
-                    Serial.println("WIFI: Attempting to connect...");
+                    //Serial.println("🛜 WIFI: Idle");
+                    Serial.println("🛜 ⏳ WIFI: Attempting to connect...");
 #endif
                     WiFi.disconnect(); // Reports that this helps if previously connected and disconnected
 
@@ -417,7 +441,7 @@ void Network::HandleWiFi(int second)
             else if (WiFiConnectionState == WL_CONNECTION_LOST)
             {
 #ifdef EXTRA_SERIAL_DEBUG
-                Serial.println("WIFI: Connection lost, attempting to reconnect...");
+                Serial.println("🛜 ❌ WIFI: Connection lost, attempting to reconnect...");
 #endif
                 WiFiCharacter = Icon_WiFi_LostSignal;
                 WiFiStatus = WiFi_ReConnecting;
@@ -426,7 +450,7 @@ void Network::HandleWiFi(int second)
             else if (WiFiConnectionState == WL_DISCONNECTED)
             {
 #ifdef EXTRA_SERIAL_DEBUG
-                Serial.println("WIFI: Connection disconnected, attempting to reconnect...");
+                Serial.println("🛜 ❌ WIFI: Connection disconnected, attempting to reconnect...");
 #endif
 
                 WiFiCharacter = Icon_WiFi_LostSignal;
@@ -436,7 +460,7 @@ void Network::HandleWiFi(int second)
             else if (WiFiConnectionState == WL_NO_SSID_AVAIL)
             {
 #ifdef EXTRA_SERIAL_DEBUG
-                Serial.println("WIFI: SSID [' + ssid + '] is not available or cannot be found");
+                Serial.println("🛜 ⛔ WIFI: SSID [' + ssid + '] is not available or cannot be found");
 #endif
                 WiFiCharacter = Icon_WiFi_Query;
                 WiFiStatus = WiFi_AccessPointUnavailable;
@@ -444,7 +468,7 @@ void Network::HandleWiFi(int second)
             else
             {
 #ifdef EXTRA_SERIAL_DEBUG
-                Serial.println("WIFI: Unknown status: " + String(WiFiConnectionState));
+                Serial.println("🛜 ❌ WIFI: Unknown status: " + String(WiFiConnectionState));
 #endif
                 WiFiCharacter = Icon_WiFi_Query;
                 WiFiStatus = WiFi_UnknownStatus;
@@ -489,32 +513,32 @@ void Network::RenderIcons()
 }
 
 // WiFi Connection Testing Functions
-Network::WiFiTestResult Network::TestWiFiConnection(const String& testSSID, const String& testPassword)
+Network::WiFiTestResult Network::TestWiFiConnection(const String &testSSID, const String &testPassword)
 {
     // Cancel any existing test first
     if (TestInProgress || TestStartTime > 0)
     {
         Serial_INFO;
-        Serial.println("WiFi Test: Cancelling previous test");
+        Serial.println("🛜 WiFi Test: Cancelling previous test");
         CancelWiFiTest();
     }
 
     Serial_INFO;
-    Serial.println("WiFi Test: Starting connection test");
-    Serial.printf("WiFi Test: SSID='%s', Password length=%d\n", testSSID.c_str(), testPassword.length());
-    
+    //Serial.println("🛜 WiFi Test: Starting connection test");
+    Serial.printf("🛜 ❔ WiFi testing connection: SSID='%s', Password length=%d\n", testSSID.c_str(), testPassword.length());
+
     TestInProgress = true;
     TestStartTime = millis();
     LastTestResult = TEST_CONNECTING;
 
     // Disconnect from any existing connection first
     WiFi.disconnect(true);
-    //delay(100);
+    // delay(100);
 
     // Set to station mode and initiate connection
     WiFi.mode(WIFI_STA);
     WiFi.begin(testSSID.c_str(), testPassword.c_str());
-    
+
     return TEST_CONNECTING;
 }
 
@@ -533,28 +557,28 @@ Network::WiFiTestResult Network::CheckTestResults()
         TestInProgress = false;
         LastTestResult = TEST_TIMEOUT;
         TestStartTime = 0;
-        
+
         Serial_INFO;
-        Serial.println("WiFi Test: TIMEOUT - Connection attempt took too long");
-        
+        Serial.println("🛜 ❌ WiFi Test: TIMEOUT - Connection attempt took too long");
+
         // Clean up the test connection
         WiFi.disconnect(true);
-        
+
         return LastTestResult;
     }
 
     // Check connection status
     wl_status_t status = WiFi.status();
-    
+
     if (status == WL_CONNECTED)
     {
         TestInProgress = false;
         LastTestResult = TEST_SUCCESS;
         TestStartTime = 0;
-        
+
         Serial_INFO;
-        Serial.printf("WiFi Test: SUCCESS - Connected with IP: %s\n", WiFi.localIP().toString().c_str());
-        
+        Serial.printf("🛜 ✅ WiFi Test: SUCCESS - Connected with IP: %s\n", WiFi.localIP().toString().c_str());
+
         return TEST_SUCCESS;
     }
     else if (status == WL_CONNECT_FAILED)
@@ -562,11 +586,11 @@ Network::WiFiTestResult Network::CheckTestResults()
         TestInProgress = false;
         LastTestResult = TEST_INVALID_PASSWORD;
         TestStartTime = 0;
-        
+
         Serial_INFO;
-        Serial.println("WiFi Test: FAILED - Connection attempt failed (likely invalid password)");
+        Serial.println("🛜 ⚠️ WiFi Test: FAILED - Connection attempt failed (likely invalid password)");
         WiFi.disconnect(true);
-        
+
         return TEST_INVALID_PASSWORD;
     }
     else if (status == WL_NO_SSID_AVAIL)
@@ -574,14 +598,14 @@ Network::WiFiTestResult Network::CheckTestResults()
         TestInProgress = false;
         LastTestResult = TEST_SSID_NOT_FOUND;
         TestStartTime = 0;
-        
+
         Serial_INFO;
-        Serial.println("WiFi Test: FAILED - SSID not found/available");
+        Serial.println("🛜 ❌ WiFi Test: FAILED - SSID not found/available");
         WiFi.disconnect(true);
-        
+
         return TEST_SSID_NOT_FOUND;
     }
-    
+
     // Still connecting...
     return TEST_CONNECTING;
 }
@@ -601,12 +625,12 @@ void Network::CancelWiFiTest()
     if (TestInProgress || TestStartTime > 0)
     {
         Serial_INFO;
-        Serial.println("WiFi Test: Cancelled");
-        
+        Serial.println("🛜 ℹ️ WiFi Test: Cancelled");
+
         TestInProgress = false;
         TestStartTime = 0;
         LastTestResult = TEST_NOT_STARTED;
-        
+
         // Clean up the test connection
         WiFi.disconnect(true);
     }

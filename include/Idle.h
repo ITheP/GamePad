@@ -2,13 +2,14 @@
 
 #include <stdlib.h>
 
-static const int IdleParticleCount = 256;       // 256 particles benchmarked at under 1ms overhead with current effect
+#define IDLE_MAX_PARTICLE_COUNT 256             // 256 particles benchmarked at under 1ms overhead with current effect
 
 struct IdleSpawnPoint {
     int x;
     int y;
     int w;
     int h;
+    int maxParticles;
 };
 
 struct IdleParticle {
