@@ -40,6 +40,8 @@
 // 🛜 WiFi
 // 📶 Signal Strength
 // 🔗 Link
+// 🖥 Desktop
+// 💻 Laptop
 // 🔌 Serial
 // 🔢 Digital
 // 🎚 Analog

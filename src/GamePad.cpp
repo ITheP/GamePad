@@ -280,12 +280,12 @@ void setupUSB()
   unsigned char usbState;
   if (Serial)
   {
-    Serial.println("🔌✅ Serial connected");
+    Serial.println("💻✅ Serial connected");
     usbState = Icon_USB_Connected;
   }
   else
   {
-    Serial.println("🔌❌ Serial disconnected");
+    Serial.println("💻❌ Serial disconnected");
     usbState = Icon_USB_Disconnected;
   }
 
@@ -307,6 +307,9 @@ void setupUSB()
 void setupWiFi()
 {
   // Set up web server to start/stop on WiFi connect/disconnect
+  Serial.println();
+  Serial_INFO;
+  Serial.println("🛜 Setting up WiFi...");
   Serial_INFO;
   Serial.println("🛜 Initialising WiFi event monitoring");
 
@@ -343,7 +346,9 @@ void setupWebServer()
   //   return;
   // }
 
-  Serial.println("🌐 Configuring HTTP Web Server");
+  Serial.println();
+  Serial_INFO;
+  Serial.println("🌐 Setting up HTTP Web Server...");
   Web::SetUpRoutes();
 
   // Full BT mode
@@ -368,7 +373,9 @@ void setupWebServer()
 void setupDigitalInputs()
 {
   // Digital Inputs
-  Serial.println("\n🔘 Button/Digital Inputs: " + String(DigitalInputs_Count));
+  Serial.println();
+  Serial_INFO;
+  Serial.println("🔘 Button/Digital Inputs: " + String(DigitalInputs_Count));
 
   Input *input;
   for (int i = 0; i < DigitalInputs_Count; i++)
@@ -407,7 +414,9 @@ void setupDigitalInputs()
 void setupAnalogInputs()
 {
   // Analog Inputs
-  Serial.println("\n🎚 Analog Inputs: " + String(AnalogInputs_Count));
+  Serial.println();
+  Serial_INFO;
+  Serial.println("🎚 Analog Inputs: " + String(AnalogInputs_Count));
 
   Input *input;
   for (int i = 0; i < AnalogInputs_Count; i++)
@@ -438,7 +447,9 @@ void setupAnalogInputs()
 void setupHatInputs()
 {
   // Hat inputs
-  Serial.println("\n🎩 Hat Inputs: " + String(HatInputs_Count));
+  Serial.println();
+  Serial_INFO;
+  Serial.println("🎩 Hat Inputs: " + String(HatInputs_Count));
   HatInput *hatInput;
   for (int i = 0; i < HatInputs_Count; i++)
   {
@@ -517,6 +528,10 @@ void setupInitExternalLEDs()
 
 void setupLEDs()
 {
+  Serial.println();
+  Serial_INFO;
+  Serial.println("💡 Setting up LEDs...");
+  
   SetFontIcon();
 #ifdef USE_EXTERNAL_LED
   void setupInitExternalLEDs();
@@ -545,7 +560,8 @@ void setupLEDs()
 
 // Add and flash onboard led if enabled
 #ifdef USE_ONBOARD_LED
-  Serial.println("\n\n💡 LED pins\nOnboard: pin " + String(ONBOARD_LED_PIN));
+  Serial.println();
+  Serial.println("💡 LED pins\nOnboard: pin " + String(ONBOARD_LED_PIN));
   FastLED.addLeds<NEOPIXEL, ONBOARD_LED_PIN>(StatusLed, 1);
 
   for (hue = 0; hue < 255; hue++)
@@ -559,6 +575,7 @@ void setupLEDs()
 
 // Add and flash external led's if enabled
 #ifdef USE_EXTERNAL_LED
+  Serial.println();
   Serial.println("🔦 External: pin " + String(EXTERNAL_LED_PIN));
   FastLED.addLeds<EXTERNAL_LED_TYPE, EXTERNAL_LED_PIN, EXTERNAL_LED_COLOR_ORDER>(ExternalLeds, ExternalLED_FastLEDCount); // ExternalLED_Count);
 
@@ -613,7 +630,9 @@ void setupLEDs()
 
 void setupBluetooth()
 {
-  Serial.println("🔗 Bluetooth init");
+  Serial.println();
+  Serial_INFO;
+  Serial.println("🔗 Setting up Bluetooth...");
 
   // Bluetooth and other general config
   //SetFontIcon();
@@ -716,6 +735,10 @@ void setupBluetooth()
 
 void setupDeviceIdentifiers()
 {
+  Serial.println();
+  Serial_INFO;
+  Serial.println("🎮 Setting up device identification...");
+
   ESPChipId = ESP.getEfuseMac();
   int offset = ESPChipId % DeviceNamesCount;
   // Bluetooth controller max name length = 30 chars (+ null terminator)
@@ -751,10 +774,13 @@ void setupDeviceIdentifiers()
 
 void setupController()
 {
+  Serial.println();
+
   // snprintf(buffer, sizeof(buffer), "Guitar %s", DeviceName);
   bleGamepad = BleGamepad(FullDeviceName, ControllerType, 100);
 
-  Serial.println("\n🔗 Bluetooth configuration...");
+  Serial_INFO;
+  Serial.println("🔗 Final Bluetooth configuration...");
   Serial.println("... Name: " + String(buffer));
   Serial.println("... Type: " + String(ControllerType));
   BleGamepadConfiguration bleGamepadConfig;
@@ -823,6 +849,10 @@ void setupController()
 
 void SetupLittleFS()
 {
+  Serial.println();
+  Serial_INFO;
+  Serial.println("📁 Setting up LittleFS...");
+
   if (!LittleFS.begin(true))
   {
     // Alternative handling - Spit out an error over serial connection if problem with display
@@ -971,7 +1001,6 @@ void setup()
   Display.fillRect(HALF_SCREEN_WIDTH + 8, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH - 8, RREHeight_fixed_8x16, C_BLACK);
 
 #ifdef WEBSERVER
-  Serial.println();
   setupWebServer();
 #endif
 
@@ -985,6 +1014,7 @@ void setup()
   setupLEDs();
 
   setupBluetooth();
+
   setupDeviceIdentifiers();
 
   setupController();
@@ -1003,11 +1033,11 @@ void setup()
 
   DrawMainScreen();
 
-  // Custom font is default used everywhere for icons - set to this by default. If using text font at all, remember to reset back to custom.
-  SetFontIcon();
-
-  Serial_INFO;
-  Serial.println("\n✅ Setup complete!");
+  Serial.println();
+  Serial_OK;
+  Serial.println("✅ Setup complete!");
+  Serial.println("ℹ️ Entering core process");
+  Serial.println();
 
   SetupComplete();
 }

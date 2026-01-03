@@ -19,10 +19,9 @@ void FlipScreen(Input* input) {
   }
 #endif
 
-#ifdef EXTRA_SERIAL_DEBUG
-  Serial.println("Flip Screen " + String(input->ValueState.Value));
-#endif
-
+// #ifdef EXTRA_SERIAL_DEBUG
+//   Serial.println("Flip Screen " + String(input->ValueState.Value));
+// #endif
 
   // Set orientation will also need flipping
 
