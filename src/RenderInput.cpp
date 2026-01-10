@@ -1,9 +1,11 @@
 // #include <Adafruit_SH110X.h>
 #include <RREFont.h>
 #include "Config.h"
+#include "Defines.h"
 #include "GamePad.h"
 #include "Structs.h"
 #include "Screen.h"
+#include "RenderText.h"
 
 // Draws a rectangle depending on value of Input (e.g. button press/release)
 void RenderInput_Rectangle(Input *input)
@@ -68,7 +70,7 @@ void RenderInput_Icon(Input *input)
 
     // Only draw if required - otherwise we might just be blanking previous icon
     if (input->FalseIcon != 0)
-      RRE.drawChar(input->XPos, input->YPos, input->FalseIcon);
+      RREIcon.drawChar(input->XPos, input->YPos, input->FalseIcon);
   }
   else
   {
@@ -78,7 +80,7 @@ void RenderInput_Icon(Input *input)
 
     // Only draw if required - otherwise we might just be blanking previous icon
     if (input->TrueIcon != NONE)
-      RRE.drawChar(input->XPos, input->YPos, input->TrueIcon);
+      RREIcon.drawChar(input->XPos, input->YPos, input->TrueIcon);
   }
 }
 
@@ -101,8 +103,8 @@ void RenderInput_DoubleIcon(Input *input)
 
     if (input->FalseIcon != NONE)
     {
-      RRE.drawChar(input->XPos, input->YPos, input->FalseIcon);
-      RRE.drawChar(input->XPos + 16, input->YPos, input->FalseIcon + 1);
+      RREIcon.drawChar(input->XPos, input->YPos, input->FalseIcon);
+      RREIcon.drawChar(input->XPos + 16, input->YPos, input->FalseIcon + 1);
     }
   }
   else
@@ -112,9 +114,9 @@ void RenderInput_DoubleIcon(Input *input)
 #endif
 
     if (input->TrueIcon != NONE)
-      RRE.drawChar(input->XPos, input->YPos, input->TrueIcon);
+      RREIcon.drawChar(input->XPos, input->YPos, input->TrueIcon);
 
-    RRE.drawChar(input->XPos + 16, input->YPos, input->TrueIcon + 1);
+    RREIcon.drawChar(input->XPos + 16, input->YPos, input->TrueIcon + 1);
   }
 }
 
@@ -158,7 +160,9 @@ void RenderInput_AnalogBar_Vert(Input *input)
   float rangedValue = mapFloat(constrainedState, minValue, maxValue, 0.0, 1.0);
 
   int barHeight = (rangedValue * (height - 1));
-  // Make sure bar is always at least 1 pixel high, and in our case here account for fractional rounding down to nearest pixel (which might otherwise cause a full value to miss final pixel of height)
+
+  // Make sure bar is always at least 1 pixel high, and in our case here account for fractional rounding
+  // down to nearest pixel (which might otherwise cause a full value to miss final pixel of height).
   // Note that for some reason, .fillRect was creating a 2 pixel high rectangle with a funny offset when barHeight was set to 0
   barHeight++;
 
@@ -181,5 +185,5 @@ void RenderInput_Hat(HatInput *hatInput)
   Display.fillRect(xPos, yPos, width, height, C_BLACK);
 
   // Value should be 0 for neutral position (nothing selected). Other icons are just + the value as an offset
-  RRE.drawChar(xPos, yPos, (hatInput->StartIcon + hatInput->ValueState.Value));
+  RREIcon.drawChar(xPos, yPos, (hatInput->StartIcon + hatInput->ValueState.Value));
 }

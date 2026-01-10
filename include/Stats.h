@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Config.h"
+#include "Defines.h"
 
-#define STATS_MINUTE_COUNT 60                         // 60 second across a minute count
-#define STATS_SUBCOUNTS_COUNT (SUB_SECOND_COUNT * 2) // Overall size of window that a 1 second sliding window is checked across to find out the actual max per second counts
-
+#define STATS_MINUTE_COUNT 60                           // 60 second across a minute count
+#define STATS_SUBCOUNTS_COUNT (SUB_SECOND_COUNT * 2)    // Overall size of window that a 1 second sliding window is checked across to find out the actual max per second counts
 
 ControllerReport ResetAllCurrentStats();
 void UpdateSecondStats(int second);
@@ -36,33 +36,25 @@ public:
     // Stats for current
     int Current_SecondCount;
     int Current_TotalCount;
-    //int Current_PerSecondCount;
     int Current_MaxPerSecond;
     int Current_MaxPerSecondOverLastMinute;
-    //int Current_MaxPerSecondEver;
 
     int Current_CrossSecondCount;
 
     // Stats for current session (since power on)
     int Session_TotalCount;
-    //int Session_CountPerSecond;
     int Session_MaxPerSecond;
 
     // Stats ever (including older sessions, if saved to flash)
     int Ever_TotalCount;
-    //int Ever_CountPerSecond;
     int Ever_MaxPerSecond;
 
     // TODO: Design Choice - GetSessionCountPerSecond = previous GetSessionCountPerSecond + CountPerSecond - SessionCountPerSecond
     // is only updated CountPerSecond is reset, or device is powered down
     // Same with EverCounts - update when CountPerSecond is reset, or device powered down
 
-// TODO: Second Operation (e.g. draw to screen)
-// TODO: SubSecond Operation (e.g. draw to screen)
-
-    //int TotalCount;
-    //int MaxPerSecondCount;
-    //int TotalEverCount;
+    // TODO: Second Operation (e.g. draw to screen)
+    // TODO: SubSecond Operation (e.g. draw to screen)
 
     // Chain stats together - handy for e.g. keeping track of a single stat, but also stat combinations that add multiple inputs
     // E.g. a Hat input might have individual stats for each direction, but also a combined stat for the whole hat

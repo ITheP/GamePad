@@ -2,6 +2,7 @@
 #include "Menus.h"
 #include "MenuFunctions.h"
 #include "Config.h"
+#include "Defines.h"
 #include "Structs.h"
 #include "IconMappings.h"
 #include "Screen.h"
@@ -21,17 +22,24 @@ void Menu::Handle()
 {
   if (CurrentMenuOffset != RequiredMenuOffset)
   {
-Serial.println("Handling menu: " + String(CurrentMenuOption->Description) + ", required offset: " + String(RequiredMenuOffset));
+#ifdef EXTRA_SERIAL_DEBUG
+    Serial.println("Handling menu: " + String(CurrentMenuOption->Description));
+#endif
 
     if (CurrentMenuOption->ExitOperation != nullptr)
       CurrentMenuOption->ExitOperation();
 
     CurrentMenuOption = &MenuOptions[RequiredMenuOffset];
-    Menus::CurrentMenuOption = CurrentMenuOption; // Menus can reference directly, if needed without needing to push around all over the place or force all menu options to have an initiation call to record this.
+    // Menus can reference directly, if needed without needing to push around all over the place or force all menu options to have an initiation call to record this.
+    Menus::CurrentMenuOption = CurrentMenuOption;
     CurrentMenuOffset = RequiredMenuOffset;
 
-    if (CurrentMenuOption->InitOperation != nullptr) {
+    if (CurrentMenuOption->InitOperation != nullptr)
+    {
+#ifdef EXTRA_SERIAL_DEBUG
       Serial.println("Calling init operation for menu: " + String(CurrentMenuOption->Description));
+#endif
+
       CurrentMenuOption->InitOperation();
     }
   }

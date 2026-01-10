@@ -11,7 +11,7 @@ float fmap(float x, float in_min, float in_max, float out_min, float out_max)
 
 const char *getBuildVersion()
 {
-  static char version[32]; // Enough space for "v1.YYMMDD.HHMMSS"
+  static char version[32]; // Enough space for "v123.YYMMDD.HHMMSS"
   static bool initialized = false;
 
   if (initialized)
@@ -64,4 +64,23 @@ if (LittleFS.exists(path))
 }
 else
   Serial.printf("ℹ️ %s doesn't exist to dump to serial", path);
+}
+
+// SaferPasswordString only shows first and last letters - all others are converted to * - safter for display anywhere (including Serial use)
+String SaferPasswordString(String password)
+{
+    int len = password.length();
+
+    // If 0, 1, or 2 chars → return as‑is
+    if (len <= 2)
+        return password;
+
+    // Build masked version
+    String result = "";
+    result += password[0];          // first char
+    for (int i = 1; i < len - 1; i++)
+        result += '*';              // mask middle
+    result += password[len - 1];    // last char
+
+    return result;
 }

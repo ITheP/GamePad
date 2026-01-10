@@ -12,6 +12,7 @@
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
 #include "Config.h"
+#include "Defines.h"
 #include "Arduino.h"
 #include "IconMappings.h"
 #include "Icons.h"
@@ -22,8 +23,8 @@
 
 #ifdef WEBSERVER
 
-// Create AsyncWebServer on port 80
-AsyncWebServer WebServer(80);
+AsyncWebServer WebServer(80);       // Create AsyncWebServer on port 80
+
 int Web::WebServerEnabled = false;
 char WebServerIcon = Icon_Web_Disabled;
 
@@ -65,10 +66,9 @@ void Web::SetUpRoutes()
     // server.serveStatic("/", SPIFFS, "/").setDefaultFile("root.html");
 
     // We do a lot of the heavy lifting ourselves for sorting the
-    // pushing of web pages out - this is to allow us to
-    // more easily slap in dynamic content. Can still put in special cases and
-    // .on requests if required.
-    // Also wanted extra flexibility to debug/print what was going on
+    // pushing of web pages out - this is to allow us to more easily slap in dynamic content.
+    // Can still put in special cases and .on requests if required.
+    // Also wanted extra flexibility to debug/print what was going on.
     WebServer.onNotFound([](AsyncWebServerRequest *request)
                          {
                              ShowTraffic = TrafficDisplayTime + 1000; // +1 gives us some leeway to try make sure separate thread doesn't reduce this in the RenderIcon before it displays something
@@ -306,36 +306,6 @@ void Web::SendJson_Stats(AsyncWebServerRequest *request)
     request->send(200, "application/json", buffer.GetString());
 }
 
-// void handleTestRequest(AsyncWebServerRequest *request) {
-//   if (request->hasParam("num1") && request->hasParam("num2") && request->hasParam("text")) {
-//       String num1Str = request->getParam("num1")->value();
-//       String num2Str = request->getParam("num2")->value();
-//       String text = request->getParam("text")->value();
-
-//       int num1 = num1Str.toInt();
-//       int num2 = num2Str.toInt();
-//       String result = String(num1 * num2) + " " + text;
-
-//       // Create JSON response
-//       rapidjson::Document json;
-//       json.SetObject();
-//       rapidjson::Document::AllocatorType& allocator = json.GetAllocator();
-
-//       json.AddMember("num1", num1, allocator);
-//       json.AddMember("num2", num2, allocator);
-//       json.AddMember("text", rapidjson::Value(text.c_str(), allocator), allocator);
-//       json.AddMember("result", rapidjson::Value(result.c_str(), allocator), allocator);
-
-//       rapidjson::StringBuffer buffer;
-//       rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-//       json.Accept(writer);
-
-//       request->send(200, "application/json", buffer.GetString());
-//   } else {
-//       request->send(400, "application/json", "{\"error\":\"Missing parameters\"}");
-//   }
-// }
-
 int Web::ShowTraffic = -1;
 char LastWebServerIcon;
 
@@ -385,9 +355,7 @@ void Web::ListDir(const char *dirname, uint8_t depth)
             String subdir = String(file.name());
             if (!subdir.startsWith("/"))
                 subdir = "/" + subdir;
-            ListDir(subdir.c_str(), depth + 1);
-
-            //ListDir(file.name(), depth + 1); // Recurse into subdirectory
+            ListDir(subdir.c_str(), depth + 1); // Recurse into subdirectory
         }
         else
         {
@@ -412,8 +380,6 @@ void Web::WebListDir(std::ostringstream *stream, const char *dirname, uint8_t de
     File file = dir.openNextFile();
     while (file)
     {
-        // for (uint8_t i = 0; i < depth; i++)
-        //     *stream << ("&nbsp;&nbsp;"); // Indent
         *stream << "<li>";
 
         if (file.isDirectory())
@@ -423,9 +389,7 @@ void Web::WebListDir(std::ostringstream *stream, const char *dirname, uint8_t de
             String subdir = String(file.name());
             if (!subdir.startsWith("/"))
                 subdir = "/" + subdir;
-            WebListDir(stream, subdir.c_str(), depth + 1);
-
-            //WebListDir(stream, file.name(), depth + 1); // Recurse into subdirectory
+            WebListDir(stream, subdir.c_str(), depth + 1);  // Recurse into subdirectory
         }
         else
         {

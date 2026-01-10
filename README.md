@@ -40,41 +40,25 @@ Includes...
 - [x] Automagic Bluetooth device naming
 - [x] Custom Bluetooth device name
 - [x] Automatic unique Bluetooth Id's
-- [x] Onboard LED
-- [x] Neopixel/equivalent RGB external LEDs
 - [x] Controller visual display with live control state
 - [x] Basic stats (strums per second, total strums)
-- [x] Startup information and LED tests
+- [x] Startup information
 - [x] Benchmarking for performance
 - [x] Extra debug information
 - [x] Support for multiple controllers (via configuration files)
-- [x] WiFi support
-- [x] Embedded web service
 - [x] Better stats calculation with better decoupling of hardcoded stats counting
 - [ ] Wired gamepad support
 - [x] User selectable configuration in controller
 - [x] Scrollable help text in controller configuration
 - [x] Basic text style formatting of Help text
-- [x] User selectable configuration in web
 - [x] Save user config to flash
 - [x] Save user stats to flash
 - [ ] Query around power brownout on off and saving
-- [x] Multiple profiles
-- [x] Controller config profile handling
-- [x] Controller config profile copy/paste
-- [x] Controller config WiFi access point selection
-- [x] Controller config WiFi set password
 - [ ] Save to flash encryption
 - [ ] Hiding of existing password (show 1st/last chars only) - UI specific, don't overwrite saved passwords
 - [ ] Default Device Names from default Profiles
-- [ ] Controller config set custom Device Name
-- [ ] Support for more LED effects
-- [x] Idle LED effects
-- [ ] Independent LED effects (e.g. based on Stats)
 - [x] Trigger on button down, and button up, and alternative long press triggers (so can e.g. hold button to access menus while retaining its ability to be used in game)
 - [ ] One effect can affect others - e.g. buttons held down affect colour of another effect
-- [ ] Run time configurable LEDs (disable if power below certain level, turn on/off in options)
-- [ ] More accurate battery life indicator
 - [ ] HAT code needs tweaking to finish it completely
 - [ ] Impliment analog stick support
 - [ ] Add more stats tracking
@@ -84,9 +68,51 @@ Includes...
 - [ ] Test/debug screen - show pins etc. on button presses (access via boot option?)
 - [ ] Investigate ESP32-S3 cpu throttling (reduce mhz) power saving mode
 - [ ] Settings using whammy bar - e.g. hold button to set brightness and wiggle whammy bar to set it
-- [ ] Analog inputs - have a configuration screen that allows you to set min/max values (by using them) and save to settings
-- [ ] Flip-able controls - i.e. flips mappings inside so e.g. up and down flipped on strum bar (or whole HAT is flipped and upside down)
 - [ ] Menu option to auto-re-boot into configuration menus
+- [ ] Statistics menu item, show changing every x seconds random stats. Possibly when scroll ends it updates with content from a new scroll (2*scroll text move from one to other)
+- [ ] Controller idle - on display idle keep to max ?3? pixel for first ?20? seconds in case actually in game and don't want performance drop of long term idle effect overhead.
+- [ ] Shift logos out of Icons font into own Logo font to free up icon space, and devices font for device images
+
+## To Do - Config & Prefs
+- [x] User selectable configuration in web
+- [x] Controller config WiFi access point selection
+- [x] Controller config WiFi set password
+- [ ] Controller config set custom Device Name
+- [ ] Analog inputs - have a configuration screen that allows you to set min/max values (by using them) and save to settings
+- [ ] Custom device name (also remove current hardcoded custom device name, won't be needed)
+- [ ] Invert display (black on white)
+- [ ] Use same WiFi details as Default (makes multiple profiles easier while specifying single WiFi). Menus should should dynamically change when this is enabled (don't show access point selection or password)
+- [ ] Default all profiles to using Default profile WiFi
+- [ ] No WiFi? Make sure not powered.
+- [ ] Flip-able controls - i.e. flips mappings inside so e.g. up and down flipped on strum bar (or whole HAT is flipped and upside down)
+- [ ] Prefs saving in so actually saves
+- [ ] Icons for Profiles
+- [ ] Choose different guitar/controller gfx
+## To Do - Networking
+- [x] WiFi support
+
+## To Do - Web
+- [x] Embedded web service
+
+## To Do - Profiles
+- [x] Multiple profiles
+- [x] Controller config profile handling
+- [x] Controller config profile copy/paste
+
+## To Do - Battery
+- [ ] More accurate battery life indicator
+- [ ] When h/w allows, initial live battery monitoring loop checks for battery level - and if charging, and level high enough, will then exit on past the loop and allow device to continue booting.
+- [ ] Charging battery status (when hardware allows for it) - flashing when charging, not flashing when plugged in by charged
+
+## To Do - LED
+- [x] Startup LED tests
+- [x] Onboard LED
+- [x] Neopixel/equivalent RGB external LEDs
+- [ ] Support for more LED effects
+- [x] Idle LED effects
+- [ ] Independent LED effects (e.g. based on Stats)
+- [ ] Run time configurable LEDs (disable if power below certain level, turn on/off in options)
+- [ ] If External LED's powered on when empty battery kicks in - turn them all off to preserve battery power
   
 ## To Do - Electronics
 
@@ -97,7 +123,7 @@ Includes...
 - [X] Connect to external (to device) LEDs
 - [ ] LED's that only power up when USB connected
 - [ ] USB charging while playing from USB power (hot plug-able while playing)
-- [ ] Dual battery power (possibly one dedicated to device so doesn't touch LEDs)
+- [ ] Dual battery power (possibly one dedicated to device so isn't effected by LEDs)
 
 ## To Do - Other
 

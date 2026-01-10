@@ -1,6 +1,7 @@
 #pragma once
 
-#include "config.h"
+#include "Config.h"
+#include "Defines.h"
 #include "Profiles.h"
 
 #define MenuContentStartX 22
@@ -94,9 +95,9 @@ private:
     static char Icon;
     static int AnimationFrameIndex; // Index for tracking animated components
     static int FrameTimer;
-    static int DelayBetweenFrames; // milliseconds between animation frames
-    static String MessageTop;          // General purpose message
-    static String MessageBottom;          // General purpose message
+    static int DelayBetweenFrames;  // milliseconds between animation frames
+    static String MessageTop;       // General purpose message
+    static String MessageBottom;    // General purpose message
 
     static void DrawMessages();
 };

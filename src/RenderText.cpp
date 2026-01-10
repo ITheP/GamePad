@@ -21,7 +21,6 @@ void setupRRE()
   RRE.setCR(0);
   RRE.setScale(1);
   SetFontFixed();
-  // SetFontLineHeightFixed();
 
   RREDefault.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
   RREDefault.setCR(0);
@@ -45,7 +44,7 @@ void RRERect(int x, int y, int width, int height, int colour)
   Display.fillRect(x, y, width, height, colour);
 }
 
-// Much juicier (but slower) text rendering than inline variants in . h file
+// Much juicier (but slower) text rendering than inline variants in .h file.
 void PrintDisplayLine(const TextLine *line)
 {
   int textPos = TextXPos;

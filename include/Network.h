@@ -6,22 +6,6 @@
 #include <vector>
 #include <string>
 
-// enum WiFi_StatusCode {
-//     WIFI_HIGHSIGNAL,
-//     WIFI_MEDIUMSIGNAL,
-//     WIFI_LOWSIGNAL,
-//     WIFI_TRACESIGNAL,
-//     WIFI_QUERY,
-//     WIFI_ACCESSPOINTUNAVAILABLE,
-//     WIFI_DISABLED,
-//     WIFI_CONNECTING,
-//     WIFI_RECONNECTING,
-//     WIFI_DISCONNECTED,
-//     WIFI_UNKNOWNSTATUS,
-//     WIFI_STATUS_COUNT // for bounds checking
-// };
-
-
 // Structure to hold AP info
 struct AccessPoint {
   String ssid;        // Network name
@@ -38,7 +22,12 @@ class Network
 {
 public:
     static void HandleWiFi(int second);
+    static int WiFiDisabled;
     static char *WiFiStatus;
+    static unsigned char WiFiCharacter;
+
+    static const char *ssid;
+    static const char *password;
 
     static std::vector<AccessPoint*> AllAccessPointList;
     static std::map<String, AccessPoint*> AccessPointList;
@@ -47,7 +36,6 @@ public:
     static void Config_InitWifi();
     static void Config_StartScan();
     static void Config_UpdateScanResults();
-    static void Config_SelectAccessPoint(const String& ssid);
     
     // WiFi connection testing
     enum WiFiTestResult {
@@ -67,14 +55,10 @@ public:
     static void CancelWiFiTest();  // Cancel any in-progress test
 
 private:
-    static const char *ssid;
-    static const char *password;
-
     static int WiFiConnecting;
     static wl_status_t WiFiConnectionState;
     static wl_status_t PreviousWiFiConnectionState;
 
-    static unsigned char WiFiCharacter;
     static unsigned char WiFiStatusCharacter;
     static unsigned char LastWiFiCharacter;
     static unsigned char LastWiFiStatusCharacter;

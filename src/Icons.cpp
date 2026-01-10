@@ -13,7 +13,6 @@ void RenderIcon(unsigned char icon, int xPos, int yPos, int clearWidth, int clea
   RREIcon.drawChar(xPos, yPos, icon);
 }
 
-// Assumes correct font is selected
 void RenderIconRuns(IconRun runs[], int count)
 {
   for (int i = 0; i < count; i++)

@@ -20,8 +20,6 @@ float StatusLED_B = 0;
 TaskHandle_t UpdateExternalLEDsTask;
 volatile int UpdateLEDs = false;
 
-// =========================================================
-
 void InitExternalLED(ExternalLEDConfig *config, CRGB *leds)
 {
   // We effectively account for either 1 LED being specified (nice and simple) or an array of them being specified (for fancy connected effects)
@@ -59,7 +57,6 @@ void InitExternalLED(ExternalLEDConfig *config, CRGB *leds)
 
   // Just in case an effect wants it, pre-calculate a HSV from Primary Colour
   config->PrimaryHSV = rgb2hsv_approximate(config->PrimaryColour.Colour);
-  //}
 }
 
 extern CRGB ExternalLeds[];
@@ -70,6 +67,8 @@ extern int Second;
 int LEDPreviousSecond;
 #endif
 
+// Constantly running LED loop - running under it's own task
+// so we can adjust the core it run's on if required
 void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
 {
   for (;;)
@@ -199,7 +198,6 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
         // e.g. map(state, 0, 4095, -20, 275) then clip to FastLED 0->255 range and we have a decent range ignoring the extremes
 
         ExternalLEDConfig *ledConfig = input->LEDConfig;
-        // int ledNumber = config->LEDNumber;
 
         if (ledConfig != nullptr)
         {
@@ -371,13 +369,15 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
         StatusLED_B = 0;
 
 #ifdef USE_EXTERNAL_LED
-      // Fade disabled External LED's - note this are integer calculations so must be enough fade to actually have a decrease, and fractional components not applied over many iterations can add up to bigger differences over time. So this isn't exact.
+      // Fade disabled External LED's - note these are integer calculations so must be enough fade to actually have a decrease,
+      // and fractional components not applied over many iterations can add up to bigger differences over time. So this isn't exact.
 
       // We don't want to do this as fast as possible, and too many small fractional changes to work nicely with FastLED's preferred uint8_t
       // so we throttle back (assumes is delayed enough that there will always be a high enough value to affect a decrease)
       CRGB *crgb;
       float r, g, b;
-      // As External LED's are updated to a value sporadically on press, and held without repeatedly being set each frame, we only fade when an LED is set as being disabled (i.e. a nice fade to being off)
+      // As External LED's are updated to a value sporadically on press, and held without repeatedly being set each frame,
+      // we only fade when an LED is set as being disabled (i.e. a nice fade to being off)
       // TODO: Fade to an off colour rather than black?
 
       for (int i = 0; i < ExternalLED_FadeCount; i++)

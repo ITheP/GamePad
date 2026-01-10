@@ -1,6 +1,7 @@
 #pragma once
 
-#include "config.h"
+#include "Config.h"
+#include "Defines.h"
 
 typedef struct MenuOption
 {
@@ -15,15 +16,12 @@ typedef struct MenuOption
 class Menu
 {
 public:
-    // static int RequiredMenuOffset;
     MenuOption *MenuOptions;
     int MenuOptionsCount;
 
     MenuOption *CurrentMenuOption;
     int CurrentMenuOffset;
     int RequiredMenuOffset;
-
-    // static int MenuMode;
 
     void Handle();
 

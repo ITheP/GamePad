@@ -13,5 +13,6 @@
         "NEOPIXEL",
         "PSRAM",
         "targettable"
-    ]
+    ],
+    "cmake.sourceDirectory": "C:/Work/PlatformIO/GamePad/GamePad/lib/rapidjson-1.1.0"
 }

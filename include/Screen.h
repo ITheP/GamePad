@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Config.h"
+#include "Defines.h"
 #include "Structs.h"
 #include <Adafruit_SH110X.h>
 

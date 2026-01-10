@@ -5,7 +5,8 @@
 #include <esp_cpu.h>
 #include <xtensa/core-macros.h>
 #include "Debug.h"
-#include "config.h"
+#include "Config.h"
+#include "Defines.h"
 #include "Prefs.h"
 
 // Serial friendly characters (show fine in VSCode terminal)
@@ -60,6 +61,7 @@
 // 🔦 External LED
 
 // Serial output in VSCode appears to be able to display following OK - though editor font and terminal font may differ...
+// Sometimes VSCode get's knickers in a twist and doesn't display emoji/icons
 
 //  !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
 // `abcdefghijklmnopqrstuvwxyz{|}~☀☁☂☃☄★☆☇☈☉☊☋☌☍☎☏☐☑☒☓☔☕☖☗☘☙☚☛☜☝☞☟☠
@@ -320,7 +322,6 @@ void Debug::WarningFlashes(WarningFlashCodes code)
 // Experiments in device crash logging...
 // DOESN'T WORK without changing framework from arduino to espidf (or layering in arduino inside espidf)
 // but that in itself suddenly opens a whole can of worms!
-// Stopped bothering
 
 // extern "C" void panic_handler(void *frame)
 // {
@@ -425,6 +426,7 @@ void Debug::CheckForCrashInfo()
     CrashInfo[0] = 0;
 }
 
+// Primarily for testing purposes
 void Debug::CrashOnPurpose()
 {
     Serial.println("ATTEMPTING TO CRASH DEVICE");

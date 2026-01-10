@@ -1,7 +1,8 @@
 #pragma once
 
 #include <Arduino.h>
-#include "config.h"
+#include "Config.h"
+#include "Defines.h"
 
 // ANSI escape codes
 #define ANSI_RED     "\033[31m"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Config.h"
+#include "Defines.h"
 
 #define DEVICE_NAME "Humbug"    // Max 17 characters
 

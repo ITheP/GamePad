@@ -1,6 +1,7 @@
 #pragma once
 
-#include "config.h"
+#include "Config.h"
+#include "Defines.h"
 #include "Menu.h"
 #include "Screen.h"
 #include "DeviceConfig.h"
@@ -30,13 +31,7 @@ public:
 
     static unsigned int MenuFrame;
 
-    // static int UpPressed;
-    // static int DownPressed;
-    // static int SelectPressed;
-    // static int BackPressed;
-
     static ControllerReport ToggleMenuMode();
-    // static int SelectionOff();
 
     static void InitMenuItemDisplay(int useMenuOptionLabel);
     static void InitMenuItemDisplay(char *text = NONE, MenuScrollState scrollStatus = NoScrollNeeded);
@@ -96,15 +91,6 @@ public:
         return DigitalInput_Config_Back.ValueState.StateJustChanged;
     }
 
-    // static ControllerReport Config_UpPressed();
-    // static ControllerReport Config_DownPressed();
-    // static ControllerReport Config_SelectPressed();
-    // static ControllerReport Config_BackPressed();
-    // static ControllerReport Config_UpReleased();
-    // static ControllerReport Config_DownReleased();
-    // static ControllerReport Config_SelectReleased();
-    // static ControllerReport Config_BackReleased();
-
 private:
     static void RenderScrollingText();
     static void UpdateScrollingText();
@@ -112,4 +98,5 @@ private:
     static void DrawScrollingText();
     static void ReDrawScrollingText();
     static void DrawStaticMenuText();
+    static void DrawMenuLine();
 };

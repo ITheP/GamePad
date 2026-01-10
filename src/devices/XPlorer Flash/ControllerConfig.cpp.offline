@@ -1,6 +1,7 @@
 #include <optional>
 #include <vector>
 #include "Config.h"
+#include "Defines.h"
 #include "RenderInput.h"
 #include "LED.h"
 #include "IconMappings.h"
@@ -98,7 +99,7 @@ Input DigitalInput_Green = // Green button on guitar neck
         .PrimaryColour = { CRGB(0, 255, 0), true },
         .SecondaryColour = { CRGB(0, 255, 0), false }
     },
-    .BluetoothIdOffset = 1
+    .ProfileId = 1
   };
 
 Input DigitalInput_Red = // Red button on guitar neck
@@ -112,7 +113,7 @@ Input DigitalInput_Red = // Red button on guitar neck
         .PrimaryColour = { CRGB(255, 0, 0), true },
         .SecondaryColour = { CRGB(255, 0, 0), false }
     },
-    .BluetoothIdOffset = 2
+    .ProfileId = 2
   };
 
 Input DigitalInput_Yellow = // Yellow button on guitar neck
@@ -126,7 +127,7 @@ Input DigitalInput_Yellow = // Yellow button on guitar neck
         .PrimaryColour = { CRGB(255, 128, 0), true },
         .SecondaryColour = { CRGB(255, 128, 0), false }
     },
-    .BluetoothIdOffset = 3
+    .ProfileId = 3
   }; // Onboard LED set to slightly off yellow, then if red is pressed as well, you can kind of see it a bit
 
 Input DigitalInput_Blue = // Blue button on guitar neck
@@ -140,7 +141,7 @@ Input DigitalInput_Blue = // Blue button on guitar neck
         .PrimaryColour = { CRGB(0, 0, 255), true },
         .SecondaryColour = { CRGB(0, 0, 255), false }
     },
-    .BluetoothIdOffset = 4
+    .ProfileId = 4
   };
 
 Input DigitalInput_Orange = // Orange button on guitar neck
@@ -154,7 +155,7 @@ Input DigitalInput_Orange = // Orange button on guitar neck
         .PrimaryColour = { CRGB(255, 128, 0), true },
         .SecondaryColour = { CRGB(255, 128, 0), false }
     },
-    .BluetoothIdOffset = 5
+    .ProfileId = 5
   };
 
   // TEST - same as select but with some LED
@@ -456,5 +457,5 @@ void Custom_RenderHatStrumState(HatInput *hatInput) {
     else
       c = Icon_Guitar2_CenterOff;
 
-    RRE.drawChar(26, 25, c);
+    RREIcon.drawChar(26, 25, c);
 }

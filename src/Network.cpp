@@ -3,10 +3,10 @@
 #include <string>
 #include <algorithm>
 #include <map>
-// #include <WiFiManager.h>
 #include "Network.h"
 #include "GamePad.h"
 #include "Config.h"
+#include "Defines.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "IconMappings.h"
@@ -39,6 +39,7 @@ char WiFi_SignalLevel_Trace[] = "Trace Signal";
 std::vector<AccessPoint *> Network::AllAccessPointList;
 std::map<String, AccessPoint *> Network::AccessPointList;
 int Network::AccessPointListUpdated = false;
+int Network::WiFiDisabled = true;
 
 const char *AuthModeToStr(wifi_auth_mode_t auth)
 {
@@ -140,12 +141,8 @@ void Network::Config_UpdateScanResults()
 
         // Generate final list of access points, removing duplicates (keeping strongest signal only)
         // and ignoring hidden SSIDs
+
         // Clean up old AccessPointList entries before clearing
-        // for (auto& entry : AccessPointList)
-        // {
-        //     if (entry.second && AllAccessPointList.end() == std::find(AllAccessPointList.begin(), AllAccessPointList.end(), entry.second))
-        //         delete entry.second;
-        // }
         AccessPointList.clear();
 
         for (auto *ap : AllAccessPointList)
@@ -159,8 +156,6 @@ void Network::Config_UpdateScanResults()
                 AccessPointList[ap->ssid] = ap; // keep strongest
             }
         }
-
-        // Config_SelectAccessPoint("Sparkles");
 
         // Show all access points
 
@@ -224,22 +219,6 @@ void Network::Config_UpdateScanResults()
     }
 }
 
-// NOT NEEDED?
-void Network::Config_SelectAccessPoint(const String &ssid)
-{
-    //   for (auto &ap : AllAccessPointList) {
-    //     ap.selected = (ap.ssid == ssid);
-    //   }
-
-    for (auto &entry : Network::AccessPointList)
-    {
-        const String &key = entry.first; // the SSID key
-        AccessPoint *ap = entry.second;  // the AccessPoint object
-
-        ap->selected = (key == ssid);
-    }
-}
-
 void Network::Config_InitWifi()
 {
 #ifdef EXTRA_SERIAL_DEBUG
@@ -260,11 +239,9 @@ void Network::Config_InitWifi()
     Config_StartScan();
 }
 
-// TODO: If ndef WIFI then draw the icons for no wifi in main display setup
-
 // Wi-Fi credentials
-const char *Network::ssid = WIFI_DEFAULT_SSID;
-const char *Network::password = WIFI_DEFAULT_PASSWORD;
+const char *Network::ssid;
+const char *Network::password;
 
 int Network::WiFiConnecting = 0;
 wl_status_t Network::WiFiConnectionState;
@@ -279,23 +256,27 @@ Network::WiFiTestResult Network::LastTestResult = Network::TEST_NOT_STARTED;
 bool Network::TestInProgress = false;
 unsigned long Network::TestStartTime = 0;
 
-// ToDo: Disconnected icon if wifi is turned off
-
 unsigned char Network::WiFiCharacter;
 char *Network::WiFiStatus;
 
 unsigned char Network::WiFiStatusCharacter;
-// We have a final character that might override the WiFiCharacter (e.g. animation) but we want to retain what
-// the current WiFiCharacter is so that we can re-render it when status isn't changing. Mainly relevant when in a connecting state.
+
+// We have a final character that might override the WiFiCharacter (e.g. something animated) but we want to retain what
+// the current WiFiCharacter is so that we can re-render it when status isn't changing.
+// Mainly relevant when in a connecting state.
 unsigned char Network::FinalWiFiCharacter;
 
 void Network::HandleWiFi(int second)
 {
-    // WiFi
-    // Connect to Wi-Fi
-    WiFiConnectionState = WiFi.status();
-    // FinalWiFiCharacter = WiFiCharacter;
+    if (WiFiDisabled)
+    {
+        LastWiFiCharacter = WiFiCharacter;
+        RenderIcons();
+        return;
+    }
 
+    WiFiConnectionState = WiFi.status();
+    
     if (WiFiConnectionState == WL_CONNECTED)
     {
         wifi_ap_record_t ap_info;
@@ -305,7 +286,8 @@ void Network::HandleWiFi(int second)
         if (PreviousWiFiConnectionState != WiFiConnectionState)
         {
 #ifdef EXTRA_SERIAL_DEBUG
-            Serial.println("🛜 Connected to WiFi...");
+            Serial_INFO;
+            Serial.println("🛜 ℹ️ WiFi Information...");
 
             if (state == ESP_OK)
             {
@@ -315,7 +297,7 @@ void Network::HandleWiFi(int second)
 
             // WiFi.setSleep(false);
 
-            Serial.print("🛜 IP Address: ");
+            Serial.print("🛜 🔢 IP Address: ");
             Serial.println(WiFi.localIP());
 
             // esp_wifi_set_ps(WIFI_PS_NONE); // Throws wobbler if you try and use BT and WiFi at same time if WiFi isn't in a lower power mode
@@ -325,19 +307,19 @@ void Network::HandleWiFi(int second)
 
             if (ps_mode == WIFI_PS_NONE)
             {
-                Serial.println("🛜 WiFi is not in any power-saving mode.");
+                Serial.println("🛜 ℹ️ WiFi is not in any power-saving mode.");
             }
             else if (ps_mode == WIFI_PS_MIN_MODEM)
             {
-                Serial.println("🛜 WiFi is in minimum modem power-saving mode.");
+                Serial.println("🛜 ℹ️ WiFi is in minimum modem power-saving mode.");
             }
             else if (ps_mode == WIFI_PS_MAX_MODEM)
             {
-                Serial.println("🛜 WiFi is in maximum modem power-saving mode.");
+                Serial.println("🛜 ℹ️ WiFi is in maximum modem power-saving mode.");
             }
             else
             {
-                Serial.println("🛜 WiFi power saving mode is unknown.");
+                Serial.println("🛜 ⚠️ WiFi power saving mode is unknown.");
             }
 #endif
             WiFiConnecting = false;
@@ -377,7 +359,6 @@ void Network::HandleWiFi(int second)
                 WiFiCharacter = Icon_WiFi_TraceSignal;
                 WiFiStatus = WiFi_TraceSignal;
             }
-            // WiFiStatusCharacter = Icon_OK;
         }
         else
         {
@@ -409,7 +390,6 @@ void Network::HandleWiFi(int second)
     else
     {
         // Eyes hunting icons
-        // WiFiStatusCharacter = (unsigned char)Icon_EyesLeft + (unsigned char)(WiFiStatusIterations & 1);
 
         // Somethings changed...
         if (PreviousWiFiConnectionState != WiFiConnectionState)
@@ -423,7 +403,6 @@ void Network::HandleWiFi(int second)
                 if (WiFiConnecting == false)
                 {
 #ifdef EXTRA_SERIAL_DEBUG
-                    //Serial.println("🛜 WIFI: Idle");
                     Serial.println("🛜 ⏳ WIFI: Attempting to connect...");
 #endif
                     WiFi.disconnect(); // Reports that this helps if previously connected and disconnected
@@ -483,7 +462,7 @@ void Network::HandleWiFi(int second)
 
         // Base icon remains the same but we animate the search part of this
         unsigned char animation = (unsigned char)(WiFiStatusIterations & 0b11);
-        // Serial.println((int)(animation));
+
         if (animation == 0)
             FinalWiFiCharacter = WiFiCharacter;
         else
@@ -502,11 +481,6 @@ void Network::RenderIcons()
         RenderIcon(FinalWiFiCharacter, uiWiFi_xPos, uiWiFi_yPos, 14, 16);
         LastWiFiCharacter = FinalWiFiCharacter;
     }
-    // if (WiFiStatusCharacter != LastWiFiStatusCharacter)
-    //{
-    //     RenderIcon(WiFiStatusCharacter, uiWiFiStatus_xPos, uiWiFiStatus_yPos, 16, 16);
-    //     LastWiFiStatusCharacter = WiFiStatusCharacter;
-    // }
 
     // TEMPORARY TEST
     Web::RenderIcons();
@@ -524,7 +498,6 @@ Network::WiFiTestResult Network::TestWiFiConnection(const String &testSSID, cons
     }
 
     Serial_INFO;
-    //Serial.println("🛜 WiFi Test: Starting connection test");
     Serial.printf("🛜 ❔ WiFi testing connection: SSID='%s', Password length=%d\n", testSSID.c_str(), testPassword.length());
 
     TestInProgress = true;
@@ -533,6 +506,7 @@ Network::WiFiTestResult Network::TestWiFiConnection(const String &testSSID, cons
 
     // Disconnect from any existing connection first
     WiFi.disconnect(true);
+    
     // delay(100);
 
     // Set to station mode and initiate connection

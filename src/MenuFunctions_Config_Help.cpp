@@ -2,6 +2,7 @@
 #include "Menus.h"
 #include "MenuFunctions.h"
 #include "Config.h"
+#include "Defines.h"
 #include "Structs.h"
 #include "IconMappings.h"
 #include "Screen.h"
@@ -32,22 +33,23 @@ void MenuFunctions::Config_Update_Help()
 
   if (PRESSED == Menus::SelectState())
   {
-    //  Check for buttons being held down
+    // Check for buttons being held down
+    // Initially scrolled 1 pixel at a time but was a bit slow!
     if (PRESSED == Menus::UpState())
       ConfigHelpPixelOffset += 2;
     if (PRESSED == Menus::DownState())
       ConfigHelpPixelOffset -= 2;
 
-    SetFontSmall(); // Gives is small line height
+    int textLineHeight = FONT_SMALL_HEIGHT;
 
-    if (ConfigHelpPixelOffset >= TextLineHeight)
+    if (ConfigHelpPixelOffset >= textLineHeight)
     {
-      ConfigHelpPixelOffset -= TextLineHeight;
+      ConfigHelpPixelOffset -= textLineHeight;
       ConfigHelpTextPos++;
     }
     else if (ConfigHelpPixelOffset < 0)
     {
-      ConfigHelpPixelOffset += (TextLineHeight - 1);
+      ConfigHelpPixelOffset += (textLineHeight - 1);
       ConfigHelpTextPos--;
       if (ConfigHelpTextPos < 0)
         ConfigHelpTextPos = ConfigHelpTextSize - 1;
@@ -69,16 +71,18 @@ void MenuFunctions::Config_Draw_Help(int showScrollIcons)
   // (RREFont won't allow for clipping regions)
   // so we make sure this area is included when blanking things - and note relevant content will need to be redrawn after
 
-  SetFontSmall(); // IMPORTANT - BELOW DEPENDS ON THIS AND SUBSEQUENT USAGE OF GLOBAL TextLineHeight
+  int textLineHeight = FONT_SMALL_HEIGHT;
+
   // Clear main area
   Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
 
   // Clear out anything scrolling off the top, and ready for menu area to be (re)drawn
-  Display.fillRect(0, MenuContentStartY - TextLineHeight, SCREEN_WIDTH, TextLineHeight, C_BLACK);
+  Display.fillRect(0, MenuContentStartY - textLineHeight, SCREEN_WIDTH, textLineHeight, C_BLACK);
 
   int offset = 20 - ConfigHelpPixelOffset;
 
   ResetPrintDisplayLine(offset, 0, SetFontSmall);
+  
   int pos = ConfigHelpTextPos;
   for (int i = 0; i < 6; i++)
   {
@@ -87,7 +91,7 @@ void MenuFunctions::Config_Draw_Help(int showScrollIcons)
   }
 
   // Clear out anything scrolling off the top, and ready for menu area to be (re)drawn
-  Display.fillRect(0, MenuContentStartY - TextLineHeight, SCREEN_WIDTH, TextLineHeight, C_BLACK);
+  Display.fillRect(0, MenuContentStartY - textLineHeight, SCREEN_WIDTH, textLineHeight, C_BLACK);
 
   if (showScrollIcons)
     DrawScrollArrows();

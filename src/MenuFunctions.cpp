@@ -2,6 +2,7 @@
 #include "Menus.h"
 #include "MenuFunctions.h"
 #include "Config.h"
+#include "Defines.h"
 #include "Structs.h"
 #include "IconMappings.h"
 #include "Screen.h"
@@ -95,11 +96,6 @@ static char Battery_Wired[] = "Wired";
 // Battery menu item
 void MenuFunctions::DrawBatteryLevel()
 {
-  // snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%d %d%% %.1fv",
-  //          Battery::CurrentBatterySensorReading,
-  //          Battery::CurrentBatteryPercentage,
-  //          Battery::Voltage);
-
   float batteryLevel = Battery::Voltage;
   const char *text;
 
@@ -188,7 +184,6 @@ void MenuFunctions::DrawWebServer()
 {
 
   WiFiMode_t mode = WiFi.getMode();
-  // Serial.println("WEB: " + String(mode) + " cast " + String((int)mode));
 
   if ((int)mode == LastWebServerMode)
     return; // No point in restarting if its already doing this as a thing
@@ -281,14 +276,12 @@ void MenuFunctions::UpdateUSB()
     DrawUSB();
 }
 
-static char test[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890!\"£$%^&*()-=_+<>,.;'#:@~[]{}";
-
 void MenuFunctions::InitDebug()
 {
   Menus::InitMenuItemDisplay(Debug::CrashInfo, ScrollDefinitelyNeeded);
 }
 
-static char stats[] = "STATISTICS - TODO";
+static char stats[] = "Want funky statistics? Check the web site!";
 
 void MenuFunctions::InitStats()
 {

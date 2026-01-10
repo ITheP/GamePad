@@ -5,16 +5,6 @@
 #define uiUSB_yPos 53
 
 
-//#define uiWiFiStatus_xPos (uiWiFi_xPos + 15)
-//#define uiWiFiStatus_yPos (uiWiFi_yPos + 2)
-
-
-// #define uiWebServerStatus_xPos 22
-// #define uiWebServerStatus_yPos 51
-
-// #define uiWebServer_xPos (uiWebServerStatus_xPos + 10)
-// #define uiWebServer_yPos 51
-
 #define uiWebServer_xPos 26
 #define uiWebServer_yPos 51
 

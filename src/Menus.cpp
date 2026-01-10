@@ -2,6 +2,7 @@
 #include "Menus.h"
 #include "MenuFunctions.h"
 #include "Config.h"
+#include "Defines.h"
 #include "Structs.h"
 #include "IconMappings.h"
 #include "Screen.h"
@@ -14,8 +15,8 @@
 #include <Network.h>
 #include <Idle.h>
 
-// NOTE what seems like needlessly complicated optimisations here faffing around with buffers and screen width checks etc.
-// to display menu items is all to cut down overheads
+// NOTE what seems like needlessly complicated optimisations here faffing around with buffers and screen width
+// checks etc. to display menu items is all to cut down overheads.
 // Without optimisations when menus were engaged, FPS was dropping from around 10k to 30-40 FPS.
 // Also, scrolling text does not come cheap.
 // Every little helps!
@@ -39,7 +40,11 @@ MenuOption *NoMenuOption = new MenuOption{"None", NONE, NONE, NONE};
 MenuOption *Menus::CurrentMenuOption;
 
 MenuOption MainMenuOptions[] = {
-    {"Name", NONE, NONE, MenuFunctions::InitName, NONE, NONE}, // Name is first menu item we initialise to to make sure Device Name is drawn. Has own special rendering of text so we don't get menu icons etc. being drawn
+    // Name is first menu item we initialise to to make sure Device Name is drawn, so appears as default screen information
+    // even when menu's haven't been engaged yet.
+    // Has own special rendering of text so we don't get menu icons etc. being drawn
+    {"Name", NONE, NONE, MenuFunctions::InitName, NONE, NONE},
+
     {"Battery", Icon_Menu_Battery, "Battery", MenuFunctions::InitBattery, MenuFunctions::UpdateBattery, NONE},
     {"BT", Icon_Menu_Bluetooth, "Bluetooth", MenuFunctions::InitBluetooth, MenuFunctions::UpdateBluetooth, NONE},
     {"WiFi", Icon_Menu_WiFi, "WiFi", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
@@ -58,14 +63,12 @@ Menu Menus::MainMenu = {
     -1,
     0};
 
-    MenuOption ConfigMenuOptions[] = {
+MenuOption ConfigMenuOptions[] = {
     {"Help", Icon_Menu_QuestionMark, "Help", MenuFunctions::Config_Init_Help, MenuFunctions::Config_Update_Help, NONE}, // Name is first menu item we initialise to to make sure Device Name is drawn. Has own special rendering of text so we don't get menu icons etc. being drawn
     {"Profile", Icon_Menu_Smile, "Profile", MenuFunctions::Config_Init_Profile, MenuFunctions::Config_Update_Profile, NONE},
-    //{"WiFi Settings", Icon_Menu_WiFi, "WiFi Settings", MenuFunctions::Config_Init_WiFi_Settings, MenuFunctions::Config_Update_WiFi_Settings, NONE},
     {"WiFi Access Point", Icon_Menu_WiFi, "WiFi Access Point", MenuFunctions::Config_Init_WiFi_AccessPoint, MenuFunctions::Config_Update_WiFi_AccessPoint, NONE},
     {"WiFi Password", Icon_Menu_Key, "WiFi Password", MenuFunctions::Config_Init_WiFi_Password, MenuFunctions::Config_Update_WiFi_Password, MenuFunctions::Config_Exit_WiFi_Password},
     {"Save Config", Icon_Menu_Save, "Save Settings", MenuFunctions::Config_Init_SaveSettings, MenuFunctions::Config_Update_SaveSettings, NONE}};
-
 
 Menu Menus::ConfigMenu = {
     ConfigMenuOptions,
@@ -73,12 +76,6 @@ Menu Menus::ConfigMenu = {
     NoMenuOption,
     -1,
     0};
-
-// TODO
-// Parent/Child references to menus
-// Enter submenu / return to parent menu operations
-// Value selection operations for menu items that have values to select from (make this a reusable other menus, e.g. true/false
-// Breadcrumb trail display of menu hierarchy
 
 // Menu mode within main app
 ControllerReport Menus::ToggleMenuMode()
@@ -99,7 +96,7 @@ ControllerReport Menus::ToggleMenuMode()
 
 #define MaxCharsFitOnScreen ((SCREEN_WIDTH / 2) + 1) // Theoretical max number of chars on screen (1 pixel wide) + 1 pixel spacings +1 for /0
                                                      // Number of chars that fit on screen + 1 to account for partial offsets to the left;
-char Menus::MenuTextBuffer[MenuTextBufferSize + 4];  // General use Menu display text buffer to render dynamic content into - +4 to make sure there is space for ' - \0'
+char Menus::MenuTextBuffer[MenuTextBufferSize + 4];  // General use Menu display text buffer to render dynamic content into - +4 to make sure there is space for additional ' - \0' text when making a wrap around scrolling text and amending these characters for visual clarity
 
 int ScrollMenuText = OFF;
 int DisplayTextStart = MenuTextStartX;
@@ -119,8 +116,7 @@ void Menus::InitMenuItemDisplay(int useMenuOptionLabel)
 // Menu auto-scrolls text if too long to fit on screen
 void Menus::InitMenuItemDisplay(char *text, MenuScrollState scrollStatus)
 {
-  // WORK OUT ICONS OR LEFT MENU TEXT STUFF HERE
-  Display.fillRect(0, 0, MenuTextStartX - 1, 13, C_BLACK); // SCREEN_WIDTH, 12, C_BLACK);
+  Display.fillRect(0, 0, MenuTextStartX - 1, 13, C_BLACK);
 
   RREIcon.drawChar(0, 2, CurrentMenuOption->Icon);
 
@@ -131,7 +127,7 @@ void Menus::InitMenuItemDisplay(char *text, MenuScrollState scrollStatus)
 // Call ... checkScrollNeeded = false, scrollDefinitelyNeeded = false if you KNOW text will fit on screen
 // Call ... checkScrollNeeded = true,  scrollDefinitelyNeeded = false if you aren't too sure text will fit
 // Call ... checkScrollNeeded = false, scrollDefinitelyNeeded = true  if you KNOW text will NOT fit on screen
-// We do all this to try minimise amount of overhead checking for text fit to work out if we need to scroll or not - high overheads
+// We do all this to try minimise needless overhead checking for text fit to work out if we need to scroll or not
 void Menus::UpdateMenuText(char *text, int scrollStatus)
 {
   if (scrollStatus == ScrollCheck)
@@ -169,38 +165,37 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     MenuTextLength = std::strlen(text);
   }
 
-  // Make sure MenuTextBuffer contains the text, for redraws, scrolling, etc.
+  // Make sure MenuTextBuffer contains the text for redraws, scrolling, etc.
   if (text != MenuTextBuffer)
     strcpy(MenuTextBuffer, text); // Shouldn't need strncopy()
 
   if (scrollStatus == ScrollDefinitelyNeeded)
   {
-    // For scrolling text, stick a " - " on to visually separate end of text from start on wrap
-    // Already MenuTextBuffer we can just amend it. For other strings, won't have buffer
+    // For scrolling text, stick a " - " on to visually separate end of text from start for wrapping text.
+    // If text is already in MenuTextBuffer we can just amend. For other strings, won't have buffer
     // space at the end so we copy into the MenuTextBuffer.
-    // Note that text could get used elsewhere (logs, serial output, web output)
-    // so we don't go round sticking the separator on everything in advance as we might not want it.
+    // Note that specified text could get used elsewhere (logs, serial output, web output)
+    // so we don't go sticking the extra separator text in advance elsewhere as we might not want it.
 
     strcat(MenuTextBuffer, " - ");
 
     MenuTextLength += 3; // include the " - " above
 
     // Scroll that sucker!
-    // Pad the end of the text buffer with the starting segment so we can scroll seamlessly
-    // strncat(MenuTextBuffer, MenuTextBuffer, BufferCopyCharsLength);
     MenuTextCharPos = 0;
     MenuTextStartCharWidth = -RREDefault.charWidth(MenuTextBuffer[0]);
     MenuTextPixelPos = 0;
     ScrollMenuText = ON;
 
-    MenuStartTime = Now + MenuStartDelay; // start scrolling in 2.5 seconds
+     // Scrolling doesn't start time wise till after a e.g. 2.5 second delay, to give user chance to read initial text
+    MenuStartTime = Now + MenuStartDelay;
 
     // Draw initial text, which will stick around till the MenuStartTime kicks in with actual scrolling updates
     DrawScrollingText();
   }
   else
   {
-    // No scrolling needed - display now
+    // No scrolling needed
     ScrollMenuText = OFF;
 
     DrawStaticMenuText();
@@ -209,9 +204,7 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
 
 void Menus::DrawStaticMenuText()
 {
-  // Redraw static text
   Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
-  // Display.fillRect(DisplayTextStart, 0, 10, RREHeight_fixed_8x16, C_WHITE);
   RREDefault.printStr(ALIGN_RIGHT, -1, MenuTextBuffer);
 }
 
@@ -220,9 +213,7 @@ void Menus::DisplayMenuTextOptimised()
 {
   // Throttle scrolling to every other frame
   if (ScrollMenuText == ON && (MenuFrame & 0x01) == 0 && (MenuStartTime < Now))
-  {
     DrawScrollingText();
-  }
 }
 
 // Always draw here to account for possible overwriting of menu area
@@ -262,7 +253,6 @@ void Menus::ReDrawScrollingText()
 
 void Menus::RenderScrollingText()
 {
-  // Scroll the text
   Display.fillRect(DisplayTextStart, 0, SCREEN_WIDTH - DisplayTextStart, 13, C_BLACK);
 
   int currentX = DisplayTextStart + MenuTextPixelPos;
@@ -298,43 +288,34 @@ void Menus::UpdateScrollingText()
 
 void Menus::FinishScrollingText()
 {
-  // After scrolling content, the left edge rendering will creep into where the menu separator is - so we re-draw this to keep everything neat
-  Display.fillRect(16 - 7, 0, 9, 13, C_BLACK); // Believe its 7 pixels we need to blank, could be 8 - TBC
+  // After scrolling content, the left edge rendering will creep past where the left of the
+  // menu is - so we re-draw this area to the left to keep everything neat
+  Display.fillRect(16 - 7, 0, 9, 13, C_BLACK);
   RREIcon.drawChar(0, 2, CurrentMenuOption->Icon);
 }
 
 // Super simple display of basic centered text - no icons or anything (e.g. used for Device Name)
 void Menus::DisplayMenuBasicCenteredText(char *text)
 {
-  ScrollMenuText = OFF; // Just in case any ongoing scrolling is happening!
+  ScrollMenuText = OFF; // Just in case any previous ongoing scrolling is happening!
 
   Display.fillRect(0, 0, SCREEN_WIDTH, 13, C_BLACK);
   RREDefault.printStr(ALIGN_CENTER, -1, text);
 }
 
-// Used for animated Menu line
-// i.e. some form of visual indicator that we are in menu mode
+// Used for animated Menu line - a visual indicator that we are in menu mode
 int LineOffset = -16;
 int LineWidth = 8;
 int DoubleLineWidth = 16;
 
 void Menus::Setup(Menu *rootMenu)
 {
-  // MenuFunctions::Setup();
-
-  RootMenu = rootMenu; //&MainMenu;
+   RootMenu = rootMenu;
   CurrentMenu = RootMenu;
 }
 
-// CONSOLIDATE REPEAT CODE IN 2 BELOW!
-
-// Optimised to draw less when being used with main screen
-void Menus::HandleMain()
+void Menus::DrawMenuLine()
 {
-  CurrentMenu->Handle();
-
-  DisplayMenuTextOptimised();
-
   if (MenusStatus == ON)
   {
     if ((MenuFrame & 0x07) == 0)
@@ -342,7 +323,6 @@ void Menus::HandleMain()
       // Used for animated Menu line
       LineOffset++;
       if (LineOffset == 0)
-        // LineDirection = -LineDirection;
         LineOffset = -16;
 
       for (int i = LineOffset; i < SCREEN_WIDTH; i += DoubleLineWidth)
@@ -356,6 +336,16 @@ void Menus::HandleMain()
   MenuFrame++;
 }
 
+// Optimised to draw less when being used with main screen
+void Menus::HandleMain()
+{
+  CurrentMenu->Handle();
+
+  DisplayMenuTextOptimised();
+
+  DrawMenuLine();
+}
+
 // Optimised to draw more when in config screen to allow for re-draws (where
 // content might overwrite menu area)
 void Menus::Handle_Config()
@@ -364,27 +354,7 @@ void Menus::Handle_Config()
 
   DisplayMenuText();
 
-  if (MenusStatus == ON)
-  {
-    if ((MenuFrame & 0x07) == 0)
-    {
-      // Used for animated Menu line
-      LineOffset++;
-      if (LineOffset == 0)
-        // LineDirection = -LineDirection;
-        LineOffset = -16;
-    }
-
-    for (int i = LineOffset; i < SCREEN_WIDTH; i += DoubleLineWidth)
-    {
-      Display.drawFastHLine(i, 14, LineWidth, C_WHITE);
-      Display.drawFastHLine(i + LineWidth, 14, LineWidth, C_BLACK);
-    }
-
-      RenderIdleEffect();
-  }
-
-  MenuFrame++;
+  DrawMenuLine();
 }
 
 ControllerReport Menus::MoveUp()
@@ -410,20 +380,15 @@ ControllerReport Menus::MoveDown()
 void Menus::Config_CheckForMenuChange()
 {
   if (PRESSED == UpState() && UpJustChanged())
-  //{
     CurrentMenu->MoveUp();
-    //UpPressed = false;
-  //}
   else if (PRESSED == DownState() && DownJustChanged())
-  //{
     CurrentMenu->MoveDown();
-    //DownPressed = false;
-  //}
 }
 
-// Simplified check for digital inputs
+// Simplified check for digital inputs for when in Config menu
 // Simply set's flags if something is pressed
-// It's up to individual menu options to work out how to handle. Could be different for different menu options!
+// It's up to individual menu options to work out how to handle.
+// Could be different for different menu options!
 void Menus::Config_CheckInputs()
 {
   uint16_t state;
@@ -466,7 +431,7 @@ void Menus::Config_CheckInputs()
           if (input->CustomOperationReleased != NONE)
             input->CustomOperationReleased();
         }
-      } 
+      }
     }
   }
 }

@@ -2,6 +2,7 @@
 #include "Profile.h"
 #include "Prefs.h"
 #include "Defaults.h"
+#include "Utils.h"
 
 // Note we save data encrypted
 
@@ -33,7 +34,7 @@
 // Covers saving using Preferences class
 
 // REMINDER: Max Preferences key length = 15 chars
-// Each namespace can store ~4000bytes max
+// Each namespace can store ~4000 bytes max
 
 Profile::Profile(int id, char icon, String description) : Id(id), Icon(icon), Description(description)
 {
@@ -83,7 +84,7 @@ void Profile::Load()
     Serial.print("Loaded Profile " + Description + " from saved preferences: ");
     Serial.print("DeviceName='" + CustomDeviceName + "', ");
     Serial.print("WiFi_Name='" + WiFi_Name + "', ");
-    Serial.println("WiFi_Password='" + WiFi_Password + "'");
+    Serial.println("WiFi_Password='" + SaferPasswordString(WiFi_Password) + "'");
 }
 
 void Profile::CopySettingsFrom(Profile *other)
@@ -95,5 +96,5 @@ void Profile::CopySettingsFrom(Profile *other)
     Serial.print("Copied Profile Settings from " + other->Description + " to " + Description);
     Serial.print("DeviceName='" + CustomDeviceName + "', ");
     Serial.print("WiFi_Name='" + WiFi_Name + "', ");
-    Serial.println("WiFi_Password='" + WiFi_Password + "'");
+    Serial.println("WiFi_Password='" + SaferPasswordString(WiFi_Password) + "'");
 }

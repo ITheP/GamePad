@@ -95,7 +95,6 @@ inline void PrintCenteredNumber(int xpos, int ypos, unsigned long val)
 }
 
 // For very basic automated text layout on screen
-
 inline void ResetPrintDisplayLine(int yOffset = 0, int xOffset = 0, void (*fontFunc)() = SetFontFixed)
 {
   TextXPos = xOffset;

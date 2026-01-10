@@ -5,9 +5,10 @@
 #include "DeviceConfig.h"
 #include "Debug.h"
 
-// NOTE: Some Preferences/settings are stored in NVS storage, some (bigger stuff) is stored in LittleFS files
+// Prefs are device specific, rather than profile which are multiple. E.g. individual profiles have different WiFi settings,
+// but the Prefs include general device settings, overall statistics, etc.
 
-// Typical locations...
+// NOTE: Some Preferences/settings are stored in NVS storage, some (bigger stuff) is stored in LittleFS files
 //
 // NVS
 // - Wifi
@@ -23,7 +24,7 @@ Preferences Prefs::Handler;
 
 void Prefs::Init()
 {
-    if (Handler.begin("boot", false)) // false = read/write
+    if (Handler.begin("boot", false))       // false = read/write
     {
         BootCount = Handler.getUInt("bootCount", 0);
         BootCount++;
@@ -32,16 +33,24 @@ void Prefs::Init()
     }
     else
     {
-        Debug::WarningFlashes(NVSFailed); // Critical hardware fail - completely bail out of starting uup
+        Debug::WarningFlashes(NVSFailed);   // Critical hardware fail - completely bail out of starting uup
     }
 }
 
 void Prefs::Save()
 {
-    // Handler.putString("wifi_ssid", wifiSSID);
-    // Handler.putString("wifi_pass", wifiPass);
-    // Handler.putInt("custom_value", customValue);
-    // Handler.println("Settings saved!");
+    #ifdef EXTRA_SERIAL_DEBUG
+    Serial.println("Saving settings...");
+#endif
+
+    for (int i = 0; i < AllStats_Count; i++)
+    {
+#ifdef EXTRA_SERIAL_DEBUG
+        Serial.println("...Statistics: " + String(AllStats[i]->Description));
+#endif
+
+        AllStats[i]->SaveToPreferences();
+    }
 }
 
 void Prefs::Load()

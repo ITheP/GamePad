@@ -2,6 +2,7 @@
 #include "Menus.h"
 #include "MenuFunctions.h"
 #include "Config.h"
+#include "Defines.h"
 #include "Structs.h"
 #include "IconMappings.h"
 #include "Screen.h"
@@ -19,12 +20,11 @@
 // WiFi Access Point Settings
 // While viewing this menu, pressing Select + Up/Down changes the selected AP
 // however the access point list could be changing constantly with refreshes so...
-// - Don't change the list while select is pressed
-// - The currently selected (i.e. active) access point should always be visualised as being selected
+// - The currently selected (i.e. active) access point should always be visualised as being selected, so even if list changes, what we are pointing to doesn't
 // - The currently selected access point name in list we are pointing to should stay in position
 // - The middle of the list on screen (with a visualisation) is the currently selected access point
-// - If the currently selected access point is not in the list (e.g. out of range) we show "Not Available" instead
-// The list should have a status icon showing signal strength and if its selected etc.
+// - If the currently selected access point is not in the list (e.g. physically out of range and no longer scanning) we generate and show a "Not Available" entry for it
+// The list includes a signal strength
 // We rebuild the on screen list whenever the access point lists changes or we move selection up and down
 
 std::vector<AccessPoint *> ConfigAccessPointList;
@@ -49,7 +49,7 @@ AccessPoint LastSelectedAccessPoint = {
     Icon_WiFi_LostSignal,
     "Unavailable"};
 
-// No access point selected (e.g. nothing saved in prefs)
+// No access point selected (e.g. nothing saved in prefs and we need a default)
 AccessPoint NoAccessPoint = {
     "...select access point",
     "",
@@ -66,24 +66,25 @@ void UpdateConfigAccessPointList(int listMovement = 0)
 {
     ConfigAccessPointList.clear();
 
-    // Just incase called when no list is available
+    // Just in case this is called when no list is available
     if (Network::AccessPointList.size() == 0)
         return;
 
-    // Rebuild list
+    // Rebuild our list here
     AccessPoint *lastUISelectdAccessPoint = nullptr;
     AccessPoint *savedAccessPoint = nullptr;
 
     for (auto &entry : Network::AccessPointList)
     {
-        const String &ssid = entry.first; // the key
-        AccessPoint *ap = entry.second;   // the value
+        const String &ssid = entry.first; // key
+        AccessPoint *ap = entry.second;   // value
 
         ConfigAccessPointList.push_back(ap);
 
         if (ssid == LastUISelectedAccessPointName)
             lastUISelectdAccessPoint = ap;
 
+        // Work out if current entry matches saved WiFi preference (WiFi name is same thing as a SSID - Service Set Identifier)
         if (ssid == MenuFunctions::Current_Profile->WiFi_Name)
         {
             savedAccessPoint = ap;
@@ -93,7 +94,7 @@ void UpdateConfigAccessPointList(int listMovement = 0)
             ap->selected = false;
     }
 
-    // See if we found a matching ASP
+    // See if we found a matching AP
     if (lastUISelectdAccessPoint == nullptr)
     {
         // No match? Stick in an error entry
@@ -113,20 +114,21 @@ void UpdateConfigAccessPointList(int listMovement = 0)
         ConfigAccessPointList.push_back(&UnavailableSavedAccessPoint);
     }
 
-    // So right now we should have a list of access points including the currently selected one and saved one added if either were missing
-    // Now we sort the list
+    // So right now we should have a list of access points including the
+    // currently selected one and saved one added if either were missing
 
-    // Sort by RSSI
+    // Sort list
     std::sort(ConfigAccessPointList.begin(), ConfigAccessPointList.end(),
               [](const AccessPoint *a, const AccessPoint *b)
               {
                   // Sort alphabetically
                   return a->ssid > b->ssid;
                   // Sort by signal strength
-                  //return a->rssi > b->rssi;
+                  // return a->rssi > b->rssi;
               });
 
-    // Find offset of currently selected access point
+    // Now list is sorted, find new offset of currently selected access point
+    // We need an index so when rendering we can draw list entries easily above and below this index
     SelectedAccessPointIndex = 0;
     if (LastUISelectedAccessPointName == "")
     {
@@ -156,9 +158,9 @@ void UpdateConfigAccessPointList(int listMovement = 0)
     //   - a sorted access point list
     //   - including last selected access point - even if it's disappeared
     //   - the saved access point - even if it's not found
-    //   - an index of the currently selected access point in the list (or default of 0)
+    //   - an index of the currently selected access point in the list (or default to index = 0)
 
-    // Now move it if needs be
+    // Check if we need to move the list (i.e. move up/down in list is triggered)
     if (listMovement != 0)
     {
         SelectedAccessPointIndex += listMovement;
@@ -169,14 +171,17 @@ void UpdateConfigAccessPointList(int listMovement = 0)
 
         LastUISelectedAccessPointName = ConfigAccessPointList[SelectedAccessPointIndex]->ssid;
 
-        // There are many ways we could handle the selected access point, but for now we just blat it back into the current profile
+        // There are many ways we could handle the selected access point,
+        // but for now we just blat it back into the current profile
         // where it sits there as current access point
         // It won't be saved unless user goes to SaveSettings menu option
         MenuFunctions::Current_Profile->WiFi_Name = LastUISelectedAccessPointName;
         // ...and yes, that might mean the name is invalid/unknown
 
+#ifdef EXTRA_SERIAL_DEBUG
         Serial_INFO;
         Serial.println("Selected Access Point changed to: " + LastUISelectedAccessPointName);
+#endif
     }
 }
 
@@ -184,12 +189,14 @@ void MenuFunctions::Config_Init_WiFi_AccessPoint()
 {
     Menus::InitMenuItemDisplay(true);
 
-    Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK); // clears a bit of extra space in case other menu displayed outside usual boundaries
+    // clears a bit of extra space in case other menus displayed outside usual boundaries
+    Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK);
 
     LastUISelectedAccessPointName = MenuFunctions::Current_Profile->WiFi_Name;
 
     // Refresh the access point list to ensure pointers are valid
     // This is critical when returning from other menus where WiFi scans may have updated Network::AccessPointList
+    // invalidating (deallocating) existing entries
     UpdateConfigAccessPointList();
 }
 
@@ -199,7 +206,6 @@ void MenuFunctions::Config_Update_WiFi_AccessPoint()
 
     int listMovement = 0;
 
-    // if (SecondRollover)
     if (PRESSED == Menus::SelectState())
     {
         showScrollIcons = true;
@@ -215,9 +221,10 @@ void MenuFunctions::Config_Update_WiFi_AccessPoint()
     }
 
     // Anytime a WiFi refresh completes, access point list will become stale for our ConfigAccessPointList
-    // so we make sure it is up to date
-    // When access point lists are updated in Networking then old access point objects are deleted and new ones created - we are also making sure that
-    // UpdateConfigAccessPointList is called to rebuild our list accounting for any possible object changes
+    // so we make sure it is up to date.
+    // When access point lists are updated in Networking then old access point objects are deleted and
+    // new ones created - we are also making sure that UpdateConfigAccessPointList is called to
+    // rebuild our list accounting for any possible object changes
     UpdateConfigAccessPointList(listMovement);
 
     if (DisplayRollover)
@@ -228,13 +235,11 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
 {
     Display.fillRect(0, MenuContentStartY, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY), C_BLACK);
 
-    //SetFontSmall();
     ResetPrintDisplayLine(MenuContentStartY, 10 + 12, SetFontSmall);
 
     int apSize = ConfigAccessPointList.size();
     if (apSize == 0)
     {
-        //RRESmall.setColor(C_WHITE);
         RRESmall.printStr(ALIGN_CENTER, MenuContentStartY + 12, "Scanning");
         RRESmall.printStr(ALIGN_CENTER, MenuContentStartY + 22, "Please Wait...");
     }
@@ -257,13 +262,13 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
                 continue;
             }
 
-            // if signal == 0 then something wrong (e.g. can't find, disconnected)
-
+            // if signal strength == 0 then something is wrong (e.g. can't find, disconnected)
             if (ap->rssi == 0)
                 RRESmall.drawChar(10, TextYPos - 1, 'x');
             else if (ap->rssi < 0)
             {
                 // Convert signal strength into a little bar 1->8 pixels wide
+                // clamping numbers at lower and upper boundaries
                 int w;
                 if (ap->rssi > -50)
                     w = 8;
@@ -276,34 +281,19 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
                     w = 8;
 
                 Display.fillRect(10, TextYPos, w, 7, C_WHITE);
-                // Serial.printf("RSSI %s: %d -> %d\n", ap->ssid.c_str(), ap->rssi, w);
             }
-
-            // Serial.printf("RSSI %s: %d\n", ap->ssid.c_str(), ap->rssi);
 
             // Don't forget, PrintDisplayLine alters TextYPos so make sure we call AFTER the above
             PrintDisplayLine((char *)ap->ssid.c_str());
-
-            // sprintf(buffer, "%s (%d)", ap->ssid.c_str(), ap->rssi);
-            // PrintDisplayLine(buffer);
         }
 
-        // SetFontFixed();
-        // SetFontLineHeightFixed();
-
-        // selected item indicator
-       //SetFontCustom();
+        // Selected item indicator
         // Base size of left/right arrow icons is 7x7 px
         static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) + MenuContentStartY + 2;
         int iconOffset = (Menus::MenuFrame >> 2) % 3;
         RenderIcon(Icon_Arrow_Right + iconOffset, 0, middle, 7, 7);
     }
 
-    //SetFontFixed();
-    //SetFontLineHeightFixed();
-
     if (showScrollIcons)
         DrawScrollArrows();
-
-    //SetFontFixed();
 }

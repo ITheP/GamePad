@@ -3,18 +3,14 @@
 #include <optional>
 #include <vector>
 #include "Config.h"
+#include "Defines.h"
 #include <BleGamepad.h>
 #include <FastLED.h>
 #include "LED.h"
 #include "stats.h"
-//#include "GamePad.h"
-//class Stats;
 
 typedef void (BleGamepad::*BleGamepadFunctionPointer)(uint8_t);
 typedef void (BleGamepad::*BleGamepadFunctionPointerInt)(int16_t);
-
-// typedef void (*LEDEffectFunctionPointerOld)(Input*, float);
-// typedef void (*LEDHatEffectFunctionPointer)(HatInput*, int, float);
 
 typedef struct IntPair {
   int A;
@@ -29,7 +25,7 @@ typedef struct IconRun {
 } IconRun;
 
 typedef struct State {
-  int StateJustChanged; // = false;       // Used for things like LED effects that only want to change a value when a state change happens
+  int StateJustChanged;                   // Used for things like LED effects that only want to change a value when a state change happens
   unsigned long StateChangedWhen;
   unsigned long StateChangedWhenStart;    // Extra tag that just records when a positive (pressed) state change happened, so after a release we can calculate how long it took
   int StateJustChangedLED;                // Sticks around till LED processing is done, then set to false again
@@ -53,8 +49,8 @@ typedef struct Input {
   BleGamepadFunctionPointer BluetoothPressOperation;
   BleGamepadFunctionPointer BluetoothReleaseOperation; 
   BleGamepadFunctionPointerInt BluetoothSetOperation;
-  ControllerReport (*CustomOperationPressed)();             // Custom/specific operation, code may be within controller .cpp
-  ControllerReport (*CustomOperationReleased)();            // Custom/specific operation, code may be within controller .cpp
+  ControllerReport (*CustomOperationPressed)(); // Custom/specific operation, code may be within controller .cpp
+  ControllerReport (*CustomOperationReleased)();// Custom/specific operation, code may be within controller .cpp
 
   void (*RenderOperation)(struct Input*);       // How input is rendered to the screen
 
@@ -71,7 +67,7 @@ typedef struct Input {
   LED OnboardLED;                               // Onboard LED is merged into other Onboard LED colours to create a `final combined colour`. Max of each R,G,B component generally gets used.
   ExternalLEDConfig* LEDConfig;
 
-  int BluetoothIdOffset;                        // Set > 0 to enable this Input for Bluetooth Id override inclusion on startup
+  int ProfileId;                                // Set > 0 to enable this Input for Profile Id override inclusion on startup
   State ValueState;
 
   unsigned long LongPressTiming;                // Delayed operation timing in milliseconds for alternative press operation
@@ -97,7 +93,7 @@ typedef struct HatInput {
   int RenderHeight;
   unsigned char StartIcon;                      // Represents first icon in list of mapped icons. Should be 9 - Neutral, Up, UpRight, Right, DownRight, Down, DownLeft, Left, UpLeft
 
-  ControllerReport (*ExtraOperation[9])();  // Extra operations that can run if neutral/up/up right/right/down right/down/down left/left/up left
+  ControllerReport (*ExtraOperation[9])();      // Extra operations that can run if neutral/up/up right/right/down right/down/down left/left/up left
   void (*CustomOperation)(struct HatInput*);    // Controller specific operation, code within controller .cpp
 
   Stats *Statistics[9];

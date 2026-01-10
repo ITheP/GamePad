@@ -78,9 +78,4 @@ void FlipScreen(Input* input) {
 
     PreviousScreenOrientation = ScreenOrientation;
   }
-
-  // Finally, if required, clear statistics when screen flips
-// #ifdef CLEAR_STATS_ON_FLIP
-//   Stats_StrumBar.ResetCurrentCounts();
-// #endif
 }

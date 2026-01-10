@@ -3,15 +3,21 @@
 #include <Screen.h>
 #include <Benchmark.h>
 
+// Idle effect, drawn when device has been sat around getting bored for a while
+// Usually shown same time LED idle effect kicks in
+
 int IdleParticleCount = IDLE_MAX_PARTICLE_COUNT;
 
 // Safe spawn points, not part of any small area. Area will appear will be from top left (point itself) to random extra pixels in x + y direction from it
 // x, y, width of random area, height of random area
+// Couple of variants for simple particle limit alternatives
 IdleSpawnPoint IdleSpawnPoints[] = {
-    {1, 20, 10, 30, IDLE_MAX_PARTICLE_COUNT},        // Left of guitar...
-    {13, 28, 9, 9, 32},         // Special case within the guitar body :)
-    {60, 15, 50, 10, IDLE_MAX_PARTICLE_COUNT},       // Top right of guitar...
-    {60, 48, 50, 10, IDLE_MAX_PARTICLE_COUNT}};
+    {1, 20, 10, 30, IDLE_MAX_PARTICLE_COUNT},           // Left of guitar...
+    {13, 28, 9, 9, 32},                                 // Special case within the guitar body :)
+    {13, 28, 9, 9, 16},
+    {60, 15, 50, 10, IDLE_MAX_PARTICLE_COUNT},          // Top right of guitar...
+    {60, 48, 50, 10, IDLE_MAX_PARTICLE_COUNT}};          // Top right of guitar...
+
 int IdleSpawnPointCount = sizeof(IdleSpawnPoints) / sizeof(IdleSpawnPoints[0]);
 
 IdleParticle particles[IDLE_MAX_PARTICLE_COUNT];
@@ -39,8 +45,10 @@ void InitIdleEffect()
 {
     // InitDisplayBuffer();
 
-    IdleSpawnPoint *sp = &IdleSpawnPoints[ rand() % IdleSpawnPointCount];
-    IdleParticleCount = sp->maxParticles;
+    IdleSpawnPoint *sp = &IdleSpawnPoints[rand() % IdleSpawnPointCount];
+    // Randomise max particles from 25% to 100% of max count
+    int quarterCount = sp->maxParticles / 4;
+    IdleParticleCount = quarterCount + (rand() % (quarterCount * 3));
 
     // Only need to set the position of first particle - others spawn off from this particle
     IdleParticle *p = &particles[0];
@@ -90,7 +98,7 @@ void InitIdleEffect()
 // Note that also imperfections can occur with live animations also on screen affecting
 // the environment the pixels are in
 
-void RenderIdleEffect()
+void RenderIdleEffect(int maxParticles)
 {
     // IdleBenchmark.Start("Idle Start");
 
@@ -123,7 +131,7 @@ void RenderIdleEffect()
 
             // Horizontal bounces, we also (if any left to add) increase the particle count and add one to the end
             // Comes from same spot as parent particle, but has it's own velocities
-            if (currentParticleCount < IdleParticleCount && millis() > nextSpawnTime)
+            if (currentParticleCount < IdleParticleCount && currentParticleCount <= maxParticles && millis() > nextSpawnTime)
             {
                 IdleParticle &newP = particles[currentParticleCount]; // Points to next in line already
 
@@ -183,11 +191,8 @@ void RenderIdleEffect()
             else
                 newVy = randPosVel();
 
-            tryXf = p.x; // + newVx;
-            tryYf = p.y; // + newVy;
-
-            // xi_try = (int)tryXf;
-            // yi_try = (int)tryYf;
+            tryXf = p.x;
+            tryYf = p.y;
 
             xi_final = p.lastX;
             yi_final = p.lastY;
@@ -197,8 +202,6 @@ void RenderIdleEffect()
         p.vx = newVx;
         p.vy = newVy;
 
-        // p.x += p.vx;
-        // p.y += p.vy;
         p.x = tryXf;
         p.y = tryYf;
 
@@ -214,78 +217,6 @@ void RenderIdleEffect()
 
 void StopIdleEffect()
 {
-    for (int i = 0; i < currentParticleCount; i++) // IdleParticleCount; i++)
+    for (int i = 0; i < currentParticleCount; i++)
         Display.writePixel((int)particles[i].x, (int)particles[i].y, C_BLACK);
 }
-
-// Basic early version
-// void RenderIdleEffect()
-// {
-//     //InitDisplayBuffer();
-// IdleBenchmark.Start("Idle Start");
-
-//     for (int i = 0; i < IdleParticleCount; i++)
-//     {
-//         IdleParticle &p = particles[i];
-
-//         // Erase previous pixel
-//         Display.writePixel((int)p.x, (int)p.y, 0);
-
-//         float newX = p.x;
-//         float newY = p.y;
-
-//         bool moved = false;
-
-//         for (int attempt = 0; attempt < 5; attempt++)
-//         {
-
-//             newX = p.x + p.vx;
-//             newY = p.y + p.vy;
-
-//             // Bounce off edges
-//             if (newX < 0)
-//             {
-//                 newX = 0;
-//                 p.vx = -p.vx;
-//             }
-//             if (newX >= SCREEN_WIDTH)
-//             {
-//                 newX = SCREEN_WIDTH - 1;
-//                 p.vx = -p.vx;
-//             }
-//             if (newY < 0)
-//             {
-//                 newY = 0;
-//                 p.vy = -p.vy;
-//             }
-//             if (newY >= SCREEN_HEIGHT)
-//             {
-//                 newY = SCREEN_HEIGHT - 1;
-//                 p.vy = -p.vy;
-//             }
-
-//             // Check if new pixel is black so we can move there, else we loop back and try again in a different direction
-//             if (getPixelFast((int)newX, (int)newY) == 0)
-//             {
-//                 moved = true;
-//                 break;
-//             }
-
-//             // Otherwise randomise velocity and try again
-//             p.vx = randVel();
-//             p.vy = randVel();
-//         }
-
-//         if (moved)
-//         {
-//             p.x = newX;
-//             p.y = newY;
-//         }
-
-//         // Draw new pixel
-//         Display.writePixel((int)p.x, (int)p.y, 1);
-//     }
-// IdleBenchmark.Snapshot("PostCalc");
-//     Display.display();
-// IdleBenchmark.Snapshot("PostDelay");
-// }

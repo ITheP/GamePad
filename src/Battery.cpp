@@ -53,24 +53,14 @@ void Battery::DrawEmpty(int secondRollover, int SecondFlipFlop, bool IncludeLED)
   if (secondRollover == true)
   {
     Display.clearDisplay();
-    SetFontIcon();
 
     int xPos = (SCREEN_WIDTH - 48) >> 1;
-    // int yPos = (SCREEN_HEIGHT - 16) >> 1;
-
-    // char c = Icon_BatteryBigEmpty1;
 
     RenderIconRuns(BatteryEmptyGfx, BatteryEmptyGfx_RunCount);
-    // for (uint8_t i = 0; i < 3; i++) {
-    //   RenderIcon((char)c, xPos, yPos, 0, 0);
-    //   xPos += 16;
-    //   c++;
-    // }X
 
     if (SecondFlipFlop)
     {
       // Hide middle bit of our battery warning intermittently to make it flash
-      // xPos = (SCREEN_WIDTH - 48) >> 1;
       Display.fillRect(BatteryEmptyXPos + 2, BatteryEmptyYPos + 2, 40, 12, C_BLACK);
     }
 
@@ -79,7 +69,7 @@ void Battery::DrawEmpty(int secondRollover, int SecondFlipFlop, bool IncludeLED)
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
     if (IncludeLED)
     {
-      // ToDo: If LED's were turned on at time this instigated, might remain on. Double check to make sure these are turned off.
+      // ToDo: If LED's were turned on at time this was instigated, might remain on. Double check to make sure these are turned off. (Less power drain then)
       if (SecondFlipFlop)
         StatusLed[0] = CRGB::Black;
       else

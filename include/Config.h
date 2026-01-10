@@ -28,29 +28,3 @@
 #define SUB_SECOND_COUNT         30     // Number of sub-samples to take across a second when calculating clicks per second counts. Higher number = more accurate but more overhead.
 #define DISPLAY_UPDATE_RATE      0.016  // Fraction of a second to wait between display updates - 0.016 = 16ms = ~60FPS
 #define LED_UPDATE_RATE          0.005  // Fraction of a second to wait between throttled updates - default is faster than 60fps to account for animation effects where we want faster propagation across LED arrays
-
-// Some standard values
-#define LOW 0x0
-#define HIGH 0x1
-
-#define ON 0x0
-#define OFF 0x1
-
-#define PRESSED 0x0
-#define NOT_PRESSED 0x1
-#define LONG_PRESS_MONITORING 0x2
-#define LONG_PRESS 0x3
-
-enum ControllerReport {
-    ReportToController = 0,
-    DontReportToController = 1
-};
-
-#define NONE 0
-
-// class Config {
-//     public:
-//         static void Init();
-
-//         static uint32_t BootCount;
-// };

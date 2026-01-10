@@ -31,19 +31,21 @@ typedef struct ExternalLEDConfig {
   // External LED settings - hooked up to custom Neopixel/equivalent string of physical LEDs
   int LEDNumber;                                            // LED number when single LED is used
   std::vector<int> LEDNumbers;                              // Where multiple LED's are used - note first LED in array is copied into LEDNumber.
+
   LED PrimaryColour;                                        // Primary color, usually used as the colour when button pressed
   LED SecondaryColour;                                      // Secondary color, usually used as the colour e.g. to fade out from when button not pressed, or the colour to blend up from in e.g. analog effects
+  
   typedef void (*EffectFunctionPointer)(void*, float);
   EffectFunctionPointer Effect;                             // Effect, either DigitalEffect::, HatEffect:: or AnalogEffect:: function pointer
+ 
   int RunEffectConstantly;
   float Rate;                                               // Rate of effect, default to 0.0. - will vary in use depending on the Effect
-  //float Frequency;                                          // How often ccurrs
   uint32_t Chance;                                          // For relevant effect, chance of something occurring where 0 = 0% and 0xFFFF = 100%
   CRGB* ExternalLED;                                        // Pointer to actual LED settings - note this may be shared if the LEDNumber is re-used across inputs
   CHSV PrimaryHSV;                                          // Some effects want a Hue etc. - caches a precalculate value of this based on PrimaryColour
   float StartTime;                                          // Start time of effect, used for some effects when calculating how long the effect has been active
   float CustomTag;                                          // Custom tag, used for some effects that need to remember an additional value across calls
-  Stats* EffectStats;                               // Specific set of stats if relevant to an effect
+  Stats* EffectStats;                                       // Specific set of stats if relevant to an effect
 
   int LEDNumbersCount;
   std::vector<CRGB*> ExternalLEDs;

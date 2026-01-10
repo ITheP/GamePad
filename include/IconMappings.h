@@ -268,3 +268,5 @@ static const char FilledCircleIcons[] = {
     Icon_FilledCircle_13,
     Icon_FilledCircle_14
 };
+
+static const int FilledCircleIconsSize = sizeof(FilledCircleIcons) / sizeof(FilledCircleIcons[0]);

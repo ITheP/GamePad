@@ -2,6 +2,7 @@
 #include "Menus.h"
 #include "MenuFunctions.h"
 #include "Config.h"
+#include "Defines.h"
 #include "Structs.h"
 #include "IconMappings.h"
 #include "Screen.h"
@@ -33,11 +34,6 @@ Profile *MenuFunctions::Current_Profile = nullptr;
 Profile *Copy_Profile = nullptr;
 
 static CopyPasteState currentCopyPasteState = CP_WAITING;
-// char Icon;
-// int AnimationFrameIndex = 0; // Index for tracking current frame (0-13)
-// int FrameTimer = 0;
-// int DelayBetweenFrames = 125; // milliseconds between icon frames - total time to save = this * 7 animation frames
-// String Message;
 
 char Profile_Text[] = "Save and restart\nto apply changes";
 
@@ -74,11 +70,10 @@ void MenuFunctions::Config_Update_Profile()
   }
   else if (PRESSED == Menus::BackState())
   {
-    // if (Menus::BackJustChanged())
-    //   currentCopyPasteState = CP_WAITING;
-
     if (PRESSED == Menus::UpState())
     {
+      // Copy operations
+
       if (Menus::UpJustChanged())
       {
         // Kick off save
@@ -118,18 +113,21 @@ void MenuFunctions::Config_Update_Profile()
     }
     else if (PRESSED == Menus::DownState())
     {
-      // Paste operation - if held long enough copy the CopyProfile to the current profile
+      // Paste initiation
+
       if (Menus::DownJustChanged())
       {
         if (Copy_Profile == nullptr)
         {
+          // Source not specified
           currentCopyPasteState = CP_CANCELLED;
           FrameTimer = millis();
           MessageTop = "Copy source";
-          MessageBottom = "before pasting"; // + " to " + Current_Profile->Description;
-        } // Paste profile
+          MessageBottom = "before pasting";
+        }
         else if (Copy_Profile == Current_Profile)
         {
+          // Attempting to copying on to itself
           currentCopyPasteState = CP_CANCELLED;
           FrameTimer = millis();
           MessageTop = "Can't copy profile";
@@ -137,7 +135,7 @@ void MenuFunctions::Config_Update_Profile()
         }
         else
         {
-          // Kick off save
+          // All good, initiate pasting
           AnimationFrameIndex = 0;
           Icon = FilledCircleIcons[AnimationFrameIndex];
           FrameTimer = millis();
@@ -148,7 +146,7 @@ void MenuFunctions::Config_Update_Profile()
       }
       else if (currentCopyPasteState == CP_PASTING)
       {
-        // Copy operation - if held long enough populate a profile as the CopyProfile
+        // Pasting processing
 
         unsigned long elapsed = millis() - FrameTimer;
         if (elapsed >= DelayBetweenFrames)
@@ -160,7 +158,7 @@ void MenuFunctions::Config_Update_Profile()
           {
             Current_Profile->CopySettingsFrom(Copy_Profile);
             currentCopyPasteState = CP_PASTED;
-            MessageTop = "Copied from " + Copy_Profile->Description; // + " to " + Current_Profile->Description;
+            MessageTop = "Copied from " + Copy_Profile->Description;
             MessageBottom = "into " + Current_Profile->Description;
           }
           else
@@ -220,16 +218,10 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
 
     RREDefault.setScale(1);
 
-    //SetFontSmall();
-    //SetFontLineHeightTiny();
     ResetPrintDisplayLine(SCREEN_HEIGHT - 18, 0, SetFontSmall);
 
     if (Current_Profile->WiFi_Name.length() == 0)
-    {
       PrintDisplayLineCentered("No WiFi selected");
-
-      // PrintDisplayLineCentered("AbCdgjp,.");
-    }
     else
     {
       sprintf(buffer, "WiFi: %s", Current_Profile->WiFi_Name.c_str());
@@ -247,11 +239,8 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
         PrintDisplayLineCentered("Searching for WiFi...");
     }
 
-    //SetFontLineHeightFixed();
-
     if (showScrollIcons)
     {
-      //SetFontCustom();
       // Base size of left/right arrow icons is 7x7 px
       static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) + MenuContentStartY;
       int iconOffset = (Menus::MenuFrame >> 2) % 3;
@@ -261,8 +250,6 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
   }
   else
   {
-    //SetFontCustom();
-
     // Save circle
     int checkX = (SCREEN_WIDTH / 2) - 7;
     int checkY = MenuContentStartY + 13;
@@ -271,7 +258,7 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
     if (currentCopyPasteState == CP_COPYING || currentCopyPasteState == CP_PASTING)
     {
       // Get width of the growing icon and center it dynamically
-      int iconOffset = RRE.charWidth(Icon) / 2;
+      int iconOffset = RREIcon.charWidth(Icon) / 2;
       int centeredX = (SCREEN_WIDTH / 2) - iconOffset;
       int centeredY = MenuContentStartY + 20 - iconOffset;
       RenderIcon(Icon, centeredX, centeredY, 0, 0);
@@ -299,7 +286,6 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
 
 void MenuFunctions::DrawMessages()
 {
-  //SetFontFixed();
   RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 3, (char *)MessageTop.c_str());
   RREDefault.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, (char *)MessageBottom.c_str());
 }

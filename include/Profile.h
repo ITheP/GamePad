@@ -7,7 +7,7 @@ public:
     Profile(int id, char icon, String description);
 
     int Id;
-    char Icon;  // Not currently used - need some icons!
+    char Icon;  // ToDo: Not currently used - need some icons!
     String Description;
 
     String WiFi_Name;

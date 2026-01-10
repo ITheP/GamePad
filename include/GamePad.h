@@ -6,8 +6,8 @@
 #define COREVERSION "1.0"        // The core version of this software.
                                  // Individual controller code, firmware, hardware versions are also recorded separately in the dedicated controller config files    
 
-                                 // Keep the About message < 256 characters
-#define ABOUT "The Controller - multi-purpose controller software primarily to bodge and duct tape old legacy controllers back into life or make new ones in weird and wacky ways! Connect to the embedded web server for more information."
+// Keep the About message < 256 characters
+#define ABOUT "The Controller - multi-purpose controller primarily to bodge and duct tape old legacy controllers back into life or make new ones in weird and wacky ways! Connect to the embedded web server for more information."
 
 void FlipScreen(Input* input);
 
@@ -18,6 +18,8 @@ void MenuLoop();
 void DrawConfigHelpScreen();
 void ConfigLoop();
 void DrawEmpty();
+
+extern uint32_t rnd;
 
 extern RREFont RRE;
 extern float Now;
