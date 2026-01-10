@@ -46,6 +46,6 @@ extern char DeviceName[];
 extern char FullDeviceName[];
 extern const char* DeviceNames[];
 extern int DeviceNamesCount;
-extern int ControllerIdle;
-extern int ControllerIdleJustUnset;
+extern int ControllerIdle_LED;
+extern int ControllerIdleJustUnset_LED;
 extern bool BTConnectionState;

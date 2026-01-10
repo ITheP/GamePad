@@ -144,8 +144,10 @@ float NextLEDUpdatePoint = 0;
 int DisplayRollover = false; // Throttling flag for display updates
 float NextDisplayUpdatePoint = 0;
 
-int ControllerIdle = false;
-int ControllerIdleJustUnset = false;
+int ControllerIdle_LED = false;
+int ControllerIdleJustUnset_LED = false;
+int ControllerIdle_Screen= false;
+int ControllerIdleJustUnset_Screen = false;
 
 void setupShowBattery()
 {
@@ -1809,16 +1811,48 @@ void MainLoop()
   if (sendReport)
     LastTimeAnyButtonPressed = Now;
 
+float timeSinceLastAnyButtonPress = Now - LastTimeAnyButtonPressed;
+
   // Call idle LED effects etc. if controllers not had anything pressed for a while
-  if (Now - LastTimeAnyButtonPressed > IDLE_TIMEOUT)
+#if defined(USE_ONBOARD_LED) || defined(USE_ONBOARD_LED_STATUS_ONLY)
+  if (timeSinceLastAnyButtonPress > IDLE_LED_TIMEOUT)
   {
-    if (!ControllerIdle)
+    if (!ControllerIdle_LED)
     {
-      ControllerIdle = true;
+      // Picked up by LED processing
+      ControllerIdle_LED = true;
 
 #ifdef EXTRA_SERIAL_DEBUG
       Serial_INFO;
-      Serial.println("Idle Triggered");
+      Serial.println("LED Idle Triggered");
+#endif
+    }
+  }
+  else
+  {
+    if (ControllerIdle_LED)
+    {
+      ControllerIdleJustUnset_LED = true;
+      ControllerIdle_LED = false;
+
+#ifdef EXTRA_SERIAL_DEBUG
+      Serial_INFO;
+      Serial.println("LED Idle Stopped");
+#endif
+    }
+  }
+#endif
+
+  // Call idle screen effects etc. if controllers not had anything pressed for a while
+  if (timeSinceLastAnyButtonPress > IDLE_SCREEN_TIMEOUT)
+  {
+    if (!ControllerIdle_Screen)
+    {
+      ControllerIdle_Screen = true;
+
+#ifdef EXTRA_SERIAL_DEBUG
+      Serial_INFO;
+      Serial.println("Screen Idle Triggered");
 #endif
 
       // And get ready to show display idle effect
@@ -1827,19 +1861,20 @@ void MainLoop()
   }
   else
   {
-    if (ControllerIdle)
+    if (ControllerIdle_Screen)
     {
-      ControllerIdleJustUnset = true;
-      ControllerIdle = false;
+      ControllerIdleJustUnset_Screen = true;
+      ControllerIdle_Screen = false;
 
 #ifdef EXTRA_SERIAL_DEBUG
       Serial_INFO;
-      Serial.println("Idle Stopped");
+      Serial.println("Screen Idle Stopped");
 #endif
 
       StopIdleEffect();
     }
   }
+
 #ifdef DebugMarks
   Debug::Mark(400);
 #endif
@@ -1977,7 +2012,7 @@ void MainLoop()
   // And finally update the display with all the lovely changes above - throttled as quite high overhead
   if (DisplayRollover)
   {
-    if (ControllerIdle)
+    if (ControllerIdle_LED)
     {
       int maxParticles = IDLE_MAX_PARTICLE_COUNT;
       RenderIdleEffect(maxParticles);

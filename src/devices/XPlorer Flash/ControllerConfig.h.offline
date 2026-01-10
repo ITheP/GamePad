@@ -24,7 +24,7 @@
 #define CLEAR_STATS_ON_FLIP             // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
 
 // Go into idle LED effects mode after 10 seconds
-#define IDLE_TIMEOUT 10.0
+#define IDLE_LED_TIMEOUT 10.0
 
 // =====
 // LED's

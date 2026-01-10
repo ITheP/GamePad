@@ -86,7 +86,7 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
 
 #ifdef USE_EXTERNAL_LED
       // If idle just finished, make sure all LED's fade out
-      if (ControllerIdleJustUnset)
+      if (ControllerIdleJustUnset_LED)
       {
         for (int i = 0; i < IdleLEDEffects_Count; i++)
         {
@@ -96,7 +96,7 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
              GeneralArrayEffects::DisableAll(ledConfig, Now);
         }
 
-        ControllerIdleJustUnset = false;
+        ControllerIdleJustUnset_LED = false;
       }
 #endif
 
@@ -312,10 +312,10 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
 #ifdef USE_EXTERNAL_LED
       // TODO: If idle just unset - need to unset all LEDs to be disabled
       // Must do this as FIRST thing before all other LED effects above are processed
-      // if (ControllerIdleJustUnset)
+      // if (ControllerIdleJustUnset_LED)
 
       // Idle LED effects
-      if (ControllerIdle)
+      if (ControllerIdle_LED)
       {
         for (int i = 0; i < IdleLEDEffects_Count; i++)
         {
