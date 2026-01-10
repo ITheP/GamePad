@@ -276,7 +276,7 @@ void Network::HandleWiFi(int second)
     }
 
     WiFiConnectionState = WiFi.status();
-    
+
     if (WiFiConnectionState == WL_CONNECTED)
     {
         wifi_ap_record_t ap_info;
@@ -506,11 +506,11 @@ Network::WiFiTestResult Network::TestWiFiConnection(const String &testSSID, cons
 
     // Disconnect from any existing connection first
     WiFi.disconnect(true);
-    
+
     // delay(100);
 
     // Set to station mode and initiate connection
-    WiFi.mode(WIFI_STA);
+    WiFi.mode(WIFI_AP_STA); // Mixed mode when testing, might be needed!
     WiFi.begin(testSSID.c_str(), testPassword.c_str());
 
     return TEST_CONNECTING;
@@ -608,4 +608,61 @@ void Network::CancelWiFiTest()
         // Clean up the test connection
         WiFi.disconnect(true);
     }
+}
+
+String Network::DescribeTestResults(String ssid, String password, WiFiTestResult testResults)
+{
+    String resultText;
+
+    // Note we only return no password set if not successful (incase doesn't need a password)
+
+    if (ssid.length() == 0)
+        resultText = "Access Point not set";
+    else if (testResults == Network::TEST_NOT_STARTED)
+        resultText = "Pending Test!";
+    else if (testResults == Network::TEST_SUCCESS)
+        resultText = "Success!";
+    else if (testResults == Network::TEST_SSID_NOT_FOUND)
+        resultText = "SSID Not Found";
+    else if (testResults == Network::TEST_CONNECTING)
+        resultText = "Testing...";
+    else if (password.length() == 0)
+    {
+        switch (testResults)
+        {
+        case Network::TEST_INVALID_PASSWORD:
+            resultText = "Password missing";
+            break;
+        case Network::TEST_TIMEOUT:
+            resultText = "Timeout, missing password?";
+            break;
+        case Network::TEST_FAILED:
+            resultText = "Couldn't connect, missing password?";
+            break;
+        default:
+            resultText = "Unknown";
+        }
+    }
+    else
+    {
+        switch (testResults)
+        {
+        case Network::TEST_INVALID_PASSWORD:
+            resultText = "Invalid Password";
+            break;
+        case Network::TEST_SSID_NOT_FOUND:
+            resultText = "SSID Not Found";
+            break;
+        case Network::TEST_TIMEOUT:
+            resultText = "Timeout";
+            break;
+        case Network::TEST_FAILED:
+            resultText = "Couldn't connect";
+            break;
+        default:
+            resultText = "Unknown";
+        }
+    }
+
+    return resultText;
 }

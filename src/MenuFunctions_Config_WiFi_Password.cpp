@@ -270,10 +270,6 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
 {
   Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK);
 
-  // Draw password buffer at the bottom of the screen
-  int passwordDisplayY = SCREEN_HEIGHT - 10;
-  int passwordDisplayX = 2;
-
   // Currently, show the whole password
   // Was going to hide certain characters
   // e.g. show only last 3 characters, previous ones replaced with *
@@ -294,7 +290,7 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
 
   // Get length of pixel width of password up to cursor position
   int passwordUpToCursorWidth = RRE.strWidth(displayBuffer);
-  
+
   // Draw cursor under current character
   if ((millis() & 512) == 0) // Blink every half second
     Display.drawFastHLine(passwordUpToCursorWidth, SCREEN_HEIGHT - 2, 8, C_WHITE);
@@ -339,7 +335,7 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     {
       char c = indexToChar(charIdx);
       int cWidth = RREDefault.charWidth(c);
-      drawX -= (cWidth + 2);  // 2 for extra letter spacing
+      drawX -= (cWidth + 2); // 2 for extra letter spacing
       RREDefault.drawChar(drawX, middleY, c);
       charIdx--;
       if (charIdx < 0)
@@ -366,53 +362,20 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     PrintDisplayLine("Green + up/down for next");
     PrintDisplayLine("Red to delete character");
 
-    // Get current test status
-    wifiTestResult = Network::CheckTestResults();
-
     // Display WiFi test results
-    char *resultText = nullptr;
+    // char *resultText = nullptr;
     String currentPassword = String((const char *)passwordBuffer);
     String currentSSID = Current_Profile->WiFi_Name;
 
-    if (currentSSID.length() == 0)
-      resultText = "No Access Point";
-    else if (currentPassword.length() == 0)
-      resultText = "No Password";
-    else
-    {
-      //  Display the test result in a visible area (below the instructions)
-      int resultY = MenuContentStartY + 50;
+    //  Display the test result in a visible area (below the instructions)
+    int resultY = MenuContentStartY + 50;
 
-      // Clear the result area
-      Display.fillRect(0, resultY - 2, SCREEN_WIDTH, 50, C_BLACK);
+    // Clear the result area
+    Display.fillRect(0, resultY - 2, SCREEN_WIDTH, 50, C_BLACK);
 
-      switch (wifiTestResult)
-      {
-      case Network::TEST_NOT_STARTED:
-        resultText = "Pending Test!";
-        break;
-      case Network::TEST_SUCCESS:
-        resultText = "Success!";
-        break;
-      case Network::TEST_CONNECTING:
-        resultText = "Testing...";
-        break;
-      case Network::TEST_INVALID_PASSWORD:
-        resultText = "Invalid Password";
-        break;
-      case Network::TEST_SSID_NOT_FOUND:
-        resultText = "SSID Not Found";
-        break;
-      case Network::TEST_TIMEOUT:
-        resultText = "Timeout";
-        break;
-      case Network::TEST_FAILED:
-        resultText = "Couldn't connect";
-        break;
-      default:
-        resultText = "Unknown";
-      }
-    }
+    wifiTestResult = Network::CheckTestResults();
+
+    String resultText = Network::DescribeTestResults(currentSSID, currentPassword, wifiTestResult);
 
     sprintf(buffer, "Status: %s", resultText);
     PrintDisplayLineCentered(buffer);

@@ -11,6 +11,7 @@ class MenuFunctions
 {
 public:
     static Profile *Current_Profile;
+    static Profile *Default_Profile;
     static int Profile_Selected;
 
     // Init... - functions called when entering menu option (e.g. draw static elements)
@@ -46,6 +47,11 @@ public:
     static void Config_Update_WiFi_Password();
     static void Config_Draw_WiFi_Password(int showScrollIcons = false);
     static void Config_Exit_WiFi_Password();
+
+    static void Config_Init_Hotspot();
+    static void Config_Update_Hotspot();
+    static void Config_Draw_Hotspot();
+    static void Config_Exit_Hotspot();
 
     static void Config_Init_SaveSettings();
     static void Config_Update_SaveSettings();

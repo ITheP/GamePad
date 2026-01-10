@@ -84,3 +84,20 @@ String SaferPasswordString(String password)
 
     return result;
 }
+
+String SaferShortenedPasswordString(String password)
+{
+    int len = password.length();
+
+    // If 0, 1, or 2 chars → return as‑is
+    if (len <= 2)
+        return password;
+
+    // Build masked version
+    String result = "";
+    result += password[0];          // first char
+    result += "...";                // make up middle
+    result += password[len - 1];    // last char
+
+    return result;
+}

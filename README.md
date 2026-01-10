@@ -25,11 +25,9 @@ Not yet!
 ## Contact
 For any questions or feedback, feel free to contact MisterB at [ITheP](https://github.com/ITheP/GamePad/wiki).
 
-## To Do - Firmware
+## To Do Lists
 
-Includes...
-
-- [ ] Stats - flag to say if to bother counting per second counts or not
+- [ ] Separate Logo/Controller gfx files for different types, #include ones relevant to controller type...
 - [x] OLED screen support
 - [x] Custom icons
 - [x] Battery life indicator
@@ -72,6 +70,7 @@ Includes...
 - [ ] Statistics menu item, show changing every x seconds random stats. Possibly when scroll ends it updates with content from a new scroll (2*scroll text move from one to other)
 - [ ] Controller idle - on display idle keep to max ?3? pixel for first ?20? seconds in case actually in game and don't want performance drop of long term idle effect overhead.
 - [ ] Shift logos out of Icons font into own Logo font to free up icon space, and devices font for device images
+- [x] Separate LED and Screen idle triggers and timings (allows for different overheads to affect the device separately)
 
 ## To Do - Config & Prefs
 - [x] User selectable configuration in web
@@ -79,17 +78,23 @@ Includes...
 - [x] Controller config WiFi set password
 - [ ] Controller config set custom Device Name
 - [ ] Analog inputs - have a configuration screen that allows you to set min/max values (by using them) and save to settings
+- [ ] Use same WiFi details as Default (makes multiple profiles easier while specifying single WiFi). Menus should should dynamically change when this is enabled (don't show access point selection or password)
+- [ ] No WiFi? Make sure not powered.
+- [ ] Config current profile via built in access point menu option
+
+## To Do - Web Config & Prefs
+- [ ] Preferences/settings page in Web site
+- [ ] Profile editor in Web Site
 - [ ] Custom device name (also remove current hardcoded custom device name, won't be needed)
 - [ ] Invert display (black on white)
-- [ ] Use same WiFi details as Default (makes multiple profiles easier while specifying single WiFi). Menus should should dynamically change when this is enabled (don't show access point selection or password)
 - [ ] Default all profiles to using Default profile WiFi
-- [ ] No WiFi? Make sure not powered.
 - [ ] Flip-able controls - i.e. flips mappings inside so e.g. up and down flipped on strum bar (or whole HAT is flipped and upside down)
-- [ ] Prefs saving in so actually saves
 - [ ] Icons for Profiles
 - [ ] Choose different guitar/controller gfx
+
 ## To Do - Networking
 - [x] WiFi support
+- [ ] No WiFi? Make sure not powered.
 
 ## To Do - Web
 - [x] Embedded web service

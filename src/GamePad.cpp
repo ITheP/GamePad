@@ -146,7 +146,7 @@ float NextDisplayUpdatePoint = 0;
 
 int ControllerIdle_LED = false;
 int ControllerIdleJustUnset_LED = false;
-int ControllerIdle_Screen= false;
+int ControllerIdle_Screen = false;
 int ControllerIdleJustUnset_Screen = false;
 
 void setupShowBattery()
@@ -346,7 +346,7 @@ void setupWiFi()
     Serial.println("🛜 ✅ WiFi connected...");
     Serial.println("🌐 ✅ ...Starting web server");
 #endif
-    Web::StartServer();
+    Web::StartServer(false);
   } else if
   (event == SYSTEM_EVENT_STA_DISCONNECTED) {
 #ifdef EXTRA_SERIAL_DEBUG
@@ -583,7 +583,7 @@ void setupLEDs()
     FastLED.show();
     delay(3);
   }
-  StatusLed[0] = CRGB::Black;   // Next FastLED.show() will apply this
+  StatusLed[0] = CRGB::Black; // Next FastLED.show() will apply this
 #endif
 
 // Add and flash external led's if enabled
@@ -1033,16 +1033,21 @@ void setup()
 
   // Check if button pushed for menu mode
   // ASSUMES BootPin_StartInConfiguration is defined as a valid pin!
-  if (digitalRead(BootPin_StartInConfiguration) == PRESSED) // || 1 == 1) // Override to force Config mode e.g. during development
+#ifdef STRAIGHT_TO_CONFIG_MENU
+  if (true)
+#else
+  if (digitalRead(BootPin_StartInConfiguration) == PRESSED)
+#endif
   {
     MenuFunctions::Config_Setup();
 
     DrawConfigHelpScreen();
     Menus::Setup(&Menus::ConfigMenu);
     Menus::MenusStatus = ON;
-    
+
     // We stay on this screen showing basic help until button released
-    while (digitalRead(BootPin_StartInConfiguration) == PRESSED);
+    while (digitalRead(BootPin_StartInConfiguration) == PRESSED)
+      ;
 
     Display.clearDisplay();
     Display.display();
@@ -1051,7 +1056,7 @@ void setup()
 
     // This here sets that the Configuration mode should be processed as the devices main loop() after the return below
     LoopOperation = &ConfigLoop;
-    
+
     return;
   }
 
@@ -1507,7 +1512,7 @@ void MainLoop()
         input->ValueState.StateJustChangedLED = true;
 
         // Digital inputs are easy, EXCEPT when using time delays where we might not actually want to handle the initial press
-        // 
+        //
         // e.g. you might have a Select button, however if that select button is held down for more than 1 second, rather than
         // delivering a Select button press, it ignores that and instead calls some custom code to e.g. change the controller mode to go to custom
         // controller menu
@@ -1517,7 +1522,7 @@ void MainLoop()
 
         // input->DelayedPressTiming == 0 then we we treat it normally
         // input->DelayedPressTiming > 0 then we don't handle a press until the button is pressed and then released again before the press time happens
-        
+
         // For a delayed operation...
         // If the digital input we pick up has a delayed operation
         //   If long trigger is NOT triggered, then we flag as a Press and Un-press at the same time and set a `do the led's anyway` flag so the LED code can run for 1 loop
@@ -1811,7 +1816,7 @@ void MainLoop()
   if (sendReport)
     LastTimeAnyButtonPressed = Now;
 
-float timeSinceLastAnyButtonPress = Now - LastTimeAnyButtonPressed;
+  float timeSinceLastAnyButtonPress = Now - LastTimeAnyButtonPressed;
 
   // Call idle LED effects etc. if controllers not had anything pressed for a while
 #if defined(USE_ONBOARD_LED) || defined(USE_ONBOARD_LED_STATUS_ONLY)
@@ -1921,7 +1926,6 @@ float timeSinceLastAnyButtonPress = Now - LastTimeAnyButtonPressed;
     //       StatusLed[0] = CRGB(StatusLED_R, StatusLED_G, StatusLED_B);
     //     }
     // #endif
-
   }
   else
   {
@@ -1931,7 +1935,7 @@ float timeSinceLastAnyButtonPress = Now - LastTimeAnyButtonPressed;
 #endif
 
     if (SecondRollover)
-     // Blanking area big enough to cover the `OK` if required
+      // Blanking area big enough to cover the `OK` if required
       RenderIcon(SecondFlipFlop ? Icon_EyesLeft : Icon_EyesRight, uiBTStatus_xPos, uiBTStatus_yPos, 16, 12);
 
     // Hunting for Bluetooth flashing blue status

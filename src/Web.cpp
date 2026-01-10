@@ -20,22 +20,30 @@
 #include "UI.h"
 #include "Utils.h"
 #include "Debug.h"
+#include "Network.h"
+#include "MenuFunctions.h"
 
 #ifdef WEBSERVER
 
-AsyncWebServer WebServer(80);       // Create AsyncWebServer on port 80
+AsyncWebServer WebServer(80); // Create AsyncWebServer on port 80
 
 int Web::WebServerEnabled = false;
 char WebServerIcon = Icon_Web_Disabled;
+int Web::WiFiConfigurationMode;
 
 extern Stats *AllStats[];
 extern int AllStats_Count;
 
-void Web::StartServer()
+// WiFiConfigurationMode indicates that the device is in local Hotspot access point mode
+// which only happens when we are in config menus.
+
+void Web::StartServer(bool startInWiFiConfigurationMode)
 {
     WebServer.begin();
     WebServerEnabled = true;
     WebServerIcon = Icon_Web_Enabled;
+
+    WiFiConfigurationMode = startInWiFiConfigurationMode;
 }
 
 void Web::StopServer()
@@ -115,6 +123,10 @@ void Web::SetUpRoutes()
                                  request->send(200, "text/html", GetComponent_StatsTable().c_str());
                              else if (path.equals("/json/stats"))
                                  Web::SendJson_Stats(request);
+                             else if (path.equals("/json/access_points"))
+                                 Web::SendJson_AccessPointList(request);
+                             else if (path.equals("/json/wifi_test_status"))
+                                 Web::SendJson_WiFiTestStatus(request);
                              else
                              {
                                  // if (path.startsWith("/page/"))
@@ -162,46 +174,241 @@ void Web::SetUpRoutes()
                              }
 #endif
                          });
+
+    // Specifics
+    WebServer.on("/api/UpdateWifiDetails", HTTP_POST, [](AsyncWebServerRequest *request)
+                 {
+        // Handle the form data here
+        if (request->hasParam("ssid", true) && request->hasParam("password", true))
+        {
+            String ssid = request->getParam("ssid", true)->value();
+            String password = request->getParam("password", true)->value();
+
+#ifdef EXTRA_SERIAL_DEBUG
+            Serial.println("Received WiFi details:");
+            Serial.println("SSID: " + ssid);
+            Serial.println("Password: " + password);
+#endif
+
+            // Reminder - Password isn't actually required for open networks
+
+            // Check for validity
+            bool ssidOK = true;
+            if (ssid.length() == 0)
+            {
+                request->send(400, "application/json", "{\"error\":\"SSID not set\"}");
+                return;
+            }
+
+            if (ssid.length() > 32)
+            {
+                request->send(400, "application/json", "{\"error\":\"ssid longer than max allowed (32 chars)\"}");
+                return;
+            }
+
+            for (size_t i = 0; i < ssid.length(); i++)
+            {
+                char c = ssid[i];
+                if (c < 32 || c > 126)
+                {
+                    request->send(400, "application/json", "{\"error\":\"ssid contains invalid characters (must be ascii 32 - 126)\"}");
+                    return;
+                }
+            }
+
+            // Strictly speaking, WPA2 passwords can be 8-63 characters long but older standards can be shorter. We allow for 63 or less, or no password.
+            if (password.length() > 0)
+            {
+                if (password.length() > 63)
+                {
+                    request->send(400, "application/json", "{\"error\":\"password longer than max allowed (63 chars)\"}");
+                    return;
+                }
+
+                for (size_t i = 0; i < password.length(); i++)
+                {
+                    char c = password[i];
+                    if (c < 32 || c > 126)
+                    {
+                        request->send(400, "application/json", "{\"error\":\"password contains invalid characters (must be ascii 32 - 126)\"}");
+                        return;
+                    }
+                }
+            }
+
+            // Save to your profile object or preferences here
+
+            //bool restartTest = Network::IsWiFiTestInProgress();
+
+            if (ssid != MenuFunctions::Current_Profile->WiFi_Name)
+            Serial.println("🌐 WiFi SSID changed via web interface");
+
+        if (password != MenuFunctions::Current_Profile->WiFi_Password)
+            Serial.println("🌐 WiFi Password changed via web interface");
+
+            MenuFunctions::Current_Profile->WiFi_Name = ssid;
+            MenuFunctions::Current_Profile->WiFi_Password = password;
+
+            request->send(200, "application/json", "{\"status\":\"ok\"}");
+
+            // Testing etc. takes place within the Hotspot menu function update loop, so nothing extra to do. All we wanted to do here is update the ssid+password.
+        }
+        else {
+            request->send(400, "application/json", "{\"error\":\"missing parameters\"}");
+        } });
 }
 
-std::string Web::GetComponent_StatsTable()
+void Web::SendJson_AccessPointList(AsyncWebServerRequest *request)
 {
-    std::ostringstream table;
-    table << "<table border='1'>"
-          << "<tr>"
-          << "<th rowspan='2'>Name</th>"
-          << "<th colspan='4'>Current</th>"
-          << "<th colspan='2'>Session</th>"
-          << "<th colspan='2'>Ever</th>"
-          << "</tr>"
-          << "<tr>"
-          << "<th>Second Count</th>"
-          << "<th>Total Count</th>"
-          << "<th>Max Per Second</th>"
-          << "<th>Max Per Second Over Last Minute</th>"
-          << "<th>Total Count</th>"
-          << "<th>Max Per Second</th>"
-          << "<th>Total Count</th>"
-          << "<th>Max per Second</th>"
-          << "</tr>";
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Value accessPointArray(rapidjson::kArrayType);
+    rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
 
-    for (int i = 0; i < AllStats_Count; i++)
+    auto aps = Network::AccessPointList;
+
+    // for (auto &entry : AccessPointList)
+    // {
+    //     const String &ssid = entry.first;     // the key
+    //     AccessPoint *ap = entry.second; // the value
+
+    for (auto &entry : aps)
     {
-        table << "<tr>"
-              << "<td>" << AllStats[i]->Description << "</td>"
-              << "<td>" << AllStats[i]->Current_SecondCount << "</td>"
-              << "<td>" << AllStats[i]->Current_TotalCount << "</td>"
-              << "<td>" << AllStats[i]->Current_MaxPerSecond << "</td>"
-              << "<td>" << AllStats[i]->Current_MaxPerSecondOverLastMinute << "</td>"
-              << "<td>" << AllStats[i]->Session_TotalCount << "</td>"
-              << "<td>" << AllStats[i]->Session_MaxPerSecond << "</td>"
-              << "<td>" << AllStats[i]->Ever_TotalCount << "</td>"
-              << "<td>" << AllStats[i]->Ever_MaxPerSecond << "</td>"
-              << "</tr>";
+        // TODO: Make this rhobust incase access points change whilst we are reading them
+
+        // std::map<std::string, std::shared_ptr<AccessPoint>> AccessPointList;
+        // AccessPointList[ap->ssid] = ap; // ap is a shared_ptr
+        // ...
+        // for (auto &kv : AccessPointList) {
+        //     auto ap = kv.second; // shared_ptr
+        //     if (!ap || ap->ssid.empty()) continue;
+        //     // safe to use ap->ssid, ap->rssi
+        // }
+
+        AccessPoint *ap = entry.second; // the value
+
+        if (!ap || ap->ssid.length() == 0)
+            continue; // skip hidden
+
+        rapidjson::Value apObj(rapidjson::kObjectType);
+
+        // Add SSID as a string
+        apObj.AddMember("SSID", rapidjson::Value(ap->ssid.c_str(), allocator), allocator);
+        // Add RSSI as an integer
+        apObj.AddMember("RSSI", ap->rssi, allocator);
+
+        accessPointArray.PushBack(apObj, allocator);
     }
 
-    table << "</table>";
-    return table.str();
+    doc.AddMember("accessPoints", accessPointArray, allocator);
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    request->send(200, "application/json", buffer.GetString());
+}
+
+// TODO: Make this general purpose return single value function
+void Web::SendJson_WiFiTestStatus(AsyncWebServerRequest *request)
+{
+    // This is similar to processing of test results in menu, but fleshed out a bit for web response (don't have same physical screen space limitations)
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
+
+    Network::WiFiTestResult wifiTestResult = Network::CheckTestResults();
+    // Get current test status
+
+    // Display WiFi test results
+    String resultText;
+    String currentPassword = MenuFunctions::Current_Profile->WiFi_Password;
+    String currentSSID = MenuFunctions::Current_Profile->WiFi_Name;
+
+    if (currentSSID.length() == 0)
+        resultText = "No Access Point / SSID / WiFi Name defined";
+    else if (currentPassword.length() == 0)
+        resultText = "No Password defined";
+    else
+    {
+        switch (wifiTestResult)
+        {
+        case Network::TEST_NOT_STARTED:
+            resultText = "Test has not been started yet";
+            break;
+        case Network::TEST_SUCCESS:
+            resultText = "WiFi connected successfully";
+            break;
+        case Network::TEST_CONNECTING:
+            resultText = "Testing in progress...";
+            break;
+        case Network::TEST_INVALID_PASSWORD:
+            resultText = "Invalid Password";
+            break;
+        case Network::TEST_SSID_NOT_FOUND:
+            resultText = "SSID Not Found";
+            break;
+        case Network::TEST_TIMEOUT:
+            resultText = "Test timed out - his may be due to e.g. an incorrect password";
+            break;
+        case Network::TEST_FAILED:
+            resultText = "Couldn't connect";
+            break;
+        default:
+            resultText = "WiFi is in an unknown state";
+        }
+    }
+
+    // Add a single member "Status"
+    doc.AddMember("Status", rapidjson::Value(htmlEncode(resultText).c_str(), allocator), allocator);
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    // Send JSON response
+    request->send(200, "application/json", buffer.GetString());
+}
+
+String Web::htmlEncode(const String &in)
+{
+    String out;
+    for (size_t i = 0; i < in.length(); i++)
+    {
+        char c = in[i];
+        switch (c)
+        {
+        case '&':
+            out += "&amp;";
+            break;
+        case '<':
+            out += "&lt;";
+            break;
+        case '>':
+            out += "&gt;";
+            break;
+        case '"':
+            out += "&quot;";
+            break;
+        case '\'':
+            out += "&#39;";
+            break;
+        default:
+            out += c;
+            break;
+        }
+    }
+    return out;
+}
+
+String Web::htmlDecode(const String &in)
+{
+    String out = in;
+    out.replace("&amp;", "&");
+    out.replace("&lt;", "<");
+    out.replace("&gt;", ">");
+    out.replace("&quot;", "\"");
+    out.replace("&#39;", "'");
+    return out;
 }
 
 std::string Web::GetPage_Main()
@@ -218,11 +425,76 @@ std::string Web::GetPage_Main()
         << "Serial number: " << SerialNumber << "<br/>"
         << "Firmware version: v" << FirmwareRevision
         << ", Hardware version: v" << HardwareRevision
-        << ", Software version: v" << SoftwareRevision << "<br/>"
-        << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
+        << ", Software version: v" << SoftwareRevision << "<br/>";
+
+    if (!WiFiConfigurationMode)
+        html
+            << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
+    else
+        html
+            << "<h1>WiFi Configuration Mode</h1>"
+            << "<p>The device is currently in WiFi Configuration Mode.</p>"
+            << "<p>This is here to allow you to specify a WiFi network for the device to connect to. This is saved against the currently selected profile.</p>"
+            << "<p>If you change profile on the device while in WiFi Configuration Mode, the WiFi details will be saved against the newly selected profile.</p>"
+            << "<p>Once this device has been configured and is connected to a WiFi network, you can then reboot the device and it should connect to the specified WiFi network.</p>"
+            << "Note that Statistics, battery and other information usually present in this web site will not available while in this WiFi Configuration Mode</p>"
+            << "<h1>WiFi Details for profile - " << MenuFunctions::Current_Profile->Description << "</h1>"
+            << "<p>Please enter your WiFi name and password</p>"
+            << "<form action='/api/SaveWifiDetails' method='post'>"
+            << "<label for='ssid'>WiFi Name:</label>"
+            << "<input type='text' id='ssid' name='ssid' value='" << htmlEncode(MenuFunctions::Current_Profile->WiFi_Name) << "'><br>"
+            << "<label for='password'>WiFi Password:</label>"
+            << "<input type='password' id='password' name='password' value='" << htmlEncode(MenuFunctions::Current_Profile->WiFi_Password) << "><br>"
+            << "<input type='submit' value='Save'>"
+            << "</form>"
+            << "<p>Current status: " << htmlEncode(Network::WiFiStatus) << "</p>";
 
     return html.str();
 }
+
+// std::string Web::SaveWiFiSettings(const std::string &ssid, const std::string &password)
+// {
+//     std::ostringstream html;
+
+//     if (WiFiConfigurationMode)
+//     {
+//         // Save WiFi details to current profile
+//         MenuFunctions::Current_Profile->WiFi_Name = String(ssid.c_str());
+//         CurrentProfile->WiFi_Password = String(password.c_str());
+//         Profiles::SaveProfile(CurrentProfile);
+
+//         html << "<h1>WiFi Settings Saved</h1>"
+//              << "<p>The WiFi settings have been saved to the current profile.</p>"
+//              << "<p>Please reboot the device to connect to the new WiFi network.</p>";
+//     }
+//     else
+//     {
+//         html << "<h1>Error</h1>"
+//              << "<p>The device is not in WiFi Configuration Mode. Cannot save WiFi settings.</p>";
+//     }
+
+//     return html.str();
+// }
+
+// std::string Web::GetPage_Profiles()
+// {
+//     std::ostringstream html;
+
+//     html
+//         << "<h1>GamePad - " << DeviceName << "</h1>"
+//         << "Core v" << getBuildVersion() << "<br/>"
+//         << "<h2>Device Information</h2>"
+//         << "Controller type: " << ControllerType << "<br/>"
+//         << "Device name: " << DeviceName << "<br/>"
+//         << "Model number: " << ModelNumber << "<br/>"
+//         << "Serial number: " << SerialNumber << "<br/>"
+//         << "Firmware version: v" << FirmwareRevision
+//         << ", Hardware version: v" << HardwareRevision
+//         << ", Software version: v" << SoftwareRevision << "<br/>"
+//         << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
+
+//     return html.str();
+// }
 
 std::string Web::GetPage_Debug()
 {
@@ -232,7 +504,7 @@ std::string Web::GetPage_Debug()
         << "<h1>Debug</h1>";
 
     html << "Device has been booted "
-        << Prefs::BootCount << " times<hr/>";
+         << Prefs::BootCount << " times<hr/>";
 
     if (!LittleFS.exists(Debug::CrashFile))
         html << "No crash.log exists";
@@ -389,7 +661,7 @@ void Web::WebListDir(std::ostringstream *stream, const char *dirname, uint8_t de
             String subdir = String(file.name());
             if (!subdir.startsWith("/"))
                 subdir = "/" + subdir;
-            WebListDir(stream, subdir.c_str(), depth + 1);  // Recurse into subdirectory
+            WebListDir(stream, subdir.c_str(), depth + 1); // Recurse into subdirectory
         }
         else
         {

@@ -18,6 +18,7 @@ class Web
 public:
     static const char *CSS;
     static int WebServerEnabled;
+    static int WiFiConfigurationMode;
 
     static void SetUpRoutes();
     static void SendPage_Root(AsyncWebServerRequest *request);
@@ -28,15 +29,20 @@ public:
     static std::string GetPage_Debug();
 
     static void SendJson_Stats(AsyncWebServerRequest *request);
+    static void SendJson_AccessPointList(AsyncWebServerRequest *request);
+    static void SendJson_WiFiTestStatus(AsyncWebServerRequest *request);
 
-    static void StartServer();
+    static void StartServer(bool startInWiFiConfigurationMode);
     static void StopServer();
 
     static void RenderIcons();
 
-    static void ListDir(const char* dirname, uint8_t depth = 0);
-    static void WebListDir(std::ostringstream *stream, const char* dirname, uint8_t depth = 0);
-    
+    static void ListDir(const char *dirname, uint8_t depth = 0);
+    static void WebListDir(std::ostringstream *stream, const char *dirname, uint8_t depth = 0);
+
+    static String htmlEncode(const String &in);
+    static String htmlDecode(const String &in);
+
 private:
     static int ShowTraffic;
 

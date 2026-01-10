@@ -50,6 +50,7 @@ public:
     
     static WiFiTestResult TestWiFiConnection(const String& testSSID, const String& testPassword);
     static WiFiTestResult CheckTestResults();  // Check and return current test status
+    static String DescribeTestResults(String ssid, String password, WiFiTestResult testResults);
     static bool IsWiFiTestInProgress();
     static WiFiTestResult GetLastTestResult();
     static void CancelWiFiTest();  // Cancel any in-progress test

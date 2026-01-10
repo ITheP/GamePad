@@ -31,6 +31,7 @@ enum CopyPasteState
 
 int MenuFunctions::Profile_Selected = 0;
 Profile *MenuFunctions::Current_Profile = nullptr;
+Profile *MenuFunctions::Default_Profile = nullptr;
 Profile *Copy_Profile = nullptr;
 
 static CopyPasteState currentCopyPasteState = CP_WAITING;
@@ -43,6 +44,8 @@ void MenuFunctions::Config_Init_Profile()
   Menus::InitMenuItemDisplay(true);
   currentCopyPasteState = CP_NONE;
   Config_Draw_Profile(false);
+
+  Default_Profile = Profiles::AllProfiles[0];
 }
 
 void MenuFunctions::Config_Update_Profile()
