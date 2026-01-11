@@ -30,7 +30,7 @@ public:
 
     static void SendJson_Stats(AsyncWebServerRequest *request);
     static void SendJson_AccessPointList(AsyncWebServerRequest *request);
-    static void SendJson_WiFiTestStatus(AsyncWebServerRequest *request);
+    static void SendJson_WiFiStatus(AsyncWebServerRequest *request);
 
     static void StartServer();
     static void StopServer();

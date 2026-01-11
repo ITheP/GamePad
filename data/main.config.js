@@ -1,39 +1,15 @@
-var countdown = 5;
-var refreshInterval;
-
-function updateTime() {
-    const el = document.getElementById('currentTime');
-    if (el) {
-        let now = new Date();
-        let timeString =
-            now.getHours().toString().padStart(2, '0') + ':' +
-            now.getMinutes().toString().padStart(2, '0') + ':' +
-            now.getSeconds().toString().padStart(2, '0');
-        el.innerText = timeString;
-    }
-}
-
-function startAutoRefresh() {
-    IntervalManager.add(() => {
-        updateTime();
-    }, 1000);
-}
-
-// WiFi Configuration Mode functions
 function updateAccessPoints() {
     fetch('/json/access_points')
         .then(response => response.json())
         .then(data => {
             const datalist = document.getElementById('ssidList');
-            if (datalist) {
-                datalist.innerHTML = '';
-                if (data.accessPoints && Array.isArray(data.accessPoints)) {
-                    data.accessPoints.forEach(ap => {
-                        const option = document.createElement('option');
-                        option.value = ap.SSID;
-                        datalist.appendChild(option);
-                    });
-                }
+            datalist.innerHTML = '';
+            if (data.accessPoints && Array.isArray(data.accessPoints)) {
+                data.accessPoints.forEach(ap => {
+                    const option = document.createElement('option');
+                    option.value = ap.SSID;
+                    datalist.appendChild(option);
+                });
             }
         })
         .catch(error => console.error('Error fetching access points:', error));
@@ -44,7 +20,7 @@ function updateWiFiStatus() {
         .then(response => response.json())
         .then(data => {
             const statusSpan = document.getElementById('wifiStatus');
-            if (statusSpan && data.Status) {
+            if (data.Status) {
                 statusSpan.textContent = data.Status;
             }
         })
@@ -55,8 +31,6 @@ function handleWiFiFormSubmit(event) {
     event.preventDefault();
     const form = document.getElementById('wifiForm');
     const responseDiv = document.getElementById('formResponse');
-    
-    if (!form || !responseDiv) return;
     
     const formData = new FormData(form);
     
@@ -101,16 +75,4 @@ function startConfigAutoRefresh() {
     }
 }
 
-// Check if we're in WiFi config mode and initialize accordingly
-function initializePageFunctions() {
-    // Check if WiFi config form exists on this page
-    const wifiForm = document.getElementById('wifiForm');
-    if (wifiForm) {
-        startConfigAutoRefresh();
-    } else {
-        // Regular home page
-        startAutoRefresh();
-    }
-}
-
-initializePageFunctions();
+startConfigAutoRefresh();

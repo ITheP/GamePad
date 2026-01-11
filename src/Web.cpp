@@ -130,8 +130,8 @@ void Web::InitWebServer(bool startInWiFiConfigurationMode)
                                  Web::SendJson_Stats(request);
                              else if (path.equals("/json/access_points"))
                                  Web::SendJson_AccessPointList(request);
-                             else if (path.equals("/json/wifi_test_status"))
-                                 Web::SendJson_WiFiTestStatus(request);
+                             else if (path.equals("/json/wifi_status"))
+                                 Web::SendJson_WiFiStatus(request);
                              else
                              {
                                  // if (path.startsWith("/page/"))
@@ -318,7 +318,7 @@ void Web::SendJson_AccessPointList(AsyncWebServerRequest *request)
 }
 
 // TODO: Make this general purpose return single value function
-void Web::SendJson_WiFiTestStatus(AsyncWebServerRequest *request)
+void Web::SendJson_WiFiStatus(AsyncWebServerRequest *request)
 {
     // This is similar to processing of test results in menu, but fleshed out a bit for web response (don't have same physical screen space limitations)
     rapidjson::Document doc;
@@ -464,9 +464,13 @@ std::string Web::GetPage_Main()
 {
     std::ostringstream html;
 
+    if (WiFiConfigurationMode)
+        html << "<h1>GamePad - " << DeviceName << "</h1>";
+    else
+        html << "<h1>Configuration Mode</h1>";
+
     html
-        << "<h1>GamePad - " << DeviceName << "</h1>"
-        << "Core v" << getBuildVersion() << "<br/>"
+        << "Core " << getBuildVersion() << "<br/>"
         << "<h2>Device Information</h2>"
         << "Controller type: " << ControllerType << "<br/>"
         << "Model number: " << ModelNumber << "<br/>"
@@ -481,9 +485,10 @@ std::string Web::GetPage_Main()
             << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
     else
     {
+        // Reminder - .js functionality in .js files
         html
             << "<hr/>"
-            << "<h1>WiFi Configuration Mode</h1>"
+            << "<h1>WiFi Configuration</h1>"
             << "<p>The device is currently in WiFi Configuration Mode.</p>"
             << "<p>This is here to allow you to specify a WiFi network for the device to connect to. This is saved against the currently selected profile.</p>"
             << "<p>If you change profile on the device while in WiFi Configuration Mode, the WiFi details will be saved against the newly selected profile.</p>"
@@ -491,14 +496,17 @@ std::string Web::GetPage_Main()
             << "Note that Device Name, Serial Number, Statistics, Battery and other information usually present in this web site will not available while device is in configuration mode.</p>"
             << "<h1>WiFi Details for profile - " << CurrentProfile->Description << "</h1>"
             << "<p>Please enter your WiFi name and password</p>"
-            << "<form action='/api/SaveWifiDetails' method='post'>"
+            << "<form id='wifiForm'>"
             << "<label for='ssid'>WiFi Name:</label>"
-            << "<input type='text' id='ssid' name='ssid' value='" << htmlEncode(CurrentProfile->WiFi_Name) << "'><br>"
+            << "<input type='text' id='ssid' name='ssid' list='ssidList' value='" << htmlEncode(CurrentProfile->WiFi_Name).c_str() << "'>"
+            << "<datalist id='ssidList'></datalist><br>"
             << "<label for='password'>WiFi Password:</label>"
-            << "<input type='password' id='password' name='password' value='" << htmlEncode(CurrentProfile->WiFi_Password) << "'><br>"
+            << "<input type='password' id='password' name='password' value='" << htmlEncode(CurrentProfile->WiFi_Password).c_str() << "'><br>"
+            << "<input type='checkbox' onclick=\"var p=document.getElementById('password');p.type=(p.type==='password')?'text':'password';\"> Show password<br>"
             << "<input type='submit' value='Save'>"
             << "</form>"
-            << "<p>Current status: " << htmlEncode(Network::WiFiStatus) << "</p>";
+            << "<div id='formResponse'></div>"
+            << "<p>Current status of device testing your WiFi name and Password: <span id='wifiStatus'>" << htmlEncode(Network::WiFiStatus).c_str() << "</span></p>";
 
 #ifdef EXTRA_SERIAL_DEBUG
         Serial_INFO;
