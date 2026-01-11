@@ -17,6 +17,7 @@
 #include "Defaults.h"
 
 #include "Secrets.h"
+#include <Utils.h>
 
 char WiFi_HighSignal[] = "WiFi OK - High Signal";
 char WiFi_MediumSignal[] = "WiFi OK - Medium Signal";
@@ -227,7 +228,7 @@ void Network::Config_InitWifi()
 #endif
 
     // Serial.begin(115200);
-    WiFi.mode(WIFI_STA);
+    //WiFi.mode(WIFI_STA);
     WiFi.disconnect(true); // Make sure no previous connections remain
 
 // delay(1000);
@@ -498,7 +499,9 @@ Network::WiFiTestResult Network::TestWiFiConnection(const String &testSSID, cons
     }
 
     Serial_INFO;
-    Serial.printf("🛜 ❔ WiFi testing connection: SSID='%s', Password length=%d\n", testSSID.c_str(), testPassword.length());
+    Serial.printf("🛜 ❔ WiFi testing connection: SSID='%s', Password=%s\n", testSSID.c_str(), SaferPasswordString(testPassword).c_str());
+    Serial_INFO;
+
 
     TestInProgress = true;
     TestStartTime = millis();

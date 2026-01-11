@@ -91,7 +91,7 @@ void MenuFunctions::Config_Draw_Help(int showScrollIcons)
   }
 
   // Clear out anything scrolling off the top, and ready for menu area to be (re)drawn
-  Display.fillRect(0, MenuContentStartY - textLineHeight, SCREEN_WIDTH, textLineHeight, C_BLACK);
+  //Display.fillRect(0, MenuContentStartY - textLineHeight, SCREEN_WIDTH, textLineHeight, C_BLACK);
 
   if (showScrollIcons)
     DrawScrollArrows();

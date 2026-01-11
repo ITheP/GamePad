@@ -96,7 +96,7 @@ String SaferShortenedPasswordString(String password)
     // Build masked version
     String result = "";
     result += password[0];          // first char
-    result += "...";                // make up middle
+    result += "....";                // make up middle
     result += password[len - 1];    // last char
 
     return result;

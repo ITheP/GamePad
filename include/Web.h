@@ -20,7 +20,7 @@ public:
     static int WebServerEnabled;
     static int WiFiConfigurationMode;
 
-    static void SetUpRoutes();
+    static void InitWebServer(bool startInWiFiConfigurationMode);
     static void SendPage_Root(AsyncWebServerRequest *request);
 
     static std::string GetComponent_StatsTable();
@@ -32,7 +32,7 @@ public:
     static void SendJson_AccessPointList(AsyncWebServerRequest *request);
     static void SendJson_WiFiTestStatus(AsyncWebServerRequest *request);
 
-    static void StartServer(bool startInWiFiConfigurationMode);
+    static void StartServer();
     static void StopServer();
 
     static void RenderIcons();

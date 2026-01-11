@@ -63,7 +63,7 @@ String LastUISelectedAccessPointName = "";
 int SelectedAccessPointIndex = 0;
 
 void UpdateConfigAccessPointList(int listMovement = 0)
-{
+{  
     ConfigAccessPointList.clear();
 
     // Just in case this is called when no list is available
@@ -85,7 +85,7 @@ void UpdateConfigAccessPointList(int listMovement = 0)
             lastUISelectdAccessPoint = ap;
 
         // Work out if current entry matches saved WiFi preference (WiFi name is same thing as a SSID - Service Set Identifier)
-        if (ssid == MenuFunctions::Current_Profile->WiFi_Name)
+        if (ssid == CurrentProfile->WiFi_Name)
         {
             savedAccessPoint = ap;
             ap->selected = true;
@@ -108,9 +108,9 @@ void UpdateConfigAccessPointList(int listMovement = 0)
     }
 
     // Add in saved access point if missing (and isn't the missing last match from above)
-    if (savedAccessPoint == nullptr && LastUISelectedAccessPointName != MenuFunctions::Current_Profile->WiFi_Name)
+    if (savedAccessPoint == nullptr && LastUISelectedAccessPointName != CurrentProfile->WiFi_Name)
     {
-        UnavailableSavedAccessPoint.ssid = MenuFunctions::Current_Profile->WiFi_Name;
+        UnavailableSavedAccessPoint.ssid = CurrentProfile->WiFi_Name;
         ConfigAccessPointList.push_back(&UnavailableSavedAccessPoint);
     }
 
@@ -175,7 +175,7 @@ void UpdateConfigAccessPointList(int listMovement = 0)
         // but for now we just blat it back into the current profile
         // where it sits there as current access point
         // It won't be saved unless user goes to SaveSettings menu option
-        MenuFunctions::Current_Profile->WiFi_Name = LastUISelectedAccessPointName;
+        CurrentProfile->WiFi_Name = LastUISelectedAccessPointName;
         // ...and yes, that might mean the name is invalid/unknown
 
 #ifdef EXTRA_SERIAL_DEBUG
@@ -192,7 +192,7 @@ void MenuFunctions::Config_Init_WiFi_AccessPoint()
     // clears a bit of extra space in case other menus displayed outside usual boundaries
     Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK);
 
-    LastUISelectedAccessPointName = MenuFunctions::Current_Profile->WiFi_Name;
+    LastUISelectedAccessPointName = CurrentProfile->WiFi_Name;
 
     // Refresh the access point list to ensure pointers are valid
     // This is critical when returning from other menus where WiFi scans may have updated Network::AccessPointList

@@ -64,8 +64,8 @@ void MenuFunctions::Config_Init_WiFi_Password()
   // Initialize password buffer from current profile
   memset(passwordBuffer, 0x00, sizeof(passwordBuffer));
 
-  if (Current_Profile->WiFi_Password.length() > 0)
-    strncpy(passwordBuffer, Current_Profile->WiFi_Password.c_str(), PASSWORD_MAX_LENGTH);
+  if (CurrentProfile->WiFi_Password.length() > 0)
+    strncpy(passwordBuffer, CurrentProfile->WiFi_Password.c_str(), PASSWORD_MAX_LENGTH);
 
   // For dev testing, pre-fill with a known password
   // strncpy(passwordBuffer, "TestPassword\0", PASSWORD_MAX_LENGTH);
@@ -236,10 +236,10 @@ void MenuFunctions::Config_Update_WiFi_Password()
   strncpy(tempPasswordBuffer, passwordBuffer, cursorPos);
   tempPasswordBuffer[cursorPos] = 0x00; // Explicitly null-terminate at cursor position
   String currentPassword = String((const char *)tempPasswordBuffer);
-  Current_Profile->WiFi_Password = currentPassword;
+  CurrentProfile->WiFi_Password = currentPassword;
 
   // Auto-test WiFi connection when password or SSID changes
-  String currentSSID = Current_Profile->WiFi_Name;
+  String currentSSID = CurrentProfile->WiFi_Name;
   bool ssidChanged = (currentSSID != lastTestedSSID);
   bool passwordChanged = (currentPassword != lastTestedPassword);
   bool testInProgress = Network::IsWiFiTestInProgress();
@@ -365,7 +365,7 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     // Display WiFi test results
     // char *resultText = nullptr;
     String currentPassword = String((const char *)passwordBuffer);
-    String currentSSID = Current_Profile->WiFi_Name;
+    String currentSSID = CurrentProfile->WiFi_Name;
 
     //  Display the test result in a visible area (below the instructions)
     int resultY = MenuContentStartY + 50;

@@ -188,7 +188,7 @@ void Menus::UpdateMenuText(char *text, int scrollStatus)
     MenuTextPixelPos = 0;
     ScrollMenuText = ON;
 
-     // Scrolling doesn't start time wise till after a e.g. 2.5 second delay, to give user chance to read initial text
+    // Scrolling doesn't start time wise till after a e.g. 2.5 second delay, to give user chance to read initial text
     MenuStartTime = Now + MenuStartDelay;
 
     // Draw initial text, which will stick around till the MenuStartTime kicks in with actual scrolling updates
@@ -311,7 +311,7 @@ int DoubleLineWidth = 16;
 
 void Menus::Setup(Menu *rootMenu)
 {
-   RootMenu = rootMenu;
+  RootMenu = rootMenu;
   CurrentMenu = RootMenu;
 }
 
@@ -325,12 +325,11 @@ void Menus::DrawMenuLine()
       LineOffset++;
       if (LineOffset == 0)
         LineOffset = -16;
-
-      for (int i = LineOffset; i < SCREEN_WIDTH; i += DoubleLineWidth)
-      {
-        Display.drawFastHLine(i, 14, LineWidth, C_WHITE);
-        Display.drawFastHLine(i + LineWidth, 14, LineWidth, C_BLACK);
-      }
+    }
+    for (int i = LineOffset; i < SCREEN_WIDTH; i += DoubleLineWidth)
+    {
+      Display.drawFastHLine(i, 14, LineWidth, C_WHITE);
+      Display.drawFastHLine(i + LineWidth, 14, LineWidth, C_BLACK);
     }
   }
 

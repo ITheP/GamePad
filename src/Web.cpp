@@ -37,13 +37,11 @@ extern int AllStats_Count;
 // WiFiConfigurationMode indicates that the device is in local Hotspot access point mode
 // which only happens when we are in config menus.
 
-void Web::StartServer(bool startInWiFiConfigurationMode)
+void Web::StartServer()
 {
     WebServer.begin();
     WebServerEnabled = true;
     WebServerIcon = Icon_Web_Enabled;
-
-    WiFiConfigurationMode = startInWiFiConfigurationMode;
 }
 
 void Web::StopServer()
@@ -56,8 +54,15 @@ void Web::StopServer()
 // Number of sub second loops to display traffic for. E.g. 30fps = ~33ms * 5 = 165ms
 #define TrafficDisplayTime 5
 
-void Web::SetUpRoutes()
+void Web::InitWebServer(bool startInWiFiConfigurationMode)
 {
+#ifdef EXTRA_SERIAL_DEBUG
+    Serial_INFO;
+    Serial.println("🌐 Initialising Web Server configuration...");
+#endif
+
+    WiFiConfigurationMode = startInWiFiConfigurationMode;
+
     //     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
     //               {
     // #ifdef EXTRA_SERIAL_DEBUG
@@ -176,8 +181,11 @@ void Web::SetUpRoutes()
                          });
 
     // Specifics
-    WebServer.on("/api/UpdateWifiDetails", HTTP_POST, [](AsyncWebServerRequest *request)
-                 {
+    if (WiFiConfigurationMode)
+    {
+        // In WiFi Configuration Mode - allow setting of WiFi details
+        WebServer.on("/api/UpdateWifiDetails", HTTP_POST, [](AsyncWebServerRequest *request)
+                     {
         // Handle the form data here
         if (request->hasParam("ssid", true) && request->hasParam("password", true))
         {
@@ -240,14 +248,14 @@ void Web::SetUpRoutes()
 
             //bool restartTest = Network::IsWiFiTestInProgress();
 
-            if (ssid != MenuFunctions::Current_Profile->WiFi_Name)
+            if (ssid != CurrentProfile->WiFi_Name)
             Serial.println("🌐 WiFi SSID changed via web interface");
 
-        if (password != MenuFunctions::Current_Profile->WiFi_Password)
+        if (password != CurrentProfile->WiFi_Password)
             Serial.println("🌐 WiFi Password changed via web interface");
 
-            MenuFunctions::Current_Profile->WiFi_Name = ssid;
-            MenuFunctions::Current_Profile->WiFi_Password = password;
+            CurrentProfile->WiFi_Name = ssid;
+            CurrentProfile->WiFi_Password = password;
 
             request->send(200, "application/json", "{\"status\":\"ok\"}");
 
@@ -256,6 +264,7 @@ void Web::SetUpRoutes()
         else {
             request->send(400, "application/json", "{\"error\":\"missing parameters\"}");
         } });
+    }
 }
 
 void Web::SendJson_AccessPointList(AsyncWebServerRequest *request)
@@ -321,8 +330,8 @@ void Web::SendJson_WiFiTestStatus(AsyncWebServerRequest *request)
 
     // Display WiFi test results
     String resultText;
-    String currentPassword = MenuFunctions::Current_Profile->WiFi_Password;
-    String currentSSID = MenuFunctions::Current_Profile->WiFi_Name;
+    String currentPassword = CurrentProfile->WiFi_Password;
+    String currentSSID = CurrentProfile->WiFi_Name;
 
     if (currentSSID.length() == 0)
         resultText = "No Access Point / SSID / WiFi Name defined";
@@ -411,6 +420,46 @@ String Web::htmlDecode(const String &in)
     return out;
 }
 
+std::string Web::GetComponent_StatsTable()
+{
+    std::ostringstream table;
+    table << "<table border='1'>"
+          << "<tr>"
+          << "<th rowspan='2'>Name</th>"
+          << "<th colspan='4'>Current</th>"
+          << "<th colspan='2'>Session</th>"
+          << "<th colspan='2'>Ever</th>"
+          << "</tr>"
+          << "<tr>"
+          << "<th>Second Count</th>"
+          << "<th>Total Count</th>"
+          << "<th>Max Per Second</th>"
+          << "<th>Max Per Second Over Last Minute</th>"
+          << "<th>Total Count</th>"
+          << "<th>Max Per Second</th>"
+          << "<th>Total Count</th>"
+          << "<th>Max per Second</th>"
+          << "</tr>";
+
+    for (int i = 0; i < AllStats_Count; i++)
+    {
+        table << "<tr>"
+              << "<td>" << AllStats[i]->Description << "</td>"
+              << "<td>" << AllStats[i]->Current_SecondCount << "</td>"
+              << "<td>" << AllStats[i]->Current_TotalCount << "</td>"
+              << "<td>" << AllStats[i]->Current_MaxPerSecond << "</td>"
+              << "<td>" << AllStats[i]->Current_MaxPerSecondOverLastMinute << "</td>"
+              << "<td>" << AllStats[i]->Session_TotalCount << "</td>"
+              << "<td>" << AllStats[i]->Session_MaxPerSecond << "</td>"
+              << "<td>" << AllStats[i]->Ever_TotalCount << "</td>"
+              << "<td>" << AllStats[i]->Ever_MaxPerSecond << "</td>"
+              << "</tr>";
+    }
+
+    table << "</table>";
+    return table.str();
+}
+
 std::string Web::GetPage_Main()
 {
     std::ostringstream html;
@@ -420,34 +469,42 @@ std::string Web::GetPage_Main()
         << "Core v" << getBuildVersion() << "<br/>"
         << "<h2>Device Information</h2>"
         << "Controller type: " << ControllerType << "<br/>"
-        << "Device name: " << DeviceName << "<br/>"
         << "Model number: " << ModelNumber << "<br/>"
-        << "Serial number: " << SerialNumber << "<br/>"
         << "Firmware version: v" << FirmwareRevision
         << ", Hardware version: v" << HardwareRevision
         << ", Software version: v" << SoftwareRevision << "<br/>";
 
     if (!WiFiConfigurationMode)
         html
+            << "Device name: " << DeviceName << "<br/>"
+            << "Serial number: " << SerialNumber << "<br/>"
             << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
     else
+    {
         html
+            << "<hr/>"
             << "<h1>WiFi Configuration Mode</h1>"
             << "<p>The device is currently in WiFi Configuration Mode.</p>"
             << "<p>This is here to allow you to specify a WiFi network for the device to connect to. This is saved against the currently selected profile.</p>"
             << "<p>If you change profile on the device while in WiFi Configuration Mode, the WiFi details will be saved against the newly selected profile.</p>"
             << "<p>Once this device has been configured and is connected to a WiFi network, you can then reboot the device and it should connect to the specified WiFi network.</p>"
-            << "Note that Statistics, battery and other information usually present in this web site will not available while in this WiFi Configuration Mode</p>"
-            << "<h1>WiFi Details for profile - " << MenuFunctions::Current_Profile->Description << "</h1>"
+            << "Note that Device Name, Serial Number, Statistics, Battery and other information usually present in this web site will not available while device is in configuration mode.</p>"
+            << "<h1>WiFi Details for profile - " << CurrentProfile->Description << "</h1>"
             << "<p>Please enter your WiFi name and password</p>"
             << "<form action='/api/SaveWifiDetails' method='post'>"
             << "<label for='ssid'>WiFi Name:</label>"
-            << "<input type='text' id='ssid' name='ssid' value='" << htmlEncode(MenuFunctions::Current_Profile->WiFi_Name) << "'><br>"
+            << "<input type='text' id='ssid' name='ssid' value='" << htmlEncode(CurrentProfile->WiFi_Name) << "'><br>"
             << "<label for='password'>WiFi Password:</label>"
-            << "<input type='password' id='password' name='password' value='" << htmlEncode(MenuFunctions::Current_Profile->WiFi_Password) << "><br>"
+            << "<input type='password' id='password' name='password' value='" << htmlEncode(CurrentProfile->WiFi_Password) << "'><br>"
             << "<input type='submit' value='Save'>"
             << "</form>"
             << "<p>Current status: " << htmlEncode(Network::WiFiStatus) << "</p>";
+
+#ifdef EXTRA_SERIAL_DEBUG
+        Serial_INFO;
+        Serial.printf("Web WiFi Configuration Mode - Profile: %d - %s, SSID: %s, Password: %s\n", CurrentProfile->Id, CurrentProfile->Description.c_str(), CurrentProfile->WiFi_Name.c_str(), SaferPasswordString(CurrentProfile->WiFi_Password).c_str());
+#endif
+    }
 
     return html.str();
 }

@@ -40,7 +40,7 @@ char SerialNumber[22];   // SerialNumber = large enough to hold the uint64_t val
 uint64_t ESPChipId;      // Serial Number
 int ESPChipIdOffset;
 Input *ProfileOverrideInput = nullptr; // Input on device boot that caused usage of non default Profile Id
-Profile *CurrentProfile;               // Current Profile (with any settings saved to device memory)
+//Profile *CurrentProfile;               // Current Profile (with any settings saved to device memory)
 
 void (*LoopOperation)(void);
 
@@ -346,7 +346,7 @@ void setupWiFi()
     Serial.println("🛜 ✅ WiFi connected...");
     Serial.println("🌐 ✅ ...Starting web server");
 #endif
-    Web::StartServer(false);
+    Web::StartServer();
   } else if
   (event == SYSTEM_EVENT_STA_DISCONNECTED) {
 #ifdef EXTRA_SERIAL_DEBUG
@@ -360,7 +360,7 @@ void setupWiFi()
 #endif
 
 #ifdef WEBSERVER
-void setupWebServer()
+void setupWebServer(bool startInWiFiConfigurationMode)
 {
   // WiFi events turn server on and off
 
@@ -368,7 +368,7 @@ void setupWebServer()
   Serial_INFO;
   Serial.println("🌐 Setting up HTTP Web Server...");
 
-  Web::SetUpRoutes();
+  Web::InitWebServer(startInWiFiConfigurationMode);
 
 #ifdef EXTRA_SERIAL_DEBUG
   Serial.println("🌐 Web Site source files:");
@@ -674,7 +674,7 @@ void setupProfile()
   ESPChipIdOffset = profileId;
 
   // Load profile
-  CurrentProfile = Profiles::GetProfileById(profileId);
+  Profiles::SetCurrentProfileFromId(profileId);
 
   // Populate custom names
   // TODO: CUSTOM NAMES
@@ -1045,6 +1045,11 @@ void setup()
     Menus::Setup(&Menus::ConfigMenu);
     Menus::MenusStatus = ON;
 
+#ifdef WEBSERVER
+    // Web server in Config mode
+  setupWebServer(true);
+#endif
+
     // We stay on this screen showing basic help until button released
     while (digitalRead(BootPin_StartInConfiguration) == PRESSED)
       ;
@@ -1067,7 +1072,7 @@ void setup()
   Display.fillRect(HALF_SCREEN_WIDTH + 8, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH - 8, RREHeight_fixed_8x16, C_BLACK);
 
 #ifdef WEBSERVER
-  setupWebServer();
+  setupWebServer(false);
 #endif
 
 #ifdef WIFI

@@ -62,9 +62,13 @@ void MenuFunctions::Config_Init_Hotspot()
 
   Serial.print("🛑 SoftAP IP: ");
   Serial.println(apIP);
-#endif
 
-  Web::StartServer(true);
+
+    Serial_INFO;
+    Serial.printf("🛑 Profile selected: %d - %s, WiFi: %s, WiFi Password: %s\n", CurrentProfile->Id, CurrentProfile->Description.c_str(), CurrentProfile->WiFi_Name.c_str(), SaferPasswordString(CurrentProfile->WiFi_Password).c_str());
+  #endif
+
+  Web::StartServer();
 
   // while (true) {
   //   Serial.println(String(Second));
@@ -82,14 +86,13 @@ void MenuFunctions::Config_Init_Hotspot()
 
 void MenuFunctions::Config_Update_Hotspot()
 {
-
   Menus::Config_CheckForMenuChange();
 
-  if (CurrentSSID != Current_Profile->WiFi_Name || CurrentPassword != Current_Profile->WiFi_Password)
+  if (CurrentSSID != CurrentProfile->WiFi_Name || CurrentPassword != CurrentProfile->WiFi_Password)
   {
     credentialsChanged = true;
-    CurrentSSID = Current_Profile->WiFi_Name;
-    CurrentPassword = Current_Profile->WiFi_Password;
+    CurrentSSID = CurrentProfile->WiFi_Name;
+    CurrentPassword = CurrentProfile->WiFi_Password;
   }
 
   if (credentialsChanged)
@@ -166,7 +169,7 @@ void MenuFunctions::Config_Draw_Hotspot()
 
   // Draw ssid + password at the bottom of the screen
   // TODO: Shrink password
-  sprintf(buffer, "%s/%s", CurrentSSID.length() > 0 ? CurrentSSID.c_str() : "<not set>", CurrentPassword.length() > 0 ? SaferShortenedPasswordString(CurrentPassword).c_str() : "<not set>");
+  sprintf(buffer, "%s / %s", CurrentSSID.length() > 0 ? CurrentSSID.c_str() : "<not set>", CurrentPassword.length() > 0 ? SaferShortenedPasswordString(CurrentPassword).c_str() : "<not set>");
   if (RREDefault.strWidth(buffer) > SCREEN_WIDTH)
     SetFontSmall();
   else
@@ -184,6 +187,8 @@ void MenuFunctions::Config_Exit_Hotspot()
   }
 
   Web::StopServer();
+
+  WiFi.disconnect(true);
 
   // Just in case
   Network::Config_InitWifi();

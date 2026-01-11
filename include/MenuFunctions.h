@@ -10,9 +10,9 @@
 class MenuFunctions
 {
 public:
-    static Profile *Current_Profile;
-    static Profile *Default_Profile;
-    static int Profile_Selected;
+    //static Profile *Current_Profile;
+    //static Profile *Default_Profile;
+    static int SelectedProfileId;
 
     // Init... - functions called when entering menu option (e.g. draw static elements)
     // Update... - functions called repeatedly while in menu option (e.g. update changing elements)

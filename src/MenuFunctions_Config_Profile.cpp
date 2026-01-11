@@ -29,10 +29,10 @@ enum CopyPasteState
   CP_PASTED
 };
 
-int MenuFunctions::Profile_Selected = 0;
-Profile *MenuFunctions::Current_Profile = nullptr;
-Profile *MenuFunctions::Default_Profile = nullptr;
-Profile *Copy_Profile = nullptr;
+int MenuFunctions::SelectedProfileId = 0;
+//Profile *MenuFunctions::Current_Profile = nullptr;
+// Profile *MenuFunctions::Default_Profile = nullptr;
+Profile *CopyProfile = nullptr;
 
 static CopyPasteState currentCopyPasteState = CP_WAITING;
 
@@ -45,7 +45,7 @@ void MenuFunctions::Config_Init_Profile()
   currentCopyPasteState = CP_NONE;
   Config_Draw_Profile(false);
 
-  Default_Profile = Profiles::AllProfiles[0];
+  // Default_Profile = Profiles::AllProfiles[0];
 }
 
 void MenuFunctions::Config_Update_Profile()
@@ -56,16 +56,21 @@ void MenuFunctions::Config_Update_Profile()
   if (PRESSED == Menus::SelectState())
   {
     if (PRESSED == Menus::UpState() && Menus::UpJustChanged())
-      Profile_Selected++;
+      SelectedProfileId++;
     else if (PRESSED == Menus::DownState() && Menus::DownJustChanged())
-      Profile_Selected--;
+      SelectedProfileId--;
 
-    if (Profile_Selected < 0)
-      Profile_Selected = 5;
-    else if (Profile_Selected > 5)
-      Profile_Selected = 0;
+    if (SelectedProfileId < 0)
+      SelectedProfileId = 5;
+    else if (SelectedProfileId > 5)
+      SelectedProfileId = 0;
 
-    Current_Profile = Profiles::AllProfiles[Profile_Selected];
+    Profiles::SetCurrentProfileFromId(SelectedProfileId);
+
+#ifdef EXTRA_SERIAL_DEBUG
+    Serial_INFO;
+    Serial.printf("Profile selected: %d - %s, WiFi: %s, WiFi Password: %s\n", CurrentProfile->Id, CurrentProfile->Description.c_str(), CurrentProfile->WiFi_Name.c_str(), SaferPasswordString(CurrentProfile->WiFi_Password).c_str());
+#endif
 
     currentCopyPasteState = CP_NONE;
 
@@ -85,7 +90,7 @@ void MenuFunctions::Config_Update_Profile()
         FrameTimer = millis();
 
         currentCopyPasteState = CP_COPYING;
-        MessageTop = "Copying " + Current_Profile->Description + "...";
+        MessageTop = "Copying " + CurrentProfile->Description + "...";
         MessageBottom = "Release to cancel";
       }
       else if (currentCopyPasteState == CP_COPYING)
@@ -101,9 +106,9 @@ void MenuFunctions::Config_Update_Profile()
           if (AnimationFrameIndex > 13) // Got past last frame of animation - we save
           {
             // Copy profile
-            Copy_Profile = Current_Profile;
+            CopyProfile = CurrentProfile;
             currentCopyPasteState = CP_COPIED;
-            MessageTop = Copy_Profile->Description + " copied";
+            MessageTop = CopyProfile->Description + " copied";
             MessageBottom = "Ready to paste";
           }
           else
@@ -120,7 +125,7 @@ void MenuFunctions::Config_Update_Profile()
 
       if (Menus::DownJustChanged())
       {
-        if (Copy_Profile == nullptr)
+        if (CopyProfile == nullptr)
         {
           // Source not specified
           currentCopyPasteState = CP_CANCELLED;
@@ -128,7 +133,7 @@ void MenuFunctions::Config_Update_Profile()
           MessageTop = "Copy source";
           MessageBottom = "before pasting";
         }
-        else if (Copy_Profile == Current_Profile)
+        else if (CopyProfile == CurrentProfile)
         {
           // Attempting to copying on to itself
           currentCopyPasteState = CP_CANCELLED;
@@ -143,7 +148,7 @@ void MenuFunctions::Config_Update_Profile()
           Icon = FilledCircleIcons[AnimationFrameIndex];
           FrameTimer = millis();
           currentCopyPasteState = CP_PASTING;
-          MessageTop = "Pasting from " + Copy_Profile->Description;
+          MessageTop = "Pasting from " + CopyProfile->Description;
           MessageBottom = "Release to cancel";
         }
       }
@@ -159,15 +164,15 @@ void MenuFunctions::Config_Update_Profile()
           AnimationFrameIndex += 2;
           if (AnimationFrameIndex > 13) // Got past last frame of animation - we save
           {
-            Current_Profile->CopySettingsFrom(Copy_Profile);
+            CurrentProfile->CopySettingsFrom(CopyProfile);
             currentCopyPasteState = CP_PASTED;
-            MessageTop = "Copied from " + Copy_Profile->Description;
-            MessageBottom = "into " + Current_Profile->Description;
+            MessageTop = "Copied from " + CopyProfile->Description;
+            MessageBottom = "into " + CurrentProfile->Description;
           }
           else
           {
             Icon = FilledCircleIcons[AnimationFrameIndex];
-            MessageTop = "Pasting from " + Copy_Profile->Description;
+            MessageTop = "Pasting from " + CopyProfile->Description;
             MessageBottom = "Release to cancel";
           }
         }
@@ -180,9 +185,9 @@ void MenuFunctions::Config_Update_Profile()
       {
         FrameTimer = millis();
         if (currentCopyPasteState == CP_COPYING)
-          MessageTop = "Copy of " + Current_Profile->Description;
+          MessageTop = "Copy of " + CurrentProfile->Description;
         else
-          MessageTop = "Paste of " + Copy_Profile->Description;
+          MessageTop = "Paste of " + CopyProfile->Description;
         MessageBottom = "Cancelled";
         currentCopyPasteState = CP_CANCELLED;
       }
@@ -216,21 +221,21 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
 
     RREDefault.setScale(2);
 
-    sprintf(buffer, "%s", Current_Profile->Description);
+    sprintf(buffer, "%s", CurrentProfile->Description);
     RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 4, buffer);
 
     RREDefault.setScale(1);
 
     ResetPrintDisplayLine(SCREEN_HEIGHT - 18, 0, SetFontSmall);
 
-    if (Current_Profile->WiFi_Name.length() == 0)
+    if (CurrentProfile->WiFi_Name.length() == 0)
       PrintDisplayLineCentered("No WiFi selected");
     else
     {
-      sprintf(buffer, "WiFi: %s", Current_Profile->WiFi_Name.c_str());
+      sprintf(buffer, "WiFi: %s", CurrentProfile->WiFi_Name.c_str());
       PrintDisplayLineCentered(buffer);
 
-      auto it = Network::AccessPointList.find(Current_Profile->WiFi_Name);
+      auto it = Network::AccessPointList.find(CurrentProfile->WiFi_Name);
       if (it != Network::AccessPointList.end())
       {
         // Mapping exists
@@ -279,7 +284,7 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
     else
     {
       // Show a filled copy area to represent copy buffer set
-      if (Copy_Profile != nullptr)
+      if (CopyProfile != nullptr)
         RenderIcon(Icon_FilledCircle_9, checkX + 2, checkY + 2, 0, 0);
     }
 

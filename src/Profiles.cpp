@@ -3,19 +3,27 @@
 #include "Profile.h"
 #include "Prefs.h"
 
-Profile *Profiles::AllProfiles[MAX_PROFILES] = { nullptr };
+Profile *CurrentProfile;
+
+Profile *Profiles::AllProfiles[MAX_PROFILES] = {nullptr};
 
 Profile *Profiles::GetProfileById(int profileId)
 {
-    Profile *profile = new Profile(profileId, (int)('0'+ profileId), String(profileId));
+    Profile *profile = new Profile(profileId, (int)('0' + profileId), String(profileId));
     profile->Load();
     return profile;
+}
+
+void Profiles::SetCurrentProfileFromId(int id)
+{
+    if (id >= 0 && id < MAX_PROFILES)
+        CurrentProfile = AllProfiles[id];
 }
 
 void Profiles::SaveAll()
 {
     Serial.println("Loading all profiles");
-    
+
     for (int i = 0; i < MAX_PROFILES; i++)
         AllProfiles[i]->Save();
 }
@@ -29,7 +37,7 @@ void Profiles::LoadAll()
     AllProfiles[0] = new Profile(0, '0', "Default");
 
     for (int i = 1; i < MAX_PROFILES; i++)
-        AllProfiles[i] = new Profile(i, (int)('0'+ i), String(i));
+        AllProfiles[i] = new Profile(i, (int)('0' + i), String(i));
 
     for (int i = 0; i < MAX_PROFILES; i++)
         AllProfiles[i]->Load();
