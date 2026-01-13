@@ -368,8 +368,11 @@ void setupWebServer(bool startInWiFiConfigurationMode)
   Serial_INFO;
   Serial.println("🌐 Setting up HTTP Web Server...");
 
-  Web::InitWebServer(startInWiFiConfigurationMode);
-
+  if (startInWiFiConfigurationMode)
+  Web::InitWebServer_Hotspot();
+  else
+  Web::InitWebServer();
+  
 #ifdef EXTRA_SERIAL_DEBUG
   Serial.println("🌐 Web Site source files:");
   Web::ListDir("/");

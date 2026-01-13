@@ -21,6 +21,9 @@
 // 🛑 Stop
 // ⛔ Blocked
 // 🚫 Prohibited / Rejected
+// ▶️ Play/Start
+// ⏸️ Pause
+// ⏹️ Stop
 // ✋ Raised Hand
 // ⭐ Star
 // 🌟 Glowing Star
@@ -41,6 +44,9 @@
 // 🛜 WiFi
 // 📶 Signal Strength
 // 🔗 Link
+// 📩 Request
+// 🗺️ Map
+// 🧭 Compass
 // 🖥 Desktop
 // 💻 Laptop
 // 🔌 Serial

@@ -2,6 +2,7 @@
 
 #include <ESPAsyncWebServer.h>
 #include <string>
+#include <map>
 #include "Stats.h"
 #include "DeviceConfig.h"
 
@@ -16,21 +17,31 @@ extern char SoftwareRevision[];
 class Web
 {
 public:
+    using RouteHandler = void(*)(AsyncWebServerRequest*);
+    
     static const char *CSS;
     static int WebServerEnabled;
-    static int WiFiConfigurationMode;
+    static int WiFiHotspotMode;
+    static std::map<String, RouteHandler> Routes;
+    static const char *RootWebPath;
 
-    static void InitWebServer(bool startInWiFiConfigurationMode);
+    static void InitWebServer();
+    static void InitWebServer_Hotspot();
+
     static void SendPage_Root(AsyncWebServerRequest *request);
 
-    static std::string GetComponent_StatsTable();
-    static std::string GetPage_Main();
-    static std::string GetPage_About();
-    static std::string GetPage_Debug();
+    static void SendPage_Main(AsyncWebServerRequest *request);
+    static void SendPage_About(AsyncWebServerRequest *request);
+    static void SendPage_Debug(AsyncWebServerRequest *request);
+
+    static void SendComponent_StatsTable(AsyncWebServerRequest *request);
 
     static void SendJson_Stats(AsyncWebServerRequest *request);
     static void SendJson_AccessPointList(AsyncWebServerRequest *request);
     static void SendJson_WiFiStatus(AsyncWebServerRequest *request);
+    static void SendJson_HotspotInfo(AsyncWebServerRequest *request);
+
+    static void POST_UpdateWiFiDetails(AsyncWebServerRequest *request);
 
     static void StartServer();
     static void StopServer();
@@ -46,6 +57,7 @@ public:
 private:
     static int ShowTraffic;
 
+    static void InitWebServerCustomHandler();
     static void Get_Header(std::ostringstream &stream);
     static void Get_Footer(std::ostringstream &stream);
 };

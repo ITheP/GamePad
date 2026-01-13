@@ -164,7 +164,7 @@ void MenuFunctions::Config_Draw_Hotspot()
 
   String resultText = Network::DescribeTestResults(CurrentSSID, CurrentPassword, WiFiTestResult);
 
-  sprintf(buffer, "Status: %s", resultText);
+  sprintf(buffer, "Status: %s", resultText.c_str());
   PrintDisplayLineCentered(buffer);
 
   // Draw ssid + password at the bottom of the screen

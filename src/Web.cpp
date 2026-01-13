@@ -23,18 +23,24 @@
 #include "Network.h"
 #include "MenuFunctions.h"
 
+// Notes:
+// Filename references Require / in front of the filename to work with SPIFFS
+// Includes code defining icon's of state of things so easy to render visuals in UI
+
 #ifdef WEBSERVER
 
 AsyncWebServer WebServer(80); // Create AsyncWebServer on port 80
 
 int Web::WebServerEnabled = false;
 char WebServerIcon = Icon_Web_Disabled;
-int Web::WiFiConfigurationMode;
+int Web::WiFiHotspotMode;
+std::map<String, Web::RouteHandler> Web::Routes;
+const char *Web::RootWebPath;
 
 extern Stats *AllStats[];
 extern int AllStats_Count;
 
-// WiFiConfigurationMode indicates that the device is in local Hotspot access point mode
+// WiFiHotspotMode indicates that the device is in local Hotspot access point mode
 // which only happens when we are in config menus.
 
 void Web::StartServer()
@@ -42,6 +48,11 @@ void Web::StartServer()
     WebServer.begin();
     WebServerEnabled = true;
     WebServerIcon = Icon_Web_Enabled;
+
+#ifdef EXTRA_SERIAL_DEBUG
+    Serial_INFO;
+    Serial.println("🌐 ▶️ Web Server started");
+#endif
 }
 
 void Web::StopServer()
@@ -49,34 +60,73 @@ void Web::StopServer()
     WebServer.end();
     WebServerEnabled = false;
     WebServerIcon = Icon_Web_Disabled;
+
+#ifdef EXTRA_SERIAL_DEBUG
+    Serial_INFO;
+    Serial.println("🌐 ⏹️ Web Server stopped");
+#endif
 }
 
 // Number of sub second loops to display traffic for. E.g. 30fps = ~33ms * 5 = 165ms
 #define TrafficDisplayTime 5
 
-void Web::InitWebServer(bool startInWiFiConfigurationMode)
+void Web::InitWebServer()
 {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial_INFO;
-    Serial.println("🌐 Initialising Web Server configuration...");
+    Serial.println("🌐 ⚙️ Initialising Web Server configuration...");
 #endif
 
-    WiFiConfigurationMode = startInWiFiConfigurationMode;
+    WiFiHotspotMode = false;
 
-    //     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-    //               {
-    // #ifdef EXTRA_SERIAL_DEBUG
-    //                   ShowRequestStart(request);
-    // #endif
-    //                   // Requires / in front of the filename to work with SPIFFS
-    //                   request->send(SPIFFS, "/root.html", "text/html");
-    // #ifdef EXTRA_SERIAL_DEBUG
-    //                   ShowRequestEnd(request);
-    // #endif
-    //               });
+    // Set up the routes for the main web server
+    Routes = {
+        {"/main", Web::SendPage_Main},
+        {"/debug", Web::SendPage_Debug},
+        {"/component/stats", Web::SendComponent_StatsTable},
+        {"/json/stats", Web::SendJson_Stats}};
 
-    // Serve static files from SPIFFS
-    // server.serveStatic("/", SPIFFS, "/").setDefaultFile("root.html");
+    RootWebPath = "/root.html";
+    InitWebServerCustomHandler();
+}
+
+void Web::InitWebServer_Hotspot()
+{
+#ifdef EXTRA_SERIAL_DEBUG
+    Serial_INFO;
+    Serial.println("🌐 ⚙️ Initialising Web Server configuration - Config Mode...");
+#endif
+
+    WiFiHotspotMode = true;
+
+    // Set up the routes for the hotspot web server
+    Routes = {
+        {"/json/hotspot_info", Web::SendJson_HotspotInfo},
+        {"/json/access_points", Web::SendJson_AccessPointList},
+        {"/json/wifi_status", Web::SendJson_WiFiStatus},
+        {"/api/UpdateWifiDetails", Web::POST_UpdateWiFiDetails}};
+
+    // Specific cases setting of WiFi details
+    // WebServer.on("/api/UpdateWifiDetails", HTTP_POST, [](AsyncWebServerRequest *request)
+    //              {
+    //     } });
+
+    RootWebPath = "/hotspot.html";
+    InitWebServerCustomHandler();
+}
+
+void Web::InitWebServerCustomHandler()
+{
+    #ifdef EXTRA_SERIAL_DEBUG
+    Serial_INFO;
+    Serial.println("🌐 ⚙️ Setting up Web Server custom handler...");
+    Serial.println("🌐 Registered Routes include");
+    Serial.println("  🧭  /");
+    for (const auto &route : Routes) {
+        Serial.print("  🧭 ");
+        Serial.println(route.first.c_str());  // prints the path
+    }
+#endif
 
     // We do a lot of the heavy lifting ourselves for sorting the
     // pushing of web pages out - this is to allow us to more easily slap in dynamic content.
@@ -94,19 +144,19 @@ void Web::InitWebServer(bool startInWiFiConfigurationMode)
                              switch (request->method())
                              {
                              case HTTP_GET:
-                                 Serial.print("🌐 GET ");
+                                 Serial.print("🌐 📩 GET ");
                                  break;
                              case HTTP_POST:
-                                 Serial.print("🌐 POST ");
+                                 Serial.print("🌐 📩 POST ");
                                  break;
                              case HTTP_PUT:
-                                 Serial.print("🌐 PUT ");
+                                 Serial.print("🌐 📩 PUT ");
                                  break;
                              case HTTP_DELETE:
-                                 Serial.print("🌐 DELETE ");
+                                 Serial.print("🌐 📩 DELETE ");
                                  break;
                              default:
-                                 Serial.print("🌐 OTHER ");
+                                 Serial.print("🌐 📩 OTHER ");
                                  break;
                              }
                              Serial.println("WebRequest: HTTP " + request->url());
@@ -117,53 +167,48 @@ void Web::InitWebServer(bool startInWiFiConfigurationMode)
 
                              // Default page
                              if (path.equals("/"))
-                                 // Requires / in front of the filename to work with SPIFFS
-                                 request->send(LittleFS, "/root.html", "text/html");
-                             // special cases
-                             else if (path.equals("/main"))
-                                 request->send(200, "text/html", GetPage_Main().c_str());
-                             else if (path.equals("/debug"))
-                                 request->send(200, "text/html", GetPage_Debug().c_str());
-                             else if (path.equals("/component/stats"))
-                                 request->send(200, "text/html", GetComponent_StatsTable().c_str());
-                             else if (path.equals("/json/stats"))
-                                 Web::SendJson_Stats(request);
-                             else if (path.equals("/json/access_points"))
-                                 Web::SendJson_AccessPointList(request);
-                             else if (path.equals("/json/wifi_status"))
-                                 Web::SendJson_WiFiStatus(request);
+                                 request->send(LittleFS, Web::RootWebPath, "text/html");
                              else
+                             // Check route mapping
                              {
-                                 // if (path.startsWith("/page/"))
-                                 // path = path.substring(6) + ".html"; // Convert /page/name to /name.html
-                                 if (LittleFS.exists(path))
+                                 auto it = Web::Routes.find(path);
+                                 if (it != Web::Routes.end())
                                  {
-                                     if (path.endsWith(".html"))
-                                         contentType = "text/html";
-                                     else if (path.endsWith(".js"))
-                                         contentType = "application/javascript";
-                                     else if (path.endsWith(".css"))
-                                         contentType = "text/css";
-                                     else if (path.endsWith(".png"))
-                                         contentType = "image/png";
-                                     else if (path.endsWith(".jpg"))
-                                         contentType = "image/jpeg";
-                                     else if (path.endsWith(".ico"))
-                                         contentType = "image/x-icon";
-                                     else
-                                         contentType = "text/plain";
-                                     // else if (path.endsWith(".gif")) contentType = "image/gif";
-
-                                     request->send(LittleFS, path, contentType);
+                                     it->second(request);
                                  }
                                  else
                                  {
-                                     request->send(404, "text/plain", "File Not Found");
+                                     // if (path.startsWith("/page/"))
+                                     // path = path.substring(6) + ".html"; // Convert /page/name to /name.html
+                                     if (LittleFS.exists(path))
+                                     {
+                                         if (path.endsWith(".html"))
+                                             contentType = "text/html";
+                                         else if (path.endsWith(".js"))
+                                             contentType = "application/javascript";
+                                         else if (path.endsWith(".css"))
+                                             contentType = "text/css";
+                                         else if (path.endsWith(".png"))
+                                             contentType = "image/png";
+                                         else if (path.endsWith(".jpg"))
+                                             contentType = "image/jpeg";
+                                         else if (path.endsWith(".ico"))
+                                             contentType = "image/x-icon";
+                                         else
+                                             contentType = "text/plain";
+                                         // else if (path.endsWith(".gif")) contentType = "image/gif";
+
+                                         request->send(LittleFS, path, contentType);
+                                     }
+                                     else
+                                     {
+                                         request->send(404, "text/plain", "File Not Found");
 #ifdef EXTRA_SERIAL_DEBUG
-                                     Serial.println("🚫 Request for " + request->url() + ": File Not Found (404 returned)");
+                                         Serial.println("🚫 Request for " + request->url() + ": File Not Found (404 returned)");
 #endif
 
-                                     success = 0;
+                                         success = 0;
+                                     }
                                  }
                              }
 
@@ -179,91 +224,94 @@ void Web::InitWebServer(bool startInWiFiConfigurationMode)
                              }
 #endif
                          });
+}
 
-    // Specifics
-    if (WiFiConfigurationMode)
+void Web::POST_UpdateWiFiDetails(AsyncWebServerRequest *request)
+{
+    // if (request->method() == HTTP_GET) {
+    //     // handle GET
+    // } else if (request->method() == HTTP_POST) {
+    //     // handle POST
+    // }
+
+    // Handle the form data here
+    if (request->hasParam("ssid", true) && request->hasParam("password", true))
     {
-        // In WiFi Configuration Mode - allow setting of WiFi details
-        WebServer.on("/api/UpdateWifiDetails", HTTP_POST, [](AsyncWebServerRequest *request)
-                     {
-        // Handle the form data here
-        if (request->hasParam("ssid", true) && request->hasParam("password", true))
-        {
-            String ssid = request->getParam("ssid", true)->value();
-            String password = request->getParam("password", true)->value();
+        String ssid = request->getParam("ssid", true)->value();
+        String password = request->getParam("password", true)->value();
 
 #ifdef EXTRA_SERIAL_DEBUG
-            Serial.println("Received WiFi details:");
-            Serial.println("SSID: " + ssid);
-            Serial.println("Password: " + password);
+        Serial.println("Received WiFi details:");
+        Serial.println("SSID: " + ssid);
+        Serial.println("Password: " + password);
 #endif
 
-            // Reminder - Password isn't actually required for open networks
+        // Reminder - Password isn't actually required for open networks
 
-            // Check for validity
-            bool ssidOK = true;
-            if (ssid.length() == 0)
+        // Check for validity
+        bool ssidOK = true;
+        if (ssid.length() == 0)
+        {
+            request->send(400, "application/json", "{\"error\":\"SSID not set\"}");
+            return;
+        }
+
+        if (ssid.length() > 32)
+        {
+            request->send(400, "application/json", "{\"error\":\"ssid longer than max allowed (32 chars)\"}");
+            return;
+        }
+
+        for (size_t i = 0; i < ssid.length(); i++)
+        {
+            char c = ssid[i];
+            if (c < 32 || c > 126)
             {
-                request->send(400, "application/json", "{\"error\":\"SSID not set\"}");
+                request->send(400, "application/json", "{\"error\":\"ssid contains invalid characters (must be ascii 32 - 126)\"}");
+                return;
+            }
+        }
+
+        // Strictly speaking, WPA2 passwords can be 8-63 characters long but older standards can be shorter. We allow for 63 or less, or no password.
+        if (password.length() > 0)
+        {
+            if (password.length() > 63)
+            {
+                request->send(400, "application/json", "{\"error\":\"password longer than max allowed (63 chars)\"}");
                 return;
             }
 
-            if (ssid.length() > 32)
+            for (size_t i = 0; i < password.length(); i++)
             {
-                request->send(400, "application/json", "{\"error\":\"ssid longer than max allowed (32 chars)\"}");
-                return;
-            }
-
-            for (size_t i = 0; i < ssid.length(); i++)
-            {
-                char c = ssid[i];
+                char c = password[i];
                 if (c < 32 || c > 126)
                 {
-                    request->send(400, "application/json", "{\"error\":\"ssid contains invalid characters (must be ascii 32 - 126)\"}");
+                    request->send(400, "application/json", "{\"error\":\"password contains invalid characters (must be ascii 32 - 126)\"}");
                     return;
                 }
             }
+        }
 
-            // Strictly speaking, WPA2 passwords can be 8-63 characters long but older standards can be shorter. We allow for 63 or less, or no password.
-            if (password.length() > 0)
-            {
-                if (password.length() > 63)
-                {
-                    request->send(400, "application/json", "{\"error\":\"password longer than max allowed (63 chars)\"}");
-                    return;
-                }
+        // Save to your profile object or preferences here
 
-                for (size_t i = 0; i < password.length(); i++)
-                {
-                    char c = password[i];
-                    if (c < 32 || c > 126)
-                    {
-                        request->send(400, "application/json", "{\"error\":\"password contains invalid characters (must be ascii 32 - 126)\"}");
-                        return;
-                    }
-                }
-            }
+        // bool restartTest = Network::IsWiFiTestInProgress();
 
-            // Save to your profile object or preferences here
-
-            //bool restartTest = Network::IsWiFiTestInProgress();
-
-            if (ssid != CurrentProfile->WiFi_Name)
+        if (ssid != CurrentProfile->WiFi_Name)
             Serial.println("🌐 WiFi SSID changed via web interface");
 
         if (password != CurrentProfile->WiFi_Password)
             Serial.println("🌐 WiFi Password changed via web interface");
 
-            CurrentProfile->WiFi_Name = ssid;
-            CurrentProfile->WiFi_Password = password;
+        CurrentProfile->WiFi_Name = ssid;
+        CurrentProfile->WiFi_Password = password;
 
-            request->send(200, "application/json", "{\"status\":\"ok\"}");
+        request->send(200, "application/json", "{\"status\":\"ok\"}");
 
-            // Testing etc. takes place within the Hotspot menu function update loop, so nothing extra to do. All we wanted to do here is update the ssid+password.
-        }
-        else {
-            request->send(400, "application/json", "{\"error\":\"missing parameters\"}");
-        } });
+        // Testing etc. takes place within the Hotspot menu function update loop, so nothing extra to do. All we wanted to do here is update the ssid+password.
+    }
+    else
+    {
+        request->send(400, "application/json", "{\"error\":\"missing parameters\"}");
     }
 }
 
@@ -378,6 +426,43 @@ void Web::SendJson_WiFiStatus(AsyncWebServerRequest *request)
     request->send(200, "application/json", buffer.GetString());
 }
 
+void Web::SendJson_HotspotInfo(AsyncWebServerRequest *request)
+{
+    // This is similar to processing of test results in menu, but fleshed out a bit for web response (don't have same physical screen space limitations)
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
+
+    // Device Information
+    doc.AddMember("BuildVersion", rapidjson::Value(getBuildVersion(), allocator), allocator);
+    doc.AddMember("ControllerType", rapidjson::Value(ControllerType, allocator), allocator);
+    doc.AddMember("ModelNumber", rapidjson::Value(ModelNumber, allocator), allocator);
+    doc.AddMember("FirmwareRevision", rapidjson::Value(FirmwareRevision, allocator), allocator);
+    doc.AddMember("HardwareRevision", rapidjson::Value(HardwareRevision, allocator), allocator);
+    doc.AddMember("SoftwareRevision", rapidjson::Value(SoftwareRevision, allocator), allocator);
+
+    // Profile Information
+    if (CurrentProfile != nullptr)
+    {
+        doc.AddMember("ProfileDescription", rapidjson::Value(CurrentProfile->Description.c_str(), allocator), allocator);
+        doc.AddMember("WiFiSSID", rapidjson::Value(CurrentProfile->WiFi_Name.c_str(), allocator), allocator);
+        doc.AddMember("WiFiPassword", rapidjson::Value(CurrentProfile->WiFi_Password.c_str(), allocator), allocator);
+    }
+    else
+    {
+        doc.AddMember("ProfileDescription", rapidjson::Value("Unknown", allocator), allocator);
+        doc.AddMember("WiFiSSID", rapidjson::Value("", allocator), allocator);
+        doc.AddMember("WiFiPassword", rapidjson::Value("", allocator), allocator);
+    }
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    // Send JSON response
+    request->send(200, "application/json", buffer.GetString());
+}
+
 String Web::htmlEncode(const String &in)
 {
     String out;
@@ -420,7 +505,7 @@ String Web::htmlDecode(const String &in)
     return out;
 }
 
-std::string Web::GetComponent_StatsTable()
+void Web::SendComponent_StatsTable(AsyncWebServerRequest *request)
 {
     std::ostringstream table;
     table << "<table border='1'>"
@@ -457,77 +542,41 @@ std::string Web::GetComponent_StatsTable()
     }
 
     table << "</table>";
-    return table.str();
+
+    request->send(200, "text/html", table.str().c_str());
 }
 
-std::string Web::GetPage_Main()
+void Web::SendPage_Main(AsyncWebServerRequest *request)
 {
     std::ostringstream html;
 
-    if (WiFiConfigurationMode)
-        html << "<h1>GamePad - " << DeviceName << "</h1>";
-    else
-        html << "<h1>Configuration Mode</h1>";
-
     html
+        << "<h1>GamePad - " << DeviceName << "</h1>"
         << "Core " << getBuildVersion() << "<br/>"
         << "<h2>Device Information</h2>"
         << "Controller type: " << ControllerType << "<br/>"
         << "Model number: " << ModelNumber << "<br/>"
         << "Firmware version: v" << FirmwareRevision
         << ", Hardware version: v" << HardwareRevision
-        << ", Software version: v" << SoftwareRevision << "<br/>";
+        << ", Software version: v" << SoftwareRevision << "<br/>"
+        << "Device name: " << DeviceName << "<br/>"
+        << "Serial number: " << SerialNumber << "<br/>"
+        << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
 
-    if (!WiFiConfigurationMode)
-        html
-            << "Device name: " << DeviceName << "<br/>"
-            << "Serial number: " << SerialNumber << "<br/>"
-            << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
-    else
-    {
-        // Reminder - .js functionality in .js files
-        html
-            << "<hr/>"
-            << "<h1>WiFi Configuration</h1>"
-            << "<p>The device is currently in WiFi Configuration Mode.</p>"
-            << "<p>This is here to allow you to specify a WiFi network for the device to connect to. This is saved against the currently selected profile.</p>"
-            << "<p>If you change profile on the device while in WiFi Configuration Mode, the WiFi details will be saved against the newly selected profile.</p>"
-            << "<p>Once this device has been configured and is connected to a WiFi network, you can then reboot the device and it should connect to the specified WiFi network.</p>"
-            << "Note that Device Name, Serial Number, Statistics, Battery and other information usually present in this web site will not available while device is in configuration mode.</p>"
-            << "<h1>WiFi Details for profile - " << CurrentProfile->Description << "</h1>"
-            << "<p>Please enter your WiFi name and password</p>"
-            << "<form id='wifiForm'>"
-            << "<label for='ssid'>WiFi Name:</label>"
-            << "<input type='text' id='ssid' name='ssid' list='ssidList' value='" << htmlEncode(CurrentProfile->WiFi_Name).c_str() << "'>"
-            << "<datalist id='ssidList'></datalist><br>"
-            << "<label for='password'>WiFi Password:</label>"
-            << "<input type='password' id='password' name='password' value='" << htmlEncode(CurrentProfile->WiFi_Password).c_str() << "'><br>"
-            << "<input type='checkbox' onclick=\"var p=document.getElementById('password');p.type=(p.type==='password')?'text':'password';\"> Show password<br>"
-            << "<input type='submit' value='Save'>"
-            << "</form>"
-            << "<div id='formResponse'></div>"
-            << "<p>Current status of device testing your WiFi name and Password: <span id='wifiStatus'>" << htmlEncode(Network::WiFiStatus).c_str() << "</span></p>";
-
-#ifdef EXTRA_SERIAL_DEBUG
-        Serial_INFO;
-        Serial.printf("Web WiFi Configuration Mode - Profile: %d - %s, SSID: %s, Password: %s\n", CurrentProfile->Id, CurrentProfile->Description.c_str(), CurrentProfile->WiFi_Name.c_str(), SaferPasswordString(CurrentProfile->WiFi_Password).c_str());
-#endif
-    }
-
-    return html.str();
+    request->send(200, "text/html", html.str().c_str());
 }
 
 // std::string Web::SaveWiFiSettings(const std::string &ssid, const std::string &password)
 // {
 //     std::ostringstream html;
-
-//     if (WiFiConfigurationMode)
+//
+//     if (WiFiHotspotMode)
 //     {
 //         // Save WiFi details to current profile
 //         MenuFunctions::Current_Profile->WiFi_Name = String(ssid.c_str());
 //         CurrentProfile->WiFi_Password = String(password.c_str());
 //         Profiles::SaveProfile(CurrentProfile);
-
+//
 //         html << "<h1>WiFi Settings Saved</h1>"
 //              << "<p>The WiFi settings have been saved to the current profile.</p>"
 //              << "<p>Please reboot the device to connect to the new WiFi network.</p>";
@@ -537,14 +586,14 @@ std::string Web::GetPage_Main()
 //         html << "<h1>Error</h1>"
 //              << "<p>The device is not in WiFi Configuration Mode. Cannot save WiFi settings.</p>";
 //     }
-
+//
 //     return html.str();
 // }
-
+//
 // std::string Web::GetPage_Profiles()
 // {
 //     std::ostringstream html;
-
+//
 //     html
 //         << "<h1>GamePad - " << DeviceName << "</h1>"
 //         << "Core v" << getBuildVersion() << "<br/>"
@@ -557,11 +606,11 @@ std::string Web::GetPage_Main()
 //         << ", Hardware version: v" << HardwareRevision
 //         << ", Software version: v" << SoftwareRevision << "<br/>"
 //         << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
-
+//
 //     return html.str();
 // }
 
-std::string Web::GetPage_Debug()
+void Web::SendPage_Debug(AsyncWebServerRequest *request)
 {
     std::ostringstream html;
 
@@ -609,7 +658,7 @@ std::string Web::GetPage_Debug()
 
     Prefs::WebDebug(&html);
 
-    return html.str();
+    request->send(200, "text/html", html.str().c_str());
 }
 
 void Web::SendJson_Stats(AsyncWebServerRequest *request)

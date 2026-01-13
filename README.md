@@ -1,4 +1,4 @@
-(c) 2025 MisterB @ ITheP
+(c) 2025-2026 MisterB @ ITheP
 
 **Pre-Alpha**
 

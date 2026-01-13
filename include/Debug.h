@@ -26,8 +26,6 @@
   #define Serial_INFO    Serial.print("[INFO] ")
 #endif
 
-
-
 // Critical failure flash codes for LED's
 // ...number of times LED flashes
 // Make sure numbers have some separation so its easier for people to visually
