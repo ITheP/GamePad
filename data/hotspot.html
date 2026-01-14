@@ -3,82 +3,12 @@
 <head>
     <title>GamePad</title>
     <link rel='stylesheet' type='text/css' href='default.css' />
-
-    <script>
-        var animationFrameId = 0;
-
-        function LoadContent(url, colour, js) {
-            document.documentElement.style.setProperty('--bg-color', colour || '#12354dDD');
-            var content = document.getElementById('content');
-            content.innerHTML = "<p>Loading...</p>";
-
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) { throw new Error('Network response was not ok'); }
-
-                    // Clear out any existing timers
-                    IntervalManager.clearAll();
-
-                    return response.text();
-                })
-                .then(html => {
-                    content.innerHTML = html;
-
-                    if (js !== null) {
-                        const script = document.createElement("script");
-                        script.src = js;
-                        content.appendChild(script);
-                    }
-                })
-                .catch(() => {
-                    content.innerHTML = "<p class='warning'>Sorry, unable to communicate with GamePad to load page. It may be turned off, not connected, lost connection or not have its WiFi and Web Service turned on.</p>";
-                });
-        }
-
-        const IntervalManager = (() => {
-            const ids = [];
-
-            return {
-                add(fn, delay) {
-                    const id = setInterval(fn, delay);
-                    ids.push(id);
-                    return id;
-                },
-                clearAll() {
-                    ids.forEach(clearInterval);
-                    ids.length = 0;
-                }
-            };
-        })();
-
-        const ResizeManager = (() => {
-            let resizeHandler = null;
-
-            return {
-                attach(fn) {
-                    if (resizeHandler) window.removeEventListener('resize', resizeHandler);
-                    resizeHandler = fn;
-                    window.addEventListener('resize', resizeHandler);
-                },
-                detach() {
-                    if (resizeHandler) {
-                        window.removeEventListener('resize', resizeHandler);
-                        resizeHandler = null;
-                    }
-                },
-                isAttached() {
-                    return !!resizeHandler;
-                }
-            };
-        })();
-
-    </script>
 </head>
 
 <body>
     <div class="root">
         <header id="header" class='header'>
-            <h1>GamePad Web Service</h1>
+            <h1>Controller Web Service</h1>
             <h2>Hotspot Mode for Device Configuration</h2>
         </header>
 
@@ -87,8 +17,7 @@
             Core: {BuildVersion}<br />
             Controller type: {ControllerType} <br />
             Model number: {ModelNumber} <br />
-            Firmware version: v{FirmwareRevision}, Hardware version: v{HardwareRevision} , Software version:
-            v{SoftwareRevision}
+            Firmware version: v{FirmwareRevision}, Hardware version: v{HardwareRevision}, Software version: v{SoftwareRevision}
 
             <hr />
 
@@ -106,23 +35,23 @@
 
             <hr />
 
-            <h1>WiFi Details for profile - '{ProfileDescription}' </h1>
+            <h1>WiFi Details for profile - '{Profile}' </h1>
             <p>Please enter your WiFi name/SSID and password below. WiFi password is case sensitive.</p>
 
-            <form class="form-grid">
+            <form id="uiForm" class="form-grid">
                 <div class="form-row">
                     <label for="ssid">WiFi Name</label>
-                    <input type="text" id="ssid" name="ssid" list="ssidList" value="">
+                    <input type="text" id="uiSSID" name="ssid" list="ssidList" value="">
                     <datalist id="ssidList"></datalist>
                 </div>
 
                 <div class="form-row">
-                    <label for="password">WiFi Password</label>
+                    <label for="uiPassword">WiFi Password</label>
                     <div class="form-cell">
-                        <input type="password" id="password" name="password" value="">
+                        <input type="Password" id="uiPassword" name="password" value="">
                         <div class="checkbox-inline align-right">
                             <input type="checkbox"
-                                onclick="var p=document.getElementById('password');p.type=(p.type==='password')?'text':'password';">
+                                onclick="togglePasswordVisibility();">
                             <span>Show password</span>
                         </div>
                     </div>
@@ -134,12 +63,9 @@
                 </div>
             </form>
 
+            <p>Status of controller testing your saved WiFi name and Password: <span id='uiWiFiStatus'>Fetching status...</span></p>
 
-            <div id='formResponse'></div>
-
-            <p>Status of controller testing your saved WiFi name and Password: <span id='wifiStatus'>Fetching
-                    status...</span>
-            </p>
+            <div id='uiResponse'></div>
         </div>
 
         <footer class='footer'>

@@ -36,6 +36,7 @@ char WebServerIcon = Icon_Web_Disabled;
 int Web::WiFiHotspotMode;
 std::map<String, Web::RouteHandler> Web::Routes;
 const char *Web::RootWebPath;
+std::map<String, String> Web::HTMLReplacements;
 
 extern Stats *AllStats[];
 extern int AllStats_Count;
@@ -78,13 +79,17 @@ void Web::InitWebServer()
 #endif
 
     WiFiHotspotMode = false;
+    InitHTMLMergeFields();
 
     // Set up the routes for the main web server
     Routes = {
-        {"/main", Web::SendPage_Main},
+        {"/", Web::SendPage_Main},      // returns merged main.html
         {"/debug", Web::SendPage_Debug},
         {"/component/stats", Web::SendComponent_StatsTable},
-        {"/json/stats", Web::SendJson_Stats}};
+        {"/json/stats", Web::SendJson_Stats},
+        //{"/json/device_info", Web::SendJson_DeviceInfo},
+        {"/json/battery_info", Web::SendJson_BatteryInfo}
+    };
 
     RootWebPath = "/root.html";
     InitWebServerCustomHandler();
@@ -98,9 +103,11 @@ void Web::InitWebServer_Hotspot()
 #endif
 
     WiFiHotspotMode = true;
+    InitHTMLMergeFields();
 
     // Set up the routes for the hotspot web server
     Routes = {
+        {"/", Web::SendPage_Hotspot},   // returns merged hotspot.html
         {"/json/hotspot_info", Web::SendJson_HotspotInfo},
         {"/json/access_points", Web::SendJson_AccessPointList},
         {"/json/wifi_status", Web::SendJson_WiFiStatus},
@@ -121,7 +128,7 @@ void Web::InitWebServerCustomHandler()
     Serial_INFO;
     Serial.println("🌐 ⚙️ Setting up Web Server custom handler...");
     Serial.println("🌐 Registered Routes include");
-    Serial.println("  🧭  /");
+    Serial.println("  🧭 /");
     for (const auto &route : Routes) {
         Serial.print("  🧭 ");
         Serial.println(route.first.c_str());  // prints the path
@@ -166,9 +173,9 @@ void Web::InitWebServerCustomHandler()
                              String contentType;
 
                              // Default page
-                             if (path.equals("/"))
-                                 request->send(LittleFS, Web::RootWebPath, "text/html");
-                             else
+                             //if (path.equals("/"))
+                             //    request->send(LittleFS, Web::RootWebPath, "text/html");
+                             //else
                              // Check route mapping
                              {
                                  auto it = Web::Routes.find(path);
@@ -426,34 +433,77 @@ void Web::SendJson_WiFiStatus(AsyncWebServerRequest *request)
     request->send(200, "application/json", buffer.GetString());
 }
 
+// void Web::SendJson_DeviceInfo(AsyncWebServerRequest *request)
+// {
+//     rapidjson::Document doc;
+//     doc.SetObject();
+//     rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
+
+//     // Device Information
+//     doc.AddMember("DeviceName", rapidjson::Value(DeviceName, allocator), allocator);
+//     doc.AddMember("SerialNumber", rapidjson::Value(SerialNumber, allocator), allocator);
+//     doc.AddMember("BuildVersion", rapidjson::Value(getBuildVersion(), allocator), allocator);
+//     doc.AddMember("ControllerType", rapidjson::Value(ControllerType, allocator), allocator);
+//     doc.AddMember("ModelNumber", rapidjson::Value(ModelNumber, allocator), allocator);
+//     doc.AddMember("FirmwareRevision", rapidjson::Value(FirmwareRevision, allocator), allocator);
+//     doc.AddMember("HardwareRevision", rapidjson::Value(HardwareRevision, allocator), allocator);
+//     doc.AddMember("SoftwareRevision", rapidjson::Value(SoftwareRevision, allocator), allocator);
+
+//     // Profile Information
+//     if (CurrentProfile != nullptr)
+//     {
+//         doc.AddMember("ProfileDescription", rapidjson::Value(CurrentProfile->Description.c_str(), allocator), allocator);
+//         doc.AddMember("WiFiSSID", rapidjson::Value(CurrentProfile->WiFi_Name.c_str(), allocator), allocator);
+//     }
+//     else
+//     {
+//         doc.AddMember("ProfileDescription", rapidjson::Value("Unknown", allocator), allocator);
+//         doc.AddMember("WiFiSSID", rapidjson::Value("", allocator), allocator);
+//     }
+
+//     rapidjson::StringBuffer buffer;
+//     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+//     doc.Accept(writer);
+
+//     // Send JSON response
+//     request->send(200, "application/json", buffer.GetString());
+// }
+
 void Web::SendJson_HotspotInfo(AsyncWebServerRequest *request)
 {
-    // This is similar to processing of test results in menu, but fleshed out a bit for web response (don't have same physical screen space limitations)
+    // This is similar to main Device Info, but excludes values not available in Hotspot mode, and includes password
     rapidjson::Document doc;
     doc.SetObject();
     rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
 
-    // Device Information
-    doc.AddMember("BuildVersion", rapidjson::Value(getBuildVersion(), allocator), allocator);
-    doc.AddMember("ControllerType", rapidjson::Value(ControllerType, allocator), allocator);
-    doc.AddMember("ModelNumber", rapidjson::Value(ModelNumber, allocator), allocator);
-    doc.AddMember("FirmwareRevision", rapidjson::Value(FirmwareRevision, allocator), allocator);
-    doc.AddMember("HardwareRevision", rapidjson::Value(HardwareRevision, allocator), allocator);
-    doc.AddMember("SoftwareRevision", rapidjson::Value(SoftwareRevision, allocator), allocator);
-
     // Profile Information
     if (CurrentProfile != nullptr)
     {
-        doc.AddMember("ProfileDescription", rapidjson::Value(CurrentProfile->Description.c_str(), allocator), allocator);
         doc.AddMember("WiFiSSID", rapidjson::Value(CurrentProfile->WiFi_Name.c_str(), allocator), allocator);
         doc.AddMember("WiFiPassword", rapidjson::Value(CurrentProfile->WiFi_Password.c_str(), allocator), allocator);
     }
     else
     {
-        doc.AddMember("ProfileDescription", rapidjson::Value("Unknown", allocator), allocator);
         doc.AddMember("WiFiSSID", rapidjson::Value("", allocator), allocator);
         doc.AddMember("WiFiPassword", rapidjson::Value("", allocator), allocator);
     }
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    // Send JSON response
+    request->send(200, "application/json", buffer.GetString());
+}
+
+void Web::SendJson_BatteryInfo(AsyncWebServerRequest *request)
+{
+    rapidjson::Document doc;
+    doc.SetObject();
+    rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
+
+    doc.AddMember("BatteryLevel", rapidjson::Value().SetInt(Battery::GetLevel()), allocator);
+    doc.AddMember("BatteryVoltage", rapidjson::Value().SetInt(Battery::Voltage), allocator);
 
     rapidjson::StringBuffer buffer;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -546,26 +596,6 @@ void Web::SendComponent_StatsTable(AsyncWebServerRequest *request)
     request->send(200, "text/html", table.str().c_str());
 }
 
-void Web::SendPage_Main(AsyncWebServerRequest *request)
-{
-    std::ostringstream html;
-
-    html
-        << "<h1>GamePad - " << DeviceName << "</h1>"
-        << "Core " << getBuildVersion() << "<br/>"
-        << "<h2>Device Information</h2>"
-        << "Controller type: " << ControllerType << "<br/>"
-        << "Model number: " << ModelNumber << "<br/>"
-        << "Firmware version: v" << FirmwareRevision
-        << ", Hardware version: v" << HardwareRevision
-        << ", Software version: v" << SoftwareRevision << "<br/>"
-        << "Device name: " << DeviceName << "<br/>"
-        << "Serial number: " << SerialNumber << "<br/>"
-        << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
-
-    request->send(200, "text/html", html.str().c_str());
-}
-
 // std::string Web::SaveWiFiSettings(const std::string &ssid, const std::string &password)
 // {
 //     std::ostringstream html;
@@ -609,6 +639,36 @@ void Web::SendPage_Main(AsyncWebServerRequest *request)
 //
 //     return html.str();
 // }
+
+// All below should be static in normal use.
+// During config changes, may change but they are refreshed elsewhere to account for this
+void Web::InitHTMLMergeFields()
+{
+    HTMLReplacements.clear();
+    HTMLReplacements["Profile"] = CurrentProfile->Description.c_str();
+    HTMLReplacements["DeviceName"] = DeviceName;
+    HTMLReplacements["SerialNumber"] = SerialNumber;
+    HTMLReplacements["BuildVersion"] = getBuildVersion();
+    HTMLReplacements["ControllerType"] = ControllerType;
+    HTMLReplacements["ModelNumber"] = ModelNumber;
+    HTMLReplacements["FirmwareRevision"] = FirmwareRevision;
+    HTMLReplacements["HardwareRevision"] = HardwareRevision;
+    HTMLReplacements["SoftwareRevision"] = SoftwareRevision;
+}
+
+void Web::SendPage_Main(AsyncWebServerRequest *request)
+{
+    SendPageWithMergeFields("/main.html", HTMLReplacements, request);
+}
+
+void Web::SendPage_Hotspot(AsyncWebServerRequest *request)
+{
+    // Possibly updated as part of configuration changes
+    HTMLReplacements["DeviceName"] = DeviceName;
+    HTMLReplacements["Profile"] = CurrentProfile->Description.c_str();
+
+    Web::SendPageWithMergeFields("/hotspot.html", HTMLReplacements, request);
+}
 
 void Web::SendPage_Debug(AsyncWebServerRequest *request)
 {
@@ -800,6 +860,86 @@ void Web::WebListDir(std::ostringstream *stream, const char *dirname, uint8_t de
     }
 
     *stream << "</ul>";
+}
+
+void Web::SendPageWithMergeFields(const char *path, const std::map<String, String> &replacements, AsyncWebServerRequest *request)
+{
+            Serial.println("SendPageWithMergeFields: " + String(path));
+
+    // Open and load the file
+    File file = LittleFS.open(path, FILE_READ);
+    if (!file)
+    {
+#ifdef EXTRA_SERIAL_DEBUG
+        Serial.println("🚫 SendPageWithMergeFields: File not found - " + String(path));
+#endif
+        request->send(404, "text/plain", "File Not Found");
+        return;
+    }
+
+        Serial.println("merging data");
+
+    // Read file into string (reasonable for web content files)
+    size_t fileSize = file.size();
+    String fileContent;
+    fileContent.reserve(fileSize); // Reserve space to minimize reallocations
+
+    const size_t bufferSize = 512;
+    uint8_t buffer[bufferSize];
+    while (file.available())
+    {
+        size_t bytesRead = file.read(buffer, bufferSize);
+        fileContent += String(reinterpret_cast<const char *>(buffer), bytesRead);
+    }
+    file.close();
+
+    // Process in single pass: scan for {token} patterns and replace
+    std::ostringstream output;
+
+    for (size_t i = 0; i < fileContent.length(); ++i)
+    {
+        if (fileContent[i] == '{')
+        {
+            // Found potential token, scan for closing brace
+            size_t endBrace = fileContent.indexOf('}', i);
+            if (endBrace != (size_t)-1 && endBrace - i < 256) // Reasonable token length limit
+            {
+                // Extract token name
+                String tokenName = fileContent.substring(i + 1, endBrace);
+
+                // Look up in replacements map
+                auto it = replacements.find(tokenName);
+                if (it != replacements.end())
+                {
+                    // Token found, write replacement value
+                    output << it->second.c_str();
+                    i = endBrace; // Skip past the closing brace
+                    continue;
+                }
+            }
+        }
+
+        // Not a token, write character as-is
+        output << fileContent[i];
+    }
+
+    // Determine content type based on file extension
+    // String contentType = "text/plain";
+    // if (String(path).endsWith(".html"))
+    //     contentType = "text/html";
+    // else if (String(path).endsWith(".js"))
+    //     contentType = "application/javascript";
+    // else if (String(path).endsWith(".css"))
+    //     contentType = "text/css";
+    // else if (String(path).endsWith(".json"))
+    //     contentType = "application/json";
+
+    // Send result
+    request->send(200, "text/html", output.str().c_str());
+
+#ifdef EXTRA_SERIAL_DEBUG
+    Serial.println("✅ SendPageWithMergeFields: Processed " + String(path) + " (" + String(fileSize) + " bytes)");
+#endif
 }
 
 #endif

@@ -24,18 +24,22 @@ public:
     static int WiFiHotspotMode;
     static std::map<String, RouteHandler> Routes;
     static const char *RootWebPath;
+    static std::map<String, String> HTMLReplacements;
 
     static void InitWebServer();
     static void InitWebServer_Hotspot();
 
     static void SendPage_Root(AsyncWebServerRequest *request);
-
     static void SendPage_Main(AsyncWebServerRequest *request);
+    static void SendPage_Hotspot(AsyncWebServerRequest *request);
+
     static void SendPage_About(AsyncWebServerRequest *request);
     static void SendPage_Debug(AsyncWebServerRequest *request);
 
     static void SendComponent_StatsTable(AsyncWebServerRequest *request);
 
+    static void SendJson_DeviceInfo(AsyncWebServerRequest *request);
+    static void SendJson_BatteryInfo(AsyncWebServerRequest *request);
     static void SendJson_Stats(AsyncWebServerRequest *request);
     static void SendJson_AccessPointList(AsyncWebServerRequest *request);
     static void SendJson_WiFiStatus(AsyncWebServerRequest *request);
@@ -51,6 +55,8 @@ public:
     static void ListDir(const char *dirname, uint8_t depth = 0);
     static void WebListDir(std::ostringstream *stream, const char *dirname, uint8_t depth = 0);
 
+    static void SendPageWithMergeFields(const char *path, const std::map<String, String> &replacements, AsyncWebServerRequest *request);
+
     static String htmlEncode(const String &in);
     static String htmlDecode(const String &in);
 
@@ -58,6 +64,7 @@ private:
     static int ShowTraffic;
 
     static void InitWebServerCustomHandler();
+    static void InitHTMLMergeFields();
     static void Get_Header(std::ostringstream &stream);
     static void Get_Footer(std::ostringstream &stream);
 };

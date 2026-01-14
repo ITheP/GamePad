@@ -1,34 +1,80 @@
+// TO DO
+// Make the loading work so the ui references are correct
+// Make the screen default to "Loading..." until data is fetched
+// On error, show error and insert into all values <unable to get data>
+// Stick a retry button in the error message that refreshes the whole page
 
-const responseDiv = document.getElementById('formResponse');
+function refreshUIReferences() {
+    ui = {
+        content: document.getElementById('content'),
+        form: document.getElementById('uiForm'),
 
-// Efficient placeholder replacement with single-pass algorithm
-function replacePlaceholders(html, dataMap) {
-    const result = [];
-    let i = 0;
+        ssid: document.getElementById('uiSSID'),
+        password: document.getElementById('uiPassword'),
+        response: document.getElementById('uiResponse'),
+        wifiStatus: document.getElementById('uiWiFiStatus'),
 
-    while (i < html.length) {
-        if (html[i] === '{') {
-            // Find the closing brace
-            const endIdx = html.indexOf('}', i);
-            if (endIdx !== -1) {
-                // Extract the placeholder name
-                const placeholder = html.substring(i + 1, endIdx);
-                // Add the value from dataMap, or keep the placeholder if not found
-                result.push(dataMap.hasOwnProperty(placeholder) ? dataMap[placeholder] : html.substring(i, endIdx + 1));
-                i = endIdx + 1;
-            } else {
-                // No closing brace, just add the character
-                result.push(html[i]);
-                i++;
-            }
-        } else {
-            result.push(html[i]);
-            i++;
-        }
+        ssidList: document.getElementById('ssidList')
     }
-
-    return result.join('');
 }
+
+const IntervalManager = (() => {
+    const ids = [];
+
+    return {
+        add(fn, delay) {
+            const id = setInterval(fn, delay);
+            ids.push(id);
+            return id;
+        },
+        clearAll() {
+            ids.forEach(clearInterval);
+            ids.length = 0;
+        }
+    };
+})();
+
+function togglePasswordVisibility() {
+    const p = ui.password;
+    p.type = (p.type === 'password') ? 'text' : 'password';
+}
+
+function showResponseError(message = 'Unable to communicate with controller. Please check it is currently in Hotspot mode and you are connected to its WiFi access point.') {
+    ui.response.innerHTML = '<span style="color: red;"><strong>Error</strong> - ' +
+    message +
+    '<br/><button onclick="location.reload()">Refresh</button>' +
+    '</span>';
+}
+
+// // Efficient placeholder replacement with single-pass algorithm
+// function replacePlaceholders(html, dataMap) {
+//     const result = [];
+//     let i = 0;
+
+//     while (i < html.length) {
+//         if (html[i] === '{') {
+//             // Find the closing brace
+//             const endIdx = html.indexOf('}', i);
+//             if (endIdx !== -1) {
+//                 // Extract the placeholder name
+//                 const placeholder = html.substring(i + 1, endIdx);
+//                 // Add the value from dataMap, or keep the placeholder if not found
+
+//                 result.push(dataMap.hasOwnProperty(placeholder) ? dataMap[placeholder] : html.substring(i, endIdx + 1));
+//                 i = endIdx + 1;
+//             } else {
+//                 // No closing brace, just add the character
+//                 result.push(html[i]);
+//                 i++;
+//             }
+//         } else {
+//             result.push(html[i]);
+//             i++;
+//         }
+//     }
+
+//     return result.join('');
+// }
 
 function loadHotspotContent() {
     fetch('/json/hotspot_info')
@@ -37,27 +83,16 @@ function loadHotspotContent() {
             return response.json();
         })
         .then(data => {
-            // Get the content div
-            const contentDiv = document.getElementById('content');
-
-            // Replace placeholders with actual data
-            const processedHtml = replacePlaceholders(contentDiv.innerHTML, data);
-            contentDiv.innerHTML = processedHtml;
-
-            // Handle input fields separately - they need special treatment
-            const ssidInput = document.getElementById('ssid');
-            const passwordInput = document.getElementById('password');
-
-            if (ssidInput && data.WiFiSSID !== undefined) {
-                ssidInput.value = data.WiFiSSID;
+            if (ui.ssid && data.WiFiSSID !== undefined) {
+                ui.ssid.value = data.WiFiSSID;
             }
-            if (passwordInput && data.WiFiPassword !== undefined) {
-                passwordInput.value = data.WiFiPassword;
+            if (ui.password && data.WiFiPassword !== undefined) {
+                ui.password.value = data.WiFiPassword;
             }
         })
         .catch(error => {
-            responseDiv.innerHTML = '<span style="color: red;"><strong>Error</strong> - Please check controller is powered on and is in Hotspot mode.</span>';
             console.error('Error fetching hotspot info:', error);
+            showResponseError();
         });
 }
 
@@ -68,8 +103,8 @@ function updateAccessPoints() {
             return response.json();
         })
         .then(data => {
-            const datalist = document.getElementById('ssidList');
-            datalist.innerHTML = '';
+            const datalist = ui.ssidList;
+            ui.ssidList.innerHTML = '';
             if (data.accessPoints && Array.isArray(data.accessPoints)) {
                 data.accessPoints.forEach(ap => {
                     const option = document.createElement('option');
@@ -79,8 +114,8 @@ function updateAccessPoints() {
             }
         })
         .catch(error => {
-            responseDiv.innerHTML = '<span style="color: red;"><strong>Error</strong> - Please check controller is powered on and is in Hotspot mode.</span>';
             console.error('Error fetching access points:', error);
+            showResponseError();
         });
 }
 
@@ -91,17 +126,14 @@ function updateWiFiStatus() {
             return response.json();
         })
         .then(data => {
-            const statusSpan = document.getElementById('wifiStatus');
             if (data.Status) {
-                statusSpan.textContent = data.Status;
+                ui.wifiStatus.textContent = data.Status;
             }
         })
         .catch(error => {
-            const statusSpan = document.getElementById('wifiStatus');
-            statusSpan.innerHTML = '<span style="color: red;"><strong>Unable to fetch status.</strong></span>';
-
-            responseDiv.innerHTML = '<span style="color: red;"><strong>Error</strong> - Please check controller is powered on and is in Hotspot mode.</span>';
             console.error('Error fetching wifi status:', error);
+            ui.wifiStatus.innerHTML = '<span style="color: red;"><strong>Unable to fetch status.</strong></span>';
+            showResponseError();
         });
 }
 
@@ -131,30 +163,42 @@ function handleWiFiFormSubmit(event) {
             responseDiv.innerHTML = message;
         })
         .catch(error => {
-            responseDiv.innerHTML = '<p style="color: red;"><strong>Error:</strong> ' + escapeHtml(error.message) + '</p>';
+            console.error('Error updating WiFi details: ', error);
+            showResponseError(escapeHtml(error.message));
         });
 }
 
+const escapeMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+};
+
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    // const div = document.createElement('div');
+    // div.textContent = text;
+    // return div.innerHTML;
+
+    return text.replace(/[&<>"']/g, m => escapeMap[m]);
+
 }
 
 function startConfigAutoRefresh() {
+    refreshUIReferences();
     // Load initial hotspot info (placeholders + WiFi form values)
     loadHotspotContent();
-
     updateAccessPoints();
     updateWiFiStatus();
+
     IntervalManager.add(() => {
         updateAccessPoints();
         updateWiFiStatus();
     }, 10000);
 
-    const form = document.getElementById('wifiForm');
-    if (form) {
-        form.addEventListener('submit', handleWiFiFormSubmit);
+    if (ui.form) {
+        ui.form.addEventListener('submit', handleWiFiFormSubmit);
     }
 }
 

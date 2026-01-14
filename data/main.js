@@ -1,6 +1,13 @@
 var countdown = 5;
 var refreshInterval;
 
+const ui = {
+    content: document.getElementById('content'),
+    response: document.getElementById('uiResponse'),
+    batteryLevel: document.getElementById('uiBatteryLevel'),
+    batteryVoltage: document.getElementById('uiBatteryVoltage')
+};
+
 function updateTime() {
     const el = document.getElementById('currentTime');
     if (el) {
@@ -14,103 +21,111 @@ function updateTime() {
 }
 
 function startAutoRefresh() {
+    // Load initial device info and battery info
+    updateBatteryInformation();
+    updateTime();
+
+    IntervalManager.add(() => {
+        updateBatteryInformation();
+    }, 10000);
+
     IntervalManager.add(() => {
         updateTime();
     }, 1000);
 }
 
-// WiFi Configuration Mode functions
-function updateAccessPoints() {
-    fetch('/json/access_points')
-        .then(response => response.json())
-        .then(data => {
-            const datalist = document.getElementById('ssidList');
-            if (datalist) {
-                datalist.innerHTML = '';
-                if (data.accessPoints && Array.isArray(data.accessPoints)) {
-                    data.accessPoints.forEach(ap => {
-                        const option = document.createElement('option');
-                        option.value = ap.SSID;
-                        datalist.appendChild(option);
-                    });
-                }
-            }
+function showResponseError(message = 'Please check controller is powered on and successfully connected to your WiFi network') {
+    ui.response.innerHTML = '<span style="color: red;"><strong>Error</strong> - ' + message + '</span>';
+}
+
+function showResponse(message) {
+    ui.response.innerHTML = '<span style="color: green;">' + message + '</span>';
+}
+
+function clearResponse() {
+    ui.response.innerHTML = '';
+}
+
+function setGauge(id, min, max, value, unit, icon, empty) {
+    const gauge = document.getElementById(id);
+    if (!gauge) return;
+
+    const fillElem = gauge.querySelector('.gauge-fill');
+    const valueElem = gauge.querySelector('.gauge-text .value');
+    const unitElem = gauge.querySelector('.gauge-text .unit');
+    const warningElem = gauge.querySelector('.gauge-warning');
+
+    const range = max - min;
+    let pct = Math.max(0, Math.min(1, (value - min) / range)) * 100;
+
+    // Out of range handling
+    // Always show a minimum amount
+    if (pct < 1)
+        pct = 1;
+    else if (pct > 100)
+        pct = 100;
+
+    if (pct < 5)
+        warningElem.textContent = empty;
+    else
+        warningElem.textContent = icon;
+
+    // Earlier version had dynamic gradients. Here for reference.
+    // fillElem.style.background = 'conic-gradient(from -120deg, #ff0000 0deg, #ff0000 10deg, #ff9900 30deg, #ffff00 60deg, #00ff00 90deg, #00ff00 240deg)';
+
+    // Update CSS variable for fill percentage
+    fillElem.style.setProperty('--fill-pct', pct);
+
+    valueElem.textContent = value.toFixed(1);
+    unitElem.textContent = unit;
+}
+
+// rangeExpansion = 0->1 = 0->100% +/- extra % outside of max range
+// function randomisedValue(min, max, rangeExpansion) {
+//     const range = max - min;
+//     const extra = range * rangeExpansion;   // allow going outside of range
+//     const low = min - extra;
+//     const high = max + extra;
+//     return (Math.random() * (high - low)) + low;
+// }
+
+function updateBatteryInformation() {
+    fetch('/json/battery_info')
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            return response.json();
         })
-        .catch(error => console.error('Error fetching access points:', error));
-}
-
-function updateWiFiStatus() {
-    fetch('/json/wifi_status')
-        .then(response => response.json())
         .then(data => {
-            const statusSpan = document.getElementById('wifiStatus');
-            if (statusSpan && data.Status) {
-                statusSpan.textContent = data.Status;
+            // Handle input fields separately - they need special treatment
+            if (ui.batteryLevel && data.BatteryLevel !== undefined) {
+                ui.batteryLevel.innerHTML = data.BatteryLevel + "%";
             }
+            if (ui.batteryVoltage && data.BatteryVoltage !== undefined) {
+                ui.batteryVoltage.value = data.BatteryVoltage + "v";
+            }
+
+            let batteryVoltage = randomisedValue(3.7, 4.7, 0.15);
+            let batteryLevel = randomisedValue(0, 100, 0.15);
+
+
+            setGauge("gaugeVoltage", 3.3, 4.2, batteryVoltage, "v", "⚡", "Empty");
+            setGauge("gaugePercent", 0, 100, batteryLevel, "%", "🔋", "Empty");
+
+
         })
-        .catch(error => console.error('Error fetching wifi status:', error));
+        .catch(error => {
+            console.error('Error fetching battery information:', error);
+            showResponseError("Unable to get battery information.");
+
+            setGauge("gaugeVoltage", 3.3, 4.2, 0, "v", "⚡", "❓");
+            setGauge("gaugePercent", 0, 100, 0, "%", "🔋", "❓");
+        });
+
+    // Test's
+    // let batteryVoltage = randomisedValue(3.3, 4.2, 0.15);
+    // let batteryLevel = randomisedValue(0, 100, 0.15);
+    // setGauge("gaugeVoltage", 3.3, 4.2, batteryVoltage, "v", "⚡", "Empty");
+    // setGauge("gaugePercent", 0, 100, batteryLevel, "%", "🔋", "Empty");
 }
 
-function handleWiFiFormSubmit(event) {
-    event.preventDefault();
-    const form = document.getElementById('wifiForm');
-    const responseDiv = document.getElementById('formResponse');
-    
-    if (!form || !responseDiv) return;
-    
-    const formData = new FormData(form);
-    
-    fetch('/api/UpdateWifiDetails', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        let message = '';
-        if (data.error) {
-            message = '<p style="color: red;"><strong>Error:</strong> ' + escapeHtml(data.error) + '</p>';
-        } else if (data.status === 'ok') {
-            message = '<p style="color: green;"><strong>Success:</strong> WiFi details saved</p>';
-        } else {
-            message = '<p style="color: orange;"><strong>Response:</strong> ' + escapeHtml(JSON.stringify(data)) + '</p>';
-        }
-        responseDiv.innerHTML = message;
-    })
-    .catch(error => {
-        responseDiv.innerHTML = '<p style="color: red;"><strong>Error:</strong> ' + escapeHtml(error.message) + '</p>';
-    });
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function startConfigAutoRefresh() {
-    updateAccessPoints();
-    updateWiFiStatus();
-    IntervalManager.add(() => {
-        updateAccessPoints();
-        updateWiFiStatus();
-    }, 10000);
-    
-    const form = document.getElementById('wifiForm');
-    if (form) {
-        form.addEventListener('submit', handleWiFiFormSubmit);
-    }
-}
-
-// Check if we're in WiFi config mode and initialize accordingly
-function initializePageFunctions() {
-    // Check if WiFi config form exists on this page
-    const wifiForm = document.getElementById('wifiForm');
-    if (wifiForm) {
-        startConfigAutoRefresh();
-    } else {
-        // Regular home page
-        startAutoRefresh();
-    }
-}
-
-initializePageFunctions();
+startAutoRefresh();
