@@ -126,11 +126,6 @@ void Network::Config_UpdateScanResults()
                 ap->WiFiCharacter = Icon_WiFi_LowSignal;
                 ap->WiFiStatus = WiFi_SignalLevel_Low;
             }
-            else
-            {
-                ap->WiFiCharacter = Icon_WiFi_TraceSignal;
-                ap->WiFiStatus = WiFi_SignalLevel_Trace;
-            }
 
             AllAccessPointList.push_back(ap);
         }
@@ -258,7 +253,8 @@ bool Network::TestInProgress = false;
 unsigned long Network::TestStartTime = 0;
 
 unsigned char Network::WiFiCharacter;
-char *Network::WiFiStatus;
+char *Network::WiFiStatus = WiFi_UnknownStatus;
+int8_t Network::WiFiStrength;
 
 unsigned char Network::WiFiStatusCharacter;
 
@@ -360,6 +356,8 @@ void Network::HandleWiFi(int second)
                 WiFiCharacter = Icon_WiFi_TraceSignal;
                 WiFiStatus = WiFi_TraceSignal;
             }
+
+                WiFiStrength = ap_info.rssi;
         }
         else
         {
@@ -416,7 +414,7 @@ void Network::HandleWiFi(int second)
                     WiFiStatus = WiFi_Connecting;
                 }
 
-                WiFiCharacter = Icon_WiFi_TraceSignal;
+                WiFiCharacter = Icon_WiFi_LostSignal; //Icon_WiFi_TraceSignal;
             }
             else if (WiFiConnectionState == WL_CONNECTION_LOST)
             {
@@ -474,6 +472,8 @@ void Network::HandleWiFi(int second)
 
     RenderIcons();
 }
+
+//char WiFiAnimatedSearch[] = { Icon_WiFi_LostSignal, Icon_WiFi_LowSignal, Icon_WiFi_MiddleSignal, Icon_WiFi_TopSignal };
 
 void Network::RenderIcons()
 {

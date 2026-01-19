@@ -8,9 +8,6 @@
 #include "GamePad.h"
 #include "Stats.h"
 #include "Battery.h"
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "rapidjson/stringbuffer.h"
 #include "Config.h"
 #include "Defines.h"
 #include "Arduino.h"
@@ -29,13 +26,16 @@
 
 #ifdef WEBSERVER
 
+String ContentType_Html = "text/html; charset=utf-8";
+String ContentType_JS = "application/javascript; charset=utf-8";
+String ContentType_CSS = "text/css; charset=utf-8";
+
 AsyncWebServer WebServer(80); // Create AsyncWebServer on port 80
 
 int Web::WebServerEnabled = false;
 char WebServerIcon = Icon_Web_Disabled;
 int Web::WiFiHotspotMode;
 std::map<String, Web::RouteHandler> Web::Routes;
-const char *Web::RootWebPath;
 std::map<String, String> Web::HTMLReplacements;
 
 extern Stats *AllStats[];
@@ -83,15 +83,14 @@ void Web::InitWebServer()
 
     // Set up the routes for the main web server
     Routes = {
-        {"/", Web::SendPage_Main},      // returns merged main.html
+        {"/", Web::SendPage_Root},          // returns parent page for main site
+        {"/main.html", Web::SendPage_Main}, // returns merged main.html
         {"/debug", Web::SendPage_Debug},
         {"/component/stats", Web::SendComponent_StatsTable},
-        {"/json/stats", Web::SendJson_Stats},
-        //{"/json/device_info", Web::SendJson_DeviceInfo},
-        {"/json/battery_info", Web::SendJson_BatteryInfo}
-    };
+        {"/json/stats", Web::Send_Stats},
+        {"/json/wifi_status", Web::Send_WiFiStatus},
+        {"/json/battery_info", Web::Send_BatteryInfo}};
 
-    RootWebPath = "/root.html";
     InitWebServerCustomHandler();
 }
 
@@ -107,10 +106,10 @@ void Web::InitWebServer_Hotspot()
 
     // Set up the routes for the hotspot web server
     Routes = {
-        {"/", Web::SendPage_Hotspot},   // returns merged hotspot.html
-        {"/json/hotspot_info", Web::SendJson_HotspotInfo},
-        {"/json/access_points", Web::SendJson_AccessPointList},
-        {"/json/wifi_status", Web::SendJson_WiFiStatus},
+        {"/", Web::SendPage_Hotspot}, // returns merged hotspot.html
+        {"/json/hotspot_info", Web::Send_HotspotInfo},
+        {"/json/access_points", Web::Send_AccessPointList},
+        {"/json/wifi_status", Web::Send_WiFiTestStatus},
         {"/api/UpdateWifiDetails", Web::POST_UpdateWiFiDetails}};
 
     // Specific cases setting of WiFi details
@@ -118,20 +117,20 @@ void Web::InitWebServer_Hotspot()
     //              {
     //     } });
 
-    RootWebPath = "/hotspot.html";
     InitWebServerCustomHandler();
 }
 
 void Web::InitWebServerCustomHandler()
 {
-    #ifdef EXTRA_SERIAL_DEBUG
+#ifdef EXTRA_SERIAL_DEBUG
     Serial_INFO;
     Serial.println("🌐 ⚙️ Setting up Web Server custom handler...");
+    Serial_INFO;
     Serial.println("🌐 Registered Routes include");
-    Serial.println("  🧭 /");
-    for (const auto &route : Routes) {
+    for (const auto &route : Routes)
+    {
         Serial.print("  🧭 ");
-        Serial.println(route.first.c_str());  // prints the path
+        Serial.println(route.first.c_str()); // prints the path
     }
 #endif
 
@@ -172,10 +171,6 @@ void Web::InitWebServerCustomHandler()
                              int success = 1;
                              String contentType;
 
-                             // Default page
-                             //if (path.equals("/"))
-                             //    request->send(LittleFS, Web::RootWebPath, "text/html");
-                             //else
                              // Check route mapping
                              {
                                  auto it = Web::Routes.find(path);
@@ -190,11 +185,11 @@ void Web::InitWebServerCustomHandler()
                                      if (LittleFS.exists(path))
                                      {
                                          if (path.endsWith(".html"))
-                                             contentType = "text/html";
+                                             contentType = ContentType_Html;
                                          else if (path.endsWith(".js"))
-                                             contentType = "application/javascript";
+                                             contentType = ContentType_JS;
                                          else if (path.endsWith(".css"))
-                                             contentType = "text/css";
+                                             contentType = ContentType_CSS;
                                          else if (path.endsWith(".png"))
                                              contentType = "image/png";
                                          else if (path.endsWith(".jpg"))
@@ -211,7 +206,7 @@ void Web::InitWebServerCustomHandler()
                                      {
                                          request->send(404, "text/plain", "File Not Found");
 #ifdef EXTRA_SERIAL_DEBUG
-                                         Serial.println("🚫 Request for " + request->url() + ": File Not Found (404 returned)");
+                                         Serial.println("🌐 🚫 Request for " + request->url() + ": File Not Found (404 returned)");
 #endif
 
                                          success = 0;
@@ -223,7 +218,7 @@ void Web::InitWebServerCustomHandler()
                              if (1 == success)
                              {
                                  unsigned long end = millis();
-                                 Serial.print("📨 Request for " + request->url() + " took : " + String(end - start) + "ms");
+                                 Serial.print("🌐  📨 Request for " + request->url() + " took : " + String(end - start) + "ms");
                                  if (!contentType.isEmpty())
                                      Serial.print(" - Content-Type: " + contentType);
 
@@ -322,64 +317,48 @@ void Web::POST_UpdateWiFiDetails(AsyncWebServerRequest *request)
     }
 }
 
-void Web::SendJson_AccessPointList(AsyncWebServerRequest *request)
+void Web::Send_AccessPointList(AsyncWebServerRequest *request)
 {
-    rapidjson::Document doc;
-    doc.SetObject();
-    rapidjson::Value accessPointArray(rapidjson::kArrayType);
-    rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
+    std::ostringstream json;
+    json << "{\"accessPoints\": [";
 
     auto aps = Network::AccessPointList;
-
-    // for (auto &entry : AccessPointList)
-    // {
-    //     const String &ssid = entry.first;     // the key
-    //     AccessPoint *ap = entry.second; // the value
+    int count = 0;
 
     for (auto &entry : aps)
     {
-        // TODO: Make this rhobust incase access points change whilst we are reading them
-
-        // std::map<std::string, std::shared_ptr<AccessPoint>> AccessPointList;
-        // AccessPointList[ap->ssid] = ap; // ap is a shared_ptr
-        // ...
-        // for (auto &kv : AccessPointList) {
-        //     auto ap = kv.second; // shared_ptr
-        //     if (!ap || ap->ssid.empty()) continue;
-        //     // safe to use ap->ssid, ap->rssi
-        // }
-
         AccessPoint *ap = entry.second; // the value
 
         if (!ap || ap->ssid.length() == 0)
             continue; // skip hidden
 
-        rapidjson::Value apObj(rapidjson::kObjectType);
+        count++;
+        if (count > 1)
+            json << ",";
 
-        // Add SSID as a string
-        apObj.AddMember("SSID", rapidjson::Value(ap->ssid.c_str(), allocator), allocator);
-        // Add RSSI as an integer
-        apObj.AddMember("RSSI", ap->rssi, allocator);
-
-        accessPointArray.PushBack(apObj, allocator);
+        json << "{\"SSID\": \"" << ap->ssid.c_str() << "\",\"RSSI\": " << ap->rssi << "}";
     }
 
-    doc.AddMember("accessPoints", accessPointArray, allocator);
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
+    json << "], \"count\": " << count << "}";
 
-    request->send(200, "application/json", buffer.GetString());
+    request->send(200, ContentType_Html, json.str().c_str());
 }
 
-// TODO: Make this general purpose return single value function
-void Web::SendJson_WiFiStatus(AsyncWebServerRequest *request)
+// Following only works if WiFi is connected and working, so we don't worry about lots of other states
+void Web::Send_WiFiStatus(AsyncWebServerRequest *request)
+{
+    char json[128];
+    snprintf(json, sizeof(json),
+             "{\"Status\":\"%s\", \"RSSI\":%d}",
+             Network::WiFiStatus,
+             Network::WiFiStrength);
+
+    request->send(200, ContentType_Html, json);
+}
+
+void Web::Send_WiFiTestStatus(AsyncWebServerRequest *request)
 {
     // This is similar to processing of test results in menu, but fleshed out a bit for web response (don't have same physical screen space limitations)
-    rapidjson::Document doc;
-    doc.SetObject();
-    rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
-
     Network::WiFiTestResult wifiTestResult = Network::CheckTestResults();
     // Get current test status
 
@@ -422,95 +401,46 @@ void Web::SendJson_WiFiStatus(AsyncWebServerRequest *request)
         }
     }
 
-    // Add a single member "Status"
-    doc.AddMember("Status", rapidjson::Value(htmlEncode(resultText).c_str(), allocator), allocator);
+    char json[256];
+    snprintf(json, sizeof(json),
+             "{\"Status\":\"%s\"}",
+             resultText.c_str());
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-
-    // Send JSON response
-    request->send(200, "application/json", buffer.GetString());
+    request->send(200, ContentType_Html, json);
 }
 
-// void Web::SendJson_DeviceInfo(AsyncWebServerRequest *request)
-// {
-//     rapidjson::Document doc;
-//     doc.SetObject();
-//     rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
-
-//     // Device Information
-//     doc.AddMember("DeviceName", rapidjson::Value(DeviceName, allocator), allocator);
-//     doc.AddMember("SerialNumber", rapidjson::Value(SerialNumber, allocator), allocator);
-//     doc.AddMember("BuildVersion", rapidjson::Value(getBuildVersion(), allocator), allocator);
-//     doc.AddMember("ControllerType", rapidjson::Value(ControllerType, allocator), allocator);
-//     doc.AddMember("ModelNumber", rapidjson::Value(ModelNumber, allocator), allocator);
-//     doc.AddMember("FirmwareRevision", rapidjson::Value(FirmwareRevision, allocator), allocator);
-//     doc.AddMember("HardwareRevision", rapidjson::Value(HardwareRevision, allocator), allocator);
-//     doc.AddMember("SoftwareRevision", rapidjson::Value(SoftwareRevision, allocator), allocator);
-
-//     // Profile Information
-//     if (CurrentProfile != nullptr)
-//     {
-//         doc.AddMember("ProfileDescription", rapidjson::Value(CurrentProfile->Description.c_str(), allocator), allocator);
-//         doc.AddMember("WiFiSSID", rapidjson::Value(CurrentProfile->WiFi_Name.c_str(), allocator), allocator);
-//     }
-//     else
-//     {
-//         doc.AddMember("ProfileDescription", rapidjson::Value("Unknown", allocator), allocator);
-//         doc.AddMember("WiFiSSID", rapidjson::Value("", allocator), allocator);
-//     }
-
-//     rapidjson::StringBuffer buffer;
-//     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-//     doc.Accept(writer);
-
-//     // Send JSON response
-//     request->send(200, "application/json", buffer.GetString());
-// }
-
-void Web::SendJson_HotspotInfo(AsyncWebServerRequest *request)
+void Web::Send_HotspotInfo(AsyncWebServerRequest *request)
 {
     // This is similar to main Device Info, but excludes values not available in Hotspot mode, and includes password
-    rapidjson::Document doc;
-    doc.SetObject();
-    rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
+
+    char json[256];
 
     // Profile Information
     if (CurrentProfile != nullptr)
     {
-        doc.AddMember("WiFiSSID", rapidjson::Value(CurrentProfile->WiFi_Name.c_str(), allocator), allocator);
-        doc.AddMember("WiFiPassword", rapidjson::Value(CurrentProfile->WiFi_Password.c_str(), allocator), allocator);
+        snprintf(json, sizeof(json),
+                 "{\"WiFiSSID\":\"%s\",\"WiFiPassword\":\"%s\"}",
+                 CurrentProfile->WiFi_Name.c_str(),
+                 CurrentProfile->WiFi_Password.c_str());
     }
     else
     {
-        doc.AddMember("WiFiSSID", rapidjson::Value("", allocator), allocator);
-        doc.AddMember("WiFiPassword", rapidjson::Value("", allocator), allocator);
+        snprintf(json, sizeof(json),
+             "{\"WiFiSSID\":\"\",\"WiFiPassword\":\"\"}");
     }
 
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-
-    // Send JSON response
-    request->send(200, "application/json", buffer.GetString());
+    request->send(200, ContentType_Html, json);
 }
 
-void Web::SendJson_BatteryInfo(AsyncWebServerRequest *request)
+void Web::Send_BatteryInfo(AsyncWebServerRequest *request)
 {
-    rapidjson::Document doc;
-    doc.SetObject();
-    rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
+    char json[128];
+    snprintf(json, sizeof(json),
+             "{\"BatteryLevel\":\"%d\", \"BatteryVoltage\":%d}",
+             Battery::GetLevel(),
+             Battery::Voltage);
 
-    doc.AddMember("BatteryLevel", rapidjson::Value().SetInt(Battery::GetLevel()), allocator);
-    doc.AddMember("BatteryVoltage", rapidjson::Value().SetInt(Battery::Voltage), allocator);
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-
-    // Send JSON response
-    request->send(200, "application/json", buffer.GetString());
+    request->send(200, ContentType_Html, json);
 }
 
 String Web::htmlEncode(const String &in)
@@ -593,7 +523,7 @@ void Web::SendComponent_StatsTable(AsyncWebServerRequest *request)
 
     table << "</table>";
 
-    request->send(200, "text/html", table.str().c_str());
+    request->send(200, ContentType_Html, table.str().c_str());
 }
 
 // std::string Web::SaveWiFiSettings(const std::string &ssid, const std::string &password)
@@ -619,26 +549,6 @@ void Web::SendComponent_StatsTable(AsyncWebServerRequest *request)
 //
 //     return html.str();
 // }
-//
-// std::string Web::GetPage_Profiles()
-// {
-//     std::ostringstream html;
-//
-//     html
-//         << "<h1>GamePad - " << DeviceName << "</h1>"
-//         << "Core v" << getBuildVersion() << "<br/>"
-//         << "<h2>Device Information</h2>"
-//         << "Controller type: " << ControllerType << "<br/>"
-//         << "Device name: " << DeviceName << "<br/>"
-//         << "Model number: " << ModelNumber << "<br/>"
-//         << "Serial number: " << SerialNumber << "<br/>"
-//         << "Firmware version: v" << FirmwareRevision
-//         << ", Hardware version: v" << HardwareRevision
-//         << ", Software version: v" << SoftwareRevision << "<br/>"
-//         << "Battery: " << Battery::GetLevel() << "% - " << Battery::Voltage << "v<br/>";
-//
-//     return html.str();
-// }
 
 // All below should be static in normal use.
 // During config changes, may change but they are refreshed elsewhere to account for this
@@ -654,6 +564,12 @@ void Web::InitHTMLMergeFields()
     HTMLReplacements["FirmwareRevision"] = FirmwareRevision;
     HTMLReplacements["HardwareRevision"] = HardwareRevision;
     HTMLReplacements["SoftwareRevision"] = SoftwareRevision;
+}
+
+void Web::SendPage_Root(AsyncWebServerRequest *request)
+{
+    // Reminder that root will reference the initial main page as its startup page
+    request->send(LittleFS, "/root.html", ContentType_Html);
 }
 
 void Web::SendPage_Main(AsyncWebServerRequest *request)
@@ -718,38 +634,34 @@ void Web::SendPage_Debug(AsyncWebServerRequest *request)
 
     Prefs::WebDebug(&html);
 
-    request->send(200, "text/html", html.str().c_str());
+    request->send(200, ContentType_Html, html.str().c_str());
 }
 
-void Web::SendJson_Stats(AsyncWebServerRequest *request)
+void Web::Send_Stats(AsyncWebServerRequest *request)
 {
-    rapidjson::Document doc;
-    doc.SetObject();
-    rapidjson::Value statsArray(rapidjson::kArrayType);
-    rapidjson::Document::AllocatorType &allocator = doc.GetAllocator();
+    std::ostringstream json;
+
+    json << "{\"stats\": [";
 
     for (int i = 0; i < AllStats_Count; i++)
     {
-        rapidjson::Value statObj(rapidjson::kObjectType);
-        statObj.AddMember("Name", rapidjson::Value(AllStats[i]->Description, allocator), allocator);
-        statObj.AddMember("Current_SecondCount", AllStats[i]->Current_SecondCount, allocator);
-        statObj.AddMember("Current_TotalCount", AllStats[i]->Current_TotalCount, allocator);
-        statObj.AddMember("Current_MaxPerSecond", AllStats[i]->Current_MaxPerSecond, allocator);
-        statObj.AddMember("Current_MaxPerSecondOverLastMinute", AllStats[i]->Current_MaxPerSecondOverLastMinute, allocator);
-        statObj.AddMember("Session_TotalCount", AllStats[i]->Session_TotalCount, allocator);
-        statObj.AddMember("Session_MaxPerSecond", AllStats[i]->Session_MaxPerSecond, allocator);
-        statObj.AddMember("Ever_TotalCount", AllStats[i]->Ever_TotalCount, allocator);
-        statObj.AddMember("Ever_MaxPerSecond", AllStats[i]->Ever_MaxPerSecond, allocator);
+        if (i > 0)
+            json << ",";
 
-        statsArray.PushBack(statObj, allocator);
+        json << "{\"Name\": \"" << AllStats[i]->Description << "\","
+             << "\"Current_SecondCount\": " << AllStats[i]->Current_SecondCount << ","
+             << "\"Current_TotalCount\": " << AllStats[i]->Current_TotalCount << ","
+             << "\"Current_MaxPerSecond\": " << AllStats[i]->Current_MaxPerSecond << ","
+             << "\"Current_MaxPerSecondOverLastMinute\": " << AllStats[i]->Current_MaxPerSecondOverLastMinute << ","
+             << "\"Session_TotalCount\": " << AllStats[i]->Ever_TotalCount << ","
+             << "\"Session_MaxPerSecond\": " << AllStats[i]->Ever_MaxPerSecond << ","
+             << "\"Ever_TotalCount\": " << AllStats[i]->Ever_TotalCount << ","
+             << "\"Ever_MaxPerSecond\": " << AllStats[i]->Ever_MaxPerSecond << "}";
     }
 
-    doc.AddMember("stats", statsArray, allocator);
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
+    json << "]}";
 
-    request->send(200, "application/json", buffer.GetString());
+    request->send(200, ContentType_Html, json.str().c_str());
 }
 
 int Web::ShowTraffic = -1;
@@ -766,7 +678,7 @@ void Web::RenderIcons()
     // Show traffic when it first happens
     if (ShowTraffic > TrafficDisplayTime)
     {
-        RenderIcon(Icon_Web_Traffic, uiWebServerStatus_xPos, uiWebServerStatus_yPos, 5, 11);
+        RenderIcon(Icon_Web_Traffic, uiWebServerStatus_xPos, uiWebServerStatus_yPos + 1, 5, 11);
         ShowTraffic = TrafficDisplayTime;
     }
 
@@ -864,7 +776,7 @@ void Web::WebListDir(std::ostringstream *stream, const char *dirname, uint8_t de
 
 void Web::SendPageWithMergeFields(const char *path, const std::map<String, String> &replacements, AsyncWebServerRequest *request)
 {
-            Serial.println("SendPageWithMergeFields: " + String(path));
+    Serial.println("SendPageWithMergeFields: " + String(path));
 
     // Open and load the file
     File file = LittleFS.open(path, FILE_READ);
@@ -877,7 +789,7 @@ void Web::SendPageWithMergeFields(const char *path, const std::map<String, Strin
         return;
     }
 
-        Serial.println("merging data");
+    Serial.println("merging data");
 
     // Read file into string (reasonable for web content files)
     size_t fileSize = file.size();
@@ -935,7 +847,7 @@ void Web::SendPageWithMergeFields(const char *path, const std::map<String, Strin
     //     contentType = "application/json";
 
     // Send result
-    request->send(200, "text/html", output.str().c_str());
+    request->send(200, ContentType_Html, output.str().c_str());
 
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("✅ SendPageWithMergeFields: Processed " + String(path) + " (" + String(fileSize) + " bytes)");

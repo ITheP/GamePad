@@ -9,43 +9,79 @@
     <div class="root">
         <header id="header" class='header'>
             <h1>Controller - {DeviceName}</h1>
-            <h2>Profile - '{Profile}'</h2>
+            <h2>Profile: {Profile}</h2>
         </header>
 
         <div id='content' class='content'>
             <h2>Device Information</h2>
-            Core: {BuildVersion}<br />
-            Controller type: {ControllerType}<br />
-            Model number: {ModelNumber}<br />
-            Firmware version: v{FirmwareRevision}, Hardware version: v{HardwareRevision}, Software version:
-            v{SoftwareRevision}
-            Serial Number: {SerialNumber}
+            <div class="info-grid">
+                <div class="info-row">
+                    <span class="info-label">Core</span>
+                    <span class="info-value">{BuildVersion}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Controller type</span>
+                    <span class="info-value">{ControllerType}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Model number</span>
+                    <span class="info-value">{ModelNumber}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Firmware version</span>
+                    <span class="info-value">v{FirmwareRevision}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Hardware version</span>
+                    <span class="info-value">v{HardwareRevision}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Software version</span>
+                    <span class="info-value">v{SoftwareRevision}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Serial Number</span>
+                    <span class="info-value">{SerialNumber}</span>
+                </div>
+            </div>
 
             <hr />
 
             <div class="gauge-container">
                 <div class="gauge-wrapper">
                     <span class="gauge-label">Battery Voltage</span>
-                    <div class="gauge" id="gaugeVoltage">
+                    <div class="gauge" id="uiBatteryVoltage">
                         <div class="gauge-outline"></div>
                         <div class="gauge-fill"></div>
                         <div class="gauge-text">
                             <span class="value">0.0</span>
                             <span class="unit">v</span>
                         </div>
-                        <div class="gauge-warning">Empty</div>
+                        <div class="gauge-warning">❓</div>
                     </div>
                 </div>
                 <div class="gauge-wrapper">
                     <span class="gauge-label">Battery Level</span>
-                    <div class="gauge" id="gaugePercent">
+                    <div class="gauge" id="uiBatteryLevel">
                         <div class="gauge-outline"></div>
                         <div class="gauge-fill"></div>
                         <div class="gauge-text">
-                            <span class="value">75</span>
+                            <span class="value">0</span>
                             <span class="unit">%</span>
                         </div>
-                        <div class="gauge-warning">Empty</div>
+                        <div class="gauge-warning">❓</div>
+                    </div>
+                </div>
+                <div class="gauge-wrapper">
+                    <span class="gauge-label" id="uiWiFiSignalLabel">WiFi Signal</span>
+                    <div class="gauge" id="uiWiFiSignal">
+                        <div class="gauge-outline"></div>
+                        <div class="gauge-fill"></div>
+                        <div class="gauge-text">
+                            <span class="value">0</span>
+                            <span class="unit">dBm</span>
+                        </div>
+                        <div class="gauge-warning">❓</div>
                     </div>
                 </div>
             </div>

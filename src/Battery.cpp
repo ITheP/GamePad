@@ -6,6 +6,7 @@
 #include "Icons.h"
 #include "DeviceConfig.h"
 #include "Utils.h"
+#include <Debug.h>
 
 extern CRGB ExternalLeds[];
 
@@ -19,14 +20,33 @@ float Battery::Voltage = 0.0;
 int Battery::GetLevel()
 {
   // We have had multiple readings, so average them out and update current battery level
-  CurrentBatterySensorReading = CumulativeBatterySensorReadings / BatteryLevelReadingsCount;
+  if (BatteryLevelReadingsCount == 0)
+  {
+    // This may get called between a previous reading and next one
+    // We like having a few averaged readings rather than just doing 1 here and returning that
+    // so we put up with it and simply return last reading
+    return CurrentBatteryPercentage;
+  }
+  else
+    CurrentBatterySensorReading = CumulativeBatterySensorReadings / BatteryLevelReadingsCount;
+
   CumulativeBatterySensorReadings = 0; // Ready for next round of readings
   BatteryLevelReadingsCount = 0;       // Set up to start readings again
 
   if (CurrentBatterySensorReading > BAT_MAX)
+  {
+#if defined(EXTRA_SERIAL_DEBUG) && defined(USE_EXLIVE_BATTERYTERNAL_LED)
+    Serial.printf("🔋 ⚠️ Battery sensor reading was above the max value! Max: %d, Reading: %d\n", BAT_MAX, CurrentBatterySensorReading);
+#endif
     CurrentBatterySensorReading = BAT_MAX;
+  }
   else if (CurrentBatterySensorReading < BAT_MIN)
+  {
+#if defined(EXTRA_SERIAL_DEBUG) && defined(USE_EXLIVE_BATTERYTERNAL_LED)
+    Serial.printf("🔋 ⚠️ Battery sensor reading was below the min! Min: %d, Reading: %d\n", BAT_MIN, CurrentBatterySensorReading);
+#endif
     CurrentBatterySensorReading = BAT_MIN;
+  }
 
   CurrentBatteryPercentage = (CurrentBatterySensorReading - BAT_MIN) * 100.0 / (BAT_MAX - BAT_MIN);
 

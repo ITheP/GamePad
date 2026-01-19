@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#define IDLE_MAX_PARTICLE_COUNT 256             // 256 particles benchmarked at under 1ms overhead with current effect
+#define IDLE_MAX_PARTICLE_COUNT 128             // 256 particles benchmarked at under 1ms overhead with current effect. Screen can get a bit crowded with 256 though.
 
 struct IdleSpawnPoint {
     int x;

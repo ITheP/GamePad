@@ -30,6 +30,7 @@
 // Go into idle LED effects mode after 10 seconds
 #define IDLE_LED_TIMEOUT 10.0
 #define IDLE_SCREEN_TIMEOUT 30.0
+#define IDLE_EFFECT_RESTART 60.0
 
 // =====
 // LED's

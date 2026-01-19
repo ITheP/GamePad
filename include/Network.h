@@ -25,6 +25,7 @@ public:
     static int WiFiDisabled;
     static char *WiFiStatus;
     static unsigned char WiFiCharacter;
+    static int8_t WiFiStrength;
 
     static const char *ssid;
     static const char *password;

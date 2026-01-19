@@ -12,7 +12,8 @@ public:
     // Constructors
     static Profile *AllProfiles[MAX_PROFILES];
 
-    static Profile *GetProfileById(int id);
+    static Profile *LoadProfileById(int id);
+    static void SetCurrentProfile(Profile *profile);
     static void SetCurrentProfileFromId(int id);
 
     static void SaveAll();

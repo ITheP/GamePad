@@ -7,13 +7,19 @@ Profile *CurrentProfile;
 
 Profile *Profiles::AllProfiles[MAX_PROFILES] = {nullptr};
 
-Profile *Profiles::GetProfileById(int profileId)
+Profile *Profiles::LoadProfileById(int profileId)
 {
-    Profile *profile = new Profile(profileId, (int)('0' + profileId), String(profileId));
+    Profile *profile = new Profile(profileId, (int)('0' + profileId), (profileId == 0 ? "Default" : String(profileId)));
     profile->Load();
     return profile;
 }
 
+void Profiles::SetCurrentProfile(Profile *profile)
+{
+    CurrentProfile = profile;
+}
+
+// Assumes all profiles have been loaded
 void Profiles::SetCurrentProfileFromId(int id)
 {
     if (id >= 0 && id < MAX_PROFILES)

@@ -91,6 +91,7 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 - [ ] Flip-able controls - i.e. flips mappings inside so e.g. up and down flipped on strum bar (or whole HAT is flipped and upside down)
 - [ ] Icons for Profiles
 - [ ] Choose different guitar/controller gfx
+- [ ] Set controller boot speed - slow (twice normal delay), normal (standard boot default delays), fast (remove all delays)
 
 ## To Do - Networking
 - [x] WiFi support

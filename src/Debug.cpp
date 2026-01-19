@@ -65,6 +65,8 @@
 // 👥 Profiles
 // 💡 Internal LED
 // 🔦 External LED
+// 🔋 Battery
+// ⚡ Voltage
 
 // Serial output in VSCode appears to be able to display following OK - though editor font and terminal font may differ...
 // Sometimes VSCode get's knickers in a twist and doesn't display emoji/icons

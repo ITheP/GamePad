@@ -80,6 +80,11 @@ h1 {
     margin-bottom: 0.2em;
 }
 
+h2 {
+    margin-top: 0px;
+    margin-bottom: 0.2em;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -135,8 +140,9 @@ a:hover {
     z-index: -1;
 }
 
-/* Base grid for any form */
-.form-grid {
+/* Base grid layout for form and info displays */
+.form-grid,
+.info-grid {
     display: grid;
     grid-template-columns: 150px 1fr;
     /* label column + control column */
@@ -147,16 +153,24 @@ a:hover {
 }
 
 /* Each row participates in the grid */
-.form-row {
+.form-row,
+.info-row {
     display: contents;
     /* children flow into grid cells */
 }
 
 /* Labels */
-.form-grid label {
+.form-grid label,
+.info-label {
     text-align: right;
     padding-top: 6px;
     font-weight: bold;
+}
+
+/* Info values */
+.info-value {
+    padding-top: 6px;
+    color: white;
 }
 
 /* Inputs */
@@ -295,7 +309,7 @@ button:hover {
 
 .gauge-text {
   position: absolute;
-  top: 50%;
+  top: 48%;
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 32px;
@@ -311,17 +325,29 @@ button:hover {
   display: inline-block;
 }
 
-.gauge-text .unit {
+/* Right aligned version of the unit next to the value whilst keeping value centred */
+/* .gauge-text .unit {
   position: absolute;
   bottom: 2px;
   left: 100%;
-  margin-left: 4px; /* spacing between number and unit */
+  margin-left: 4px;
   font-size: 0.75em;
+} */
+
+/* Unit centred under value */
+.gauge-text .unit {
+  position: absolute;
+  top: 100%;        /* place it below the value */
+  left: 50%;        /* center horizontally */
+  transform: translateX(-50%);
+  margin-top: 0px;  /* spacing between number and unit */
+  font-size: 0.5em;
+  white-space: nowrap;
 }
 
 .gauge-warning {
   position: absolute;
-  top: 75%;
+  top: 77%;
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 24px;

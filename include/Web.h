@@ -5,7 +5,6 @@
 #include <map>
 #include "Stats.h"
 #include "DeviceConfig.h"
-
 #ifdef WEBSERVER
 
 extern char ControllerType[];
@@ -29,24 +28,6 @@ public:
     static void InitWebServer();
     static void InitWebServer_Hotspot();
 
-    static void SendPage_Root(AsyncWebServerRequest *request);
-    static void SendPage_Main(AsyncWebServerRequest *request);
-    static void SendPage_Hotspot(AsyncWebServerRequest *request);
-
-    static void SendPage_About(AsyncWebServerRequest *request);
-    static void SendPage_Debug(AsyncWebServerRequest *request);
-
-    static void SendComponent_StatsTable(AsyncWebServerRequest *request);
-
-    static void SendJson_DeviceInfo(AsyncWebServerRequest *request);
-    static void SendJson_BatteryInfo(AsyncWebServerRequest *request);
-    static void SendJson_Stats(AsyncWebServerRequest *request);
-    static void SendJson_AccessPointList(AsyncWebServerRequest *request);
-    static void SendJson_WiFiStatus(AsyncWebServerRequest *request);
-    static void SendJson_HotspotInfo(AsyncWebServerRequest *request);
-
-    static void POST_UpdateWiFiDetails(AsyncWebServerRequest *request);
-
     static void StartServer();
     static void StopServer();
 
@@ -63,10 +44,31 @@ public:
 private:
     static int ShowTraffic;
 
+    static void SendPage_Root(AsyncWebServerRequest *request);
+    static void SendPage_Main(AsyncWebServerRequest *request);
+    static void SendPage_Hotspot(AsyncWebServerRequest *request);
+
+    static void SendPage_About(AsyncWebServerRequest *request);
+    static void SendPage_Debug(AsyncWebServerRequest *request);
+
+    static void SendComponent_StatsTable(AsyncWebServerRequest *request);
+
+    static void Send_DeviceInfo(AsyncWebServerRequest *request);
+    static void Send_BatteryInfo(AsyncWebServerRequest *request);
+    static void Send_Stats(AsyncWebServerRequest *request);
+    static void Send_AccessPointList(AsyncWebServerRequest *request);
+    static void Send_WiFiStatus(AsyncWebServerRequest *request);
+    static void Send_WiFiTestStatus(AsyncWebServerRequest *request);
+    static void Send_HotspotInfo(AsyncWebServerRequest *request);
+
+    static void POST_UpdateWiFiDetails(AsyncWebServerRequest *request);
+
     static void InitWebServerCustomHandler();
     static void InitHTMLMergeFields();
     static void Get_Header(std::ostringstream &stream);
     static void Get_Footer(std::ostringstream &stream);
+
+    // static void SendJson(rapidjson::Document &doc, AsyncWebServerRequest *request);
 };
 
 #endif

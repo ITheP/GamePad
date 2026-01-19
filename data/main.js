@@ -1,11 +1,10 @@
-var countdown = 5;
-var refreshInterval;
-
 const ui = {
     content: document.getElementById('content'),
     response: document.getElementById('uiResponse'),
     batteryLevel: document.getElementById('uiBatteryLevel'),
-    batteryVoltage: document.getElementById('uiBatteryVoltage')
+    batteryVoltage: document.getElementById('uiBatteryVoltage'),
+    wifiSignal: document.getElementById('uiWiFiSignal'),
+    wifiSignalLabel: document.getElementById('uiWiFiSignalLabel')
 };
 
 function updateTime() {
@@ -20,18 +19,39 @@ function updateTime() {
     }
 }
 
+// rangeExpansion = 0->1 = 0->100% +/- extra % outside of max range
+function randomisedValue(min, max, rangeExpansion) {
+    const range = max - min;
+    const extra = range * rangeExpansion;   // allow going outside of range
+    const low = min - extra;
+    const high = max + extra;
+    return (Math.random() * (high - low)) + low;
+}
+
 function startAutoRefresh() {
     // Load initial device info and battery info
     updateBatteryInformation();
+    updateWiFiInformation();
     updateTime();
 
-    IntervalManager.add(() => {
-        updateBatteryInformation();
-    }, 10000);
+    if (typeof IntervalManager !== "undefined") {
+        IntervalManager.add(() => {
+            updateBatteryInformation();
+            updateWiFiInformation();
+        }, 10000);
 
-    IntervalManager.add(() => {
-        updateTime();
-    }, 1000);
+        IntervalManager.add(() => {
+            updateTime();
+        }, 1000);
+    }
+
+    // Test's (remember to disable updates above which will probably trigger after the tests run and overwrite them)
+    // let batteryVoltage = randomisedValue(3.3, 4.2, 0.15);
+    // let batteryLevel = randomisedValue(0, 100, 0.15);
+    // let wifiSignal = randomisedValue(-90, -30, 0.15);
+    // setGauge(ui.batteryVoltage, 3.3, 4.2, batteryVoltage, "v", "⚡", "Test");
+    // setGauge(ui.batteryLevel, 0, 100, batteryLevel, "%", "🔋", "Test");
+    // setGauge(ui.wifiSignal, -30, -90, wifiSignal, "dBm", "🗼", "☠️");
 }
 
 function showResponseError(message = 'Please check controller is powered on and successfully connected to your WiFi network') {
@@ -46,17 +66,34 @@ function clearResponse() {
     ui.response.innerHTML = '';
 }
 
-function setGauge(id, min, max, value, unit, icon, empty) {
-    const gauge = document.getElementById(id);
-    if (!gauge) return;
+// Accounts for
+// - input ascending or descending
+// - output ascending or descending
+// - positive or negative values
+const mapValue = (x, inMin, inMax, outMin, outMax) => {
+    const t = (x - inMin) / (inMax - inMin);      // normalized 0–1 (or 1–0 if reversed)
+    const y = outMin + t * (outMax - outMin);     // scale to output range
 
+    // clamp to whichever bound is lower/higher
+    return Math.max(Math.min(outMin, outMax),
+        Math.min(Math.max(outMin, outMax), y));
+};
+
+// Clamp that accounts for positive and negative values
+const clamp = (value, a, b) => Math.max(Math.min(a, b), Math.min(Math.max(a, b), value));
+
+function setGauge(gauge, min, max, value, unit, icon, empty) {
     const fillElem = gauge.querySelector('.gauge-fill');
     const valueElem = gauge.querySelector('.gauge-text .value');
     const unitElem = gauge.querySelector('.gauge-text .unit');
     const warningElem = gauge.querySelector('.gauge-warning');
 
-    const range = max - min;
-    let pct = Math.max(0, Math.min(1, (value - min) / range)) * 100;
+    // const range = max - min;
+    // let pct = Math.max(0, Math.min(1, (value - min) / range)) * 100;
+
+    // Accounts for positive ranges and negative ranges
+    const clampedValue = clamp(value, min, max);
+    let pct = mapValue(clampedValue, min, max, 0, 100);
 
     // Out of range handling
     // Always show a minimum amount
@@ -80,15 +117,6 @@ function setGauge(id, min, max, value, unit, icon, empty) {
     unitElem.textContent = unit;
 }
 
-// rangeExpansion = 0->1 = 0->100% +/- extra % outside of max range
-// function randomisedValue(min, max, rangeExpansion) {
-//     const range = max - min;
-//     const extra = range * rangeExpansion;   // allow going outside of range
-//     const low = min - extra;
-//     const high = max + extra;
-//     return (Math.random() * (high - low)) + low;
-// }
-
 function updateBatteryInformation() {
     fetch('/json/battery_info')
         .then(response => {
@@ -96,36 +124,43 @@ function updateBatteryInformation() {
             return response.json();
         })
         .then(data => {
-            // Handle input fields separately - they need special treatment
-            if (ui.batteryLevel && data.BatteryLevel !== undefined) {
-                ui.batteryLevel.innerHTML = data.BatteryLevel + "%";
-            }
-            if (ui.batteryVoltage && data.BatteryVoltage !== undefined) {
-                ui.batteryVoltage.value = data.BatteryVoltage + "v";
-            }
+            let batteryVoltage = data.BatteryVoltage;
+            let batteryLevel = data.BatteryLevel;
 
-            let batteryVoltage = randomisedValue(3.7, 4.7, 0.15);
-            let batteryLevel = randomisedValue(0, 100, 0.15);
-
-
-            setGauge("gaugeVoltage", 3.3, 4.2, batteryVoltage, "v", "⚡", "Empty");
-            setGauge("gaugePercent", 0, 100, batteryLevel, "%", "🔋", "Empty");
-
-
+            setGauge(ui.batteryVoltage, 3.3, 4.2, batteryVoltage, "v", "⚡", "Empty");
+            setGauge(ui.batteryLevel, 0, 100, batteryLevel, "%", "🔋", "Empty");
         })
         .catch(error => {
-            console.error('Error fetching battery information:', error);
+            console.error('Error fetching battery information: ', error);
             showResponseError("Unable to get battery information.");
 
-            setGauge("gaugeVoltage", 3.3, 4.2, 0, "v", "⚡", "❓");
-            setGauge("gaugePercent", 0, 100, 0, "%", "🔋", "❓");
+            setGauge(ui.batteryVoltage, 3.3, 4.2, 0, "v", "⚡", "❓");
+            setGauge(ui.batteryLevel, 0, 100, 0, "%", "🔋", "❓");
         });
+}
 
-    // Test's
-    // let batteryVoltage = randomisedValue(3.3, 4.2, 0.15);
-    // let batteryLevel = randomisedValue(0, 100, 0.15);
-    // setGauge("gaugeVoltage", 3.3, 4.2, batteryVoltage, "v", "⚡", "Empty");
-    // setGauge("gaugePercent", 0, 100, batteryLevel, "%", "🔋", "Empty");
+function updateWiFiInformation() {
+    fetch('/json/wifi_status')
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            return response.json();
+        })
+        .then(data => {
+            // Signal Level...
+            // -30 is amazing
+            // -90 is crap
+            // That's our range, anything else can be clamped
+            // let percent = mapValue(data.RSSI, -30, -90, 100, 0);
+
+            setGauge(ui.wifiSignal, -30, -90, data.RSSI, "dBm", "🗼", "☠️");
+            ui.wifiSignalLabel.textContent = data.Status;
+        })
+        .catch(error => {
+            console.error('Error fetching WiFi Signal Level: ', error);
+            showResponseError("Unable to get WiFi Signal Level.");
+            ui.wifiSignalLabel.textContent = "WiFi Signal";
+            setGauge(ui.wifiSignal, -30, -90, -30, "dBm", "🗼", "☠️");
+        });
 }
 
 startAutoRefresh();

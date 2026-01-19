@@ -40,7 +40,7 @@ char SerialNumber[22];   // SerialNumber = large enough to hold the uint64_t val
 uint64_t ESPChipId;      // Serial Number
 int ESPChipIdOffset;
 Input *ProfileOverrideInput = nullptr; // Input on device boot that caused usage of non default Profile Id
-//Profile *CurrentProfile;               // Current Profile (with any settings saved to device memory)
+// Profile *CurrentProfile;               // Current Profile (with any settings saved to device memory)
 
 void (*LoopOperation)(void);
 
@@ -369,11 +369,12 @@ void setupWebServer(bool startInWiFiConfigurationMode)
   Serial.println("🌐 Setting up HTTP Web Server...");
 
   if (startInWiFiConfigurationMode)
-  Web::InitWebServer_Hotspot();
+    Web::InitWebServer_Hotspot();
   else
-  Web::InitWebServer();
-  
+    Web::InitWebServer();
+
 #ifdef EXTRA_SERIAL_DEBUG
+  Serial_INFO;
   Serial.println("🌐 Web Site source files:");
   Web::ListDir("/");
 #endif
@@ -658,6 +659,7 @@ void setupProfile()
   // hosts to use same physical controller but as separate controllers,
   // Along with holding separate WiFi details and configurations if required.
   int profileId = 0;
+
   Input *input;
   for (int i = 0; i < DigitalInputs_Count; i++)
   {
@@ -677,14 +679,16 @@ void setupProfile()
   ESPChipIdOffset = profileId;
 
   // Load profile
-  Profiles::SetCurrentProfileFromId(profileId);
+  auto profile = Profiles::LoadProfileById(profileId);
+  Profiles::SetCurrentProfile(profile);
+  // CurrentProfile should now have profile loaded into it!
 
   // Populate custom names
   // TODO: CUSTOM NAMES
 
   Serial_INFO;
   Serial.print("👤 Using Profile ");
-  Serial.print(CurrentProfile->Id);
+  Serial.print(String(CurrentProfile->Id));
   if (CurrentProfile->Id == 0)
     Serial.print(" (Default)");
   Serial.println();
@@ -1050,7 +1054,7 @@ void setup()
 
 #ifdef WEBSERVER
     // Web server in Config mode
-  setupWebServer(true);
+    setupWebServer(true);
 #endif
 
     // We stay on this screen showing basic help until button released
@@ -1074,14 +1078,6 @@ void setup()
   // Clear temporary battery details ready for icons instead
   Display.fillRect(HALF_SCREEN_WIDTH + 8, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH - 8, RREHeight_fixed_8x16, C_BLACK);
 
-#ifdef WEBSERVER
-  setupWebServer(false);
-#endif
-
-#ifdef WIFI
-  setupWiFi();
-#endif
-
   Display.display();
   delay(SETUP_DELAY);
 
@@ -1090,6 +1086,16 @@ void setup()
   setupBluetooth();
   setupDeviceIdentifiers();
   setupController();
+
+#ifdef WIFI
+  // Depends on profile being loaded to get WiFi details
+  setupWiFi();
+#endif
+
+#ifdef WEBSERVER
+  // Make sure this is done AFTER the above, as normal web server setup includes references to things like current profile
+  setupWebServer(false);
+#endif
 
   Display.display();
   delay(SETUP_DELAY * 2);
@@ -1396,6 +1402,7 @@ void MainLoop()
 #endif
   uint16_t state;
   Input *input;
+  int someControlStateJustChanged = false; // Used to cancel idle timeout
 
   for (int i = 0; i < DigitalInputs_Count; i++)
   {
@@ -1446,6 +1453,7 @@ void MainLoop()
 
             input->ValueState.Value = LONG_PRESS_MONITORING;
             input->ValueState.StateChangedWhen = timeCheck;
+            someControlStateJustChanged = true;
           }
           else if (timeDifference >= input->LongPressTiming)
           {
@@ -1518,6 +1526,8 @@ void MainLoop()
         input->ValueState.StateChangedWhen = timeCheck;
         input->ValueState.StateJustChanged = true;
         input->ValueState.StateJustChangedLED = true;
+
+        someControlStateJustChanged = true;
 
         // Digital inputs are easy, EXCEPT when using time delays where we might not actually want to handle the initial press
         //
@@ -1630,6 +1640,8 @@ void MainLoop()
         input->ValueState.Value = state;
         input->ValueState.PreviousValue = previousValue;
         input->ValueState.StateChangedWhen = micros(); // ToDo: More accurate setting here, as there have been delays
+
+        someControlStateJustChanged = true;
 
         int16_t minValue = input->MinValue;
         int16_t maxValue = input->MaxValue;
@@ -1755,6 +1767,8 @@ void MainLoop()
       hatInput->ValueState.StateChangedWhen = micros(); // TODO make this when hat last read took place though realistically bog all time will have passed
       hatInput->ValueState.StateJustChangedLED = true;
 
+      someControlStateJustChanged = true;
+
       hatInput->RenderOperation(hatInput);
 
       // Any general hat level extra operations
@@ -1821,14 +1835,14 @@ void MainLoop()
   // rightVryJoystickValue = map(rightVryJoystickLecture, 0, 4095, 0, 32737);
 
   // Little generalised check to see if anything has changed
-  if (sendReport)
+  if (someControlStateJustChanged)
     LastTimeAnyButtonPressed = Now;
 
-  float timeSinceLastAnyButtonPress = Now - LastTimeAnyButtonPressed;
+  float timeSinceLastAnyControlChanged = Now - LastTimeAnyButtonPressed;
 
   // Call idle LED effects etc. if controllers not had anything pressed for a while
 #if defined(USE_ONBOARD_LED) || defined(USE_ONBOARD_LED_STATUS_ONLY)
-  if (timeSinceLastAnyButtonPress > IDLE_LED_TIMEOUT)
+  if (timeSinceLastAnyControlChanged >= IDLE_LED_TIMEOUT)
   {
     if (!ControllerIdle_LED)
     {
@@ -1857,7 +1871,7 @@ void MainLoop()
 #endif
 
   // Call idle screen effects etc. if controllers not had anything pressed for a while
-  if (timeSinceLastAnyButtonPress > IDLE_SCREEN_TIMEOUT)
+  if (timeSinceLastAnyControlChanged >= IDLE_SCREEN_TIMEOUT)
   {
     if (!ControllerIdle_Screen)
     {
@@ -1867,9 +1881,16 @@ void MainLoop()
       Serial_INFO;
       Serial.println("Screen Idle Triggered");
 #endif
-
+  
       // And get ready to show display idle effect
       InitIdleEffect();
+    }
+    // Restart occasionally to keep things interesting
+    else if (timeSinceLastAnyControlChanged >= IDLE_EFFECT_RESTART)
+    {
+        StopIdleEffect();
+        InitIdleEffect();
+        LastTimeAnyButtonPressed = Now - IDLE_SCREEN_TIMEOUT;  // Pretend timeout just started so the idle effect keeps going till next occasional restart
     }
   }
   else
