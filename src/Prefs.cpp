@@ -14,6 +14,7 @@
 // - Wifi
 // - Bluetooth
 // - General configuration settings
+// - HTTPS Security Certificates
 //
 // File storage
 // - Statistics
@@ -67,15 +68,6 @@ void Prefs::Load()
 
         AllStats[i]->LoadFromPreferences();
     }
-
-    // String wifiSSID = Handler.getString("wifi_ssid", "defaultSSID");
-    // String wifiPass = Handler.getString("wifi_pass", "defaultPass");
-    // int customValue = Handler.getInt("custom_value", 42);  // Default if not set
-
-    // Serial.println("Loaded Settings:");
-    // Serial.println("SSID: " + wifiSSID);
-    // Serial.println("Password: " + wifiPass);
-    // Serial.println("Custom Value: " + String(customValue));
 }
 
 void Prefs::WebDebug(std::ostringstream *stream)
@@ -99,4 +91,51 @@ void Prefs::SaveEverything()
 void Prefs::Close()
 {
     Handler.end();
+}
+
+// HTTPS Certificate management functions
+bool Prefs::LoadHTTPSCertificates(std::string &certPem, std::string &keyPem) {
+    bool success = false;
+
+    if (Handler.begin("https_certs", true))  // true = read-only
+    {
+        size_t certSize = Handler.getBytesLength("cert");
+        size_t keySize = Handler.getBytesLength("key");
+
+        if (certSize > 0 && keySize > 0) {
+            char *certBuffer = new char[certSize + 1];
+            char *keyBuffer = new char[keySize + 1];
+
+            size_t readCertSize = Handler.getBytes("cert", (uint8_t *)certBuffer, certSize);
+            size_t readKeySize = Handler.getBytes("key", (uint8_t *)keyBuffer, keySize);
+
+            if (readCertSize == certSize && readKeySize == keySize) {
+                certBuffer[certSize] = '\0';
+                keyBuffer[keySize] = '\0';
+                certPem = std::string(certBuffer);
+                keyPem = std::string(keyBuffer);
+                success = true;
+            }
+
+            delete[] certBuffer;
+            delete[] keyBuffer;
+        }
+
+        Handler.end();
+    }
+
+    return success;
+}
+
+void Prefs::SaveHTTPSCertificates(const std::string &certPem, const std::string &keyPem) {
+    if (Handler.begin("https_certs", false))  // false = read/write
+    {
+        Handler.putBytes("cert", (const uint8_t *)certPem.c_str(), certPem.length());
+        Handler.putBytes("key", (const uint8_t *)keyPem.c_str(), keyPem.length());
+        Handler.end();
+
+#ifdef EXTRA_SERIAL_DEBUG
+        Serial.println("✅ HTTPS certificates saved to NVS");
+#endif
+    }
 }

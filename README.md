@@ -130,6 +130,8 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 - [ ] LED's that only power up when USB connected
 - [ ] USB charging while playing from USB power (hot plug-able while playing)
 - [ ] Dual battery power (possibly one dedicated to device so isn't effected by LEDs)
+- [ ] Include SPI variant of OLED screen. Currently using I2C, limits max FPS to around 48 due to I2C interface limitations. SPI uses more pins but can push 900+fps - i.e. far lower device load and so faster response.
+- [ ] Include digital and analog input matrix to allow for far more inputs than pins on esp32-s3 dev module
 
 ## To Do - Other
 

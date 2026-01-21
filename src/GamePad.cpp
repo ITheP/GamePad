@@ -1885,13 +1885,13 @@ void MainLoop()
       // And get ready to show display idle effect
       InitIdleEffect();
     }
-    // Restart occasionally to keep things interesting
-    else if (timeSinceLastAnyControlChanged >= IDLE_EFFECT_RESTART)
-    {
-        StopIdleEffect();
-        InitIdleEffect();
-        LastTimeAnyButtonPressed = Now - IDLE_SCREEN_TIMEOUT;  // Pretend timeout just started so the idle effect keeps going till next occasional restart
-    }
+    // // Restart occasionally to keep things interesting
+    // else if (timeSinceLastAnyControlChanged >= IDLE_EFFECT_RESTART)
+    // {
+    //     StopIdleEffect();
+    //     InitIdleEffect();
+    //     LastTimeAnyButtonPressed = Now - IDLE_SCREEN_TIMEOUT;  // Pretend timeout just started so the idle effect keeps going till next occasional restart
+    // }
   }
   else
   {
@@ -2045,10 +2045,10 @@ void MainLoop()
   // And finally update the display with all the lovely changes above - throttled as quite high overhead
   if (DisplayRollover)
   {
-    if (ControllerIdle_LED)
+    if (ControllerIdle_Screen)
     {
-      int maxParticles = IDLE_MAX_PARTICLE_COUNT;
-      RenderIdleEffect(maxParticles);
+        RenderIdleEffect();
+
 #ifdef INCLUDE_BENCHMARKS
       MainBenchmark.Snapshot("Loop.IdleEffect", showBenchmark);
 #endif

@@ -22,7 +22,7 @@ struct IdleParticle {
 };
 
 void InitIdleEffect();
-void RenderIdleEffect(int maxParticles);
+void RenderIdleEffect();
 void StopIdleEffect();
 
 void InitDisplayBuffer();

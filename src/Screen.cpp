@@ -2,7 +2,10 @@
 #include "Stats.h"
 #include "Battery.h"
 
+// I2C 4 pin (display theoretical FPS maxes out around 48fps)
 Adafruit_SH1106G Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// SPI 7 pin (display theoretical FPS maxes out around 976fps)
+// TODO
 
 // Screen orientation functions
 int ScreenOrientation = 0;

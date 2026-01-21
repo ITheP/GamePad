@@ -1,10 +1,13 @@
-#pragma
+#pragma once
 
-#include <ESPAsyncWebServer.h>
+#include <Arduino.h>
+#include <esp_http_server.h>
+#include <esp_https_server.h>
 #include <string>
 #include <map>
 #include "Stats.h"
 #include "DeviceConfig.h"
+
 #ifdef WEBSERVER
 
 extern char ControllerType[];
@@ -13,15 +16,16 @@ extern char FirmwareRevision[];
 extern char HardwareRevision[];
 extern char SoftwareRevision[];
 
+// Pure ESP-IDF: esp_http_server for HTTP (port 80), esp_https_server for HTTPS (port 443)
+extern httpd_handle_t WebServerHTTP;
+extern httpd_handle_t WebServerHTTPS;
+
 class Web
 {
 public:
-    using RouteHandler = void(*)(AsyncWebServerRequest*);
-    
     static const char *CSS;
     static int WebServerEnabled;
     static int WiFiHotspotMode;
-    static std::map<String, RouteHandler> Routes;
     static const char *RootWebPath;
     static std::map<String, String> HTMLReplacements;
 
@@ -36,7 +40,7 @@ public:
     static void ListDir(const char *dirname, uint8_t depth = 0);
     static void WebListDir(std::ostringstream *stream, const char *dirname, uint8_t depth = 0);
 
-    static void SendPageWithMergeFields(const char *path, const std::map<String, String> &replacements, AsyncWebServerRequest *request);
+    static void SendPageWithMergeFields(const char *path, const std::map<String, String> &replacements, httpd_req_t *req);
 
     static String htmlEncode(const String &in);
     static String htmlDecode(const String &in);
@@ -44,24 +48,24 @@ public:
 private:
     static int ShowTraffic;
 
-    static void SendPage_Root(AsyncWebServerRequest *request);
-    static void SendPage_Main(AsyncWebServerRequest *request);
-    static void SendPage_Hotspot(AsyncWebServerRequest *request);
+    static esp_err_t SendPage_Root(httpd_req_t *req);
+    static esp_err_t SendPage_Main(httpd_req_t *req);
+    static esp_err_t SendPage_Hotspot(httpd_req_t *req);
 
-    static void SendPage_About(AsyncWebServerRequest *request);
-    static void SendPage_Debug(AsyncWebServerRequest *request);
+    static esp_err_t SendPage_About(httpd_req_t *req);
+    static esp_err_t SendPage_Debug(httpd_req_t *req);
 
-    static void SendComponent_StatsTable(AsyncWebServerRequest *request);
+    static esp_err_t SendComponent_StatsTable(httpd_req_t *req);
 
-    static void Send_DeviceInfo(AsyncWebServerRequest *request);
-    static void Send_BatteryInfo(AsyncWebServerRequest *request);
-    static void Send_Stats(AsyncWebServerRequest *request);
-    static void Send_AccessPointList(AsyncWebServerRequest *request);
-    static void Send_WiFiStatus(AsyncWebServerRequest *request);
-    static void Send_WiFiTestStatus(AsyncWebServerRequest *request);
-    static void Send_HotspotInfo(AsyncWebServerRequest *request);
+    static esp_err_t Send_DeviceInfo(httpd_req_t *req);
+    static esp_err_t Send_BatteryInfo(httpd_req_t *req);
+    static esp_err_t Send_Stats(httpd_req_t *req);
+    static esp_err_t Send_AccessPointList(httpd_req_t *req);
+    static esp_err_t Send_WiFiStatus(httpd_req_t *req);
+    static esp_err_t Send_WiFiTestStatus(httpd_req_t *req);
+    static esp_err_t Send_HotspotInfo(httpd_req_t *req);
 
-    static void POST_UpdateWiFiDetails(AsyncWebServerRequest *request);
+    static esp_err_t POST_UpdateWiFiDetails(httpd_req_t *req);
 
     static void InitWebServerCustomHandler();
     static void InitHTMLMergeFields();

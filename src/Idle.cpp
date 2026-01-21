@@ -12,11 +12,11 @@ int IdleParticleCount = IDLE_MAX_PARTICLE_COUNT;
 // x, y, width of random area, height of random area
 // Couple of variants for simple particle limit alternatives
 IdleSpawnPoint IdleSpawnPoints[] = {
-    {1, 20, 10, 30, IDLE_MAX_PARTICLE_COUNT},           // Left of guitar...
-    {13, 28, 9, 9, 32},                                 // Special case within the guitar body :)
+    {1, 20, 10, 30, IDLE_MAX_PARTICLE_COUNT},       // Left of guitar...
+    {13, 28, 9, 9, 32},                             // Special case within the guitar body :)
     {13, 28, 9, 9, 16},
-    {60, 15, 50, 10, IDLE_MAX_PARTICLE_COUNT},          // Top right of guitar...
-    {60, 48, 50, 10, IDLE_MAX_PARTICLE_COUNT}};          // Top right of guitar...
+{60, 15, 50, 10, IDLE_MAX_PARTICLE_COUNT},          // Top right of guitar...
+    {60, 48, 50, 10, IDLE_MAX_PARTICLE_COUNT}};     // Top right of guitar...
 
 int IdleSpawnPointCount = sizeof(IdleSpawnPoints) / sizeof(IdleSpawnPoints[0]);
 
@@ -25,7 +25,7 @@ IdleParticle particles[IDLE_MAX_PARTICLE_COUNT];
 int currentParticleCount;
 unsigned long nextSpawnTime = 0;
 unsigned long spawnRate = 500;
-
+int spawnDirection = 1;
 // Benchmark IdleBenchmark("Idle");
 
 // Random +/- 0.15 to 0.3
@@ -87,6 +87,7 @@ void InitIdleEffect()
 
     currentParticleCount = 1;
     nextSpawnTime = millis() + spawnRate;
+    spawnDirection = 1;
 }
 
 // Over engineered bouncing pixel effect.
@@ -98,7 +99,7 @@ void InitIdleEffect()
 // Note that also imperfections can occur with live animations also on screen affecting
 // the environment the pixels are in
 
-void RenderIdleEffect(int maxParticles)
+void RenderIdleEffect()
 {
     // IdleBenchmark.Start("Idle Start");
 
@@ -129,20 +130,52 @@ void RenderIdleEffect(int maxParticles)
             Display.getPixel(xi_try, p.lastY) == C_WHITE)
         {
 
-            // Horizontal bounces, we also (if any left to add) increase the particle count and add one to the end
-            // Comes from same spot as parent particle, but has it's own velocities
-            if (currentParticleCount < IdleParticleCount && currentParticleCount <= maxParticles && millis() > nextSpawnTime)
+            if (millis() > nextSpawnTime)
             {
-                IdleParticle &newP = particles[currentParticleCount]; // Points to next in line already
+                // Horizontal bounces,
+                // We also (if any left to add) increase the particle count and add one to the end
+                // Comes from same spot as parent particle, but has it's own velocities
+                // We do this till we reach max particles then we start to de-spawn till none are left and we can start again somewhere else
+                if (spawnDirection == 1)
+                {
 
-                newP.x = p.x;
-                newP.y = p.y;
-                newP.lastX = p.lastX;
-                newP.lastY = p.lastY;
+                    if (currentParticleCount < IdleParticleCount)
+                    {
+                        IdleParticle &newP = particles[currentParticleCount]; // Points to next in line already
 
-                nextSpawnTime = millis() + spawnRate;
+                        newP.x = p.x;
+                        newP.y = p.y;
+                        newP.lastX = p.lastX;
+                        newP.lastY = p.lastY;
 
-                currentParticleCount++;
+                        nextSpawnTime = millis() + spawnRate;
+
+                        currentParticleCount++;
+                    }
+                    else
+                    {
+                        spawnDirection = -1;
+                    }
+                }
+
+                // Knock off the last pixel if the time is right
+                if (spawnDirection == -1 && i == currentParticleCount - 1)
+                {
+                    // We haven't drawn the rest of the current pixel yet so we reduce count and skip
+                    currentParticleCount--;
+
+                    // Make sure
+                    //Display.writePixel(particles[currentParticleCount].lastX, particles[currentParticleCount].lastY, C_BLACK);
+
+                    // If there are no particles left, restart everything from scratch!
+                    if (currentParticleCount == 0)
+                    {
+                        InitIdleEffect();
+                        return;
+                    }
+                    
+                    continue; // Skip drawing this particle since we're removing it
+                }
             }
 
             newVx = -newVx;

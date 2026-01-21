@@ -182,7 +182,6 @@ function escapeHtml(text) {
     // return div.innerHTML;
 
     return text.replace(/[&<>"']/g, m => escapeMap[m]);
-
 }
 
 function startConfigAutoRefresh() {
