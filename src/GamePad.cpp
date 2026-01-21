@@ -344,16 +344,16 @@ void setupWiFi()
   if (event == SYSTEM_EVENT_STA_GOT_IP) {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("🛜 ✅ WiFi connected...");
-    Serial.println("🌐 ✅ ...Starting web server");
+    Serial.println("🌐 ✅ ...web server active");
 #endif
-    Web::StartServer();
+    Web::WiFiEnabled();
   } else if
   (event == SYSTEM_EVENT_STA_DISCONNECTED) {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("🛜 ❌ WiFi disconnected...");
-    Serial.println("🌐 ⚠️ ...stopping web server");
+    Serial.println("🌐 ⚠️ ...web server inactive");
 #endif
-    Web::StopServer();
+    Web::WiFiDisabled();
   } });
 }
 #endif

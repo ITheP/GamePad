@@ -68,7 +68,7 @@ void MenuFunctions::Config_Init_Hotspot()
     Serial.printf("🛑 Profile selected: %d - %s, WiFi: %s, WiFi Password: %s\n", CurrentProfile->Id, CurrentProfile->Description.c_str(), CurrentProfile->WiFi_Name.c_str(), SaferPasswordString(CurrentProfile->WiFi_Password).c_str());
   #endif
 
-  Web::StartServer();
+  Web::WiFiEnabled();
 
   // while (true) {
   //   Serial.println(String(Second));
@@ -186,7 +186,7 @@ void MenuFunctions::Config_Exit_Hotspot()
     Network::CancelWiFiTest();
   }
 
-  Web::StopServer();
+  Web::WiFiDisabled();
 
   WiFi.disconnect(true);
 

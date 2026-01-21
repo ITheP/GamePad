@@ -46,49 +46,40 @@ std::map<String, String> Web::HTMLReplacements;
 extern Stats *AllStats[];
 extern int AllStats_Count;
 
-void Web::StartServer()
+// WiFi Enabled/Disabled sets relevant icons/status to show if we can get to the web server or not
+// Web server if enabled is always running
+
+void Web::WiFiEnabled()
 {
     WebServerEnabled = true;
     WebServerIcon = Icon_Web_Enabled;
-
-#ifdef EXTRA_SERIAL_DEBUG
-    Serial_INFO;
-    Serial.println("🌐 ▶️ Web Servers started (HTTP + HTTPS)");
-#endif
 }
 
-void Web::StopServer()
+void Web::WiFiDisabled()
 {
-    // if (WebServerHTTP)
-    // {
-    //     httpd_stop(WebServerHTTP);
-    //     WebServerHTTP = nullptr;
-    // }
-
-    // if (WebServerHTTPS)
-    // {
-    //     httpd_stop(WebServerHTTPS);
-    //     WebServerHTTPS = nullptr;
-    // }
-
     WebServerEnabled = false;
     WebServerIcon = Icon_Web_Disabled;
-
-#ifdef EXTRA_SERIAL_DEBUG
-    Serial_INFO;
-    Serial.println("🌐 ⏹️ Web Servers stopped");
-#endif
 }
 
 static void register_handler(const httpd_uri_t &uri)
 {
     if (WebServerHTTP)
     {
-        httpd_register_uri_handler(WebServerHTTP, &uri);
+        esp_err_t res = httpd_register_uri_handler(WebServerHTTP, &uri);
+        if (res != ESP_OK)
+            Serial.printf("HTTP handler register failed for %s: %d\n", uri.uri, res);
+        else
+
+            Serial.printf("HTTP handler registered for %s: %d\n", uri.uri, res);
     }
     if (WebServerHTTPS)
     {
-        httpd_register_uri_handler(WebServerHTTPS, &uri);
+        esp_err_t res = httpd_register_uri_handler(WebServerHTTPS, &uri);
+        if (res != ESP_OK)
+            Serial.printf("HTTPS handler register failed for %s\n", uri.uri);
+        else
+
+            Serial.printf("HTTPS handler registered for %s\n", uri.uri);
     }
 }
 
@@ -106,8 +97,8 @@ esp_err_t Web::SendPage_Root(httpd_req_t *req)
     }
 
 #ifdef EXTRA_SERIAL_DEBUG
-        Serial_INFO;
-        Serial.println("🌐 Sending /root.html");
+    Serial_INFO;
+    Serial.println("🌐 Sending /root.html");
 #endif
 
     httpd_resp_set_type(req, "text/html; charset=utf-8");
@@ -226,7 +217,7 @@ esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
 {
     char json[128];
     snprintf(json, sizeof(json),
-             "{\"BatteryLevel\":\"%d\", \"BatteryVoltage\":%d}",
+             "{\"BatteryLevel\":%d, \"BatteryVoltage\":%d}",
              Battery::GetLevel(),
              Battery::Voltage);
 
@@ -441,6 +432,8 @@ static esp_err_t default_handler(httpd_req_t *req)
 {
     String path = req->uri;
 
+    Serial.printf("default_handler: %s\n", path.c_str());
+
 #ifdef EXTRA_SERIAL_DEBUG
     unsigned long start = millis();
     Serial.print("🌐 📩 ");
@@ -451,6 +444,9 @@ static esp_err_t default_handler(httpd_req_t *req)
 
     if (LittleFS.exists(path))
     {
+#ifdef EXTRA_SERIAL_DEBUG
+        Serial.printf("📄 ✅ File found: %s\n", path.c_str());
+#endif
         if (path.endsWith(".html"))
             contentType = "text/html; charset=utf-8";
         else if (path.endsWith(".js"))
@@ -490,8 +486,24 @@ static esp_err_t default_handler(httpd_req_t *req)
         return ESP_OK;
     }
 
+#ifdef EXTRA_SERIAL_DEBUG
+    Serial.printf("📄 ❌ File NOT found: %s\n", path.c_str());
+#endif
     httpd_resp_send_404(req);
     return ESP_OK;
+}
+
+static esp_err_t not_found_handler(httpd_req_t *req, httpd_err_code_t err)
+{
+    const char *method = "UNKNOWN";
+    if (req->method == HTTP_GET) method = "GET";
+    else if (req->method == HTTP_POST) method = "POST";
+    else if (req->method == HTTP_PUT) method = "PUT";
+    else if (req->method == HTTP_DELETE) method = "DELETE";
+    else if (req->method == HTTP_HEAD) method = "HEAD";
+
+    Serial.printf("HTTPD 404: %s %s (err=%d)\n", method, req->uri, err);
+    return ESP_FAIL;
 }
 
 void Web::InitHTMLMergeFields()
@@ -508,6 +520,7 @@ void Web::InitHTMLMergeFields()
     HTMLReplacements["SoftwareRevision"] = SoftwareRevision;
 }
 
+// Normal web server uses HTTP
 void Web::InitWebServer()
 {
 #ifdef EXTRA_SERIAL_DEBUG
@@ -520,7 +533,7 @@ void Web::InitWebServer()
 
     if (!Security::LoadOrGenerateHTTPSCertificates(HttpsCertPem, HttpsKeyPem))
     {
-        Serial.println("⚠️  No HTTPS certificates available");
+        Serial.println("🌐 ⚠️  No HTTPS certificates available");
     }
 
     // Recommended open sockets and url handlers
@@ -530,48 +543,70 @@ void Web::InitWebServer()
     // That's in total - so probably 4 connections between them and 30 URI handlers total
     // Heap free after startup: 120 KB+ recommended
 
+    // HTTP Web Server
+    httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
+    http_config.server_port = 80;
+    http_config.max_open_sockets = 4;
+    http_config.max_uri_handlers = 16;
+    http_config.stack_size = 8192;
+    http_config.uri_match_fn = httpd_uri_match_wildcard;
+
+    Serial.println("✅ Pre-HTTP server heap: " + String(ESP.getFreeHeap()) + " bytes");
+    Serial.println("✅ Pre-HTTP server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
+
+// HTTPS Web Server
+
     // Start HTTPS first to allocate its resources before HTTP
-    Serial.println("✅ Pre-HTTPS server heap: " + String(ESP.getFreeHeap()) + " bytes");
-    Serial.println("✅ Pre-HTTPS server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
+// #ifdef EXTRA_SERIAL_DEBUG_PLUS
+//     Serial.println("🌐 ✅ Pre-HTTPS server heap: " + String(ESP.getFreeHeap()) + " bytes");
+//     Serial.println("🌐 ✅ Pre-HTTPS server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
+// #endif
 
-    if (!HttpsCertPem.empty() && !HttpsKeyPem.empty())
-    {
-        httpd_ssl_config_t https_conf = HTTPD_SSL_CONFIG_DEFAULT();
-        https_conf.httpd.server_port = 443;
-        https_conf.httpd.max_open_sockets = 4;
-        https_conf.httpd.max_uri_handlers = 8;
-        https_conf.httpd.stack_size = 8192;
-        https_conf.cacert_pem = (const uint8_t *)HttpsCertPem.c_str();
-        https_conf.cacert_len = HttpsCertPem.length() + 1;
-        https_conf.prvtkey_pem = (const uint8_t *)HttpsKeyPem.c_str();
-        https_conf.prvtkey_len = HttpsKeyPem.length() + 1;
+    // if (!HttpsCertPem.empty() && !HttpsKeyPem.empty())
+    // {
+    //     #ifdef EXTRA_SERIAL_DEBUG_PLUS
+    //     Serial.printf("Cert PEM length: %d, Key PEM length: %d\n", HttpsCertPem.length(), HttpsKeyPem.length());
+    //     Serial.printf("Cert starts with: %.40s\n", HttpsCertPem.c_str());
+    //     Serial.printf("Key starts with: %.40s\n", HttpsKeyPem.c_str());
+    //     #endif
 
-        if (httpd_ssl_start(&WebServerHTTPS, &https_conf) != ESP_OK)
-        {
-            Serial.println("❌ Failed to start HTTPS server");
-            WebServerHTTPS = nullptr;
-        }
-        else
-        {
-            Serial.println("✅ HTTPS server started on port 443");
-        }
+    //     httpd_ssl_config_t https_conf = HTTPD_SSL_CONFIG_DEFAULT();
+    //     https_conf.httpd.server_port = 443;
+    //     https_conf.httpd.max_open_sockets = 4;
+    //     https_conf.httpd.max_uri_handlers = 16;
+    //     https_conf.httpd.stack_size = 10240;
+    //     https_conf.httpd.uri_match_fn = httpd_uri_match_wildcard;
+        
+    //     https_conf.cacert_pem = (const uint8_t *)HttpsCertPem.c_str();
+    //     https_conf.cacert_len = HttpsCertPem.length() + 1;
+    //     https_conf.prvtkey_pem = (const uint8_t *)HttpsKeyPem.c_str();
+    //     https_conf.prvtkey_len = HttpsKeyPem.length() + 1;
+
+    //     if (httpd_ssl_start(&WebServerHTTPS, &https_conf) != ESP_OK)
+    //     {
+    //         Serial.println("🌐 ❌ Failed to start HTTPS server");
+    //         WebServerHTTPS = nullptr;
+    //     }
+    //     else
+    //     {
+    //         Serial.println("🌐 ✅ HTTPS server started on port 443");
+    //         httpd_register_err_handler(WebServerHTTPS, HTTPD_404_NOT_FOUND, not_found_handler);
+    //     }
+    // }
+
+    if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK) {
+        Serial.println("❌ Failed to start HTTP server");
+        WebServerHTTP = nullptr;
+    } else {
+        Serial.println("✅ HTTP server started on port 80");
     }
 
-    // httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
-    // http_config.server_port = 80;
-    // http_config.max_open_sockets = 1;
-    // http_config.max_uri_handlers = 10;
-    // http_config.stack_size = 8192;
-
-    // Serial.println("✅ Pre-HTTP server heap: " + String(ESP.getFreeHeap()) + " bytes");
-    // Serial.println("✅ Pre-HTTP server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
-
-    // if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK) {
-    //     Serial.println("❌ Failed to start HTTP server");
-    //     WebServerHTTP = nullptr;
-    // } else {
-    //     Serial.println("✅ HTTP server started on port 80");
-    // }
+    if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK) {
+        Serial.println("❌ Failed to start HTTP server");
+        WebServerHTTP = nullptr;
+    } else {
+        Serial.println("🌐 ✅ HTTP server started on port 80");
+    }
 
     static const httpd_uri_t uri_root = {
         .uri = "/",
@@ -642,6 +677,7 @@ void Web::InitWebServer()
 #endif
 }
 
+// Hotspot web server uses HTTPS
 void Web::InitWebServer_Hotspot()
 {
 #ifdef EXTRA_SERIAL_DEBUG
@@ -664,6 +700,8 @@ void Web::InitWebServer_Hotspot()
         https_conf.httpd.server_port = 443;
         https_conf.httpd.max_open_sockets = 1;
         https_conf.httpd.max_uri_handlers = 10;
+        https_conf.httpd.stack_size = 10240;
+        https_conf.httpd.uri_match_fn = httpd_uri_match_wildcard;
         https_conf.cacert_pem = (const uint8_t *)HttpsCertPem.c_str();
         https_conf.cacert_len = HttpsCertPem.length() + 1;
         https_conf.prvtkey_pem = (const uint8_t *)HttpsKeyPem.c_str();
@@ -677,6 +715,7 @@ void Web::InitWebServer_Hotspot()
         else
         {
             Serial.println("✅ HTTPS server started on port 443");
+            httpd_register_err_handler(WebServerHTTPS, HTTPD_404_NOT_FOUND, not_found_handler);
         }
     }
 

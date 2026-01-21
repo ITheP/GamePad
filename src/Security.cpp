@@ -79,6 +79,8 @@ static bool IsCertificateExpired(const std::string &certPem) {
 // Generate a new self-signed HTTPS certificate
 static bool GenerateHTTPSCertificate(std::string &certPem, std::string &keyPem) {
     int ret = 0;
+    int cert_len = 0;
+    int key_len = 0;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_pk_context key;
@@ -173,22 +175,35 @@ static bool GenerateHTTPSCertificate(std::string &certPem, std::string &keyPem) 
 
     // Set MD algorithm
     mbedtls_x509write_crt_set_md_alg(&crt, MBEDTLS_MD_SHA256);
+    
+    // Add basicConstraints extension (mark as CA for self-signed)
+    ret = mbedtls_x509write_crt_set_basic_constraints(&crt, 1, -1);
+    if (ret != 0) {
+        Serial.printf("Failed to set basic constraints: %d\n", ret);
+        goto cleanup;
+    }
 
     // Self-sign the certificate
     ret = mbedtls_x509write_crt_pem(&crt, cert_buffer, sizeof(cert_buffer),
                                     mbedtls_ctr_drbg_random, &ctr_drbg);
-    if (ret != 0) {
+    if (ret < 0) {
         Serial.printf("Failed to sign/write certificate: %d\n", ret);
         goto cleanup;
     }
+    // mbedtls_x509write_crt_pem returns negative on success (negative of bytes written)
+    // mbedtls already includes null terminator in the output, so just use it
+    cert_len = -ret;
     certPem = std::string((const char *)cert_buffer);
 
     // Write private key to PEM format
     ret = mbedtls_pk_write_key_pem(&key, key_buffer, sizeof(key_buffer));
-    if (ret != 0) {
+    if (ret < 0) {
         Serial.printf("Failed to write key PEM: %d\n", ret);
         goto cleanup;
     }
+    // mbedtls_pk_write_key_pem returns negative on success (negative of bytes written)
+    // mbedtls already includes null terminator in the output, so just use it
+    key_len = -ret;
     keyPem = std::string((const char *)key_buffer);
 
     Serial.println("✅ HTTPS certificate generated successfully");

@@ -32,8 +32,8 @@ public:
     static void InitWebServer();
     static void InitWebServer_Hotspot();
 
-    static void StartServer();
-    static void StopServer();
+    static void WiFiEnabled();
+    static void WiFiDisabled();
 
     static void RenderIcons();
 
