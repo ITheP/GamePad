@@ -1,11 +1,4 @@
-const ui = {
-    content: document.getElementById('content'),
-    response: document.getElementById('uiResponse'),
-    batteryLevel: document.getElementById('uiBatteryLevel'),
-    batteryVoltage: document.getElementById('uiBatteryVoltage'),
-    wifiSignal: document.getElementById('uiWiFiSignal'),
-    wifiSignalLabel: document.getElementById('uiWiFiSignalLabel')
-};
+var ui;
 
 function updateTime() {
     const el = document.getElementById('currentTime');
@@ -29,6 +22,15 @@ function randomisedValue(min, max, rangeExpansion) {
 }
 
 function startAutoRefresh() {
+    ui = {
+        content: document.getElementById('content'),
+        response: document.getElementById('uiResponse'),
+        batteryLevel: document.getElementById('uiBatteryLevel'),
+        batteryVoltage: document.getElementById('uiBatteryVoltage'),
+        wifiSignal: document.getElementById('uiWiFiSignal'),
+        wifiSignalLabel: document.getElementById('uiWiFiSignalLabel')
+    };
+
     // Load initial device info and battery info
     updateBatteryInformation();
     updateWiFiInformation();
@@ -70,17 +72,19 @@ function clearResponse() {
 // - input ascending or descending
 // - output ascending or descending
 // - positive or negative values
-const mapValue = (x, inMin, inMax, outMin, outMax) => {
+function mapValue(x, inMin, inMax, outMin, outMax) {
     const t = (x - inMin) / (inMax - inMin);      // normalized 0–1 (or 1–0 if reversed)
     const y = outMin + t * (outMax - outMin);     // scale to output range
 
     // clamp to whichever bound is lower/higher
     return Math.max(Math.min(outMin, outMax),
         Math.min(Math.max(outMin, outMax), y));
-};
+}
 
 // Clamp that accounts for positive and negative values
-const clamp = (value, a, b) => Math.max(Math.min(a, b), Math.min(Math.max(a, b), value));
+function clamp(value, a, b) {
+    return Math.max(Math.min(a, b), Math.min(Math.max(a, b), value));
+}
 
 function setGauge(gauge, min, max, value, unit, icon, empty) {
     const fillElem = gauge.querySelector('.gauge-fill');
@@ -89,7 +93,7 @@ function setGauge(gauge, min, max, value, unit, icon, empty) {
     const warningElem = gauge.querySelector('.gauge-warning');
 
     // const range = max - min;
-    // let pct = Math.max(0, Math.min(1, (value - min) / range)) * 100;
+    // let pct = Math.max(0, Math.min (1, (value - min) / range)) * 100;
 
     // Accounts for positive ranges and negative ranges
     const clampedValue = clamp(value, min, max);

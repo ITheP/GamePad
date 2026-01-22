@@ -463,6 +463,7 @@ static esp_err_t default_handler(httpd_req_t *req)
             contentType = "text/plain";
 
         httpd_resp_set_type(req, contentType.c_str());
+        httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=86400");
 
         File file = LittleFS.open(path, FILE_READ);
         const size_t bufferSize = 512;
@@ -531,17 +532,17 @@ void Web::InitWebServer()
     WiFiHotspotMode = false;
     InitHTMLMergeFields();
 
-    if (!Security::LoadOrGenerateHTTPSCertificates(HttpsCertPem, HttpsKeyPem))
-    {
-        Serial.println("🌐 ⚠️  No HTTPS certificates available");
-    }
-
     // Recommended open sockets and url handlers
     // HTTP connections: 3–5
     // HTTPS connections: 2–3
     // Total URI handlers: 20–40
     // That's in total - so probably 4 connections between them and 30 URI handlers total
     // Heap free after startup: 120 KB+ recommended
+
+#ifdef EXTRA_SERIAL_DEBUG_PLUS
+    Serial.println("🌐 ✅ Pre-HTTP server heap: " + String(ESP.getFreeHeap()) + " bytes");
+    Serial.println("🌐 ✅ Pre-HTTP server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
+#endif
 
     // HTTP Web Server
     httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
@@ -551,12 +552,15 @@ void Web::InitWebServer()
     http_config.stack_size = 8192;
     http_config.uri_match_fn = httpd_uri_match_wildcard;
 
-    Serial.println("✅ Pre-HTTP server heap: " + String(ESP.getFreeHeap()) + " bytes");
-    Serial.println("✅ Pre-HTTP server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
+    if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK) {
+        Serial.println("🌐 ❌ Failed to start HTTP server");
+        WebServerHTTP = nullptr;
+    } else {
+        Serial.println("🌐 ✅ HTTP server started on port 80");
+    }
 
 // HTTPS Web Server
 
-    // Start HTTPS first to allocate its resources before HTTP
 // #ifdef EXTRA_SERIAL_DEBUG_PLUS
 //     Serial.println("🌐 ✅ Pre-HTTPS server heap: " + String(ESP.getFreeHeap()) + " bytes");
 //     Serial.println("🌐 ✅ Pre-HTTPS server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
@@ -593,20 +597,6 @@ void Web::InitWebServer()
     //         httpd_register_err_handler(WebServerHTTPS, HTTPD_404_NOT_FOUND, not_found_handler);
     //     }
     // }
-
-    if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK) {
-        Serial.println("❌ Failed to start HTTP server");
-        WebServerHTTP = nullptr;
-    } else {
-        Serial.println("✅ HTTP server started on port 80");
-    }
-
-    if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK) {
-        Serial.println("❌ Failed to start HTTP server");
-        WebServerHTTP = nullptr;
-    } else {
-        Serial.println("🌐 ✅ HTTP server started on port 80");
-    }
 
     static const httpd_uri_t uri_root = {
         .uri = "/",
@@ -690,7 +680,7 @@ void Web::InitWebServer_Hotspot()
 
     if (!Security::LoadOrGenerateHTTPSCertificates(HttpsCertPem, HttpsKeyPem))
     {
-        Serial.println("⚠️  No HTTPS certificates available");
+        Serial.println("🌐 ⚠️  No HTTPS certificates available");
     }
 
     // Start HTTPS first to allocate its resources before HTTP
@@ -709,30 +699,30 @@ void Web::InitWebServer_Hotspot()
 
         if (httpd_ssl_start(&WebServerHTTPS, &https_conf) != ESP_OK)
         {
-            Serial.println("❌ Failed to start HTTPS server");
+            Serial.println("🌐 ❌ Failed to start HTTPS server");
             WebServerHTTPS = nullptr;
         }
         else
         {
-            Serial.println("✅ HTTPS server started on port 443");
+            Serial.println("🌐 ✅ HTTPS server started on port 443");
             httpd_register_err_handler(WebServerHTTPS, HTTPD_404_NOT_FOUND, not_found_handler);
         }
     }
 
-    httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
-    http_config.server_port = 80;
-    http_config.max_open_sockets = 1;
-    http_config.max_uri_handlers = 10;
+    // httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
+    // http_config.server_port = 80;
+    // http_config.max_open_sockets = 1;
+    // http_config.max_uri_handlers = 10;
 
-    if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK)
-    {
-        Serial.println("❌ Failed to start HTTP server");
-        WebServerHTTP = nullptr;
-    }
-    else
-    {
-        Serial.println("✅ HTTP server started on port 80");
-    }
+    // if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK)
+    // {
+    //     Serial.println("❌ Failed to start HTTP server");
+    //     WebServerHTTP = nullptr;
+    // }
+    // else
+    // {
+    //     Serial.println("✅ HTTP server started on port 80");
+    // }
 
     static const httpd_uri_t uri_hotspot = {
         .uri = "/",
@@ -783,7 +773,7 @@ void Web::InitWebServer_Hotspot()
     register_handler(uri_default);
 
 #ifdef EXTRA_SERIAL_DEBUG
-    Serial.println("✅ Hotspot mode routes registered");
+    Serial.println("🌐 ✅ Hotspot mode routes registered");
 #endif
 }
 
@@ -831,19 +821,16 @@ String Web::htmlDecode(const String &in)
 
 void Web::SendPageWithMergeFields(const char *path, const std::map<String, String> &replacements, httpd_req_t *req)
 {
-    Serial.println("SendPageWithMergeFields: " + String(path));
 
     File file = LittleFS.open(path, FILE_READ);
     if (!file)
     {
 #ifdef EXTRA_SERIAL_DEBUG
-        Serial.println("🚫 SendPageWithMergeFields: File not found - " + String(path));
+        Serial.println("🌐 🚫 Merged Page: File not found - " + String(path));
 #endif
         httpd_resp_send_404(req);
         return;
     }
-
-    Serial.println("merging data");
 
     size_t fileSize = file.size();
     String fileContent;
@@ -885,7 +872,7 @@ void Web::SendPageWithMergeFields(const char *path, const std::map<String, Strin
     httpd_resp_send(req, response.c_str(), response.length());
 
 #ifdef EXTRA_SERIAL_DEBUG
-    Serial.println("✅ SendPageWithMergeFields: Processed " + String(path) + " (" + String(fileSize) + " bytes)");
+    Serial.println("✅ Merged Page: Processed " + String(path) + " (" + String(fileSize) + " bytes)");
 #endif
 }
 
