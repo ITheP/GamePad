@@ -56,6 +56,16 @@ public:
     char Function[32];
     char CrashInfo[256];
   };
+  static const char CrashDir[];
+
+  struct DebugMark
+  {
+    int Value;
+    int LineNumber;
+    char Filename[32];
+    char Function[32];
+    char CrashInfo[256];
+  };
 
   static void Mark(int mark);
   static void Mark(int mark, const char *details);
@@ -64,6 +74,10 @@ public:
 
   static void PowerOnInit();
   static void WarningFlashes(WarningFlashCodes code);
+  static void CheckForCrashInfo(esp_reset_reason_t reason);
+  static const char *GetLatestCrashFilePath();
+  static bool GetNextCrashFilePath(char *outPath, size_t outPathSize);
+  static void GetCrashLogPaths(std::vector<String> &outPaths, bool newestFirst = true);
   static void CheckForCrashInfo(esp_reset_reason_t reason);
   static const char *GetLatestCrashFilePath();
   static bool GetNextCrashFilePath(char *outPath, size_t outPathSize);

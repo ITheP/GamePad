@@ -68,6 +68,7 @@ int ExternalLedsEnabled[ExternalLED_Count];
 #include <MenuFunctions.h>
 #include <Idle.h>
 #include <Prefs.h>
+#include <Prefs.h>
 
 // Task for handling FastLED updates
 void UpdateExternalLEDs(void *parameter)
@@ -297,6 +298,9 @@ void setupUSB()
   // We actually start the serial earlier than this, to try and output earlier
   // startup info. We process here partly just to look super fancy.
   // Serial.begin(SERIAL_SPEED);
+  // We actually start the serial earlier than this, to try and output earlier
+  // startup info. We process here partly just to look super fancy.
+  // Serial.begin(SERIAL_SPEED);
 
   // Show battery stuff here early on, before waiting around for Serial visuals to finish rendering
   // Gives user the opportunity to glimpse early battery level in case it is low
@@ -371,6 +375,17 @@ void setupWiFi()
   Serial_INFO;
   Serial.println("🛜 Initialising WiFi event monitoring");
 
+  // Initialize network interface - add error handling
+  esp_err_t netif_result = esp_netif_init();
+  if (netif_result != ESP_OK && netif_result != ESP_ERR_INVALID_STATE) // ESP_ERR_INVALID_STATE means already initialized
+  {
+    Serial_ERROR;
+    Serial.printf("🛜 ❌ esp_netif_init failed with error: %d\n", netif_result);
+    // Continue anyway - WiFi may still work
+  }
+
+  // Add a small delay to let the network stack stabilize
+  delay(50);
   // Initialize network interface - add error handling
   esp_err_t netif_result = esp_netif_init();
   if (netif_result != ESP_OK && netif_result != ESP_ERR_INVALID_STATE) // ESP_ERR_INVALID_STATE means already initialized
@@ -629,6 +644,7 @@ void setupLEDs()
   xTaskCreatePinnedToCore(
       UpdateExternalLEDs,
       "LEDUpdateTask",
+      16000, // Stack size
       16000, // Stack size
       NULL,
       1,
@@ -999,6 +1015,8 @@ void SetupLittleFS()
 {
   // Used for read/write of Profile data, crash logs, etc. etc.
   // Called very early into setup so most things aren't configured yet
+  // Used for read/write of Profile data, crash logs, etc. etc.
+  // Called very early into setup so most things aren't configured yet
 
   if (!LittleFS.begin(true))
   {
@@ -1288,6 +1306,7 @@ void DrawMainScreen()
 void loop()
 {
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
   Debug::Mark(10);
 #endif
 
@@ -1385,6 +1404,7 @@ void MainLoop()
   }
 
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
   Debug::Mark(20);
 #endif
 
@@ -1411,6 +1431,7 @@ void MainLoop()
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Snapshot("Loop.Init", showBenchmark);
 #endif
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
   Debug::Mark(30);
 #endif
@@ -1469,6 +1490,7 @@ void MainLoop()
       Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, width, 5, C_WHITE);
     }
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
     Debug::Mark(40);
 #endif
 
@@ -1483,6 +1505,7 @@ void MainLoop()
       else
         RenderIcon(Icon_USB_Disconnected, 0, 53, 16, 9);
     }
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
     Debug::Mark(50);
 #endif
@@ -1503,6 +1526,7 @@ void MainLoop()
 
 // Digital inputs
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
   Debug::Mark(100);
 #endif
   uint16_t state;
@@ -1521,6 +1545,7 @@ void MainLoop()
     }
 
     input->ValueState.StateJustChanged = false;
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
     Debug::Mark(110);
 #endif
@@ -1546,6 +1571,7 @@ void MainLoop()
         unsigned long timeDifference = timeCheck - input->ValueState.StateChangedWhen;
         // Serial.println("NAME - " + String(input->Label));
         // Serial.println("State - " + String(state) + " for " + String(input->ValueState.Value));
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
         Debug::Mark(120);
 #endif
@@ -1617,11 +1643,13 @@ void MainLoop()
         }
       }
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
       Debug::Mark(130);
 #endif
       // Process when state has changed
       if (state != input->ValueState.Value && input->ValueState.Value != LONG_PRESS_MONITORING)
       {
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
         Debug::Mark(140);
 #endif
@@ -1693,6 +1721,7 @@ void MainLoop()
         {
           // RELEASED!!
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
           Debug::Mark(150);
 #endif
           // Any extra special custom to specific controller code
@@ -1722,12 +1751,14 @@ void MainLoop()
 
 // Analog Inputs
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
   Debug::Mark(200);
 #endif
   for (int i = 0; i < AnalogInputs_Count; i++)
   {
     input = AnalogInputs[i];
     state = analogRead(input->Pin);
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
     Debug::Mark(210);
 #endif
@@ -1739,6 +1770,7 @@ void MainLoop()
     {
       if (state != input->ValueState.Value)
       {
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
         Debug::Mark(220);
 #endif
@@ -1766,6 +1798,7 @@ void MainLoop()
 
         sendReport = true;
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
         Debug::Mark(230);
 #endif
       }
@@ -1777,6 +1810,7 @@ void MainLoop()
 #endif
 
   // Hat inputs
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
   Debug::Mark(300);
 #endif
@@ -1791,6 +1825,7 @@ void MainLoop()
 
   for (int i = 0; i < HatInputs_Count; i++)
   {
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
     Debug::Mark(310);
 #endif
@@ -1822,6 +1857,7 @@ void MainLoop()
       // else state remains same as last time
     }
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
     Debug::Mark(320);
 #endif
     // Step 2, copy first pin state to extra buffer pin state (faster/easier calculations, no wrapping needed)
@@ -1835,6 +1871,7 @@ void MainLoop()
       hatCurrentState = 8;
     else
     {
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
       Debug::Mark(330);
 #endif
@@ -1857,6 +1894,7 @@ void MainLoop()
       }
     }
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
     Debug::Mark(340);
 #endif
     // Final check to see if things have changed since last time
@@ -1864,6 +1902,7 @@ void MainLoop()
 
     if (hatCurrentState != hatPreviousState)
     {
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
       Debug::Mark(350);
 #endif
@@ -1886,6 +1925,7 @@ void MainLoop()
                                                                             // we can use hat activities for onboard operations (such as menu navigation)
                                                                             // without it being reported back via bluetooth
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
       Debug::Mark(360);
 #endif
       if (hatInput->ExtraOperation[hatCurrentState] != NONE)
@@ -1905,6 +1945,7 @@ void MainLoop()
       }
     }
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
     Debug::Mark(370);
 #endif
   }
@@ -1915,6 +1956,7 @@ void MainLoop()
     Serial.print("Hat Change: ");
     Serial.println(HatValues[0]);
 #endif
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
     Debug::Mark(380);
 #endif
@@ -1987,6 +2029,7 @@ void MainLoop()
       Serial.println("Screen Idle Triggered");
 #endif
 
+
       // And get ready to show display idle effect
       InitIdleEffect();
     }
@@ -2015,6 +2058,7 @@ void MainLoop()
   }
 
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
   Debug::Mark(400);
 #endif
 
@@ -2023,6 +2067,7 @@ void MainLoop()
 
   if (BTConnectionState == true)
   {
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
     Debug::Mark(410);
 #endif
@@ -2048,6 +2093,7 @@ void MainLoop()
 #endif
     }
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
     Debug::Mark(420);
 #endif
 
@@ -2064,6 +2110,7 @@ void MainLoop()
   else
   {
     // No Bluetooth - always be updating the searching icons
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
     Debug::Mark(430);
 #endif
@@ -2090,6 +2137,7 @@ void MainLoop()
   }
 
 #ifdef DEBUG_MARKS
+#ifdef DEBUG_MARKS
   Debug::Mark(500);
 #endif
 
@@ -2100,6 +2148,7 @@ void MainLoop()
     Network::HandleWiFi(Second);
 #endif
 
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
   Debug::Mark(550);
 #endif
@@ -2123,6 +2172,7 @@ void MainLoop()
     UpdateLEDs = true;
 #endif
 
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
   Debug::Mark(600);
 #endif
@@ -2153,6 +2203,7 @@ void MainLoop()
     if (ControllerIdle_Screen)
     {
       RenderIdleEffect();
+      RenderIdleEffect();
 
 #ifdef INCLUDE_BENCHMARKS
       MainBenchmark.Snapshot("Loop.IdleEffect", showBenchmark);
@@ -2166,6 +2217,7 @@ void MainLoop()
 #endif
   }
 
+#ifdef DEBUG_MARKS
 #ifdef DEBUG_MARKS
   Debug::Mark(700);
 #endif
