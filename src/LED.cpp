@@ -395,6 +395,7 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
 #endif
     }
 
-    taskYIELD();
+    //taskYIELD();
+    vTaskDelay(0);
   }
 }

@@ -8,6 +8,7 @@
 //#define INCLUDE_BENCHMARKS_LED    // Basic performance stats for LED processing
 //#define STRAIGHT_TO_CONFIG_MENU     // Skip straight to config menu on start up for easier testing
 //#define WHITE_SCREEN              // Display will show a solid white screen, handy when physically aligning panel in device
+#define DEBUG_MARKS                  // Extra debug logging that survives crashes
 
 #define SETUP_DELAY     250         // Delay between stages of initial start up
                                     // Could be pretty much instant, but having a delay gives a chance to display

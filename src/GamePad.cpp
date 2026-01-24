@@ -1,5 +1,6 @@
 #include <Wire.h>
 #include <WiFi.h>
+#include <vector>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <RREFont.h>
@@ -28,8 +29,6 @@
 #include "Menus.h"
 #include "Debug.h"
 #include "Web.h"
-
-#define DebugMarks
 
 // Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
 #include "DeviceConfig.h"
@@ -68,6 +67,7 @@ int ExternalLedsEnabled[ExternalLED_Count];
 #include <Profiles.h>
 #include <MenuFunctions.h>
 #include <Idle.h>
+#include <Prefs.h>
 
 // Task for handling FastLED updates
 void UpdateExternalLEDs(void *parameter)
@@ -164,6 +164,10 @@ void setupShowBattery()
 
 void setupDisplay()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, "setupDisplay()");
+#endif
+
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   // if (!Display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS, &Wire, OLED_RESET)) {
   if (!Display.begin(SCREEN_ADDRESS, true))
@@ -238,6 +242,10 @@ void RenderGlint(int frame)
 
 void setupRenderLogo()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(__LINE__, __func__);
+#endif
+
   RenderIconRuns(Logo, Logo_RunCount);
   Display.display();
 
@@ -248,6 +256,10 @@ void setupRenderLogo()
 
 void setupBattery()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __func__);
+#endif
+
   // Battery hardware monitoring
   pinMode(BATTERY_MONITOR_PIN, INPUT);
 
@@ -257,6 +269,10 @@ void setupBattery()
 
 void setupUSB()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(__LINE__, __func__);
+#endif
+
   // Animate USB socket coming into screen from off left - just to look cool
   for (int i = -32; i <= 0; i++)
   {
@@ -266,7 +282,9 @@ void setupUSB()
     delay(10);
   }
 
-  Serial.begin(SERIAL_SPEED);
+  // We actually start the serial earlier than this, to try and output earlier
+  // startup info. We process here partly just to look super fancy.
+  // Serial.begin(SERIAL_SPEED);
 
   // Show battery stuff here early on, before waiting around for Serial visuals to finish rendering
   // Gives user the opportunity to glimpse early battery level in case it is low
@@ -337,7 +355,17 @@ void setupWiFi()
   Serial_INFO;
   Serial.println("🛜 Initialising WiFi event monitoring");
 
-  esp_netif_init(); // Need to do this now else the web service throws a wobbler
+  // Initialize network interface - add error handling
+  esp_err_t netif_result = esp_netif_init();
+  if (netif_result != ESP_OK && netif_result != ESP_ERR_INVALID_STATE) // ESP_ERR_INVALID_STATE means already initialized
+  {
+    Serial_ERROR;
+    Serial.printf("🛜 ❌ esp_netif_init failed with error: %d\n", netif_result);
+    // Continue anyway - WiFi may still work
+  }
+
+  // Add a small delay to let the network stack stabilize
+  delay(50);
 
   WiFi.onEvent([](WiFiEvent_t event)
                {
@@ -566,7 +594,7 @@ void setupLEDs()
   xTaskCreatePinnedToCore(
       UpdateExternalLEDs,
       "LEDUpdateTask",
-      10000,
+      16000, // Stack size
       NULL,
       1,
       &UpdateExternalLEDsTask,
@@ -918,11 +946,8 @@ void setupController()
 
 void SetupLittleFS()
 {
-  // Used for read/write of Profile data etc.
-
-  Serial.println();
-  Serial_INFO;
-  Serial.println("📁 Setting up LittleFS...");
+  // Used for read/write of Profile data, crash logs, etc. etc.
+  // Called very early into setup so most things aren't configured yet
 
   if (!LittleFS.begin(true))
   {
@@ -954,6 +979,28 @@ void setup()
   delay(10); // Give pins on start up time to settle if theres any power up glitching
 
   Wire.begin(I2C_SDA, I2C_SCL);
+
+  // Set this up super early, used to write crash logs etc.
+  SetupLittleFS();
+
+  // This checked on and handled better when we get to setupUSB()
+  // but we can't do pretty visuals etc. until other parts are configured
+  // So it's possible it fails/doesnt work - but thats ok.
+  Serial.begin(SERIAL_SPEED);
+
+  // Handle potential previous crash details
+  esp_reset_reason_t reason = esp_reset_reason();
+  Serial_INFO;
+  if (reason == ESP_RST_POWERON)
+  {
+    Serial.println("ℹ️  Device initial power on");
+    Debug::PowerOnInit();
+  }
+  else
+  {
+    Serial.println("ℹ️  Device rebooted");
+    Debug::CheckForCrashInfo(reason);
+  }
 
   setupDisplay();
 
@@ -997,24 +1044,15 @@ void setup()
   Serial_INFO;
   Serial.printf("ℹ️  Arduino Core Version: %d\n", ARDUINO);
 
-  // Set this up super early, used to write crash logs etc.
-  SetupLittleFS();
+  // Initialize NVS preferences storage (boot count, settings, etc.)
+  Prefs::Init();
 
-  // Handle potential previous crash details
-  esp_reset_reason_t reason = esp_reset_reason();
-  Serial_INFO;
-  if (reason == ESP_RST_POWERON)
-  {
-    Serial.println("ℹ️  Device initial power on");
-    Debug::PowerOnInit();
-  }
-  else
-  {
-    Serial.println("ℹ️  Device rebooted");
-    Debug::CheckForCrashInfo();
-  }
-
-  DumpFileToSerial(Debug::CrashFile); // Output any previous crash file we might have had for info purposes
+  Serial.println("💥 📁 Checking for crash logs...");
+  std::vector<String> crashLogs;
+  Debug::GetCrashLogPaths(crashLogs, true);
+  snprintf(buffer, sizeof(buffer), "💥 ℹ️ Found %d crash log(s)", crashLogs.size());
+  for (const auto &logPath : crashLogs)
+    DumpFileToSerial(logPath.c_str()); // Output any previous crash files we might have had for info purposes
 
   // We need inputs set up now before anything else
   // so we can check for boot up redirection to configuration screen
@@ -1182,7 +1220,7 @@ void DrawMainScreen()
 
 void loop()
 {
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(10);
 #endif
 
@@ -1279,7 +1317,7 @@ void MainLoop()
     Web::RenderIcons();
   }
 
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(20);
 #endif
 
@@ -1306,7 +1344,7 @@ void MainLoop()
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Snapshot("Loop.Init", showBenchmark);
 #endif
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(30);
 #endif
 
@@ -1363,7 +1401,7 @@ void MainLoop()
 
       Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, width, 5, C_WHITE);
     }
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(40);
 #endif
 
@@ -1378,7 +1416,7 @@ void MainLoop()
       else
         RenderIcon(Icon_USB_Disconnected, 0, 53, 16, 9);
     }
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(50);
 #endif
   }
@@ -1397,7 +1435,7 @@ void MainLoop()
 #endif
 
 // Digital inputs
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(100);
 #endif
   uint16_t state;
@@ -1416,7 +1454,7 @@ void MainLoop()
     }
 
     input->ValueState.StateJustChanged = false;
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(110);
 #endif
     unsigned long timeCheck = micros();
@@ -1441,7 +1479,7 @@ void MainLoop()
         unsigned long timeDifference = timeCheck - input->ValueState.StateChangedWhen;
         // Serial.println("NAME - " + String(input->Label));
         // Serial.println("State - " + String(state) + " for " + String(input->ValueState.Value));
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
         Debug::Mark(120);
 #endif
 
@@ -1511,13 +1549,13 @@ void MainLoop()
           }
         }
       }
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
       Debug::Mark(130);
 #endif
       // Process when state has changed
       if (state != input->ValueState.Value && input->ValueState.Value != LONG_PRESS_MONITORING)
       {
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
         Debug::Mark(140);
 #endif
         // Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
@@ -1587,7 +1625,7 @@ void MainLoop()
         else
         {
           // RELEASED!!
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
           Debug::Mark(150);
 #endif
           // Any extra special custom to specific controller code
@@ -1616,14 +1654,14 @@ void MainLoop()
 #endif
 
 // Analog Inputs
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(200);
 #endif
   for (int i = 0; i < AnalogInputs_Count; i++)
   {
     input = AnalogInputs[i];
     state = analogRead(input->Pin);
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(210);
 #endif
     // We only register a change if it is above a certain level of change (kind of like smoothing it but without smoothing it)
@@ -1634,7 +1672,7 @@ void MainLoop()
     {
       if (state != input->ValueState.Value)
       {
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
         Debug::Mark(220);
 #endif
         input->ValueState.Value = state;
@@ -1660,7 +1698,7 @@ void MainLoop()
           input->CustomOperationPressed();
 
         sendReport = true;
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
         Debug::Mark(230);
 #endif
       }
@@ -1672,7 +1710,7 @@ void MainLoop()
 #endif
 
   // Hat inputs
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(300);
 #endif
 
@@ -1686,7 +1724,7 @@ void MainLoop()
 
   for (int i = 0; i < HatInputs_Count; i++)
   {
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(310);
 #endif
 
@@ -1716,7 +1754,7 @@ void MainLoop()
       }
       // else state remains same as last time
     }
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(320);
 #endif
     // Step 2, copy first pin state to extra buffer pin state (faster/easier calculations, no wrapping needed)
@@ -1730,7 +1768,7 @@ void MainLoop()
       hatCurrentState = 8;
     else
     {
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
       Debug::Mark(330);
 #endif
 
@@ -1751,7 +1789,7 @@ void MainLoop()
         subState += 2; // Hat values go 1, 3, 5, 7 for Up, Right, Down, Left, diagonals go 2, 4, 6, 8
       }
     }
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(340);
 #endif
     // Final check to see if things have changed since last time
@@ -1759,7 +1797,7 @@ void MainLoop()
 
     if (hatCurrentState != hatPreviousState)
     {
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
       Debug::Mark(350);
 #endif
       hatInput->ValueState.Value = hatCurrentState;
@@ -1780,7 +1818,7 @@ void MainLoop()
                                                                             // We allow cancellation of bluetooth setting here so
                                                                             // we can use hat activities for onboard operations (such as menu navigation)
                                                                             // without it being reported back via bluetooth
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
       Debug::Mark(360);
 #endif
       if (hatInput->ExtraOperation[hatCurrentState] != NONE)
@@ -1799,7 +1837,7 @@ void MainLoop()
           hatInput->Statistics[hatCurrentState]->AddCount();
       }
     }
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(370);
 #endif
   }
@@ -1810,7 +1848,7 @@ void MainLoop()
     Serial.print("Hat Change: ");
     Serial.println(HatValues[0]);
 #endif
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(380);
 #endif
     bleGamepad.setHats(HatValues[0], HatValues[1], HatValues[2], HatValues[3]);
@@ -1881,7 +1919,7 @@ void MainLoop()
       Serial_INFO;
       Serial.println("Screen Idle Triggered");
 #endif
-  
+
       // And get ready to show display idle effect
       InitIdleEffect();
     }
@@ -1909,7 +1947,7 @@ void MainLoop()
     }
   }
 
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(400);
 #endif
 
@@ -1918,7 +1956,7 @@ void MainLoop()
 
   if (BTConnectionState == true)
   {
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(410);
 #endif
     if (sendReport)
@@ -1942,7 +1980,7 @@ void MainLoop()
       ExternalLedsEnabled[ExternalLED_StatusLED] = false;
 #endif
     }
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(420);
 #endif
 
@@ -1959,7 +1997,7 @@ void MainLoop()
   else
   {
     // No Bluetooth - always be updating the searching icons
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
     Debug::Mark(430);
 #endif
 
@@ -1984,7 +2022,7 @@ void MainLoop()
 #endif
   }
 
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(500);
 #endif
 
@@ -1995,7 +2033,7 @@ void MainLoop()
     Network::HandleWiFi(Second);
 #endif
 
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(550);
 #endif
 
@@ -2018,7 +2056,7 @@ void MainLoop()
     UpdateLEDs = true;
 #endif
 
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(600);
 #endif
 
@@ -2047,7 +2085,7 @@ void MainLoop()
   {
     if (ControllerIdle_Screen)
     {
-        RenderIdleEffect();
+      RenderIdleEffect();
 
 #ifdef INCLUDE_BENCHMARKS
       MainBenchmark.Snapshot("Loop.IdleEffect", showBenchmark);
@@ -2061,7 +2099,7 @@ void MainLoop()
 #endif
   }
 
-#ifdef DebugMarks
+#ifdef DEBUG_MARKS
   Debug::Mark(700);
 #endif
 

@@ -142,28 +142,44 @@ esp_err_t Web::SendPage_Debug(httpd_req_t *req)
     html << "<h1>Debug</h1>";
     html << "Device has been booted " << Prefs::BootCount << " times<hr/>";
 
-    if (!LittleFS.exists(Debug::CrashFile))
+    std::vector<String> crashLogs;
+    Debug::GetCrashLogPaths(crashLogs, true);
+
+    if (crashLogs.empty())
     {
-        html << "No crash.log exists";
+        html << "No crash logs exist";
     }
     else
     {
-        File file = LittleFS.open(Debug::CrashFile, FILE_READ);
-        if (!file)
+        html << "<h2>Crash Logs</h2>";
+
+        for (size_t i = 0; i < crashLogs.size(); i++)
         {
-            html << Debug::CrashFile << " exists but unable to open it";
-        }
-        else
-        {
-            html << Debug::CrashFile << " contents is as follows...<br/><br/><pre><code>";
-            const size_t bufferSize = 512;
-            uint8_t buffer[bufferSize];
-            while (file.available())
+            float opacity = 1.0f - (0.05f * static_cast<float>(i));
+            if (opacity < 0.0f)
+                opacity = 0.0f;
+
+            html << "<div style='opacity:" << std::fixed << std::setprecision(2) << opacity << "'>";
+            html << "<strong>" << crashLogs[i].c_str() << "</strong><br/><pre><code>";
+
+            File file = LittleFS.open(crashLogs[i].c_str(), FILE_READ);
+            if (file)
             {
-                size_t bytesRead = file.read(buffer, bufferSize);
-                html.write(reinterpret_cast<const char *>(buffer), bytesRead);
+                const size_t bufferSize = 512;
+                uint8_t buffer[bufferSize];
+                while (file.available())
+                {
+                    size_t bytesRead = file.read(buffer, bufferSize);
+                    html.write(reinterpret_cast<const char *>(buffer), bytesRead);
+                }
+                file.close();
             }
-            file.close();
+            else
+            {
+                html << "Failed to open " << crashLogs[i].c_str();
+            }
+
+            html << "</code></pre></div><hr/>";
         }
     }
 

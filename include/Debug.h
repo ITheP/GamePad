@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <vector>
 #include "Config.h"
 #include "Defines.h"
 
@@ -45,14 +46,28 @@ class Debug
 {
 public:
   static char CrashFile[];
-  static RTC_NOINIT_ATTR char CrashInfo[1024];
+  static const char CrashDir[];
+
+  struct DebugMark
+  {
+    int Value;
+    int LineNumber;
+    char Filename[32];
+    char Function[32];
+    char CrashInfo[256];
+  };
 
   static void Mark(int mark);
-  static void RecordMark();
+  static void Mark(int mark, const char *details);
+  static void Mark(int mark, int lineNumber, const char *filename);
+  static void Mark(int mark, int lineNumber, const char *filename, const char *details);
 
   static void PowerOnInit();
   static void WarningFlashes(WarningFlashCodes code);
-  static void CheckForCrashInfo();
+  static void CheckForCrashInfo(esp_reset_reason_t reason);
+  static const char *GetLatestCrashFilePath();
+  static bool GetNextCrashFilePath(char *outPath, size_t outPathSize);
+  static void GetCrashLogPaths(std::vector<String> &outPaths, bool newestFirst = true);
   static void CrashOnPurpose();
 
   static void printUnicodeRange();

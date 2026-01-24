@@ -263,6 +263,11 @@ unsigned char Network::WiFiStatusCharacter;
 // Mainly relevant when in a connecting state.
 unsigned char Network::FinalWiFiCharacter;
 
+// Rate limiting for WiFi reconnection attempts to prevent rapid-fire reconnects
+// which can destabilize BLE+WiFi coexistence
+static unsigned long lastReconnectAttempt = 0;
+const unsigned long RECONNECT_INTERVAL_MS = 5000; // Minimum 5 seconds between reconnect attempts
+
 void Network::HandleWiFi(int second)
 {
     if (WiFiDisabled)
@@ -418,22 +423,33 @@ void Network::HandleWiFi(int second)
             }
             else if (WiFiConnectionState == WL_CONNECTION_LOST)
             {
-#ifdef EXTRA_SERIAL_DEBUG
-                Serial.println("🛜 ❌ WIFI: Connection lost, attempting to reconnect...");
-#endif
                 WiFiCharacter = Icon_WiFi_LostSignal;
                 WiFiStatus = WiFi_ReConnecting;
-                WiFi.reconnect();
+                
+                // Rate limit reconnection attempts
+                if (millis() - lastReconnectAttempt > RECONNECT_INTERVAL_MS)
+                {
+#ifdef EXTRA_SERIAL_DEBUG
+                    Serial.println("🛜 ❌ WIFI: Connection lost, attempting to reconnect...");
+#endif
+                    WiFi.reconnect();
+                    lastReconnectAttempt = millis();
+                }
             }
             else if (WiFiConnectionState == WL_DISCONNECTED)
             {
-#ifdef EXTRA_SERIAL_DEBUG
-                Serial.println("🛜 ❌ WIFI: Connection disconnected, attempting to reconnect...");
-#endif
-
                 WiFiCharacter = Icon_WiFi_LostSignal;
                 WiFiStatus = WiFi_Disconnected;
-                WiFi.reconnect();
+                
+                // Rate limit reconnection attempts
+                if (millis() - lastReconnectAttempt > RECONNECT_INTERVAL_MS)
+                {
+#ifdef EXTRA_SERIAL_DEBUG
+                    Serial.println("🛜 ❌ WIFI: Connection disconnected, attempting to reconnect...");
+#endif
+                    WiFi.reconnect();
+                    lastReconnectAttempt = millis();
+                }
             }
             else if (WiFiConnectionState == WL_NO_SSID_AVAIL)
             {
