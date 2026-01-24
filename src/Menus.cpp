@@ -14,6 +14,7 @@
 #include <Battery.h>
 #include <Network.h>
 #include <Idle.h>
+#include <Debug.h>
 
 // NOTE what seems like needlessly complicated optimisations here faffing around with buffers and screen width
 // checks etc. to display menu items is all to cut down overheads.
@@ -311,6 +312,10 @@ int DoubleLineWidth = 16;
 
 void Menus::Setup(Menu *rootMenu)
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   RootMenu = rootMenu;
   CurrentMenu = RootMenu;
 }

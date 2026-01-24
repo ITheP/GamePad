@@ -59,8 +59,8 @@ public:
 
   static void Mark(int mark);
   static void Mark(int mark, const char *details);
-  static void Mark(int mark, int lineNumber, const char *filename);
-  static void Mark(int mark, int lineNumber, const char *filename, const char *details);
+  static void Mark(int mark, int lineNumber, const char*filename, const char *function);
+  static void Mark(int mark, int lineNumber, const char*filename, const char *function, const char *details);
 
   static void PowerOnInit();
   static void WarningFlashes(WarningFlashCodes code);

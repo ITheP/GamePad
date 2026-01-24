@@ -25,8 +25,8 @@ Preferences Prefs::Handler;
 
 void Prefs::Init()
 {
-        #ifdef DEBUG_MARKS
-  Debug::Mark(1, "Prefs::Init()");
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
 #endif
 
     if (Handler.begin("boot", false))       // false = read/write

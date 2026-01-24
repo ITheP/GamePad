@@ -165,16 +165,19 @@ void setupShowBattery()
 void setupDisplay()
 {
 #ifdef DEBUG_MARKS
-  Debug::Mark(1, "setupDisplay()");
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
 #endif
+
+  Serial_INFO;
+  Serial.println("📺 Setting up display...");
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   // if (!Display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS, &Wire, OLED_RESET)) {
   if (!Display.begin(SCREEN_ADDRESS, true))
   {
     // Alternative handling - Spit out an error over serial connection if problem with display
-    Serial.begin(SERIAL_SPEED);
-    delay(200);
+    // Serial.begin(SERIAL_SPEED);
+    // delay(200);
     Serial.println("⛔ Critical failure, display failed to start. Halting!");
     Debug::WarningFlashes(LittleFSFailedToMount);
   }
@@ -243,8 +246,11 @@ void RenderGlint(int frame)
 void setupRenderLogo()
 {
 #ifdef DEBUG_MARKS
-  Debug::Mark(__LINE__, __func__);
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
 #endif
+
+  Serial_INFO;
+  Serial.println("🎨 Rendering logo...");
 
   RenderIconRuns(Logo, Logo_RunCount);
   Display.display();
@@ -257,8 +263,11 @@ void setupRenderLogo()
 void setupBattery()
 {
 #ifdef DEBUG_MARKS
-  Debug::Mark(1, __func__);
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
 #endif
+
+  Serial_INFO;
+  Serial.println("🔋 Setting up Battery...");
 
   // Battery hardware monitoring
   pinMode(BATTERY_MONITOR_PIN, INPUT);
@@ -270,8 +279,11 @@ void setupBattery()
 void setupUSB()
 {
 #ifdef DEBUG_MARKS
-  Debug::Mark(__LINE__, __func__);
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
 #endif
+
+  Serial_INFO;
+  Serial.println("🔌 Setting up USB/Serial...");
 
   // Animate USB socket coming into screen from off left - just to look cool
   for (int i = -32; i <= 0; i++)
@@ -305,12 +317,12 @@ void setupUSB()
   unsigned char usbState;
   if (Serial)
   {
-    Serial.println("💻✅ Serial connected");
+    Serial.println("🔌💻✅ Serial connected");
     usbState = Icon_USB_Connected;
   }
   else
   {
-    Serial.println("💻❌ Serial disconnected");
+    Serial.println("🔌💻❌ Serial disconnected");
     usbState = Icon_USB_Disconnected;
   }
 
@@ -332,6 +344,10 @@ void setupUSB()
 #ifdef WEBSERVER
 void setupWiFi()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   Serial.println();
   Serial_INFO;
   Serial.println("🛜 Setting up WiFi...");
@@ -390,6 +406,10 @@ void setupWiFi()
 #ifdef WEBSERVER
 void setupWebServer(bool startInWiFiConfigurationMode)
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   // WiFi events turn server on and off
 
   Serial.println();
@@ -411,6 +431,9 @@ void setupWebServer(bool startInWiFiConfigurationMode)
 
 void setupDigitalInputs()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
   // Simple Digital Inputs / Buttons
 
   Serial.println();
@@ -454,6 +477,10 @@ void setupDigitalInputs()
 
 void setupAnalogInputs()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   // Basic Analog Inputs
   Serial.println();
   Serial_INFO;
@@ -487,6 +514,10 @@ void setupAnalogInputs()
 
 void setupHatInputs()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   // Hat inputs also known as e.g. DPads
 
   Serial.println();
@@ -571,6 +602,10 @@ void setupInitExternalLEDs()
 
 void setupLEDs()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   Serial.println();
   Serial_INFO;
   Serial.println("💡 Setting up LEDs...");
@@ -678,6 +713,10 @@ void setupLEDs()
 
 void setupProfile()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   Serial.println();
   Serial_INFO;
   Serial.println("👤 Setting up Profile...");
@@ -741,6 +780,10 @@ void setupProfile()
 
 void setupBluetooth()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   // Full BT mode
   // esp_bt_controller_enable(ESP_BT_MODE_CLASSIC_BT);
   //  Low energy BT mode
@@ -831,6 +874,10 @@ void setupBluetooth()
 
 void setupDeviceIdentifiers()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   Serial.println();
   Serial_INFO;
   Serial.println("🎮 Setting up device identification...");
@@ -872,6 +919,10 @@ void setupDeviceIdentifiers()
 
 void setupController()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   Serial.println();
 
   bleGamepad = BleGamepad(FullDeviceName, ControllerType, 100);
@@ -960,6 +1011,10 @@ void SetupLittleFS()
 
 void SetupComplete()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   // Init timestamp so its reasonably accurate for a start point
   // (otherwise initial time dependant processing may be quirky)
   unsigned long currentMicroS = micros();
@@ -1002,6 +1057,7 @@ void setup()
     Debug::CheckForCrashInfo(reason);
   }
 
+  Serial.println();
   setupDisplay();
 
   // Up to now, any h/w failure to initialise could be handled with flashing onboard LED warning codes.
@@ -1047,10 +1103,13 @@ void setup()
   // Initialize NVS preferences storage (boot count, settings, etc.)
   Prefs::Init();
 
+  Serial.println();
   Serial.println("💥 📁 Checking for crash logs...");
   std::vector<String> crashLogs;
   Debug::GetCrashLogPaths(crashLogs, true);
   snprintf(buffer, sizeof(buffer), "💥 ℹ️ Found %d crash log(s)", crashLogs.size());
+  Serial_INFO;
+  Serial.println(buffer);
   for (const auto &logPath : crashLogs)
     DumpFileToSerial(logPath.c_str()); // Output any previous crash files we might have had for info purposes
 
@@ -1160,6 +1219,10 @@ void setup()
 
 void DrawConfigHelpScreen()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   Display.clearDisplay();
 
   ResetPrintDisplayLine(0, 0, SetFontSmall);
@@ -1189,6 +1252,10 @@ void DrawConfigHelpScreen()
 // Draw main screen
 void DrawMainScreen()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
 #ifdef INCLUDE_BENCHMARKS
   MainBenchmark.Start("DrawMainScreen");
 #endif

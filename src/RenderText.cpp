@@ -19,8 +19,11 @@ int TextLineHeight = 0;
 void setupRRE()
 {
 #ifdef DEBUG_MARKS
-  Debug::Mark(1, __func__);
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
 #endif
+
+  Serial_INFO;
+  Serial.println("🅰️ Setting up fonts...");
 
   RRE.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
   RRE.setCR(0);

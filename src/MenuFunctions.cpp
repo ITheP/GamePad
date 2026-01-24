@@ -26,7 +26,6 @@ int MenuFunctions::DelayBetweenFrames = 125; // milliseconds between icon frames
 String MenuFunctions::MessageTop;
 String MenuFunctions::MessageBottom;
 
-
 // NOTE
 // Careful with your choice of Scroll checking choices. If your text is a little bit too long
 // and you select NoScroll - remembering it renders from the right of the screen - there is a chance
@@ -34,12 +33,19 @@ String MenuFunctions::MessageBottom;
 
 void MenuFunctions::Setup()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
 }
 
 // Config Menu Functions
 
 void MenuFunctions::Config_Setup()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   // Even if not required, we kick off WiFi scanning for config mode
   Network::Config_InitWifi();
   Profiles::LoadAll();
@@ -48,16 +54,16 @@ void MenuFunctions::Config_Setup()
 
 void MenuFunctions::DrawScrollArrows()
 {
-    //SetFontCustom();
-    RREIcon.setColor(C_BLACK);
-    RREIcon.drawChar(SCREEN_WIDTH - 9, MenuContentStartY - 2, Icon_Arrow_Up_Outline);
-    RREIcon.drawChar(SCREEN_WIDTH - 9, SCREEN_HEIGHT - 8, Icon_Arrow_Down_Outline);
+  // SetFontCustom();
+  RREIcon.setColor(C_BLACK);
+  RREIcon.drawChar(SCREEN_WIDTH - 9, MenuContentStartY - 2, Icon_Arrow_Up_Outline);
+  RREIcon.drawChar(SCREEN_WIDTH - 9, SCREEN_HEIGHT - 8, Icon_Arrow_Down_Outline);
 
-    RREIcon.setColor(C_WHITE);
-    RREIcon.drawChar(SCREEN_WIDTH - 7, MenuContentStartY, Icon_Arrow_Up);
-    RREIcon.drawChar(SCREEN_WIDTH - 7, SCREEN_HEIGHT - 7, Icon_Arrow_Down);
+  RREIcon.setColor(C_WHITE);
+  RREIcon.drawChar(SCREEN_WIDTH - 7, MenuContentStartY, Icon_Arrow_Up);
+  RREIcon.drawChar(SCREEN_WIDTH - 7, SCREEN_HEIGHT - 7, Icon_Arrow_Down);
 
-    //SetFontFixed();
+  // SetFontFixed();
 }
 
 // Main Menu Functions
@@ -92,6 +98,8 @@ void MenuFunctions::InitWiFi()
 {
   Menus::InitMenuItemDisplay(Network::WiFiStatus, ScrollCheck);
   LastWiFiStatus = Network::WiFiStatus;
+
+  Debug::CrashOnPurpose();
 }
 
 void MenuFunctions::UpdateWiFi()

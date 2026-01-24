@@ -55,6 +55,7 @@
 // 🧭 Compass
 // 🖥 Desktop
 // 💻 Laptop
+// 📺 Display
 // 🔌 Serial
 // 🔢 Digital
 // 🎚 Analog
@@ -462,9 +463,16 @@ void Debug::GetCrashLogPaths(std::vector<String> &outPaths, bool newestFirst)
         uint32_t index = 0;
         if (ParseCrashIndex(file.name(), index))
         {
-            String path = String(file.name());
-            if (!path.startsWith("/"))
-                path = "/" + path;
+            String name = String(file.name());
+            String path;
+
+            // Just incase the file name has a full path from some unforseen changes to the FS processing used
+            String crashPrefix = String(CrashDir) + "/";
+            if (name.startsWith(crashPrefix))
+                path = name;
+            else
+                path = crashPrefix + name;
+
             items.push_back({index, path});
         }
         file = dir.openNextFile();
@@ -490,6 +498,10 @@ bool Debug::GetNextCrashFilePath(char *outPath, size_t outPathSize)
     File dir = LittleFS.open(CrashDir);
     if (!dir || !dir.isDirectory())
     {
+        if (!LittleFS.mkdir(CrashDir))
+            return false;
+
+        // Default filename
         snprintf(outPath, outPathSize, "%s/crash.%05lu.log", CrashDir, 1UL);
         return true;
     }
@@ -576,14 +588,14 @@ void Debug::Mark(int mark, const char *details)
     StoreDebugMark(mark, 0, nullptr, nullptr, details);
 }
 
-void Debug::Mark(int mark, int lineNumber, const char *filename)
+void Debug::Mark(int mark, int lineNumber, const char*filename, const char *function)
 {
-    StoreDebugMark(mark, lineNumber, filename, nullptr, nullptr);
+    StoreDebugMark(mark, lineNumber, filename, function, nullptr);
 }
 
-void Debug::Mark(int mark, int lineNumber, const char *filename, const char *details)
+void Debug::Mark(int mark, int lineNumber, const char* filename, const char *function, const char *details)
 {
-    StoreDebugMark(mark, lineNumber, filename, nullptr, details);
+    StoreDebugMark(mark, lineNumber, filename, function, details);
 }
 
 // Reset any possible crash info - we've just powered on so there won't be any!
@@ -743,10 +755,12 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
     }
 
     char crashPath[32];
-    if (!GetNextCrashFilePath(crashPath, sizeof(crashPath)))
-        snprintf(crashPath, sizeof(crashPath), "%s", CrashFile);
+    if (!GetNextCrashFilePath(crashPath, sizeof(crashPath))) {
+        Serial.print("💥 ⛔ Critical failure, unable to create crash file. No crash details will be saved.");
+        return;
+    }
 
-    Serial.println("Crash info found, logging to " + String(crashPath) + " - resulting file should also be visible in web interface");
+    Serial.println("💥 Crash info found, logging to " + String(crashPath) + " - resulting file should also be visible in web interface");
 
     // Crash file picked up! Save this
     File file = LittleFS.open(crashPath, FILE_WRITE);

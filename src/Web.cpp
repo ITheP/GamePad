@@ -67,10 +67,10 @@ static void register_handler(const httpd_uri_t &uri)
     {
         esp_err_t res = httpd_register_uri_handler(WebServerHTTP, &uri);
         if (res != ESP_OK)
-            Serial.printf("HTTP handler register failed for %s: %d\n", uri.uri, res);
+            Serial.printf("HTTP handler register failed for %s\n", uri.uri);
         else
 
-            Serial.printf("HTTP handler registered for %s: %d\n", uri.uri, res);
+            Serial.printf("HTTP handler registered for %s\n", uri.uri);
     }
     if (WebServerHTTPS)
     {
@@ -140,7 +140,7 @@ esp_err_t Web::SendPage_Debug(httpd_req_t *req)
 {
     std::ostringstream html;
     html << "<h1>Debug</h1>";
-    html << "Device has been booted " << Prefs::BootCount << " times<hr/>";
+    html << "Device has rebooted " << Prefs::BootCount << " times since last power on<hr/>";
 
     std::vector<String> crashLogs;
     Debug::GetCrashLogPaths(crashLogs, true);
