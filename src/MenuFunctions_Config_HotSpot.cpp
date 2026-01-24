@@ -155,10 +155,19 @@ void MenuFunctions::Config_Draw_Hotspot()
 
   ResetPrintDisplayLine(MenuContentStartY, 0, SetFontSmall);
 
-  sprintf(buffer, "Connect to WiFi %s", HotspotName.c_str());
-  PrintDisplayLineCentered(buffer);
-  sprintf(buffer, "Browse %s", WiFi.softAPIP().toString().c_str());
-  PrintDisplayLineCentered(buffer);
+
+
+  if (SecondFlipFlop) {
+    sprintf(buffer, "Connect to WiFi %s", HotspotName.c_str());
+    PrintDisplayLineCentered(buffer);
+    sprintf(buffer, "Browse %s", WiFi.softAPIP().toString().c_str());
+    PrintDisplayLineCentered(buffer);
+  }
+  else {
+    PrintDisplayLineCentered("Point a web browser to");
+    sprintf(buffer, "https://%s", WiFi.softAPIP().toString().c_str());
+    PrintDisplayLineCentered(buffer);
+  }
 
   WiFiTestResult = Network::CheckTestResults();
 

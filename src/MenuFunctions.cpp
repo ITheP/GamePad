@@ -230,7 +230,8 @@ void MenuFunctions::UpdateUSB()
 
 void MenuFunctions::InitDebug()
 {
-  Menus::InitMenuItemDisplay(Debug::CrashInfo, ScrollDefinitelyNeeded);
+  static char debugInfo[] = "Crash logs available via Web Debug";
+  Menus::InitMenuItemDisplay(debugInfo, ScrollDefinitelyNeeded);
 }
 
 static char stats[] = "Want funky statistics? Check the web site!";

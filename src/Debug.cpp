@@ -4,6 +4,12 @@
 #include <esp_system.h>
 #include <esp_cpu.h>
 #include <xtensa/core-macros.h>
+#include <climits>
+#include <algorithm>
+#include <vector>
+#if defined(__XTENSA__)
+#include <xtensa/xtensa_context.h>
+#endif
 #include "Debug.h"
 #include "Config.h"
 #include "Defines.h"
@@ -67,6 +73,8 @@
 // 🔦 External LED
 // 🔋 Battery
 // ⚡ Voltage
+// 💥 Crash
+// 🐞 Bug
 
 // Serial output in VSCode appears to be able to display following OK - though editor font and terminal font may differ...
 // Sometimes VSCode get's knickers in a twist and doesn't display emoji/icons
@@ -291,23 +299,328 @@
 
 
 char Debug::CrashFile[] = "/debug/crash.log";
-RTC_NOINIT_ATTR char Debug::CrashInfo[1024];
-RTC_NOINIT_ATTR int MarkVal;
+const char Debug::CrashDir[] = "/debug";
+
+namespace
+{
+    constexpr size_t DebugMarkCount = 10;
+}
+
+RTC_NOINIT_ATTR Debug::DebugMark DebugMarks[DebugMarkCount];
+RTC_NOINIT_ATTR int DebugMarkPos;
+
+namespace
+{
+    constexpr uint32_t PanicMagic = 0x504E4B21; // "PNK!"
+    constexpr char CrashPrefix[] = "crash.";
+    constexpr char CrashSuffix[] = ".log";
+
+    struct PanicRecord
+    {
+        uint32_t magic;
+        uint32_t pc;
+        uint32_t sp;
+        uint32_t a0;
+        uint32_t exccause;
+        uint32_t excvaddr;
+    };
+
+    RTC_NOINIT_ATTR PanicRecord PanicInfo;
+}
+
+static void ClearDebugMark(Debug::DebugMark &mark)
+{
+    mark.Value = -1;
+    mark.LineNumber = 0;
+    mark.Filename[0] = '\0';
+    mark.Function[0] = '\0';
+    mark.CrashInfo[0] = '\0';
+}
+
+static void SetMarkString(char *dest, size_t destSize, const char *src)
+{
+    if (!dest || destSize == 0)
+        return;
+
+    if (src && src[0] != '\0')
+    {
+        strncpy(dest, src, destSize - 1);
+        dest[destSize - 1] = '\0';
+    }
+    else
+    {
+        dest[0] = '\0';
+    }
+}
+
+static void StoreDebugMark(int value, int lineNumber, const char *filename, const char *functionName, const char *details)
+{
+    if (DebugMarkPos < 0 || DebugMarkPos >= static_cast<int>(DebugMarkCount))
+        DebugMarkPos = 0;
+
+    DebugMarkPos = (DebugMarkPos + 1) % static_cast<int>(DebugMarkCount);
+
+    Debug::DebugMark &entry = DebugMarks[DebugMarkPos];
+    entry.Value = value;
+    entry.LineNumber = lineNumber > 0 ? lineNumber : 0;
+    SetMarkString(entry.Filename, sizeof(entry.Filename), filename);
+    SetMarkString(entry.Function, sizeof(entry.Function), functionName);
+    SetMarkString(entry.CrashInfo, sizeof(entry.CrashInfo), details);
+}
+
+static bool ParseCrashIndex(const char *name, uint32_t &index)
+{
+    if (!name)
+        return false;
+
+    const char *base = strrchr(name, '/');
+    base = base ? base + 1 : name;
+
+    size_t baseLen = strlen(base);
+    size_t prefixLen = strlen(CrashPrefix);
+    size_t suffixLen = strlen(CrashSuffix);
+
+    if (baseLen <= prefixLen + suffixLen)
+        return false;
+
+    if (strncmp(base, CrashPrefix, prefixLen) != 0)
+        return false;
+
+    if (strcmp(base + baseLen - suffixLen, CrashSuffix) != 0)
+        return false;
+
+    const char *numStart = base + prefixLen;
+    size_t numLen = baseLen - prefixLen - suffixLen;
+    if (numLen == 0)
+        return false;
+
+    uint32_t value = 0;
+    for (size_t i = 0; i < numLen; i++)
+    {
+        char c = numStart[i];
+        if (c < '0' || c > '9')
+            return false;
+        value = value * 10 + static_cast<uint32_t>(c - '0');
+    }
+
+    index = value;
+    return true;
+}
+
+const char *Debug::GetLatestCrashFilePath()
+{
+    static char latestPath[32];
+
+    File dir = LittleFS.open(CrashDir);
+    if (!dir || !dir.isDirectory())
+        return nullptr;
+
+    uint32_t maxIndex = 0;
+    bool found = false;
+
+    File file = dir.openNextFile();
+    while (file)
+    {
+        uint32_t index = 0;
+        if (ParseCrashIndex(file.name(), index))
+        {
+            if (!found || index > maxIndex)
+            {
+                maxIndex = index;
+                found = true;
+            }
+        }
+        file = dir.openNextFile();
+    }
+
+    if (!found)
+        return nullptr;
+
+    snprintf(latestPath, sizeof(latestPath), "%s/crash.%05lu.log", CrashDir, static_cast<unsigned long>(maxIndex));
+    return latestPath;
+}
+
+void Debug::GetCrashLogPaths(std::vector<String> &outPaths, bool newestFirst)
+{
+    outPaths.clear();
+
+    File dir = LittleFS.open(CrashDir);
+    if (!dir || !dir.isDirectory())
+        return;
+
+    struct CrashItem
+    {
+        uint32_t index;
+        String path;
+    };
+
+    std::vector<CrashItem> items;
+
+    File file = dir.openNextFile();
+    while (file)
+    {
+        uint32_t index = 0;
+        if (ParseCrashIndex(file.name(), index))
+        {
+            String path = String(file.name());
+            if (!path.startsWith("/"))
+                path = "/" + path;
+            items.push_back({index, path});
+        }
+        file = dir.openNextFile();
+    }
+
+    std::sort(items.begin(), items.end(), [newestFirst](const CrashItem &a, const CrashItem &b)
+              { return newestFirst ? (a.index > b.index) : (a.index < b.index); });
+
+    for (const auto &item : items)
+        outPaths.push_back(item.path);
+}
+
+// Crash files survive firmware re-flashes - will only blank to nothing
+// when filesystem image is re-written
+// Crash files are written on a rolling basis, keeping up to 10 most recent (to save space)
+// If we reach the max reference number (99999) we wipe all existing crash files and start again from 0
+bool Debug::GetNextCrashFilePath(char *outPath, size_t outPathSize)
+{
+    if (!outPath || outPathSize == 0)
+        return false;
+
+    // Return default file if crash folder doesn't exist
+    File dir = LittleFS.open(CrashDir);
+    if (!dir || !dir.isDirectory())
+    {
+        snprintf(outPath, outPathSize, "%s/crash.%05lu.log", CrashDir, 1UL);
+        return true;
+    }
+
+    uint32_t minIndex = UINT_MAX;
+    uint32_t maxIndex = 0;
+    uint8_t count = 0;
+
+    File file = dir.openNextFile();
+    while (file)
+    {
+        uint32_t index = 0;
+        if (ParseCrashIndex(file.name(), index))
+        {
+            count++;
+            if (index < minIndex)
+                minIndex = index;
+            if (index > maxIndex)
+                maxIndex = index;
+        }
+        file = dir.openNextFile();
+    }
+
+    /// 99999 is a lot of crashes, but you never know over the years!
+    if (maxIndex >= 99999)
+    {
+        File wipeDir = LittleFS.open(CrashDir);
+        File wipeFile = wipeDir.openNextFile();
+        while (wipeFile)
+        {
+            uint32_t index = 0;
+            // Check if file is a crash file before deleting
+            if (ParseCrashIndex(wipeFile.name(), index))
+            {
+                LittleFS.remove(wipeFile.name());
+            }
+            wipeFile = wipeDir.openNextFile();
+        }
+
+        // Return default crash file, starting from 0 so we have a reference that it's a fresh start
+        snprintf(outPath, outPathSize, "%s/crash.%05lu.log", CrashDir, 0UL);
+        return true;
+    }
+
+    // If there are 10 files already, get rid of the first to keep down storage usage on device
+    if (count >= 10 && minIndex != UINT_MAX)
+    {
+        char removePath[32];
+        snprintf(removePath, sizeof(removePath), "%s/crash.%05lu.log", CrashDir, static_cast<unsigned long>(minIndex));
+        LittleFS.remove(removePath);
+    }
+
+    uint32_t nextIndex = (maxIndex > 0) ? (maxIndex + 1) : 1;
+    snprintf(outPath, outPathSize, "%s/crash.%05lu.log", CrashDir, static_cast<unsigned long>(nextIndex));
+    return true;
+}
+
+extern "C" void __real_esp_panic_handler(void *info);
+
+extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
+{
+#if defined(__XTENSA__)
+    if (info)
+    {
+        XtExcFrame *frame = reinterpret_cast<XtExcFrame *>(info);
+        PanicInfo.magic = PanicMagic;
+        PanicInfo.pc = frame->pc;
+        PanicInfo.sp = frame->a1; // stack pointer is a1
+        PanicInfo.a0 = frame->a0;
+        PanicInfo.exccause = frame->exccause;
+        PanicInfo.excvaddr = frame->excvaddr;
+    }
+#endif
+    __real_esp_panic_handler(info);
+}
 
 void Debug::Mark(int mark)
 {
-    MarkVal = mark;
+    StoreDebugMark(mark, 0, nullptr, nullptr, nullptr);
 }
 
-void Debug::RecordMark()
+void Debug::Mark(int mark, const char *details)
 {
-    snprintf(CrashInfo + strlen(CrashInfo), sizeof(CrashInfo) - strlen(CrashInfo), ", %d", MarkVal);
+    StoreDebugMark(mark, 0, nullptr, nullptr, details);
 }
 
+void Debug::Mark(int mark, int lineNumber, const char *filename)
+{
+    StoreDebugMark(mark, lineNumber, filename, nullptr, nullptr);
+}
+
+void Debug::Mark(int mark, int lineNumber, const char *filename, const char *details)
+{
+    StoreDebugMark(mark, lineNumber, filename, nullptr, details);
+}
+
+// Reset any possible crash info - we've just powered on so there won't be any!
 void Debug::PowerOnInit()
 {
-    memset(CrashInfo, 0, sizeof(CrashInfo));
-    sprintf(CrashInfo, "Marks: Init");
+    for (size_t i = 0; i < DebugMarkCount; i++)
+        ClearDebugMark(DebugMarks[i]);
+    DebugMarkPos = 0;
+}
+
+static const char *ResetReasonToString(esp_reset_reason_t reason)
+{
+    switch (reason)
+    {
+    case ESP_RST_POWERON:
+        return "Power on";
+    case ESP_RST_EXT:
+        return "External reset";
+    case ESP_RST_SW:
+        return "Software reset";
+    case ESP_RST_PANIC:
+        return "Panic";
+    case ESP_RST_INT_WDT:
+        return "Interrupt watchdog";
+    case ESP_RST_TASK_WDT:
+        return "Task watchdog";
+    case ESP_RST_WDT:
+        return "Other watchdog";
+    case ESP_RST_DEEPSLEEP:
+        return "Deep sleep";
+    case ESP_RST_BROWNOUT:
+        return "Brownout";
+    case ESP_RST_SDIO:
+        return "SDIO";
+    default:
+        return "Unknown";
+    }
 }
 
 // Low level warning flashing of LED to indicate errors
@@ -411,35 +724,154 @@ void Debug::WarningFlashes(WarningFlashCodes code)
 //     esp_restart(); // while(true);
 // }
 
-void Debug::CheckForCrashInfo()
+void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
 {
-    RecordMark();
+    bool hasMarks = false;
+    for (size_t i = 0; i < DebugMarkCount; i++)
+    {
+        if (DebugMarks[i].Value != -1)
+        {
+            hasMarks = true;
+            break;
+        }
+    }
 
-    if (CrashInfo[0] == 0)
+    if (!hasMarks && PanicInfo.magic != PanicMagic)
+    {
         Serial.println("No crash info found");
-    return;
+        return;
+    }
 
-    Serial.println("Crash info found, logging to " + String(CrashFile) + " - resulting file should also be visible in web interface");
+    char crashPath[32];
+    if (!GetNextCrashFilePath(crashPath, sizeof(crashPath)))
+        snprintf(crashPath, sizeof(crashPath), "%s", CrashFile);
+
+    Serial.println("Crash info found, logging to " + String(crashPath) + " - resulting file should also be visible in web interface");
 
     // Crash file picked up! Save this
-    File file = LittleFS.open(CrashFile, FILE_WRITE);
+    File file = LittleFS.open(crashPath, FILE_WRITE);
     if (file)
     {
-        file.print(CrashInfo);
+        file.println("ResetReason: " + String(ResetReasonToString(reason)) + " (" + String((int)reason) + ")");
+        
+        if (PanicInfo.magic == PanicMagic)
+        {
+            file.println("PanicInfo:");
+            file.printf("  pc=0x%08lx sp=0x%08lx a0=0x%08lx\n", PanicInfo.pc, PanicInfo.sp, PanicInfo.a0);
+            file.printf("  exccause=%lu excvaddr=0x%08lx\n", PanicInfo.exccause, PanicInfo.excvaddr);
+        }
+        
+        file.println("Marks (newest first):");
+
+        for (size_t i = 0; i < DebugMarkCount; i++)
+        {
+            int idx = DebugMarkPos - static_cast<int>(i);
+            if (idx < 0)
+                idx += static_cast<int>(DebugMarkCount);
+
+            const Debug::DebugMark &mark = DebugMarks[idx];
+            if (mark.Value == -1)
+                continue;
+
+            file.print("Value: ");
+            file.print(mark.Value);
+
+            if (mark.LineNumber > 0)
+            {
+                file.print(" Line: ");
+                file.print(mark.LineNumber);
+            }
+
+            if (mark.Filename[0] != '\0')
+            {
+                file.print(" File: ");
+                file.print(mark.Filename);
+            }
+
+            if (mark.Function[0] != '\0')
+            {
+                file.print(" Function: ");
+                file.print(mark.Function);
+            }
+
+            file.println();
+
+            if (mark.CrashInfo[0] != '\0')
+            {
+                file.print("Info: ");
+                file.println(mark.CrashInfo);
+            }
+        }
         file.close();
     }
 
-    Serial.print(CrashInfo);
+    Serial.print("ResetReason: ");
+    Serial.print(ResetReasonToString(reason));
+    Serial.print(" (");
+    Serial.print((int)reason);
+    Serial.println(")");
 
-    CrashInfo[0] = 0;
+
+    if (PanicInfo.magic == PanicMagic)
+    {
+        Serial.printf("PanicInfo: pc=0x%08lx sp=0x%08lx a0=0x%08lx\n", PanicInfo.pc, PanicInfo.sp, PanicInfo.a0);
+        Serial.printf("           exccause=%lu excvaddr=0x%08lx\n", PanicInfo.exccause, PanicInfo.excvaddr);
+    }
+
+    Serial.println("Marks (newest first):");
+
+    for (size_t i = 0; i < DebugMarkCount; i++)
+    {
+        int idx = DebugMarkPos - static_cast<int>(i);
+        if (idx < 0)
+            idx += static_cast<int>(DebugMarkCount);
+
+        const Debug::DebugMark &mark = DebugMarks[idx];
+        if (mark.Value == -1)
+            continue;
+
+        Serial.print("Value: ");
+        Serial.print(mark.Value);
+
+        if (mark.LineNumber > 0)
+        {
+            Serial.print(" Line: ");
+            Serial.print(mark.LineNumber);
+        }
+
+        if (mark.Filename[0] != '\0')
+        {
+            Serial.print(" File: ");
+            Serial.print(mark.Filename);
+        }
+
+        if (mark.Function[0] != '\0')
+        {
+            Serial.print(" Function: ");
+            Serial.print(mark.Function);
+        }
+
+        Serial.println();
+
+        if (mark.CrashInfo[0] != '\0')
+        {
+            Serial.println("Info: ");
+            Serial.println(mark.CrashInfo);
+        }
+    }
+
+    for (size_t i = 0; i < DebugMarkCount; i++)
+        ClearDebugMark(DebugMarks[i]);
+    DebugMarkPos = 0;
+    PanicInfo.magic = 0;
 }
 
 // Primarily for testing purposes
 void Debug::CrashOnPurpose()
 {
-    Serial.println("ATTEMPTING TO CRASH DEVICE");
+    Serial.println("💥 ATTEMPTING TO CRASH DEVICE");
 
-    Serial.println("Access invalid memory");
+    Serial.println("💥 Access invalid memory");
     int *ptr = nullptr;
     int crash = *ptr; // 💥 LoadProhibited panic
 
@@ -448,7 +880,7 @@ void Debug::CrashOnPurpose()
     x += -x;
     int y = 100 / x; // 💥 Only if x == 0 at runtime
 
-    Serial.println("Access Invalid Memory");
+    Serial.println("💥 Access Invalid Memory");
     volatile int *bad = (int *)0xDEADBEEF;
     crash = *bad;
 }

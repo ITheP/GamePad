@@ -25,6 +25,10 @@ Preferences Prefs::Handler;
 
 void Prefs::Init()
 {
+        #ifdef DEBUG_MARKS
+  Debug::Mark(1, "Prefs::Init()");
+#endif
+
     if (Handler.begin("boot", false))       // false = read/write
     {
         BootCount = Handler.getUInt("bootCount", 0);
