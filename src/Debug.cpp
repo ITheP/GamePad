@@ -10,12 +10,6 @@
 #if defined(__XTENSA__)
 #include <xtensa/xtensa_context.h>
 #endif
-#include <climits>
-#include <algorithm>
-#include <vector>
-#if defined(__XTENSA__)
-#include <xtensa/xtensa_context.h>
-#endif
 #include "Debug.h"
 #include "Config.h"
 #include "Defines.h"
@@ -80,8 +74,6 @@
 // 🔦 External LED
 // 🔋 Battery
 // ⚡ Voltage
-// 💥 Crash
-// 🐞 Bug
 // 💥 Crash
 // 🐞 Bug
 
@@ -589,10 +581,8 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
 void Debug::Mark(int mark)
 {
     StoreDebugMark(mark, 0, nullptr, nullptr, nullptr);
-    StoreDebugMark(mark, 0, nullptr, nullptr, nullptr);
 }
 
-void Debug::Mark(int mark, const char *details)
 void Debug::Mark(int mark, const char *details)
 {
     StoreDebugMark(mark, 0, nullptr, nullptr, details);
@@ -609,41 +599,8 @@ void Debug::Mark(int mark, int lineNumber, const char* filename, const char *fun
 }
 
 // Reset any possible crash info - we've just powered on so there won't be any!
-// Reset any possible crash info - we've just powered on so there won't be any!
 void Debug::PowerOnInit()
 {
-    for (size_t i = 0; i < DebugMarkCount; i++)
-        ClearDebugMark(DebugMarks[i]);
-    DebugMarkPos = 0;
-}
-
-static const char *ResetReasonToString(esp_reset_reason_t reason)
-{
-    switch (reason)
-    {
-    case ESP_RST_POWERON:
-        return "Power on";
-    case ESP_RST_EXT:
-        return "External reset";
-    case ESP_RST_SW:
-        return "Software reset";
-    case ESP_RST_PANIC:
-        return "Panic";
-    case ESP_RST_INT_WDT:
-        return "Interrupt watchdog";
-    case ESP_RST_TASK_WDT:
-        return "Task watchdog";
-    case ESP_RST_WDT:
-        return "Other watchdog";
-    case ESP_RST_DEEPSLEEP:
-        return "Deep sleep";
-    case ESP_RST_BROWNOUT:
-        return "Brownout";
-    case ESP_RST_SDIO:
-        return "SDIO";
-    default:
-        return "Unknown";
-    }
     for (size_t i = 0; i < DebugMarkCount; i++)
         ClearDebugMark(DebugMarks[i]);
     DebugMarkPos = 0;
@@ -780,20 +737,7 @@ void Debug::WarningFlashes(WarningFlashCodes code)
 // }
 
 void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
-void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
 {
-    bool hasMarks = false;
-    for (size_t i = 0; i < DebugMarkCount; i++)
-    {
-        if (DebugMarks[i].Value != -1)
-        {
-            hasMarks = true;
-            break;
-        }
-    }
-
-    if (!hasMarks && PanicInfo.magic != PanicMagic)
-    {
     bool hasMarks = false;
     for (size_t i = 0; i < DebugMarkCount; i++)
     {
@@ -820,59 +764,8 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
 
     // Crash file picked up! Save this
     File file = LittleFS.open(crashPath, FILE_WRITE);
-    File file = LittleFS.open(crashPath, FILE_WRITE);
     if (file)
     {
-        file.println("ResetReason: " + String(ResetReasonToString(reason)) + " (" + String((int)reason) + ")");
-        
-        if (PanicInfo.magic == PanicMagic)
-        {
-            file.println("PanicInfo:");
-            file.printf("  pc=0x%08lx sp=0x%08lx a0=0x%08lx\n", PanicInfo.pc, PanicInfo.sp, PanicInfo.a0);
-            file.printf("  exccause=%lu excvaddr=0x%08lx\n", PanicInfo.exccause, PanicInfo.excvaddr);
-        }
-        
-        file.println("Marks (newest first):");
-
-        for (size_t i = 0; i < DebugMarkCount; i++)
-        {
-            int idx = DebugMarkPos - static_cast<int>(i);
-            if (idx < 0)
-                idx += static_cast<int>(DebugMarkCount);
-
-            const Debug::DebugMark &mark = DebugMarks[idx];
-            if (mark.Value == -1)
-                continue;
-
-            file.print("Value: ");
-            file.print(mark.Value);
-
-            if (mark.LineNumber > 0)
-            {
-                file.print(" Line: ");
-                file.print(mark.LineNumber);
-            }
-
-            if (mark.Filename[0] != '\0')
-            {
-                file.print(" File: ");
-                file.print(mark.Filename);
-            }
-
-            if (mark.Function[0] != '\0')
-            {
-                file.print(" Function: ");
-                file.print(mark.Function);
-            }
-
-            file.println();
-
-            if (mark.CrashInfo[0] != '\0')
-            {
-                file.print("Info: ");
-                file.println(mark.CrashInfo);
-            }
-        }
         file.println("ResetReason: " + String(ResetReasonToString(reason)) + " (" + String((int)reason) + ")");
         
         if (PanicInfo.magic == PanicMagic)
@@ -985,74 +878,13 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
         ClearDebugMark(DebugMarks[i]);
     DebugMarkPos = 0;
     PanicInfo.magic = 0;
-    Serial.print("ResetReason: ");
-    Serial.print(ResetReasonToString(reason));
-    Serial.print(" (");
-    Serial.print((int)reason);
-    Serial.println(")");
-
-
-    if (PanicInfo.magic == PanicMagic)
-    {
-        Serial.printf("PanicInfo: pc=0x%08lx sp=0x%08lx a0=0x%08lx\n", PanicInfo.pc, PanicInfo.sp, PanicInfo.a0);
-        Serial.printf("           exccause=%lu excvaddr=0x%08lx\n", PanicInfo.exccause, PanicInfo.excvaddr);
-    }
-
-    Serial.println("Marks (newest first):");
-
-    for (size_t i = 0; i < DebugMarkCount; i++)
-    {
-        int idx = DebugMarkPos - static_cast<int>(i);
-        if (idx < 0)
-            idx += static_cast<int>(DebugMarkCount);
-
-        const Debug::DebugMark &mark = DebugMarks[idx];
-        if (mark.Value == -1)
-            continue;
-
-        Serial.print("Value: ");
-        Serial.print(mark.Value);
-
-        if (mark.LineNumber > 0)
-        {
-            Serial.print(" Line: ");
-            Serial.print(mark.LineNumber);
-        }
-
-        if (mark.Filename[0] != '\0')
-        {
-            Serial.print(" File: ");
-            Serial.print(mark.Filename);
-        }
-
-        if (mark.Function[0] != '\0')
-        {
-            Serial.print(" Function: ");
-            Serial.print(mark.Function);
-        }
-
-        Serial.println();
-
-        if (mark.CrashInfo[0] != '\0')
-        {
-            Serial.println("Info: ");
-            Serial.println(mark.CrashInfo);
-        }
-    }
-
-    for (size_t i = 0; i < DebugMarkCount; i++)
-        ClearDebugMark(DebugMarks[i]);
-    DebugMarkPos = 0;
-    PanicInfo.magic = 0;
 }
 
 // Primarily for testing purposes
 void Debug::CrashOnPurpose()
 {
     Serial.println("💥 ATTEMPTING TO CRASH DEVICE");
-    Serial.println("💥 ATTEMPTING TO CRASH DEVICE");
 
-    Serial.println("💥 Access invalid memory");
     Serial.println("💥 Access invalid memory");
     int *ptr = nullptr;
     int crash = *ptr; // 💥 LoadProhibited panic
@@ -1062,7 +894,6 @@ void Debug::CrashOnPurpose()
     x += -x;
     int y = 100 / x; // 💥 Only if x == 0 at runtime
 
-    Serial.println("💥 Access Invalid Memory");
     Serial.println("💥 Access Invalid Memory");
     volatile int *bad = (int *)0xDEADBEEF;
     crash = *bad;

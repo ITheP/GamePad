@@ -6,7 +6,6 @@
 #include "CustomIcons.16x16.h"
 #include <IconMappings.h>
 #include <Debug.h>
-#include <Debug.h>
 
 RREFont RRE;
 RREFont RREDefault;
@@ -84,7 +83,6 @@ void PrintDisplayLine(const TextLine *line)
     {
       // Icons are drawn and width calculated
       RREIcon.drawChar(0, TextYPos - 1, icon);
-      RREIcon.drawChar(0, TextYPos - 1, icon);
       if (textPos == 0)
         textPos += 16;
     }
@@ -118,8 +116,6 @@ void PrintDisplayLine(const TextLine *line)
       // over multiple lines
       if (icon != Icon_IGNORE)
       {
-      if (icon != Icon_IGNORE)
-      {
         char c = (icon == 0 ? Icon_FilledCircle_2 : icon);
         RREIcon.drawChar(textPos + 4, TextYPos + 3, c);
       }
@@ -128,7 +124,6 @@ void PrintDisplayLine(const TextLine *line)
     else if (icon != 0)
     {
       // Icons are drawn and width calculated
-      RREIcon.drawChar(0, TextYPos - 1, icon);
       RREIcon.drawChar(0, TextYPos - 1, icon);
       if (textPos == 0)
         textPos += 14;

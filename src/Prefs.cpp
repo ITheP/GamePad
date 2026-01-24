@@ -29,6 +29,9 @@ void Prefs::Init()
   Debug::Mark(1, __LINE__, __FILE__, __func__);
 #endif
 
+  Serial_INFO;
+  Serial.println("⚙️ Setting up Preferences/Config handler...");
+
     if (Handler.begin("boot", false))       // false = read/write
     {
         BootCount = Handler.getUInt("bootCount", 0);
