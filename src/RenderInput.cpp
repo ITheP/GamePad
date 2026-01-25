@@ -64,9 +64,9 @@ void RenderInput_Icon(Input *input)
 
   if (input->ValueState.Value == HIGH)
   {
-#ifdef EXTRA_SERIAL_DEBUG
-    Serial.println("Icon.Button up [" + String(input->BluetoothInput) + "]: " + String(input->Label));
-#endif
+// #ifdef EXTRA_SERIAL_DEBUG
+//     Serial.println("Icon.Button up [" + String(input->BluetoothInput) + "]: " + String(input->Label));
+// #endif
 
     // Only draw if required - otherwise we might just be blanking previous icon
     if (input->FalseIcon != 0)
@@ -74,9 +74,9 @@ void RenderInput_Icon(Input *input)
   }
   else
   {
-#ifdef EXTRA_SERIAL_DEBUG
-    Serial.println("Icon.Button down [" + String(input->BluetoothInput) + "]: " + String(input->Label));
-#endif
+// #ifdef EXTRA_SERIAL_DEBUG
+//     Serial.println("Icon.Button down [" + String(input->BluetoothInput) + "]: " + String(input->Label));
+// #endif
 
     // Only draw if required - otherwise we might just be blanking previous icon
     if (input->TrueIcon != NONE)

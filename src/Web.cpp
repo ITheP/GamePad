@@ -153,9 +153,9 @@ esp_err_t Web::SendPage_Debug(httpd_req_t *req)
     {
         html << "<h2>Crash Logs</h2>";
         html << "e.g. <i>[ 500] src/GamePad.cpp.MainLoop().2007: Bluetooth Connected</i><br/>";
-        html << "<i>[ 500]</i> = debug marker value<br/>";
-        html << "<i>src/GamePad.cpp.MainLoop().2007</i> = file name, function name, line number<br/>";
-        html << "<i>Bluetooth Connected</i> = optional details provided with the debug marker<br/></br>>";
+        html << "DIY marker value: <i>[ 500]</i><br/>";
+        html << "File name, function name, line number: <i>src/GamePad.cpp.MainLoop().2007</i><br/>";
+        html << "Extra details: <i>Bluetooth Connected</i><br/><br/>";
 
         for (size_t i = 0; i < crashLogs.size(); i++)
         {

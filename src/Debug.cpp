@@ -41,70 +41,6 @@
 
 // Rebooting...
 
-// Our override
-// extern "C" void esp_panic_handler(void *info);
-
-// Pointer to original panic handler, so we can it from our override
-// extern "C" void esp_panic_handler_original(void *info)
-//     __attribute__((weak, alias("esp_panic_handler")));
-
-extern "C" void __real_esp_panic_handler(void *info);
-
-//extern "C" void IRAM_ATTR esp_panic_handler(void *info)
-extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
-{
-
-    panic_info_t *details = reinterpret_cast<panic_info_t *>(info);
-
-    // Your logging here — but keep it IRAM‑safe
-    panic_print_str("\n\n--- CUSTOM PANIC HANDLER TRIGGERED ---\n");
-    //ets_printf("CUSTOM PANIC TRIGGERED\n");
-
-    if (details->reason) {
-        panic_print_str("## Guru Meditation Error: Core ");
-        panic_print_dec(details->core);
-        panic_print_str(" panic'ed (");
-        panic_print_str(details->reason);
-        panic_print_str(").\n");
-    }
-
-    if (details->description) {
-        panic_print_str("## Description:\n");
-        panic_print_str(details->description);
-    }
-
-        panic_print_str("\n## CUSTOM COMPLETE - HANDING OVER TO ORIGINAL:\n");
-
-    // Call the original handler
-    // Theoretically should reboot for us too
-    __real_esp_panic_handler(info);
-
-
-    // Decide what to do next
-    while (true)
-    {
-    }
-}
-
-// extern "C" void __real_esp_panic_handler(void *info);
-
-// extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
-// {
-// #if defined(__XTENSA__)
-//     if (info)
-//     {
-//         XtExcFrame *frame = reinterpret_cast<XtExcFrame *>(info);
-//         PanicInfo.flag = PanicFlag;
-//         PanicInfo.pc = frame->pc;
-//         PanicInfo.sp = frame->a1; // stack pointer is a1
-//         PanicInfo.a0 = frame->a0;
-//         PanicInfo.exccause = frame->exccause;
-//         PanicInfo.excvaddr = frame->excvaddr;
-//     }
-// #endif
-//     __real_esp_panic_handler(info);
-// }
-
 char Debug::CrashFile[] = "/debug/crash.log";
 const char Debug::CrashDir[] = "/debug";
 
@@ -130,9 +66,189 @@ namespace
         uint32_t a0;
         uint32_t exccause;
         uint32_t excvaddr;
+        uint32_t BackTrace[32];         // backtrace PCs
     };
 
     RTC_NOINIT_ATTR PanicRecord PanicInfo;
+}
+
+// Print "0x12345678"
+static void BackTracePrintHex32(uint32_t v) {
+    panic_print_str("0x");
+    panic_print_hex(v);
+}
+
+// Print one backtrace entry: "  0xPC  SP=0xSP"
+static void BackTracePrintEntry(uint32_t pc, uint32_t sp) {
+    panic_print_str("  ");
+    BackTracePrintHex32(pc);
+    panic_print_str("  SP=");
+    BackTracePrintHex32(sp);
+    panic_print_char('\n');
+}
+
+// Main walker
+extern "C" void IRAM_ATTR PrintBackTrace(const XtExcFrame *frame)
+{
+    if (!frame) {
+        panic_print_str("Backtrace: no frame\n");
+        return;
+    }
+
+    panic_print_str("Backtrace (custom):\n");
+
+    // Print the crash point
+    uint32_t pc = frame->pc;
+    uint32_t sp = frame->a1;
+    BackTracePrintEntry(pc, sp);
+
+    // Walk up to 32 frames to avoid infinite loops
+    for (int depth = 0; depth < 32; depth++) {
+
+        // Validate SP
+        if (!esp_stack_ptr_is_sane(sp)) {
+            panic_print_str("  <invalid SP>\n");
+            break;
+        }
+
+        // Xtensa ABI:
+        //   [SP + 0] = previous SP
+        //   [SP + 4] = return address (saved A0)
+        uint32_t *words = (uint32_t *)sp;
+        uint32_t next_sp = words[0];
+        uint32_t next_pc = words[1];
+
+        // Stop if SP stops changing (corruption)
+        if (next_sp == sp) {
+            panic_print_str("  <SP loop>\n");
+            break;
+        }
+
+        // Validate PC
+        if (!esp_ptr_executable((void *)next_pc)) {
+            panic_print_str("  <invalid PC>\n");
+            break;
+        }
+
+        // Print this frame
+        BackTracePrintEntry(next_pc, next_sp);
+
+        // Advance
+        sp = next_sp;
+    }
+}
+
+extern "C" void IRAM_ATTR SaveBackTraceToPanicRecord(PanicRecord *rec, const XtExcFrame *frame)
+{
+    // Clear the backtrace buffer
+    for (int i = 0; i < 32; i++) {
+        rec->BackTrace[i] = 0;
+    }
+
+    uint32_t pc = frame->pc;
+    uint32_t sp = frame->a1;
+
+    // Store the first entry (faulting PC)
+    rec->BackTrace[0] = pc;
+
+    // Walk the stack
+    for (int depth = 1; depth < 32; depth++) {
+
+        // Validate SP
+        if (!esp_stack_ptr_is_sane(sp)) {
+            break;
+        }
+
+        // Xtensa ABI:
+        //   [SP + 0] = previous SP
+        //   [SP + 4] = return address (saved A0)
+        uint32_t *words = (uint32_t *)sp;
+        uint32_t next_sp = words[0];
+        uint32_t next_pc = words[1];
+
+        // Stop if SP stops changing (corruption)
+        if (next_sp == sp) {
+            break;
+        }
+
+        // Validate PC
+        if (!esp_ptr_executable((void *)next_pc)) {
+            break;
+        }
+
+        rec->BackTrace[depth] = next_pc;
+
+        sp = next_sp;
+    }
+}
+
+// Our override
+// extern "C" void esp_panic_handler(void *info);
+
+// Pointer to original panic handler, so we can it from our override
+extern "C" void __real_esp_panic_handler(void *info);
+
+// extern "C" void IRAM_ATTR esp_panic_handler(void *info)
+extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
+{
+
+    // Your logging here — but must be kept IRAM‑safe
+    panic_print_str("\n\n--- CUSTOM PANIC HANDLER TRIGGERED ---\n");
+
+    if (info)
+    {
+        // Based on esp_panic_handler from C:\Users\<user>.platformio\packages\framework-espidf\components\esp_system\panic.c
+        panic_info_t *details = reinterpret_cast<panic_info_t *>(info);
+
+#if defined(__XTENSA__)
+        XtExcFrame *frame = (XtExcFrame *)details->frame;
+
+        PanicInfo.flag = PanicFlag;
+        PanicInfo.pc = frame->pc;
+        PanicInfo.sp = frame->a1; // stack pointer is a1
+        PanicInfo.a0 = frame->a0;
+        PanicInfo.exccause = frame->exccause;
+        PanicInfo.excvaddr = frame->excvaddr;
+#endif
+
+        if (details->reason)
+        {
+            panic_print_str("## Guru Meditation Error: Core ");
+            panic_print_dec(details->core);
+            panic_print_str(" panic'ed (");
+            panic_print_str(details->reason);
+            panic_print_str("). ");
+        }
+
+        if (details->description)
+        {
+            panic_print_str(details->description);
+        }
+
+        panic_print_str("\n");
+
+        // ets_printf("Panic = %08x\n", PanicFlag);
+        ets_printf("PC = %08x\n", frame->pc);
+        ets_printf("SP = %08x\n", frame->a1); // A1 = Stack pointer
+        ets_printf("A0 = %08x\n", frame->a0);
+        ets_printf("EXCVADDR = %08x\n", frame->excvaddr);
+        ets_printf("EXCCAUSE = %08x\n", frame->exccause);
+
+        panic_print_str("Backtrace:\n");
+
+        PrintBackTrace(frame);
+    }
+
+    panic_print_str("\n## CUSTOM COMPLETE - HANDING OVER TO ORIGINAL:\n");
+
+    // Call the original handler
+    // Theoretically should reboot for us too
+    __real_esp_panic_handler(info);
+
+    // Decide what to do next
+    while (true)
+    {
+    }
 }
 
 static void ClearDebugMark(Debug::DebugMark &mark)
@@ -441,90 +557,6 @@ void Debug::WarningFlashes(WarningFlashCodes code)
     }
 }
 
-// Experiments in device crash logging...
-// DOESN'T WORK without changing framework from arduino to espidf (or layering in arduino inside espidf)
-// but that in itself suddenly opens a whole can of worms!
-
-// extern "C" void panic_handler(void *frame)
-// {
-//     //Serial.println("PANIC HANDLER - CRITICAL PROBLEM OCCURED");
-//     sprintf(CrashInfo, "PANIC IN THE DISCO");
-
-//     return;
-
-//     XtExcFrame *exc = (XtExcFrame *)frame;
-//     uint32_t cause = exc->exccause;
-//     uint32_t pc = exc->pc;
-
-//     const char* causeDescription;
-//             digitalWrite(LED_BUILTIN, HIGH);
-//             delay(500);
-//             digitalWrite(LED_BUILTIN, LOW);
-
-//     switch (cause) {
-//     case 0:
-//         causeDescription = "Illegal Instruction";
-//         break;
-//     case 3:
-//         causeDescription = "LoadProhibited";
-//         break;
-//     case 6:
-//         causeDescription = "StoreProhibited";
-//         break;
-//     case 9:
-//         causeDescription = "DivideByZero";
-//         break;
-//     default:
-//         causeDescription = "Unknown";
-//         break;
-//     }
-
-//    // char buf[256];
-
-//     snprintf(CrashInfo, sizeof(CrashInfo),
-//             "Boot Count: <b>%d</b></br>\n"
-//             "Cause Code: <b>%u</b></br>\n"
-//             "Cause Description: <b>%s</b></br>\n"
-//             "Program Counter (PC): <b>0x%08X</b></br>\n",
-//             Prefs::BootCount,
-//             cause,
-//             causeDescription,
-//             pc);
-
-//     Serial.println("Low-Level Crash Detected<");
-//     Serial.println("Boot Count: " + String(Prefs::BootCount));
-//     Serial.println("Cause Code: " + String(cause));
-//     Serial.println("Cause Description: "  + String(causeDescription));
-//     Serial.println("Program Counter (PC): 0x" + String(pc, HEX));
-//     Serial.println("Timestamp: " + String(millis()));
-
-//     //LittleFS.begin(true);
-//     File file = LittleFS.open("/debug/test.log", FILE_WRITE);
-//     if (file)
-//     {
-//         file.println("<h1>Low-Level Crash Detected</h1>");
-//         file.println("Boot Count: <b>" + String(Prefs::BootCount) + "</b></br>");
-//         file.println("Cause Code: <b>" + String(cause) + "</b></br>");
-//         file.println("Cause Description: <b>" + String(causeDescription) + "</b></br>");
-//         file.println("Program Counter (PC): <b>0x" + String(pc, HEX) + "</b></br>");
-//         file.println("Timestamp: <b>" + String(millis()) + "</b></br>");
-//         file.close();
-//     }
-
-//     Serial.println("Restarting in 5 seconds");
-//     delay(5000);
-
-//     while(true)
-//     {
-//                     digitalWrite(LED_BUILTIN, HIGH);
-//                     delay(100);
-//                                 digitalWrite(LED_BUILTIN, LOW);
-//                                 delay(100);
-//     }
-
-//     esp_restart(); // while(true);
-// }
-
 // Checks for any logging/crash info recorded prior to last device reset and logs it to a file if we find anything
 void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
 {
@@ -566,6 +598,16 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
             file.println("PanicInfo:");
             file.printf("  pc=0x%08lx sp=0x%08lx a0=0x%08lx\n", PanicInfo.pc, PanicInfo.sp, PanicInfo.a0);
             file.printf("  exccause=%lu excvaddr=0x%08lx\n\n", PanicInfo.exccause, PanicInfo.excvaddr);
+
+            file.println("Backtrace (saved):");
+            for (size_t i = 0; i < 32; i++)
+            {
+                uint32_t pc = PanicInfo.BackTrace[i];
+                if (pc == 0)
+                    break;
+                file.printf("  #%02u 0x%08lx\n", static_cast<unsigned>(i), static_cast<unsigned long>(pc));
+            }
+            file.println();
         }
 
         if (hasMarks)
@@ -624,6 +666,16 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
     {
         Serial.printf("PanicInfo: pc=0x%08lx sp=0x%08lx a0=0x%08lx\n", PanicInfo.pc, PanicInfo.sp, PanicInfo.a0);
         Serial.printf("           exccause=%lu excvaddr=0x%08lx\n", PanicInfo.exccause, PanicInfo.excvaddr);
+        Serial.println();
+
+        Serial.println("Backtrace (saved):");
+        for (size_t i = 0; i < 32; i++)
+        {
+            uint32_t pc = PanicInfo.BackTrace[i];
+            if (pc == 0)
+                break;
+            Serial.printf("  #%02u 0x%08lx\n", static_cast<unsigned>(i), static_cast<unsigned long>(pc));
+        }
         Serial.println();
     }
 
