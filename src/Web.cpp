@@ -21,6 +21,7 @@
 #include "Screen.h"
 #include "UI.h"
 #include "Utils.h"
+#include "Version.h"
 #include "Debug.h"
 #include "Network.h"
 #include "MenuFunctions.h"
@@ -533,7 +534,7 @@ void Web::InitHTMLMergeFields()
     HTMLReplacements["Profile"] = CurrentProfile->Description.c_str();
     HTMLReplacements["DeviceName"] = DeviceName;
     HTMLReplacements["SerialNumber"] = SerialNumber;
-    HTMLReplacements["BuildVersion"] = getBuildVersion();
+    HTMLReplacements["BuildVersion"] = GetBuildVersion();
     HTMLReplacements["ControllerType"] = ControllerType;
     HTMLReplacements["ModelNumber"] = ModelNumber;
     HTMLReplacements["FirmwareRevision"] = FirmwareRevision;

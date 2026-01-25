@@ -10,6 +10,7 @@
 #include "Icons.h"
 #include "DeviceConfig.h"
 #include "Utils.h"
+#include "Version.h"
 #include "GamePad.h"
 #include "Battery.h"
 #include "Network.h"
@@ -86,7 +87,7 @@ void MenuFunctions::InitAbout()
 void MenuFunctions::InitVersion()
 {
   snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s - Core %s - FW v%s - HW v%s - SW v%s",
-           ModelNumber, getBuildVersion(), FirmwareRevision, HardwareRevision, SoftwareRevision);
+           ModelNumber, GetBuildVersion(), FirmwareRevision, HardwareRevision, SoftwareRevision);
 
   Menus::InitMenuItemDisplay(Menus::MenuTextBuffer, ScrollDefinitelyNeeded);
 }

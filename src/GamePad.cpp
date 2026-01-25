@@ -26,6 +26,7 @@
 #include "Screen.h"
 #include "UI.h"
 #include "Utils.h"
+#include "Version.h"
 #include "Menus.h"
 #include "Debug.h"
 #include "Web.h"
@@ -948,7 +949,7 @@ void setupController()
   bleGamepadConfig.setSerialNumber(SerialNumber);
   Serial.println("... Serial Number: " + String(SerialNumber));
 
-  Serial.println("... Core build: " + String(getBuildVersion()));
+  Serial.println("... Core build: " + String(GetBuildVersion()));
 
   // TODO: Revision versions in config file
   bleGamepadConfig.setFirmwareRevision(FirmwareRevision); // Version of this firmware
@@ -1114,13 +1115,17 @@ void setup()
   snprintf(buffer, sizeof(buffer), "💥 ℹ️ Found %d crash log(s)", logCount);
   Serial_INFO;
   Serial.println(buffer);
+  Serial.println("IMPORTANT: Reminder that when viewing crash logs with something like PlatformIO Serial Monitor");
+  Serial.println("with automatic core debugging turned on where PC and Backtraces are decoded,");
+  Serial.println("this is dependant on the correct .elf being available to decode against.");
   if (logCount > 2)
-    Serial.println("💥 📄  Only last 2 log's shown here - check web debug for others");
+    Serial.println("💥 📄  Only last 2 log's shown here - check web debug for others\n");
 
   int count = 0;
   for (const auto &logPath : crashLogs)
   {
-    if (count < 2) {
+    if (count < 2)
+    {
       DumpFileToSerial(logPath.c_str()); // Output any previous crash files we might have had for info purposes
       Serial.println();
     }

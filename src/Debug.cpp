@@ -14,7 +14,10 @@
 #include "Config.h"
 #include "Defines.h"
 #include "Prefs.h"
+#include "Utils.h"
+#include "Version.h"
 #include "esp_private/panic_internal.h"
+#include <esp_debug_helpers.h>
 
 // Override the default panic handler
 // We have to do this in C linkage to match the original declaration
@@ -64,8 +67,28 @@ namespace
         uint32_t pc;
         uint32_t sp;
         uint32_t a0;
+        uint32_t ps;
+        uint32_t a1;
+        uint32_t a2;
+        uint32_t a3;
+        uint32_t a4;
+        uint32_t a5;
+        uint32_t a6;
+        uint32_t a7;
+        uint32_t a8;
+        uint32_t a9;
+        uint32_t a10;
+        uint32_t a11;
+        uint32_t a12;
+        uint32_t a13;
+        uint32_t a14;
+        uint32_t a15;
+        uint32_t sar;
         uint32_t exccause;
         uint32_t excvaddr;
+        uint32_t lbeg;
+        uint32_t lend;
+        uint32_t lcount;
         uint32_t BackTrace[32];         // backtrace PCs
     };
 
@@ -78,13 +101,20 @@ static void BackTracePrintHex32(uint32_t v) {
     panic_print_hex(v);
 }
 
-// Print one backtrace entry: "  0xPC  SP=0xSP"
+// Print one backtrace entry: " 0xPC:0xSP"
 static void BackTracePrintEntry(uint32_t pc, uint32_t sp) {
-    panic_print_str("  ");
+    panic_print_str(" ");
     BackTracePrintHex32(pc);
-    panic_print_str("  SP=");
+    panic_print_str(":");
     BackTracePrintHex32(sp);
-    panic_print_char('\n');
+}
+
+// Print "LABEL : 0x12345678"
+static void PanicPrintReg(const char *label, uint32_t value)
+{
+    panic_print_str(label);
+    panic_print_str("0x");
+    panic_print_hex(value);
 }
 
 // Main walker
@@ -95,47 +125,34 @@ extern "C" void IRAM_ATTR PrintBackTrace(const XtExcFrame *frame)
         return;
     }
 
-    panic_print_str("Backtrace (custom):\n");
+    panic_print_str("Backtrace:");
 
-    // Print the crash point
-    uint32_t pc = frame->pc;
-    uint32_t sp = frame->a1;
-    BackTracePrintEntry(pc, sp);
+    // Seed from exception frame, NOT from esp_backtrace_get_start
+    esp_backtrace_frame_t bt_frame = {0};
+    bt_frame.exc_frame = (void *)frame;
+    bt_frame.pc = frame->pc;
+    bt_frame.sp = frame->a1;
+    bt_frame.next_pc = frame->a0;
 
-    // Walk up to 32 frames to avoid infinite loops
-    for (int depth = 0; depth < 32; depth++) {
-
-        // Validate SP
-        if (!esp_stack_ptr_is_sane(sp)) {
-            panic_print_str("  <invalid SP>\n");
-            break;
-        }
-
-        // Xtensa ABI:
-        //   [SP + 0] = previous SP
-        //   [SP + 4] = return address (saved A0)
-        uint32_t *words = (uint32_t *)sp;
-        uint32_t next_sp = words[0];
-        uint32_t next_pc = words[1];
-
-        // Stop if SP stops changing (corruption)
-        if (next_sp == sp) {
-            panic_print_str("  <SP loop>\n");
-            break;
-        }
-
-        // Validate PC
-        if (!esp_ptr_executable((void *)next_pc)) {
-            panic_print_str("  <invalid PC>\n");
-            break;
-        }
-
-        // Print this frame
-        BackTracePrintEntry(next_pc, next_sp);
-
-        // Advance
-        sp = next_sp;
+    if (!esp_stack_ptr_is_sane(bt_frame.sp) ||
+        !esp_ptr_executable((void *)esp_cpu_process_stack_pc(bt_frame.pc)))
+    {
+        panic_print_str(" <no backtrace>\n");
+        return;
     }
+
+    // Print first entry (faulting PC) - use esp_cpu_process_stack_pc to strip windowed ABI bits
+    BackTracePrintEntry(esp_cpu_process_stack_pc(bt_frame.pc), bt_frame.sp);
+
+    for (int depth = 1; depth < 32; depth++)
+    {
+        if (!esp_backtrace_get_next_frame(&bt_frame))
+            break;
+
+        BackTracePrintEntry(esp_cpu_process_stack_pc(bt_frame.pc), bt_frame.sp);
+    }
+
+    panic_print_char('\n');
 }
 
 extern "C" void IRAM_ATTR SaveBackTraceToPanicRecord(PanicRecord *rec, const XtExcFrame *frame)
@@ -145,40 +162,26 @@ extern "C" void IRAM_ATTR SaveBackTraceToPanicRecord(PanicRecord *rec, const XtE
         rec->BackTrace[i] = 0;
     }
 
-    uint32_t pc = frame->pc;
-    uint32_t sp = frame->a1;
+    // Seed from exception frame, NOT from esp_backtrace_get_start
+    esp_backtrace_frame_t bt_frame = {0};
+    bt_frame.exc_frame = (void *)frame;
+    bt_frame.pc = frame->pc;
+    bt_frame.sp = frame->a1;
+    bt_frame.next_pc = frame->a0;
 
-    // Store the first entry (faulting PC)
-    rec->BackTrace[0] = pc;
+    if (!esp_stack_ptr_is_sane(bt_frame.sp) ||
+        !esp_ptr_executable((void *)esp_cpu_process_stack_pc(bt_frame.pc)))
+        return;
 
-    // Walk the stack
-    for (int depth = 1; depth < 32; depth++) {
+    // Store processed PC (strip windowed ABI bits)
+    rec->BackTrace[0] = esp_cpu_process_stack_pc(bt_frame.pc);
 
-        // Validate SP
-        if (!esp_stack_ptr_is_sane(sp)) {
+    for (int depth = 1; depth < 32; depth++)
+    {
+        if (!esp_backtrace_get_next_frame(&bt_frame))
             break;
-        }
 
-        // Xtensa ABI:
-        //   [SP + 0] = previous SP
-        //   [SP + 4] = return address (saved A0)
-        uint32_t *words = (uint32_t *)sp;
-        uint32_t next_sp = words[0];
-        uint32_t next_pc = words[1];
-
-        // Stop if SP stops changing (corruption)
-        if (next_sp == sp) {
-            break;
-        }
-
-        // Validate PC
-        if (!esp_ptr_executable((void *)next_pc)) {
-            break;
-        }
-
-        rec->BackTrace[depth] = next_pc;
-
-        sp = next_sp;
+        rec->BackTrace[depth] = esp_cpu_process_stack_pc(bt_frame.pc);
     }
 }
 
@@ -191,10 +194,6 @@ extern "C" void __real_esp_panic_handler(void *info);
 // extern "C" void IRAM_ATTR esp_panic_handler(void *info)
 extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
 {
-
-    // Your logging here — but must be kept IRAM‑safe
-    panic_print_str("\n\n--- CUSTOM PANIC HANDLER TRIGGERED ---\n");
-
     if (info)
     {
         // Based on esp_panic_handler from C:\Users\<user>.platformio\packages\framework-espidf\components\esp_system\panic.c
@@ -207,13 +206,38 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
         PanicInfo.pc = frame->pc;
         PanicInfo.sp = frame->a1; // stack pointer is a1
         PanicInfo.a0 = frame->a0;
+        PanicInfo.ps = frame->ps;
+        PanicInfo.a1 = frame->a1;
+        PanicInfo.a2 = frame->a2;
+        PanicInfo.a3 = frame->a3;
+        PanicInfo.a4 = frame->a4;
+        PanicInfo.a5 = frame->a5;
+        PanicInfo.a6 = frame->a6;
+        PanicInfo.a7 = frame->a7;
+        PanicInfo.a8 = frame->a8;
+        PanicInfo.a9 = frame->a9;
+        PanicInfo.a10 = frame->a10;
+        PanicInfo.a11 = frame->a11;
+        PanicInfo.a12 = frame->a12;
+        PanicInfo.a13 = frame->a13;
+        PanicInfo.a14 = frame->a14;
+        PanicInfo.a15 = frame->a15;
+        PanicInfo.sar = frame->sar;
         PanicInfo.exccause = frame->exccause;
         PanicInfo.excvaddr = frame->excvaddr;
+        PanicInfo.lbeg = frame->lbeg;
+        PanicInfo.lend = frame->lend;
+        PanicInfo.lcount = frame->lcount;
+
+        SaveBackTraceToPanicRecord(&PanicInfo, frame);
 #endif
 
         if (details->reason)
         {
-            panic_print_str("## Guru Meditation Error: Core ");
+            panic_print_str("\nBuild: ");
+            panic_print_str(GetBuildVersion());
+            panic_print_str("\nCustom handler...\n");
+            panic_print_str("Guru Meditation Error: Core ");
             panic_print_dec(details->core);
             panic_print_str(" panic'ed (");
             panic_print_str(details->reason);
@@ -225,21 +249,68 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
             panic_print_str(details->description);
         }
 
-        panic_print_str("\n");
+        panic_print_str("\n\nCore ");
+        panic_print_dec(details->core);
+        panic_print_str(" register dump:\n");
 
-        // ets_printf("Panic = %08x\n", PanicFlag);
-        ets_printf("PC = %08x\n", frame->pc);
-        ets_printf("SP = %08x\n", frame->a1); // A1 = Stack pointer
-        ets_printf("A0 = %08x\n", frame->a0);
-        ets_printf("EXCVADDR = %08x\n", frame->excvaddr);
-        ets_printf("EXCCAUSE = %08x\n", frame->exccause);
+        PanicPrintReg("PC      : ", frame->pc);
+        panic_print_str("  ");
+        PanicPrintReg("PS      : ", frame->ps);
+        panic_print_str("  ");
+        PanicPrintReg("A0      : ", frame->a0);
+        panic_print_str("  ");
+        PanicPrintReg("A1      : ", frame->a1);
+        panic_print_char('\n');
 
-        panic_print_str("Backtrace:\n");
+        PanicPrintReg("A2      : ", frame->a2);
+        panic_print_str("  ");
+        PanicPrintReg("A3      : ", frame->a3);
+        panic_print_str("  ");
+        PanicPrintReg("A4      : ", frame->a4);
+        panic_print_str("  ");
+        PanicPrintReg("A5      : ", frame->a5);
+        panic_print_char('\n');
+
+        PanicPrintReg("A6      : ", frame->a6);
+        panic_print_str("  ");
+        PanicPrintReg("A7      : ", frame->a7);
+        panic_print_str("  ");
+        PanicPrintReg("A8      : ", frame->a8);
+        panic_print_str("  ");
+        PanicPrintReg("A9      : ", frame->a9);
+        panic_print_char('\n');
+
+        PanicPrintReg("A10     : ", frame->a10);
+        panic_print_str("  ");
+        PanicPrintReg("A11     : ", frame->a11);
+        panic_print_str("  ");
+        PanicPrintReg("A12     : ", frame->a12);
+        panic_print_str("  ");
+        PanicPrintReg("A13     : ", frame->a13);
+        panic_print_char('\n');
+
+        PanicPrintReg("A14     : ", frame->a14);
+        panic_print_str("  ");
+        PanicPrintReg("A15     : ", frame->a15);
+        panic_print_str("  ");
+        PanicPrintReg("SAR     : ", frame->sar);
+        panic_print_str("  ");
+        PanicPrintReg("EXCCAUSE: ", frame->exccause);
+        panic_print_char('\n');
+
+        PanicPrintReg("EXCVADDR: ", frame->excvaddr);
+        panic_print_str("  ");
+        PanicPrintReg("LBEG    : ", frame->lbeg);
+        panic_print_str("  ");
+        PanicPrintReg("LEND    : ", frame->lend);
+        panic_print_str("  ");
+        PanicPrintReg("LCOUNT  : ", frame->lcount);
+        panic_print_char('\n');
 
         PrintBackTrace(frame);
     }
 
-    panic_print_str("\n## CUSTOM COMPLETE - HANDING OVER TO ORIGINAL:\n");
+    panic_print_str("\n\nInitiating system panic handler. Should match custom...\n");
 
     // Call the original handler
     // Theoretically should reboot for us too
@@ -591,6 +662,7 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
     File file = LittleFS.open(crashPath, FILE_WRITE);
     if (file)
     {
+        file.println("Build: " + String(GetBuildVersion()));
         file.println("Reset Reason: " + String(ResetReasonToString(reason)) + " (" + String((int)reason) + ")\n");
 
         if (PanicInfo.flag == PanicFlag)
@@ -599,15 +671,30 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
             file.printf("  pc=0x%08lx sp=0x%08lx a0=0x%08lx\n", PanicInfo.pc, PanicInfo.sp, PanicInfo.a0);
             file.printf("  exccause=%lu excvaddr=0x%08lx\n\n", PanicInfo.exccause, PanicInfo.excvaddr);
 
-            file.println("Backtrace (saved):");
+            file.printf("Core register dump:\n");
+            file.printf("PC      : 0x%08lx  PS      : 0x%08lx  A0      : 0x%08lx  A1      : 0x%08lx\n",
+                        PanicInfo.pc, PanicInfo.ps, PanicInfo.a0, PanicInfo.a1);
+            file.printf("A2      : 0x%08lx  A3      : 0x%08lx  A4      : 0x%08lx  A5      : 0x%08lx\n",
+                        PanicInfo.a2, PanicInfo.a3, PanicInfo.a4, PanicInfo.a5);
+            file.printf("A6      : 0x%08lx  A7      : 0x%08lx  A8      : 0x%08lx  A9      : 0x%08lx\n",
+                        PanicInfo.a6, PanicInfo.a7, PanicInfo.a8, PanicInfo.a9);
+            file.printf("A10     : 0x%08lx  A11     : 0x%08lx  A12     : 0x%08lx  A13     : 0x%08lx\n",
+                        PanicInfo.a10, PanicInfo.a11, PanicInfo.a12, PanicInfo.a13);
+            file.printf("A14     : 0x%08lx  A15     : 0x%08lx  SAR     : 0x%08lx  EXCCAUSE: 0x%08lx\n",
+                        PanicInfo.a14, PanicInfo.a15, PanicInfo.sar, PanicInfo.exccause);
+            file.printf("EXCVADDR: 0x%08lx  LBEG    : 0x%08lx  LEND    : 0x%08lx  LCOUNT  : 0x%08lx\n\n",
+                        PanicInfo.excvaddr, PanicInfo.lbeg, PanicInfo.lend, PanicInfo.lcount);
+
+            // Note the saved backtrace values only have the PC (Program Counter) values, not the SP S(Stack Pointer). They aren't needed for post-mortem analysis.
+            file.print("Backtrace:");
             for (size_t i = 0; i < 32; i++)
             {
                 uint32_t pc = PanicInfo.BackTrace[i];
                 if (pc == 0)
                     break;
-                file.printf("  #%02u 0x%08lx\n", static_cast<unsigned>(i), static_cast<unsigned long>(pc));
+                file.printf(" 0x%08lx", static_cast<unsigned long>(pc));
             }
-            file.println();
+            file.println("\n");
         }
 
         if (hasMarks)
@@ -655,6 +742,7 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
         file.close();
     }
 
+    Serial.println("Build: " + String(GetBuildVersion()));
     Serial.print("ResetReason: ");
     Serial.print(ResetReasonToString(reason));
     Serial.print(" (");
@@ -668,15 +756,29 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
         Serial.printf("           exccause=%lu excvaddr=0x%08lx\n", PanicInfo.exccause, PanicInfo.excvaddr);
         Serial.println();
 
-        Serial.println("Backtrace (saved):");
+        Serial.println("Core register dump:");
+        Serial.printf("PC      : 0x%08lx  PS      : 0x%08lx  A0      : 0x%08lx  A1      : 0x%08lx\n",
+                      PanicInfo.pc, PanicInfo.ps, PanicInfo.a0, PanicInfo.a1);
+        Serial.printf("A2      : 0x%08lx  A3      : 0x%08lx  A4      : 0x%08lx  A5      : 0x%08lx\n",
+                      PanicInfo.a2, PanicInfo.a3, PanicInfo.a4, PanicInfo.a5);
+        Serial.printf("A6      : 0x%08lx  A7      : 0x%08lx  A8      : 0x%08lx  A9      : 0x%08lx\n",
+                      PanicInfo.a6, PanicInfo.a7, PanicInfo.a8, PanicInfo.a9);
+        Serial.printf("A10     : 0x%08lx  A11     : 0x%08lx  A12     : 0x%08lx  A13     : 0x%08lx\n",
+                      PanicInfo.a10, PanicInfo.a11, PanicInfo.a12, PanicInfo.a13);
+        Serial.printf("A14     : 0x%08lx  A15     : 0x%08lx  SAR     : 0x%08lx  EXCCAUSE: 0x%08lx\n",
+                      PanicInfo.a14, PanicInfo.a15, PanicInfo.sar, PanicInfo.exccause);
+        Serial.printf("EXCVADDR: 0x%08lx  LBEG    : 0x%08lx  LEND    : 0x%08lx  LCOUNT  : 0x%08lx\n\n",
+                      PanicInfo.excvaddr, PanicInfo.lbeg, PanicInfo.lend, PanicInfo.lcount);
+
+        Serial.print("Backtrace:");
         for (size_t i = 0; i < 32; i++)
         {
             uint32_t pc = PanicInfo.BackTrace[i];
             if (pc == 0)
                 break;
-            Serial.printf("  #%02u 0x%08lx\n", static_cast<unsigned>(i), static_cast<unsigned long>(pc));
+            Serial.printf(" 0x%08lx", static_cast<unsigned long>(pc));
         }
-        Serial.println();
+        Serial.println("\n");
     }
 
     if (hasMarks)
