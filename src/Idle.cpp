@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <Screen.h>
 #include <Benchmark.h>
+#include <Debug.h>
 
 // Idle effect, drawn when device has been sat around getting bored for a while
 // Usually shown same time LED idle effect kicks in
@@ -43,6 +44,10 @@ static float randPosVel()
 
 void InitIdleEffect()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
     // InitDisplayBuffer();
 
     IdleSpawnPoint *sp = &IdleSpawnPoints[rand() % IdleSpawnPointCount];
@@ -101,6 +106,10 @@ void InitIdleEffect()
 
 void RenderIdleEffect()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
     // IdleBenchmark.Start("Idle Start");
 
     // Test to check layout of screen to help work out particle start positions
@@ -250,6 +259,10 @@ void RenderIdleEffect()
 
 void StopIdleEffect()
 {
+#ifdef DEBUG_MARKS
+    Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
     for (int i = 0; i < currentParticleCount; i++)
         Display.writePixel((int)particles[i].x, (int)particles[i].y, C_BLACK);
 }

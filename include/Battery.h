@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DeviceConfig.h"
+#include "Debug.h"
 
 const float Vcc = 2.4;
 

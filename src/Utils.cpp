@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <GamePad.h>
 #include <LittleFS.h>
+#include <Debug.h>
 
 float fmap(float x, float in_min, float in_max, float out_min, float out_max)
 {
@@ -47,14 +48,15 @@ const char *getBuildVersion()
 void DumpFileToSerial(const char* path) {
 if (LittleFS.exists(path))
 {
-
   File file = LittleFS.open(path, FILE_READ);
   if (!file) {
-    Serial.printf("ℹ️ Failed to open %s\n", path);   // ❌
+    Serial_INFO;
+    Serial.printf("❌ Failed to open %s\n", path);
     return;
   }
 
-  Serial.printf("📄 Dumping %s (%d bytes):\n", path, file.size());
+  Serial_INFO;
+  Serial.printf("📄 Showing %s (%d bytes):\n", path, file.size());
 
   while (file.available()) {
     Serial.write(file.read());

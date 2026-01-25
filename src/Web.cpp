@@ -155,7 +155,7 @@ esp_err_t Web::SendPage_Debug(httpd_req_t *req)
 
         for (size_t i = 0; i < crashLogs.size(); i++)
         {
-            float opacity = 1.0f - (0.05f * static_cast<float>(i));
+            float opacity = 1.0f - (0.07f * static_cast<float>(i));
             if (opacity < 0.0f)
                 opacity = 0.0f;
 

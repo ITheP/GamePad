@@ -15,296 +15,12 @@
 #include "Defines.h"
 #include "Prefs.h"
 
-// Serial friendly characters (show fine in VSCode terminal)
-
-// Common ones used...
-// ❌ Failed/false/stop/bad
-// ✅ Yes/OK/Success
-// ⚠️ Warning
-// ℹ️ Information
-// ❔ Query
-// ❓ Query
-// 🛑 Stop
-// ⛔ Blocked
-// 🚫 Prohibited / Rejected
-// ▶️ Play/Start
-// ⏸️ Pause
-// ⏹️ Stop
-// ✋ Raised Hand
-// ⭐ Star
-// 🌟 Glowing Star
-// 🌐 Web
-// 📨 Request
-// 🌍 Planet
-// 💾 Save
-// 🔢 Numbers
-// 🔣 Symbols
-// 📊 Stats/Graph
-// 📄 File
-// 📁 Folder
-// ⏳ Waiting
-// ⌛ Done
-// 🕒 Time
-// ⏱ Stopwatch
-// 📺 Display
-// 🛜 WiFi
-// 📶 Signal Strength
-// 🔗 Link
-// 📩 Request
-// 🗺️ Map
-// 🧭 Compass
-// 🖥 Desktop
-// 💻 Laptop
-// 📺 Display
-// 🔌 Serial
-// 🔢 Digital
-// 🎚 Analog
-// 🎩 Hat
-// 🔘 Buttons
-// 🎛 Inputs
-// 🎤 Microphone
-// ⌨️ Keyboard
-// 🎧 Headphones
-// 🎮 Controller
-// ⚙️ Settings
-// 🔧 Tool
-// 👤 Profile
-// 👥 Profiles
-// 💡 Internal LED
-// 🔦 External LED
-// 🔋 Battery
-// ⚡ Voltage
-// 💥 Crash
-// 🐞 Bug
-
-// Serial output in VSCode appears to be able to display following OK - though editor font and terminal font may differ...
-// Sometimes VSCode get's knickers in a twist and doesn't display emoji/icons
-
-//  !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_
-// `abcdefghijklmnopqrstuvwxyz{|}~☀☁☂☃☄★☆☇☈☉☊☋☌☍☎☏☐☑☒☓☔☕☖☗☘☙☚☛☜☝☞☟☠
-// ☡☢☣☤☥☦☧☨☩☪☫☬☭☮☯☰☱☲☳☴☵☶☷☸☹☺☻☼☽☾☿♀♁♂♃♄♅♆♇♈♉♊♋♌♍♎♏♐♑♒♓♔♕♖♗♘♙♚♛♜♝♞♟♠
-// ♡♢♣♤♥♦♧♨♩♪♫♬♭♮♯♰♱♲♳♴♵♶♷♸♹♺♻♼♽♾♿⚀⚁⚂⚃⚄⚅⚆⚇⚈⚉⚊⚋⚌⚍⚎⚏⚐⚑⚒⚓⚔⚕⚖⚗⚘⚙⚚⚛⚜⚝⚞⚟⚠
-// ⚡⚢⚣⚤⚥⚦⚧⚨⚩⚪⚫⚬⚭⚮⚯⚰⚱⚲⚳⚴⚵⚶⚷⚸⚹⚺⚻⚼⚽⚾⚿⛀⛁⛂⛃⛄⛅⛆⛇⛈⛉⛊⛋⛌⛍⛎⛏⛐⛑⛒⛓⛔⛕⛖⛗⛘⛙⛚⛛⛜⛝⛞⛟⛠
-// ⛡⛢⛣⛤⛥⛦⛧⛨⛩⛪⛫⛬⛭⛮⛯⛰⛱⛲⛳⛴⛵⛶⛷⛸⛹⛺⛻⛼⛽⛾⛿✀✁✂✃✄✅✆✇✈✉✊✋✌✍✎✏✐✑✒✓✔✕✖✗✘✙✚✛✜✝✞✟✠
-// ✡✢✣✤✥✦✧✨✩✪✫✬✭✮✯✰✱✲✳✴✵✶✷✸✹✺✻✼✽✾✿❀❁❂❃❄❅❆❇❈❉❊❋❌❍❎❏❐❑❒❓❔❕❖❗❘❙❚❛❜❝❞❟❠
-// ❡❢❣❤❥❦❧❨❩❪❫❬❭❮❯❰❱❲❳❴❵❶❷❸❹❺❻❼❽❾❿➀➁➂➃➄➅➆➇➈➉➊➋➌➍➎➏➐➑➒➓➔➕➖➗➘➙➚➛➜➝➞➟➠
-// ➡➢➣➤➥➦➧➨➩➪➫➬➭➮➯➰➱➲➳➴➵➶➷➸➹➺➻➼➽➾➿⬀⬁⬂⬃⬄⬅⬆⬇⬈⬉⬊⬋⬌⬍⬎⬏⬐⬑⬒⬓⬔⬕⬖⬗⬘⬙⬚⬛⬜⬝⬞⬟⬠
-// ⬡⬢⬣⬤⬥⬦⬧⬨⬩⬪⬫⬬⬭⬮⬯⬰⬱⬲⬳⬴⬵⬶⬷⬸⬹⬺⬻⬼⬽⬾⬿⭀⭁⭂⭃⭄⭅⭆⭇⭈⭉⭊⭋⭌⭍⭎⭏⭐⭑⭒⭓⭔⭕⭖⭗⭘⭙⭚⭛⭜⭝⭞⭟⭠
-// ⮡⮢⮣⮤⮥⮦⮧⮨⮩⮪⮫⮬⮭⮮⮯⮰⮱⮲⮳⮴⮵⮶⮷⮸⮹⮽⮾⮿⯀⯁⯂⯃⯄⯅⯆⯇⯈⯉⯊⯋⯌⯍⯎⯏⯐⯑
-// 🇦🇧🇨🇩🇪🇫🇬🇭🇮🇯🇰🇱🇲🇳🇴🇵🇶🇷🇸🇹🇺🇻🇼🇽🇾🇿🌀🌁🌂🌃🌄🌅
-// 🌆🌇🌈🌉🌊🌋🌌🌍🌎🌏🌐🌑🌒🌓🌔🌕🌖🌗🌘🌙🌚🌛🌜🌝🌞🌟🌠🌡🌢🌣🌤🌥🌦🌧🌨🌩🌪🌭🌮🌯🌰🌱🌲🌳🌴🌵🌶🌷🌸 🌹🌺🌻🌼🌽🌾🌿🍀🍁🍂🍃🍄🍅
-// 🍆🍇🍈🍉🍊🍋🍌🍍🍎🍏🍐🍑🍒🍓🍔🍕🍖🍗🍘🍙🍚🍛🍜🍝🍞🍟🍠🍡🍢🍣🍤🍥🍦🍧🍨🍩🍪🍫🍬🍭🍮🍯🍰🍱🍲🍳🍴🍵🍶🍷🍸🍹🍺🍻🍼🍽🍾🍿🎀 🎁🎂🎃🎄🎅
-// 🎆🎇🎈🎉🎊🎋🎌🎍🎎🎏🎐🎑🎒🎓🎔🎕🎖🎗🎘🎙🎚🎛🎜🎝🎞🎟🎠🎡🎢🎣🎤🎥🎦🎧🎨🎩🎪🎫🎬🎭🎮🎯🎰🎱🎲🎳🎴🎵🎶🎷🎸🎹🎺🎻🎼🎽🎾🎿🏀🏁🏂🏃🏄🏅
-// 🏆🏇🏈🏉🏊🏋🏌🏍🏎🏏🏐🏑🏒🏓🏔🏕🏖🏗🏘🏙🏚🏛🏜🏝🏞🏟🏠🏡🏢🏣 🏤🏥🏦🏧🏨🏩🏪🏫🏬🏭🏮🏯🏰🏱🏲🏳🏴🏵🏶🏷🏸🏹🏺🏻🏼🏽🏾🏿🐀🐁🐂🐃🐄🐅
-// 🐆🐇🐈🐉🐊🐋🐌🐍🐎🐏🐐🐑🐒🐓🐔🐕🐖🐗🐘🐙🐚🐛🐜🐝🐞🐟🐠🐡🐢🐣🐤🐥🐦🐧🐨🐩🐪🐫🐬🐭🐮🐯🐰🐱🐲🐳🐴🐵🐶🐷🐸🐹🐺🐻🐼🐽🐾🐿👀👁  👂👃👄👅
-// 👆👇👈👉👊👋👌👍👎👏👐👑👒👓👔👕👖👗👘👙👚👛👜👝👞👟👠👡👢👣👤👥👦👧👨👩👪👫👬👭👮👯👰👱👲👳👴👵👶👷👸👹👺👻👼👽👾👿💀💁💂💃💄💅
-// 💆💇💈💉💊💋💌💍💎💏💐💑💒💓💔💕💖💗💘💙💚💛💜💝💞💟💠💡💢💣💤💥💦💧💨💩💪💫💬💭💮💯💰💱💲💳💴💵💶💷💸💹💺💻💼💽💾💿📀📁📂📃📄📅
-// 📆📇📈📉📊📋📌📍📎📏📐📑📒📓📔📕📖📗📘📙📚📛📜📝📞📟📠📡📢📣📤📥📦📧📨📩📪📫📬📭📮📯📰📱📲📳📴📵📶📷📸📹📺📻📼📽📾📿🔀🔁🔂🔃🔄🔅
-// 🔆🔇🔈🔉🔊🔋🔌🔍🔎🔏🔐🔑🔒🔓🔔🔕🔖🔗🔘🔙🔚🔛🔜🔝🔞🔟🔠🔡🔢🔣🔤🔥🔦🔧🔨🔩🔪🔫🔬🔭🔮🔯🔰🔱🔲🔳🔴🔵🔶🔷🔸🔹🔺🔻🔼🔽🔾🔿🕀🕁🕂🕃🕄🕅
-// 🕆🕇🕈🕉🕊🕋🕌🕍🕎🕏🕐🕑 🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛🕜🕝🕞🕟🕠🕡🕢🕣🕤🕥🕦🕧🕨🕩🕪🕫🕬🕭🕮🕯🕰🕱🕲🕳🕴🕵🕶🕷🕸🕹🕺🕻🕼🕽🕾🕿🖀🖁🖂🖃🖄🖅
-// 🖆🖇🖈🖉🖊🖋🖌🖍🖎🖏🖐🖑🖒🖓🖔🖕🖖🖗🖘🖙🖚🖛🖜🖝🖞🖟🖠🖡🖢🖣🖤🖥🖦🖧🖨🖩🖪🖫🖬🖭🖮🖯🖰🖱🖲🖳🖴🖵🖶🖷🖸🖹🖺🖻🖼🖽🖾🖿🗀🗁🗂🗃🗄🗅
-// 🗆🗇🗈🗉🗊🗋🗌🗍🗎🗏🗐🗑🗒🗓🗔🗕🗖🗗🗘🗙🗚🗛🗜🗝🗞🗟🗠🗡🗢🗣🗤🗥🗦🗧🗨🗩🗪🗫🗬🗭🗮🗯🗰🗱🗲🗳🗴🗵🗶🗷🗸🗹🗺🗻🗼🗽🗾 🗿😀😁😂😃😄😅
-// 😆😇😈😉😊😋😌😍😎😏😐😑😒😓😔😕😖😗😘😙😚😛😜😝😞😟😠😡😢😣😤😥😦😧😨😩😪😫😬😭😮😯😰😱😲😳😴😵😶😷😸😹😺😻😼😽😾😿🙀🙁🙂🙃🙄🙅
-// 🙆🙇🙈🙉🙊🙋🙌🙍🙎🙏🚀🚁🚂🚃🚄🚅🚆🚇🚈🚉🚊🚋🚌🚍🚎🚏🚐🚑🚒🚓🚔🚕🚖🚗🚘🚙🚚🚛🚜🚝🚞🚟🚠🚡🚢🚣🚤🚥🚦🚧🚨🚩🚪🚫🚬🚭🚮🚯🚰🚱🚲🚳🚴🚵
-// 🚶🚷🚸🚹🚺🚻🚼🚽🚾🚿🛀🛁🛂🛃🛄🛅🛆🛇🛈🛉🛊🛋🛌🛍🛎🛏🛐🛑🛒🛕🛖🛗🛜🛝🛞🛟🛠🛡🛢🛣🛤🛥🛦🛧🛨🛩🛪🛫🛬🛴🛵
-// 🛶🛷🛸🛹🛺🛻🛼🤌🤍🤎🤏🤐🤑🤒🤓🤔🤕🤖🤗🤘🤙🤚🤛🤜🤝🤞🤟🤠🤡🤢🤣🤤🤥🤦🤧🤨🤩🤪🤫🤬🤭🤮🤯🤰🤱🤲🤳🤴🤵
-// 🤶🤷🤸🤹🤺🤻🤼🤽🤾🤿🥀🥁🥂🥃🥄🥅🥇🥈🥉🥊🥋🥌🥍🥎🥏🥐🥑🥒🥓🥔🥕🥖🥗🥘🥙🥚🥛🥜🥝🥞🥟🥠🥡🥢🥣🥤🥥🥦🥧🥨🥩🥪🥫🥬🥭🥮🥯🥰🥱🥲🥳🥴🥵
-// 🥶🥷🥸🥹🥺🥻🥼🥽🥾🥿🦀🦁🦂🦃🦄🦅🦆🦇🦈🦉🦊🦋🦌🦍🦎🦏🦐🦑🦒🦓🦔🦕🦖🦗🦘🦙🦚🦛🦜🦝🦞🦟🦠🦡🦢🦣🦤🦥🦦🦧🦨🦩🦪🦫🦬🦭🦮🦯🦰🦱🦲🦳🦴🦵
-// 🦶🦷🦸🦹🦺🦻🦼🦽🦾🦿🧀🧁🧂🧃🧄🧅🧆🧇🧈🧉🧊🧋🧌🧍🧎🧏🧐🧑🧒🧓🧔🧕🧖🧗🧘🧙🧚🧛🧜🧝🧞🧟🧠🧡🧢🧣🧤🧥🧦🧧🧨🧩🧪🧫🧬🧭🧮🧯🧰🧱🧲🧳🧴🧵
-// 🧶🧷🧸🧹🧺🧻🧼🧽🧾🧿🩰🩱🩲🩳🩴🩵🩶🩷🩸🩹🩺🩻🩼🪀🪁🪂🪃🪄🪅🪆🪇🪈🪐🪑🪒🪓🪔🪕🪖🪗🪘🪙🪚🪛🪜🪝🪞🪟🪠🪡🪢🪣🪤🪥
-// 🪦🪧🪨🪩🪪🪫🪬🪭🪮🪯🪰🪱🪲🪳🪴🪵🪶🪷🪸🪹🪺🪻🪼🪽🫂🫃🫄🫅🫒🫓🫔🫕🫖🫗🫘🫙🫚🫛🫠🫡🫢🫣🫤🫥
-// 🫦🫧🫨🫱🫲🫳🫴🫵🫶🫷🫸
-
-// // Convert a Unicode codepoint (0–0x10FFFF) to UTF‑8 bytes
-// int utf8Encode(uint32_t cp, char* out)
-// {
-//     if (cp <= 0x7F) {
-//         out[0] = cp;
-//         return 1;
-//     }
-//     else if (cp <= 0x7FF) {
-//         out[0] = 0xC0 | (cp >> 6);
-//         out[1] = 0x80 | (cp & 0x3F);
-//         return 2;
-//     }
-//     else if (cp <= 0xFFFF) {
-//         out[0] = 0xE0 | (cp >> 12);
-//         out[1] = 0x80 | ((cp >> 6) & 0x3F);
-//         out[2] = 0x80 | (cp & 0x3F);
-//         return 3;
-//     }
-//     else {
-//         out[0] = 0xF0 | (cp >> 18);
-//         out[1] = 0x80 | ((cp >> 12) & 0x3F);
-//         out[2] = 0x80 | ((cp >> 6) & 0x3F);
-//         out[3] = 0x80 | (cp & 0x3F);
-//         return 4;
-//     }
-// }
-
-// // Included for our purposes
-// // - ASCII
-// // - Latin‑1
-// // - arrows
-// // - box‑drawing
-// // - block elements
-// // - geometric shapes
-// // - misc symbols
-// // - dingbats
-// // - emoji
-// // - math symbols
-// // - music notation
-// // Excluded for our purposes
-// // - control codes
-// // - combining marks
-// // - surrogate halves
-// // - private‑use areas
-// // - CJK
-// // - Hangul
-// // - ancient scripts
-// // - variation selectors (except FE0F)
-
-// bool excludeCP(uint32_t cp)
-// {
-//     // Control characters
-//     if (cp < 0x20) return true;
-//     if (cp >= 0x7F && cp <= 0x9F) return true;
-
-//     // Combining diacritics
-//     if (cp >= 0x0300 && cp <= 0x036F) return true;
-//     if (cp >= 0x1AB0 && cp <= 0x1AFF) return true;
-//     if (cp >= 0x1DC0 && cp <= 0x1DFF) return true;
-
-//     // UTF‑16 surrogate range
-//     if (cp >= 0xD800 && cp <= 0xDFFF) return true;
-
-//     // Private Use Areas
-//     if (cp >= 0xE000 && cp <= 0xF8FF) return true;
-//     if (cp >= 0xF0000 && cp <= 0xFFFFD) return true;
-//     if (cp >= 0x100000 && cp <= 0x10FFFD) return true;
-
-//     // CJK Unified Ideographs
-//     if (cp >= 0x3400 && cp <= 0x4DBF) return true;
-//     if (cp >= 0x4E00 && cp <= 0x9FFF) return true;
-//     if (cp >= 0x20000 && cp <= 0x2A6DF) return true;
-//     if (cp >= 0x2A700 && cp <= 0x2B73F) return true;
-//     if (cp >= 0x2B740 && cp <= 0x2B81F) return true;
-//     if (cp >= 0x2B820 && cp <= 0x2CEAF) return true;
-//     if (cp >= 0x2CEB0 && cp <= 0x2EBEF) return true;
-
-//     // Hangul syllables
-//     if (cp >= 0xAC00 && cp <= 0xD7AF) return true;
-
-//     // Variation selectors (except FE0F)
-//     if (cp >= 0xFE00 && cp <= 0xFE0E) return true;
-//     if (cp >= 0xE0100 && cp <= 0xE01EF) return true;
-
-//     // Ancient scripts (skip)
-//     if (cp >= 0x10000 && cp <= 0x102FF) return true; // Linear B etc.
-//     if (cp >= 0x10300 && cp <= 0x1034F) return true; // Old Italic
-//     if (cp >= 0x10400 && cp <= 0x1044F) return true; // Deseret
-//     if (cp >= 0x10800 && cp <= 0x10FFF) return true; // Misc ancient
-
-//     //if (cp >= 0x1D400 && cp <= 0x1D7FF) return true; // Mathematical Alphanumeric Symbols
-//     //if (cp >= 0x1D100 && cp <= 0x1D1FF) return true; // Musical Symbols
-
-//     return false;
-// }
-
-// // Returns true if the codepoint should be included in the font/renderer
-// bool includeCP(uint32_t cp)
-// {
-//     // --- BASIC ASCII PRINTABLES ---
-//     // Space (0x20) through tilde (0x7E)
-//     if (cp >= 0x20 && cp <= 0x7E)
-//         return true;
-
-//     // --- NEWLINE / TAB (optional) ---
-//     //if (cp == '\n' || cp == '\r' || cp == '\t')
-//     //    return true;
-
-//     // --- EXTENDED EMOJI / SYMBOL RANGES (VSCode‑safe) ---
-//     // Add only the ranges you want to support.
-//     // These are the safe ones for Windows + VSCode terminal.
-
-//     // Misc Symbols + Dingbats
-//     if (cp >= 0x2600 && cp <= 0x27BF)
-//         return true;
-
-//     // Arrows + geometric shapes (safe subset)
-//     if (cp >= 0x2B00 && cp <= 0x2BFF)
-//         return true;
-
-//     // Emoji blocks
-//     if (cp >= 0x1F300 && cp <= 0x1F5FF)  // Misc symbols & pictographs
-//         return true;
-
-//     if (cp >= 0x1F600 && cp <= 0x1F64F)  // Emoticons
-//         return true;
-
-//     if (cp >= 0x1F680 && cp <= 0x1F6FF)  // Transport & map
-//         return true;
-
-//     if (cp >= 0x1F900 && cp <= 0x1F9FF)  // Supplemental symbols
-//         return true;
-
-//     if (cp >= 0x1FA70 && cp <= 0x1FAFF)  // Emoji Extended-A
-//         return true;
-
-//     // Skin tones
-//     if (cp >= 0x1F3FB && cp <= 0x1F3FF)
-//         return true;
-
-//     // Regional indicator flags
-//     if (cp >= 0x1F1E6 && cp <= 0x1F1FF)
-//         return true;
-
-//     // Emoji presentation selector
-//     if (cp == 0xFE0F)
-//         return true;
-
-//     // Everything else excluded
-//     return false;
-// }
-
-// // Outputs characters to Serial - we can see what comes out other end as supported chars in terminal
-// void Debug::printUnicodeRange()
-// {
-//     const int maxPerLine = 64;
-//     int count = 0;
-//     char buf[5] = {0};
-
-//     for (uint32_t cp = 0x0020; cp <= 0x1FFFF; cp++)
-//     {
-//         //if (excludeCP(cp))
-//         if (!includeCP(cp))
-//             continue;
-
-//         int len = utf8Encode(cp, buf);
-//         Serial.write((uint8_t*)buf, len);
-//         count++;
-
-//         if (count >= maxPerLine) {
-//             Serial.println();
-//             count = 0;
-//         }
-//     }
-
-//     if (count > 0)
-//         Serial.println();
-
-// }
-
-// Possible extra debug assistance on crashes
-// https://kotyara12.ru/iot/remote_esp32_backtrace/
-
-
 char Debug::CrashFile[] = "/debug/crash.log";
 const char Debug::CrashDir[] = "/debug";
 
 namespace
 {
-    constexpr size_t DebugMarkCount = 10;
+    constexpr size_t DebugMarkCount = 24;
 }
 
 RTC_NOINIT_ATTR Debug::DebugMark DebugMarks[DebugMarkCount];
@@ -312,13 +28,13 @@ RTC_NOINIT_ATTR int DebugMarkPos;
 
 namespace
 {
-    constexpr uint32_t PanicMagic = 0x504E4B21; // "PNK!"
+    constexpr uint32_t PanicFlag = 0x4F554348; // "OUCH"
     constexpr char CrashPrefix[] = "crash.";
     constexpr char CrashSuffix[] = ".log";
 
     struct PanicRecord
     {
-        uint32_t magic;
+        uint32_t flag;
         uint32_t pc;
         uint32_t sp;
         uint32_t a0;
@@ -567,7 +283,7 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
     if (info)
     {
         XtExcFrame *frame = reinterpret_cast<XtExcFrame *>(info);
-        PanicInfo.magic = PanicMagic;
+        PanicInfo.flag = PanicFlag;
         PanicInfo.pc = frame->pc;
         PanicInfo.sp = frame->a1; // stack pointer is a1
         PanicInfo.a0 = frame->a0;
@@ -588,22 +304,24 @@ void Debug::Mark(int mark, const char *details)
     StoreDebugMark(mark, 0, nullptr, nullptr, details);
 }
 
-void Debug::Mark(int mark, int lineNumber, const char*filename, const char *function)
+void Debug::Mark(int mark, int lineNumber, const char *filename, const char *function)
 {
     StoreDebugMark(mark, lineNumber, filename, function, nullptr);
 }
 
-void Debug::Mark(int mark, int lineNumber, const char* filename, const char *function, const char *details)
+void Debug::Mark(int mark, int lineNumber, const char *filename, const char *function, const char *details)
 {
     StoreDebugMark(mark, lineNumber, filename, function, details);
 }
 
 // Reset any possible crash info - we've just powered on so there won't be any!
-void Debug::PowerOnInit()
+void Debug::ClearCrashCheckData()
 {
     for (size_t i = 0; i < DebugMarkCount; i++)
         ClearDebugMark(DebugMarks[i]);
+
     DebugMarkPos = 0;
+    PanicInfo.flag = 0;
 }
 
 static const char *ResetReasonToString(esp_reset_reason_t reason)
@@ -736,84 +454,98 @@ void Debug::WarningFlashes(WarningFlashCodes code)
 //     esp_restart(); // while(true);
 // }
 
+// Checks for any logging/crash info recorded prior to last device reset and logs it to a file if we find anything
 void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
 {
-    bool hasMarks = false;
-    for (size_t i = 0; i < DebugMarkCount; i++)
-    {
-        if (DebugMarks[i].Value != -1)
-        {
-            hasMarks = true;
-            break;
-        }
-    }
+    // bool hasMarks = false;
+    // // for (size_t i = 0; i < DebugMarkCount; i++)
+    // // {
+    // //     if (DebugMarks[i].Value != -1)
+    // //     {
+    // //         hasMarks = true;
+    // //         break;
+    // //     }
+    // // }
+    // if (DebugMarks[0].Value != -1)
+    //     hasMarks = true;
 
-    if (!hasMarks && PanicInfo.magic != PanicMagic)
+    // We don't check for marks unless some sort of relevant panic flag was set
+
+    if (reason == ESP_RST_POWERON ||
+        reason == ESP_RST_EXT ||
+        reason == ESP_RST_SW)
     {
-        Serial.println("No crash info found");
+        // Valid reset reasons rather than from issues. Ignore.
         return;
     }
 
+    bool hasMarks = (DebugMarks[0].Value == -1 ? false : true);
+
+    // if (!hasMarks && PanicInfo.flag != PanicFlag)
+    // {
+    //     Serial.println("No crash info found");
+    //     return;
+    // }
+
     char crashPath[32];
-    if (!GetNextCrashFilePath(crashPath, sizeof(crashPath))) {
+    if (!GetNextCrashFilePath(crashPath, sizeof(crashPath)))
+    {
         Serial.print("💥 ⛔ Critical failure, unable to create crash file. No crash details will be saved.");
         return;
     }
 
-    Serial.println("💥 Crash info found, logging to " + String(crashPath) + " - resulting file should also be visible in web interface");
+    Serial.println("💥 Crash detected, logging to " + String(crashPath) + " - resulting file should also be visible in web interface");
 
     // Crash file picked up! Save this
     File file = LittleFS.open(crashPath, FILE_WRITE);
     if (file)
     {
-        file.println("ResetReason: " + String(ResetReasonToString(reason)) + " (" + String((int)reason) + ")");
-        
-        if (PanicInfo.magic == PanicMagic)
+        file.println("Reset Reason: " + String(ResetReasonToString(reason)) + " (" + String((int)reason) + ")\n");
+
+        if (PanicInfo.flag == PanicFlag)
         {
             file.println("PanicInfo:");
             file.printf("  pc=0x%08lx sp=0x%08lx a0=0x%08lx\n", PanicInfo.pc, PanicInfo.sp, PanicInfo.a0);
-            file.printf("  exccause=%lu excvaddr=0x%08lx\n", PanicInfo.exccause, PanicInfo.excvaddr);
+            file.printf("  exccause=%lu excvaddr=0x%08lx\n\n", PanicInfo.exccause, PanicInfo.excvaddr);
         }
-        
-        file.println("Marks (newest first):");
 
-        for (size_t i = 0; i < DebugMarkCount; i++)
+        if (hasMarks)
         {
-            int idx = DebugMarkPos - static_cast<int>(i);
-            if (idx < 0)
-                idx += static_cast<int>(DebugMarkCount);
 
-            const Debug::DebugMark &mark = DebugMarks[idx];
-            if (mark.Value == -1)
-                continue;
+            file.println("Marks (newest first):");
 
-            file.print("Value: ");
-            file.print(mark.Value);
-
-            if (mark.LineNumber > 0)
+            for (size_t i = 0; i < DebugMarkCount; i++)
             {
-                file.print(" Line: ");
-                file.print(mark.LineNumber);
-            }
+                int idx = DebugMarkPos - static_cast<int>(i);
+                if (idx < 0)
+                    idx += static_cast<int>(DebugMarkCount);
 
-            if (mark.Filename[0] != '\0')
-            {
-                file.print(" File: ");
-                file.print(mark.Filename);
-            }
+                const Debug::DebugMark &mark = DebugMarks[idx];
+                if (mark.Value == -1)
+                    continue;
 
-            if (mark.Function[0] != '\0')
-            {
-                file.print(" Function: ");
-                file.print(mark.Function);
-            }
+                const char *fileName = (mark.Filename[0] != '\0') ? mark.Filename : "?";
+                const char *functionName = (mark.Function[0] != '\0') ? mark.Function : "?";
+                int lineNumber = (mark.LineNumber > 0) ? mark.LineNumber : 0;
 
-            file.println();
+                file.print("[");
+                file.print(fileName);
+                file.print(".");
+                file.print(functionName);
+                file.print(".");
+                file.printf("%4d", lineNumber);
+                file.print("]");
+                file.print(" [");
+                file.printf("%4d", mark.Value);
+                file.print("]");
 
-            if (mark.CrashInfo[0] != '\0')
-            {
-                file.print("Info: ");
-                file.println(mark.CrashInfo);
+                if (mark.CrashInfo[0] != '\0')
+                {
+                    file.print(": ");
+                    file.print(mark.CrashInfo);
+                }
+
+                file.println();
             }
         }
         file.close();
@@ -824,60 +556,55 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
     Serial.print(" (");
     Serial.print((int)reason);
     Serial.println(")");
+    Serial.println();
 
-
-    if (PanicInfo.magic == PanicMagic)
+    if (PanicInfo.flag == PanicFlag)
     {
         Serial.printf("PanicInfo: pc=0x%08lx sp=0x%08lx a0=0x%08lx\n", PanicInfo.pc, PanicInfo.sp, PanicInfo.a0);
         Serial.printf("           exccause=%lu excvaddr=0x%08lx\n", PanicInfo.exccause, PanicInfo.excvaddr);
-    }
-
-    Serial.println("Marks (newest first):");
-
-    for (size_t i = 0; i < DebugMarkCount; i++)
-    {
-        int idx = DebugMarkPos - static_cast<int>(i);
-        if (idx < 0)
-            idx += static_cast<int>(DebugMarkCount);
-
-        const Debug::DebugMark &mark = DebugMarks[idx];
-        if (mark.Value == -1)
-            continue;
-
-        Serial.print("Value: ");
-        Serial.print(mark.Value);
-
-        if (mark.LineNumber > 0)
-        {
-            Serial.print(" Line: ");
-            Serial.print(mark.LineNumber);
-        }
-
-        if (mark.Filename[0] != '\0')
-        {
-            Serial.print(" File: ");
-            Serial.print(mark.Filename);
-        }
-
-        if (mark.Function[0] != '\0')
-        {
-            Serial.print(" Function: ");
-            Serial.print(mark.Function);
-        }
-
         Serial.println();
-
-        if (mark.CrashInfo[0] != '\0')
-        {
-            Serial.println("Info: ");
-            Serial.println(mark.CrashInfo);
-        }
     }
 
-    for (size_t i = 0; i < DebugMarkCount; i++)
-        ClearDebugMark(DebugMarks[i]);
-    DebugMarkPos = 0;
-    PanicInfo.magic = 0;
+    if (hasMarks)
+    {
+        Serial.println("Marks (newest first):");
+
+        // Limit to 3 most recent for serial output, avoids flooding console
+        for (size_t i = 0; i < DebugMarkCount; i++)
+        {
+            int idx = DebugMarkPos - static_cast<int>(i);
+            if (idx < 0)
+                idx += static_cast<int>(DebugMarkCount);
+
+            const Debug::DebugMark &mark = DebugMarks[idx];
+            if (mark.Value == -1)
+                continue;
+
+            const char *fileName = (mark.Filename[0] != '\0') ? mark.Filename : "?";
+            const char *functionName = (mark.Function[0] != '\0') ? mark.Function : "?";
+            int lineNumber = (mark.LineNumber > 0) ? mark.LineNumber : 0;
+
+            Serial.print("[");
+            Serial.print(fileName);
+            Serial.print(".");
+            Serial.print(functionName);
+            Serial.print(".");
+            Serial.printf("%4d", lineNumber);
+            Serial.print("]");
+            Serial.print(" [");
+            Serial.printf("%4d", mark.Value);
+            Serial.print("]");
+
+            if (mark.CrashInfo[0] != '\0')
+            {
+                Serial.print(": ");
+                Serial.print(mark.CrashInfo);
+            }
+
+            Serial.println();
+        }
+    Serial.println();
+    }
 }
 
 // Primarily for testing purposes

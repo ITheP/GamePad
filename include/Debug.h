@@ -52,9 +52,9 @@ public:
   {
     int Value;
     int LineNumber;
-    char Filename[32];
-    char Function[32];
-    char CrashInfo[256];
+    char Filename[24];
+    char Function[24];
+    char CrashInfo[128];
   };
 
   static void Mark(int mark);
@@ -62,7 +62,7 @@ public:
   static void Mark(int mark, int lineNumber, const char*filename, const char *function);
   static void Mark(int mark, int lineNumber, const char*filename, const char *function, const char *details);
 
-  static void PowerOnInit();
+  static void ClearCrashCheckData();
   static void WarningFlashes(WarningFlashCodes code);
   static void CheckForCrashInfo(esp_reset_reason_t reason);
   static const char *GetLatestCrashFilePath();

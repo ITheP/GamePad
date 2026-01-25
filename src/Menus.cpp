@@ -344,6 +344,10 @@ void Menus::DrawMenuLine()
 // Optimised to draw less when being used with main screen
 void Menus::HandleMain()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   CurrentMenu->Handle();
 
   DisplayMenuTextOptimised();

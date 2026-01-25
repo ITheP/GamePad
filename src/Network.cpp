@@ -270,6 +270,10 @@ const unsigned long RECONNECT_INTERVAL_MS = 5000; // Minimum 5 seconds between r
 
 void Network::HandleWiFi(int second)
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
     if (WiFiDisabled)
     {
         LastWiFiCharacter = WiFiCharacter;

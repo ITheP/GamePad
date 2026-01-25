@@ -7,6 +7,7 @@
 #include "Stats.h"
 #include "DeviceConfig.h"
 #include "Prefs.h"
+#include <Debug.h>
 
 ControllerReport ResetAllCurrentStats()
 {
@@ -18,12 +19,20 @@ ControllerReport ResetAllCurrentStats()
 
 void UpdateSecondStats(int second)
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(30, __LINE__, __FILE__, __func__);
+#endif
+
   for (int i = 0; i < AllStats_Count; i++)
     AllStats[i]->SecondPassed(second);
 }
 
 void UpdateSubSecondStats()
 {
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
   for (int i = 0; i < AllStats_Count; i++)
     AllStats[i]->SubSecondPassed();
 }
