@@ -12,7 +12,9 @@ Embedded esp32-s3/arduino/equivalent controller. Originally written to convert o
 - **LED Effects**: Supports various LED effects for visual feedback.
 - **Display**: Screen showing controller state and information with visuals.
 - **Stats**: Capture controller usage statistics
-- **Configurable**: Configure at low level different controllers from config files
+- **Configurable**: Configure different types of controllers and electronic layouts at low levels using custom configuration files
+- **Built in web server**: Configure and view details on the device itself, including secure https WiFi configuration hotspot
+  
 ## License
 TBC - At the moment this is not licensed for use.
 
@@ -138,3 +140,5 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 - [ ] Stop writing code so much and actually impliment/convert some more physical controllers to use it!
 
 
+## Research
+https://kotyara12.ru/iot/remote_esp32_backtrace/

@@ -14,6 +14,96 @@
 #include "Config.h"
 #include "Defines.h"
 #include "Prefs.h"
+#include "esp_private/panic_internal.h"
+
+// Override the default panic handler
+// We have to do this in C linkage to match the original declaration
+// You can check for original panic handler name equivalent in .elf file in e.g. powershell...
+// & "$env:USERPROFILE\.platformio\packages\toolchain-xtensa-esp32s3\bin\xtensa-esp32s3-elf-nm.exe" -n .pio/build/esp32-s3-devkitm-1/firmware.elf | Select-String "esp_panic_handler"
+// assuming using esp32-s3 toolchain here, and esp_panic_handler is correct
+
+// Example core dump from system...
+//
+// Guru Meditation Error: Core  0 panic'ed (LoadProhibited).
+// Exception was unhandled.
+
+// Core 0 register dump:
+// PC      : 0x42012345  PS      : 0x00060030  A0      : 0x4200abcd
+// A1      : 0x3fcdf1a0  A2      : 0x00000000  A3      : 0x3fcdf1b0
+// A4      : 0x00000004  A5      : 0x3fcdf1c0  A6      : 0x00000001
+// A7      : 0x00000000  A8      : 0x800d1234  A9      : 0x3fcdf180
+// A10     : 0x00000000  A11     : 0x3fcdf1d0  A12     : 0x00000000
+// A13     : 0x00000001  A14     : 0x00000000  A15     : 0x3fcdf1e0
+
+// Backtrace: 0x42012345:0x3fcdf1a0 0x4200abcd:0x3fcdf1c0 0x42004567:0x3fcdf1e0
+
+// ELF file SHA256: 1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd
+
+// Rebooting...
+
+// Our override
+// extern "C" void esp_panic_handler(void *info);
+
+// Pointer to original panic handler, so we can it from our override
+// extern "C" void esp_panic_handler_original(void *info)
+//     __attribute__((weak, alias("esp_panic_handler")));
+
+extern "C" void __real_esp_panic_handler(void *info);
+
+//extern "C" void IRAM_ATTR esp_panic_handler(void *info)
+extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
+{
+
+    panic_info_t *details = reinterpret_cast<panic_info_t *>(info);
+
+    // Your logging here — but keep it IRAM‑safe
+    panic_print_str("\n\n--- CUSTOM PANIC HANDLER TRIGGERED ---\n");
+    //ets_printf("CUSTOM PANIC TRIGGERED\n");
+
+    if (details->reason) {
+        panic_print_str("## Guru Meditation Error: Core ");
+        panic_print_dec(details->core);
+        panic_print_str(" panic'ed (");
+        panic_print_str(details->reason);
+        panic_print_str(").\n");
+    }
+
+    if (details->description) {
+        panic_print_str("## Description:\n");
+        panic_print_str(details->description);
+    }
+
+        panic_print_str("\n## CUSTOM COMPLETE - HANDING OVER TO ORIGINAL:\n");
+
+    // Call the original handler
+    // Theoretically should reboot for us too
+    __real_esp_panic_handler(info);
+
+
+    // Decide what to do next
+    while (true)
+    {
+    }
+}
+
+// extern "C" void __real_esp_panic_handler(void *info);
+
+// extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
+// {
+// #if defined(__XTENSA__)
+//     if (info)
+//     {
+//         XtExcFrame *frame = reinterpret_cast<XtExcFrame *>(info);
+//         PanicInfo.flag = PanicFlag;
+//         PanicInfo.pc = frame->pc;
+//         PanicInfo.sp = frame->a1; // stack pointer is a1
+//         PanicInfo.a0 = frame->a0;
+//         PanicInfo.exccause = frame->exccause;
+//         PanicInfo.excvaddr = frame->excvaddr;
+//     }
+// #endif
+//     __real_esp_panic_handler(info);
+// }
 
 char Debug::CrashFile[] = "/debug/crash.log";
 const char Debug::CrashDir[] = "/debug";
@@ -275,25 +365,6 @@ bool Debug::GetNextCrashFilePath(char *outPath, size_t outPathSize)
     return true;
 }
 
-extern "C" void __real_esp_panic_handler(void *info);
-
-extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
-{
-#if defined(__XTENSA__)
-    if (info)
-    {
-        XtExcFrame *frame = reinterpret_cast<XtExcFrame *>(info);
-        PanicInfo.flag = PanicFlag;
-        PanicInfo.pc = frame->pc;
-        PanicInfo.sp = frame->a1; // stack pointer is a1
-        PanicInfo.a0 = frame->a0;
-        PanicInfo.exccause = frame->exccause;
-        PanicInfo.excvaddr = frame->excvaddr;
-    }
-#endif
-    __real_esp_panic_handler(info);
-}
-
 void Debug::Mark(int mark)
 {
     StoreDebugMark(mark, 0, nullptr, nullptr, nullptr);
@@ -457,18 +528,6 @@ void Debug::WarningFlashes(WarningFlashCodes code)
 // Checks for any logging/crash info recorded prior to last device reset and logs it to a file if we find anything
 void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
 {
-    // bool hasMarks = false;
-    // // for (size_t i = 0; i < DebugMarkCount; i++)
-    // // {
-    // //     if (DebugMarks[i].Value != -1)
-    // //     {
-    // //         hasMarks = true;
-    // //         break;
-    // //     }
-    // // }
-    // if (DebugMarks[0].Value != -1)
-    //     hasMarks = true;
-
     // We don't check for marks unless some sort of relevant panic flag was set
 
     if (reason == ESP_RST_POWERON ||
@@ -524,28 +583,31 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
                 if (mark.Value == -1)
                     continue;
 
-                const char *fileName = (mark.Filename[0] != '\0') ? mark.Filename : "?";
-                const char *functionName = (mark.Function[0] != '\0') ? mark.Function : "?";
-                int lineNumber = (mark.LineNumber > 0) ? mark.LineNumber : 0;
+                // e.g.
+                // [ 300] src/GamePad.cpp.MainLoop().73  : Hat Inputs
+                // [ 240] src/GamePad.cpp.MainLoop().1486: Something Else
+                // [ 240] ?.?.773 : Unknown Something
+                // [  17] Other details
+                // [1372]
 
-                file.print("[");
-                file.print(fileName);
-                file.print(".");
-                file.print(functionName);
-                file.print(".");
-                file.printf("%4d", lineNumber);
-                file.print("]");
-                file.print(" [");
-                file.printf("%4d", mark.Value);
-                file.print("]");
+                // Always print the value
+                file.printf("[%4d]", mark.Value);
 
-                if (mark.CrashInfo[0] != '\0')
+                if (mark.LineNumber > 0)
                 {
-                    file.print(": ");
-                    file.print(mark.CrashInfo);
-                }
+                    const char *fileName = (mark.Filename[0] != '\0') ? mark.Filename : "?";
+                    const char *functionName = (mark.Function[0] != '\0') ? mark.Function : "?";
+                    int lineNumber = (mark.LineNumber > 0) ? mark.LineNumber : 0;
 
-                file.println();
+                    if (mark.CrashInfo[0] == '\0')
+                        file.printf(" %s.%s().%d\n", fileName, functionName, lineNumber);
+                    else
+                        file.printf(" %s.%s().%-4d: %s\n", fileName, functionName, lineNumber, mark.CrashInfo);
+                }
+                else if (mark.CrashInfo[0] != '\0')
+                    file.printf(" %s\n", mark.CrashInfo);
+                else
+                    file.println();
             }
         }
         file.close();
@@ -580,30 +642,27 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
             if (mark.Value == -1)
                 continue;
 
-            const char *fileName = (mark.Filename[0] != '\0') ? mark.Filename : "?";
-            const char *functionName = (mark.Function[0] != '\0') ? mark.Function : "?";
-            int lineNumber = (mark.LineNumber > 0) ? mark.LineNumber : 0;
+            // Always print the value
+            Serial.printf("[%4d]", mark.Value);
 
-            Serial.print("[");
-            Serial.print(fileName);
-            Serial.print(".");
-            Serial.print(functionName);
-            Serial.print(".");
-            Serial.printf("%4d", lineNumber);
-            Serial.print("]");
-            Serial.print(" [");
-            Serial.printf("%4d", mark.Value);
-            Serial.print("]");
-
-            if (mark.CrashInfo[0] != '\0')
+            if (mark.LineNumber > 0)
             {
-                Serial.print(": ");
-                Serial.print(mark.CrashInfo);
-            }
+                const char *fileName = (mark.Filename[0] != '\0') ? mark.Filename : "?";
+                const char *functionName = (mark.Function[0] != '\0') ? mark.Function : "?";
+                int lineNumber = (mark.LineNumber > 0) ? mark.LineNumber : 0;
 
-            Serial.println();
+                if (mark.CrashInfo[0] == '\0')
+                    Serial.printf(" %s.%s().%d\n", fileName, functionName, lineNumber);
+                else
+                    Serial.printf(" %s.%s().%-4d: %s\n", fileName, functionName, lineNumber, mark.CrashInfo);
+            }
+            else if (mark.CrashInfo[0] != '\0')
+                Serial.printf(" %s\n", mark.CrashInfo);
+            else
+                Serial.println();
         }
-    Serial.println();
+
+        Serial.println();
     }
 }
 

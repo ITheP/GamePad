@@ -140,7 +140,7 @@ esp_err_t Web::SendPage_Debug(httpd_req_t *req)
 {
     std::ostringstream html;
     html << "<h1>Debug</h1>";
-    html << "Device has rebooted " << Prefs::BootCount << " times since last power on<hr/>";
+    html << "Device has rebooted " << Prefs::BootCount << " times<hr/>";
 
     std::vector<String> crashLogs;
     Debug::GetCrashLogPaths(crashLogs, true);
@@ -152,6 +152,10 @@ esp_err_t Web::SendPage_Debug(httpd_req_t *req)
     else
     {
         html << "<h2>Crash Logs</h2>";
+        html << "e.g. <i>[ 500] src/GamePad.cpp.MainLoop().2007: Bluetooth Connected</i><br/>";
+        html << "<i>[ 500]</i> = debug marker value<br/>";
+        html << "<i>src/GamePad.cpp.MainLoop().2007</i> = file name, function name, line number<br/>";
+        html << "<i>Bluetooth Connected</i> = optional details provided with the debug marker<br/></br>>";
 
         for (size_t i = 0; i < crashLogs.size(); i++)
         {
