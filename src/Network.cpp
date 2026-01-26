@@ -113,8 +113,8 @@ void Network::Config_UpdateScanResults()
 
             if (ap->rssi > -50)
             {
-                ap->WiFiCharacter = Icon_WiFi_HighSignal;
-                ap->WiFiStatus = WiFi_SignalLevel_High;
+                ap->WiFiCharacter = Icon_WiFi_LowSignal;
+                ap->WiFiStatus = WiFi_SignalLevel_Low;
             }
             else if (ap->rssi > -67)
             {
@@ -123,8 +123,8 @@ void Network::Config_UpdateScanResults()
             }
             else if (ap->rssi > -75)
             {
-                ap->WiFiCharacter = Icon_WiFi_LowSignal;
-                ap->WiFiStatus = WiFi_SignalLevel_Low;
+                ap->WiFiCharacter = Icon_WiFi_HighSignal;
+                ap->WiFiStatus = WiFi_SignalLevel_High;
             }
 
             AllAccessPointList.push_back(ap);

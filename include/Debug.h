@@ -68,7 +68,7 @@ public:
   static const char *GetLatestCrashFilePath();
   static bool GetNextCrashFilePath(char *outPath, size_t outPathSize);
   static void GetCrashLogPaths(std::vector<String> &outPaths, bool newestFirst = true);
-  static void CrashOnPurpose();
+  static void CrashDeviceOnPurpose();
 
   static void printUnicodeRange();
 };

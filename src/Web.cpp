@@ -152,11 +152,12 @@ esp_err_t Web::SendPage_Debug(httpd_req_t *req)
     }
     else
     {
-        html << "<h2>Crash Logs</h2>";
-        html << "e.g. <i>[ 500] src/GamePad.cpp.MainLoop().2007: Bluetooth Connected</i><br/>";
-        html << "DIY marker value: <i>[ 500]</i><br/>";
-        html << "File name, function name, line number: <i>src/GamePad.cpp.MainLoop().2007</i><br/>";
-        html << "Extra details: <i>Bluetooth Connected</i><br/><br/>";
+        html << "<h2>Crash Logs</h2>"
+             << "<span style='color: skyblue;'>Marks example:</span><br/>"
+             << "<code><i>[ 500] src/GamePad.cpp.MainLoop().2007: Bluetooth Connected</i></code><br/>"
+             << "DIY marker value: <code><i>[ 500]</i></code><br/>"
+             << "File name, function name, line number: <code><i>src/GamePad.cpp.MainLoop().2007</i></code><br/>"
+             << "Extra details: <code><i>Bluetooth Connected</i></code><br/><hr/>";
 
         for (size_t i = 0; i < crashLogs.size(); i++)
         {
@@ -164,8 +165,13 @@ esp_err_t Web::SendPage_Debug(httpd_req_t *req)
             if (opacity < 0.0f)
                 opacity = 0.0f;
 
-            html << "<div style='opacity:" << std::fixed << std::setprecision(2) << opacity << "'>";
-            html << "<strong>" << crashLogs[i].c_str() << "</strong><br/><pre><code>";
+            html << "<div style='opacity:"
+                 << std::fixed << std::setprecision(2)
+                 << opacity
+                 << "'>"
+                 << "<span style='font-weight: bold; color: skyblue;'>"
+                 << crashLogs[i].c_str()
+                 << "</span><br/><pre><code>";
 
             File file = LittleFS.open(crashLogs[i].c_str(), FILE_READ);
             if (file)
@@ -181,7 +187,8 @@ esp_err_t Web::SendPage_Debug(httpd_req_t *req)
             }
             else
             {
-                html << "Failed to open " << crashLogs[i].c_str();
+                html << "Failed to open "
+                     << crashLogs[i].c_str();
             }
 
             html << "</code></pre></div><hr/>";
@@ -238,7 +245,7 @@ esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
 {
     char json[128];
     snprintf(json, sizeof(json),
-             "{\"BatteryLevel\":%d, \"BatteryVoltage\":%d}",
+             "{\"BatteryLevel\":%d, \"BatteryVoltage\":%.2f}",
              Battery::GetLevel(),
              Battery::Voltage);
 
@@ -518,11 +525,16 @@ static esp_err_t default_handler(httpd_req_t *req)
 static esp_err_t not_found_handler(httpd_req_t *req, httpd_err_code_t err)
 {
     const char *method = "UNKNOWN";
-    if (req->method == HTTP_GET) method = "GET";
-    else if (req->method == HTTP_POST) method = "POST";
-    else if (req->method == HTTP_PUT) method = "PUT";
-    else if (req->method == HTTP_DELETE) method = "DELETE";
-    else if (req->method == HTTP_HEAD) method = "HEAD";
+    if (req->method == HTTP_GET)
+        method = "GET";
+    else if (req->method == HTTP_POST)
+        method = "POST";
+    else if (req->method == HTTP_PUT)
+        method = "PUT";
+    else if (req->method == HTTP_DELETE)
+        method = "DELETE";
+    else if (req->method == HTTP_HEAD)
+        method = "HEAD";
 
     Serial.printf("HTTPD 404: %s %s (err=%d)\n", method, req->uri, err);
     return ESP_FAIL;
@@ -573,19 +585,22 @@ void Web::InitWebServer()
     http_config.stack_size = 8192;
     http_config.uri_match_fn = httpd_uri_match_wildcard;
 
-    if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK) {
+    if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK)
+    {
         Serial.println("🌐 ❌ Failed to start HTTP server");
         WebServerHTTP = nullptr;
-    } else {
+    }
+    else
+    {
         Serial.println("🌐 ✅ HTTP server started on port 80");
     }
 
-// HTTPS Web Server
+    // HTTPS Web Server
 
-// #ifdef EXTRA_SERIAL_DEBUG_PLUS
-//     Serial.println("🌐 ✅ Pre-HTTPS server heap: " + String(ESP.getFreeHeap()) + " bytes");
-//     Serial.println("🌐 ✅ Pre-HTTPS server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
-// #endif
+    // #ifdef EXTRA_SERIAL_DEBUG_PLUS
+    //     Serial.println("🌐 ✅ Pre-HTTPS server heap: " + String(ESP.getFreeHeap()) + " bytes");
+    //     Serial.println("🌐 ✅ Pre-HTTPS server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
+    // #endif
 
     // if (!HttpsCertPem.empty() && !HttpsKeyPem.empty())
     // {
@@ -601,7 +616,7 @@ void Web::InitWebServer()
     //     https_conf.httpd.max_uri_handlers = 16;
     //     https_conf.httpd.stack_size = 10240;
     //     https_conf.httpd.uri_match_fn = httpd_uri_match_wildcard;
-        
+
     //     https_conf.cacert_pem = (const uint8_t *)HttpsCertPem.c_str();
     //     https_conf.cacert_len = HttpsCertPem.length() + 1;
     //     https_conf.prvtkey_pem = (const uint8_t *)HttpsKeyPem.c_str();

@@ -50,7 +50,7 @@ void MenuFunctions::DrawBatteryLevel()
   Menus::UpdateMenuText(Menus::MenuTextBuffer, NoScrollNeeded);
 
   // For testing device crash handling - handy trigger point here
-  // Debug::CrashOnPurpose();
+  // Debug::CrashDeviceOnPurpose();
 }
 
 void MenuFunctions::InitBattery()

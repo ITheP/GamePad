@@ -17,32 +17,27 @@
 #include "Utils.h"
 #include "Version.h"
 #include "esp_private/panic_internal.h"
+#include "esp_ota_ops.h"
 #include <esp_debug_helpers.h>
 
-// Override the default panic handler
-// We have to do this in C linkage to match the original declaration
-// You can check for original panic handler name equivalent in .elf file in e.g. powershell...
-// & "$env:USERPROFILE\.platformio\packages\toolchain-xtensa-esp32s3\bin\xtensa-esp32s3-elf-nm.exe" -n .pio/build/esp32-s3-devkitm-1/firmware.elf | Select-String "esp_panic_handler"
-// assuming using esp32-s3 toolchain here, and esp_panic_handler is correct
-
-// Example core dump from system...
+// When we generate our own capture of crash data, we try and re-create what the system generates
+// Example core dump...
+//   Guru Meditation Error: Core  0 panic'ed (LoadProhibited).
+//   Exception was unhandled.
 //
-// Guru Meditation Error: Core  0 panic'ed (LoadProhibited).
-// Exception was unhandled.
-
-// Core 0 register dump:
-// PC      : 0x42012345  PS      : 0x00060030  A0      : 0x4200abcd
-// A1      : 0x3fcdf1a0  A2      : 0x00000000  A3      : 0x3fcdf1b0
-// A4      : 0x00000004  A5      : 0x3fcdf1c0  A6      : 0x00000001
-// A7      : 0x00000000  A8      : 0x800d1234  A9      : 0x3fcdf180
-// A10     : 0x00000000  A11     : 0x3fcdf1d0  A12     : 0x00000000
-// A13     : 0x00000001  A14     : 0x00000000  A15     : 0x3fcdf1e0
-
-// Backtrace: 0x42012345:0x3fcdf1a0 0x4200abcd:0x3fcdf1c0 0x42004567:0x3fcdf1e0
-
-// ELF file SHA256: 1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd
-
-// Rebooting...
+//   Core 0 register dump:
+//   PC      : 0x42012345  PS      : 0x00060030  A0      : 0x4200abcd
+//   A1      : 0x3fcdf1a0  A2      : 0x00000000  A3      : 0x3fcdf1b0
+//   A4      : 0x00000004  A5      : 0x3fcdf1c0  A6      : 0x00000001
+//   A7      : 0x00000000  A8      : 0x800d1234  A9      : 0x3fcdf180
+//   A10     : 0x00000000  A11     : 0x3fcdf1d0  A12     : 0x00000000
+//   A13     : 0x00000001  A14     : 0x00000000  A15     : 0x3fcdf1e0
+//
+//   Backtrace: 0x42012345:0x3fcdf1a0 0x4200abcd:0x3fcdf1c0 0x42004567:0x3fcdf1e0
+//
+//   ELF file SHA256: 1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcd
+//
+//   Rebooting...
 
 char Debug::CrashFile[] = "/debug/crash.log";
 const char Debug::CrashDir[] = "/debug";
@@ -90,6 +85,7 @@ namespace
         uint32_t lend;
         uint32_t lcount;
         uint32_t BackTrace[32];         // backtrace PCs
+        char SHA256[65];
     };
 
     RTC_NOINIT_ATTR PanicRecord PanicInfo;
@@ -185,8 +181,11 @@ extern "C" void IRAM_ATTR SaveBackTraceToPanicRecord(PanicRecord *rec, const XtE
     }
 }
 
-// Our override
-// extern "C" void esp_panic_handler(void *info);
+// Override the default panic handler
+// We do this in C linkage matching the original declaration to our own, targetting the esp_panic_handler()
+// You can check for an original panic handler name equivalent in .elf file e.g. via powershell...
+// & "$env:USERPROFILE\.platformio\packages\toolchain-xtensa-esp32s3\bin\xtensa-esp32s3-elf-nm.exe" -n .pio/build/esp32-s3-devkitm-1/firmware.elf | Select-String "esp_panic_handler"
+// assuming using esp32-s3 toolchain here, and esp_panic_handler is what we are after
 
 // Pointer to original panic handler, so we can it from our override
 extern "C" void __real_esp_panic_handler(void *info);
@@ -194,9 +193,12 @@ extern "C" void __real_esp_panic_handler(void *info);
 // extern "C" void IRAM_ATTR esp_panic_handler(void *info)
 extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
 {
+    // Following is done very carefully, running from IRAM and remembering that
+    // standard functions won't be available - the heap and everything else might be screwed (hence the crash we are handling)
+
     if (info)
     {
-        // Based on esp_panic_handler from C:\Users\<user>.platformio\packages\framework-espidf\components\esp_system\panic.c
+        // Part based on esp_panic_handler from C:\Users\<user>.platformio\packages\framework-espidf\components\esp_system\panic.c
         panic_info_t *details = reinterpret_cast<panic_info_t *>(info);
 
 #if defined(__XTENSA__)
@@ -204,7 +206,7 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
 
         PanicInfo.flag = PanicFlag;
         PanicInfo.pc = frame->pc;
-        PanicInfo.sp = frame->a1; // stack pointer is a1
+        PanicInfo.sp = frame->a1; // Also the Stack Pointer
         PanicInfo.a0 = frame->a0;
         PanicInfo.ps = frame->ps;
         PanicInfo.a1 = frame->a1;
@@ -228,6 +230,7 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
         PanicInfo.lbeg = frame->lbeg;
         PanicInfo.lend = frame->lend;
         PanicInfo.lcount = frame->lcount;
+        esp_ota_get_app_elf_sha256(PanicInfo.SHA256, sizeof(PanicInfo.SHA256));
 
         SaveBackTraceToPanicRecord(&PanicInfo, frame);
 #endif
@@ -236,7 +239,7 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
         {
             panic_print_str("\nBuild: ");
             panic_print_str(GetBuildVersion());
-            panic_print_str("\nCustom handler...\n");
+            panic_print_str("\n*** Custom Panic Handler ***\n");
             panic_print_str("Guru Meditation Error: Core ");
             panic_print_dec(details->core);
             panic_print_str(" panic'ed (");
@@ -306,11 +309,15 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
         panic_print_str("  ");
         PanicPrintReg("LCOUNT  : ", frame->lcount);
         panic_print_char('\n');
+        panic_print_char('\n');
 
         PrintBackTrace(frame);
+
+        panic_print_str("\nELF file SHA256: ");
+        panic_print_str(PanicInfo.SHA256);
     }
 
-    panic_print_str("\n\nInitiating system panic handler. Should match custom...\n");
+    panic_print_str("\n\n*** System Panic Handler. Should match custom ***\n");
 
     // Call the original handler
     // Theoretically should reboot for us too
@@ -694,7 +701,8 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
                     break;
                 file.printf(" 0x%08lx", static_cast<unsigned long>(pc));
             }
-            file.println("\n");
+
+            file.printf("\n\nELF file SHA256: %s\n\n", PanicInfo.SHA256);
         }
 
         if (hasMarks)
@@ -778,7 +786,8 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
                 break;
             Serial.printf(" 0x%08lx", static_cast<unsigned long>(pc));
         }
-        Serial.println("\n");
+
+        Serial.printf("\nELF file SHA256: %s\n", PanicInfo.SHA256);
     }
 
     if (hasMarks)
@@ -821,7 +830,7 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
 }
 
 // Primarily for testing purposes
-void Debug::CrashOnPurpose()
+void Debug::CrashDeviceOnPurpose()
 {
     Serial.println("💥 ATTEMPTING TO CRASH DEVICE");
 

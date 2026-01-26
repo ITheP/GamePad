@@ -100,7 +100,7 @@ void MenuFunctions::InitWiFi()
   Menus::InitMenuItemDisplay(Network::WiFiStatus, ScrollCheck);
   LastWiFiStatus = Network::WiFiStatus;
 
-  Debug::CrashOnPurpose();
+  //Debug::CrashDeviceOnPurpose();
 }
 
 void MenuFunctions::UpdateWiFi()
