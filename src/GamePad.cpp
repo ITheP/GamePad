@@ -1212,7 +1212,8 @@ void setup()
 
 #ifdef WEBSERVER
   // Make sure this is done AFTER the above, as normal web server setup includes references to things like current profile
-  setupWebServer(false);
+  if (!Network::WiFiDisabled)
+    setupWebServer(false);
 #endif
 
   Display.display();

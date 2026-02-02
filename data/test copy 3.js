@@ -74,8 +74,9 @@ var TestFire = (function(){
             'void main(){ vec2 uv=v_uv; vec4 cur=texture2D(uTarget,uv); float d=distance(uv,point); float a=exp(-d*d/(radius*radius)); vec2 vel=decode(cur.xy, velRange); vel += force * a; gl_FragColor=vec4(encode(vel, velRange),0.0,1.0); }\n';
 
         var fs_display = common +
-            'uniform sampler2D uDensity; uniform sampler2D uPalette; uniform vec2 resolution; uniform float glow; uniform vec2 vortexScale; uniform vec2 texelSize;\n' +
-            'void main(){ vec2 uv=v_uv; float d=clamp(texture2D(uDensity,uv).r, 0.0, 1.0); vec3 col=texture2D(uPalette, vec2(d, 0.5)).rgb; vec2 px=1.0/resolution * (1.0 + glow*1.5); float g=0.0; for(int i=-2;i<=2;i++){ for(int j=-2;j<=2;j++){ g += texture2D(uDensity, uv + vec2(float(i),float(j))*px).r; } } g *= 0.02*glow; col += vec3(1.0,0.6,0.2)*g; col = pow(col, vec3(0.85)); gl_FragColor=vec4(col,1.0); }\n';
+            'uniform sampler2D uDensity; uniform vec2 resolution; uniform float glow; uniform vec2 vortexScale; uniform vec2 texelSize;\n' +
+            'vec3 palette(float x){ vec3 c1=vec3(0.05,0.0,0.0); vec3 c2=vec3(0.8,0.15,0.02); vec3 c3=vec3(1.0,0.6,0.1); vec3 c4=vec3(1.0,0.95,0.8); vec3 col=mix(c1,c2,smoothstep(0.0,0.4,x)); col=mix(col,c3,smoothstep(0.3,0.8,x)); col=mix(col,c4,smoothstep(0.6,1.0,x)); return col; }\n' +
+            'void main(){ vec2 uv=v_uv; float d=texture2D(uDensity,uv).r; vec3 col=palette(d); vec2 px=1.0/resolution * (1.0 + glow*1.5); float g=0.0; for(int i=-2;i<=2;i++){ for(int j=-2;j<=2;j++){ g += texture2D(uDensity, uv + vec2(float(i),float(j))*px).r; } } g *= 0.02*glow; col += vec3(1.0,0.6,0.2)*g; col = pow(col, vec3(0.85)); vec2 boxSize=vortexScale*texelSize; vec2 boxMin=vec2(0.02); vec2 boxMax=boxMin+boxSize; float lineW=1.5/resolution.x; float edge=step(boxMin.x-lineW,uv.x)*step(uv.x,boxMax.x+lineW)*step(boxMin.y-lineW,uv.y)*step(uv.y,boxMax.y+lineW); float inner=step(boxMin.x+lineW,uv.x)*step(uv.x,boxMax.x-lineW)*step(boxMin.y+lineW,uv.y)*step(uv.y,boxMax.y-lineW); float box=edge*(1.0-inner); col=mix(col,vec3(1.0),box*0.8); gl_FragColor=vec4(col,1.0); }\n';
 
         var vs_spark = 'attribute vec2 aPos; attribute float aAlpha; varying float vAlpha; void main(){ vAlpha=aAlpha; gl_Position=vec4(aPos*2.0-1.0, 0.0, 1.0); }';
         var fs_spark = 'precision highp float; varying float vAlpha; void main(){ vec3 col=vec3(1.0, 0.8, 0.4); gl_FragColor=vec4(col, vAlpha); }';
@@ -203,155 +204,26 @@ var TestFire = (function(){
         resize();
 
         var dt = 1/60;
-        var jacobi = 32;        // Pressure iterations
-        var curl = 77;          // Vorticity
-        var vortexScaleX = 15.0;
-        var vortexScaleY = 31.0;
+        var jacobi = 32;
+        var curl = 80;
+        var vortexScaleX = 5.0;
+        var vortexScaleY = 10.0;
         var buoyancy = 15.0;
-        var maxHeat = 4.0;
-        var heatPower = 3.2;
+        var maxHeat = 3.5;
+        var heatPower = 3.6;
         var minHeat = 0.15;
         var glow = 1.2;
-        var fireSpeed = 0.0;
-        var emberRate = 6;      // Embers spawned per frame
-        var emberHeight = 0.02; // Vertical spawn range near bottom
-        var emberOffset = 0.0;  // Vertical spawn offset from bottom
-        var emberWidth = 0.6;   // Screen width covered by embers
-        var emberSize = 0.008;  // Base ember radius
-        var emberUniformity = 0.7; // 0 = uniform size, 1 = edges tiny
-        var emberLifeFrames = 1; // Lifespan in frames (1-60)
-        var velDissipation = 0.3;
-        var denDissipation = 0.91;
+        var fireSpeed = 1.2;
+        var emberRate = 3;
+        var velDissipation = 0.84;
+        var denDissipation = 0.961;
         var sparkChance = 0.275;
         var sparkMax = 64;
         var rdx = 130.0;
-        var velRange = 3.0;
+        var velRange = 2.5;
         var pointer = { down:false, x:0, y:0, px:0, py:0 };
         var splats = [];
-        var embers = [];
-        var pointerEmber = null;
         var sparks = [];
-
-        var paletteSize = 256;
-        var paletteTexture = gl.createTexture();
-        // Define colours so pos: 1.0 is the start colour and 0.0 is the end colour
-        var palettes = [
-            { name: 'Fire', stops: [
-                { pos: 0.0, color: [0.05, 0.0, 0.0] },
-                { pos: 0.4, color: [0.8, 0.15, 0.02] },
-                { pos: 0.8, color: [1.0, 0.6, 0.1] },
-                { pos: 1.0, color: [1.0, 0.95, 0.8] }
-            ] },
-            { name: 'Fire (reversed)', stops: [
-                { pos: 0.0, color: [1.0, 0.95, 0.8] },
-                { pos: 0.4, color: [1.0, 0.6, 0.1] },
-                { pos: 0.8, color: [0.8, 0.15, 0.02] },
-                { pos: 1.0, color: [0.05, 0.0, 0.0] }
-            ] },
-            { name: 'Rainbow', stops: [
-                { pos: 0.0, color: [0.0, 0.0, 0.0] },
-                { pos: 0.1, color: [1.0, 0.0, 0.0] },
-                { pos: 0.17, color: [1.0, 0.5, 0.0] },
-                { pos: 0.33, color: [1.0, 1.0, 0.0] },
-                { pos: 0.5, color: [0.0, 1.0, 0.0] },
-                { pos: 0.67, color: [0.0, 1.0, 1.0] },
-                { pos: 0.83, color: [0.0, 0.3, 1.0] },
-                { pos: 1.0, color: [0.6, 0.0, 1.0] }
-            ] },
-            { name: 'Fire + Smoke', stops: [
-                { pos: 0.0, color: [0.05, 0.0, 0.0] },
-                { pos: 0.4, color: [0.8, 0.15, 0.02] },
-                { pos: 0.8, color: [1.0, 0.6, 0.1] },
-                { pos: 0.9, color: [1.0, 0.95, 0.8] },
-                { pos: 0.97, color: [0.55, 0.55, 0.55] },
-                { pos: 1.0, color: [0.0, 0.0, 0.0] }
-            ] },
-            { name: 'Smoke', stops: [
-                { pos: 0.0, color: [0.0, 0.0, 0.0] },
-                { pos: 0.1, color: [0.1, 0.1, 0.1] },
-                { pos: 0.2, color: [0.35, 0.35, 0.35] },
-                { pos: 0.4, color: [0.8, 0.15, 0.02] },
-                { pos: 0.8, color: [1.0, 0.6, 0.1] },
-                { pos: 1.0, color: [1.0, 0.95, 0.8] }
-            ] },
-            { name: 'Smoke 2', stops: [
-                { pos: 0.0, color: [0.0, 0.0, 0.0] },
-                { pos: 0.2, color: [0.0, 0.0, 0.0] },
-                { pos: 0.5, color: [0.35, 0.35, 0.35] },
-                { pos: 0.6, color: [0.8, 0.15, 0.02] },
-                { pos: 0.85, color: [1.0, 0.6, 0.1] },
-                { pos: 1.0, color: [1.0, 0.95, 0.8] }
-            ] },
-            { name: 'Smoke 3', stops: [
-                { pos: 0.0, color: [0.0, 0.0, 0.0] },
-                { pos: 0.05, color: [0.0, 0.0, 0.0] },
-                { pos: 0.2, color: [0.5, 0.5, 0.5] },
-                { pos: 0.3, color: [0.8, 0.15, 0.02] },
-                { pos: 0.8, color: [1.0, 0.6, 0.1] },
-                { pos: 1.0, color: [1.0, 0.95, 0.8] }
-            ] },
-        ];
-        var currentPalette = palettes[0];
-
-        function paletteToCss(palette){
-            var parts = [];
-            for(var i=0;i<palette.stops.length;i++){
-                var s = palette.stops[i];
-                var r = Math.round(s.color[0]*255);
-                var g = Math.round(s.color[1]*255);
-                var b = Math.round(s.color[2]*255);
-                parts.push('rgb(' + r + ',' + g + ',' + b + ') ' + Math.round(s.pos*100) + '%');
-            }
-            return 'linear-gradient(270deg,' + parts.join(',') + ')';
-        }
-
-        function buildPaletteData(palette){
-            var stops = palette.stops.slice().sort(function(a,b){ return a.pos - b.pos; });
-            if(stops.length === 1){
-                stops = [stops[0], { pos: 1.0, color: stops[0].color.slice(0) }];
-            }
-            var data = new Uint8Array(paletteSize * 4);
-            var si = 0;
-            for(var i=0;i<paletteSize;i++){
-                var t = i / (paletteSize - 1);
-                while(si < stops.length - 2 && t > stops[si+1].pos){ si++; }
-                var a = stops[si];
-                var b = stops[Math.min(si+1, stops.length - 1)];
-                var span = b.pos - a.pos;
-                var tt = span > 0.0 ? (t - a.pos) / span : 0.0;
-                var r = a.color[0] + (b.color[0] - a.color[0]) * tt;
-                var g = a.color[1] + (b.color[1] - a.color[1]) * tt;
-                var bcol = a.color[2] + (b.color[2] - a.color[2]) * tt;
-                var idx = i * 4;
-                data[idx] = Math.round(r * 255);
-                data[idx + 1] = Math.round(g * 255);
-                data[idx + 2] = Math.round(bcol * 255);
-                data[idx + 3] = 255;
-            }
-            return data;
-        }
-
-        function uploadPaletteTexture(palette){
-            var data = buildPaletteData(palette);
-            gl.bindTexture(gl.TEXTURE_2D, paletteTexture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, paletteSize, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
-        }
-
-        uploadPaletteTexture(currentPalette);
-
-// Todo - ember size so towards edges of the bottom embers, they are smaller and more fleeting for better fire edges, and there can be more including higher up in the middle (like a pile)
-// If we do ember points as an array that can be filled by new random embers each frame - they can have a lifespan
-// I think the splat framework is already set up for this - we just need to account for the mouse pointer and adding it as a new point and making sure that point's timer is reset each frame if the mouse pointer isnt moving and is still held down
-// and the mouse click embers can be added to that with a different lifespan so they hang on screen for a moment
-// me nice for the ember splat to also randomise splat size a bit and also misshape it so there not all perfect circles
-// also have sliders for width and height of ember pile and how far up the screen it sits
-// Does splats with velocity actually do anything?
-// Splatting text
-// Turn on borders so fluid is constrained to screen
 
         // UI controls
         var ctrl = document.createElement('div');
@@ -386,92 +258,7 @@ var TestFire = (function(){
             row.appendChild(valueSpan);
             ctrl.appendChild(row);
         }
-
-        function addPaletteDropdown(label, paletteList, onChange){
-            var row = document.createElement('div');
-            row.style.marginBottom = '6px';
-            var l = document.createElement('label');
-            l.textContent = label;
-            l.style.display = 'block';
-            l.style.marginBottom = '2px';
-            var wrap = document.createElement('div');
-            wrap.style.position = 'relative';
-            wrap.style.width = '170px';
-            var button = document.createElement('div');
-            button.style.cursor = 'pointer';
-            button.style.display = 'flex';
-            button.style.alignItems = 'center';
-            button.style.justifyContent = 'space-between';
-            button.style.border = '1px solid rgba(255,255,255,0.25)';
-            button.style.padding = '4px 6px';
-            button.style.background = 'rgba(0,0,0,0.4)';
-            button.style.gap = '6px';
-            var nameSpan = document.createElement('span');
-            var swatch = document.createElement('div');
-            swatch.style.width = '70px';
-            swatch.style.height = '10px';
-            swatch.style.border = '1px solid rgba(255,255,255,0.2)';
-            var list = document.createElement('div');
-            list.style.display = 'none';
-            list.style.position = 'absolute';
-            list.style.right = '0';
-            list.style.top = '100%';
-            list.style.marginTop = '4px';
-            list.style.background = 'rgba(0,0,0,0.9)';
-            list.style.border = '1px solid rgba(255,255,255,0.25)';
-            list.style.zIndex = '10000';
-            list.style.width = '170px';
-
-            function setPalette(p){
-                nameSpan.textContent = p.name;
-                swatch.style.background = paletteToCss(p);
-                onChange(p);
-            }
-
-            for(var i=0;i<paletteList.length;i++){
-                (function(p){
-                    var item = document.createElement('div');
-                    item.style.display = 'flex';
-                    item.style.alignItems = 'center';
-                    item.style.justifyContent = 'space-between';
-                    item.style.gap = '6px';
-                    item.style.padding = '4px 6px';
-                    item.style.cursor = 'pointer';
-                    item.style.borderTop = '1px solid rgba(255,255,255,0.08)';
-                    var itemName = document.createElement('span');
-                    itemName.textContent = p.name;
-                    var itemSwatch = document.createElement('div');
-                    itemSwatch.style.width = '70px';
-                    itemSwatch.style.height = '10px';
-                    itemSwatch.style.border = '1px solid rgba(255,255,255,0.2)';
-                    itemSwatch.style.background = paletteToCss(p);
-                    item.appendChild(itemName);
-                    item.appendChild(itemSwatch);
-                    item.onclick = function(){ setPalette(p); list.style.display = 'none'; };
-                    list.appendChild(item);
-                })(paletteList[i]);
-            }
-
-            button.onclick = function(e){
-                e.stopPropagation();
-                list.style.display = (list.style.display === 'none') ? 'block' : 'none';
-            };
-            document.addEventListener('click', function(e){
-                if(!wrap.contains(e.target)) list.style.display = 'none';
-            });
-
-            button.appendChild(nameSpan);
-            button.appendChild(swatch);
-            wrap.appendChild(button);
-            wrap.appendChild(list);
-            row.appendChild(l);
-            row.appendChild(wrap);
-            ctrl.appendChild(row);
-
-            setPalette(paletteList[0]);
-        }
         content.appendChild(ctrl);
-        addPaletteDropdown('palette', palettes, function(p){ currentPalette = p; uploadPaletteTexture(currentPalette); });
         addSlider('quality (sim scale)', 0.1, 2.0, 0.05, simScale, function(v){ simScale = v; allocFBOs(); });
         addSlider('pressure iterations', 1, 48, 1, jacobi, function(v){ jacobi = Math.floor(v); });
         addSlider('vorticity', 0.0, 100.0, 1.0, curl, function(v){ curl = v; });
@@ -482,17 +269,11 @@ var TestFire = (function(){
         addSlider('heat power', -5.0, 5.0, 0.1, heatPower, function(v){ heatPower = v; });
         addSlider('min heat', 0.0, 0.5, 0.01, minHeat, function(v){ minHeat = v; });
         addSlider('advection speed', 10.0, 500.0, 5.0, rdx, function(v){ rdx = v; });
-        addSlider('fire speed', 0.0, 200.0, 0.5, fireSpeed, function(v){ fireSpeed = v; });
+        addSlider('fire speed', 0.2, 3.0, 0.05, fireSpeed, function(v){ fireSpeed = v; });
         addSlider('embers per frame', 1, 100, 1, emberRate, function(v){ emberRate = Math.floor(v); });
-        addSlider('ember height', 0.0, 0.2, 0.005, emberHeight, function(v){ emberHeight = v; });
-        addSlider('ember offset', 0.0, 0.5, 0.005, emberOffset, function(v){ emberOffset = v; });
-        addSlider('ember width', 0.1, 1.2, 0.01, emberWidth, function(v){ emberWidth = v; });
-        addSlider('ember size', 0.002, 0.02, 0.001, emberSize, function(v){ emberSize = v; });
-        addSlider('ember uniformity', 0.0, 1.0, 0.01, emberUniformity, function(v){ emberUniformity = v; });
-        addSlider('ember life (frames)', 1, 60, 1, emberLifeFrames, function(v){ emberLifeFrames = Math.floor(v); });
         addSlider('velocity dissipation', 0.0, 2.0, 0.01, velDissipation, function(v){ velDissipation = v; });
         addSlider('density dissipation', 0.8, 1.0, 0.001, denDissipation, function(v){ denDissipation = v; });
-        addSlider('spark chance', 0.0, 1.3, 0.005, sparkChance, function(v){ sparkChance = v; });
+        addSlider('spark chance', 0.0, 0.3, 0.005, sparkChance, function(v){ sparkChance = v; });
         addSlider('glow', 0.0, 2.0, 0.01, glow, function(v){ glow = v; });
         addSlider('velocity range', 1.0, 5.0, 0.5, velRange, function(v){ velRange = v; });
 
@@ -500,50 +281,25 @@ var TestFire = (function(){
             splats.push({ x:x, y:y, dx:dx, dy:dy, r:radius, d:densityAmount });
         }
 
-        function addEmber(x, y, dx, dy, radius, densityAmount, lifeFrames){
-            var life = Math.max(1, Math.floor(lifeFrames || 1));
-            embers.push({ x:x, y:y, dx:dx, dy:dy, r:radius, d:densityAmount, life: life, maxLife: life });
-        }
-
         function spawnEmbers(){
             for(var i=0;i<emberRate;i++){
-                var width = Math.max(0.001, emberWidth);
-                var x = 0.5 + (Math.random()-0.5)*width;
-                var y = emberOffset + Math.random()*emberHeight;
+                var x = 0.5 + (Math.random()-0.5)*0.6;
+                var y = Math.random()*0.02;
                 var dx = (Math.random()-0.5)*0.1;
                 var dy = fireSpeed * (0.8 + Math.random()*0.4);
-                var edge = Math.abs(x - 0.5) / (width * 0.5);
-                edge = Math.min(1.0, Math.max(0.0, edge));
-                var edgeFactor = 1.0 - edge;
-                var sizeScale = (1.0 - emberUniformity) + emberUniformity * edgeFactor;
-                var radius = emberSize * sizeScale;
-                var life = emberLifeFrames <= 1 ? 1 : (1 + Math.floor(Math.random() * emberLifeFrames));
-                addEmber(x, y, dx, dy, radius, 1.5, life);
-            }
-        }
-
-        function updateEmbers(){
-            for(var i=embers.length-1;i>=0;i--){
-                var e = embers[i];
-                addSplat(e.x, e.y, e.dx, e.dy, e.r, e.d);
-                e.life -= 1;
-                if(e.life <= 0){ embers.splice(i,1); }
+                addSplat(x, y, dx, dy, 0.008, 1.5);
             }
         }
 
         function spawnSpark(){
             if(sparks.length > sparkMax) return;
-            var width = Math.max(0.001, emberWidth);
-            var innerWidth = width * 0.65;
-            var x = 0.5 + (Math.random()-0.5)*innerWidth;
-            var midY = emberOffset + emberHeight * 0.5;
-            var y = midY + (Math.random()-0.5)*emberHeight;
+            var x = 0.5 + (Math.random()-0.5)*0.4;
+            var y = 0.01 + Math.random()*0.02;
             var s = {
                 x: x,
                 y: y,
                 px: x,
                 py: y,
-                startY: y,
                 vx: (Math.random()-0.5)*0.3,
                 vy: 1.5 + Math.random()*1.0,
                 maxY: 0.25 + Math.random()*0.55,
@@ -564,15 +320,10 @@ var TestFire = (function(){
                 s.y += s.vy * dtSec;
                 s.vy -= 0.2 * dtSec;
                 if(s.y >= s.maxY){ sparks.splice(i,1); continue; }
-                var alpha = 1.0;
-                var denom = Math.max(1e-4, (s.maxY - s.startY));
-                var rise = (s.y - s.startY) / denom;
-                if(rise < 0.25){ alpha = rise / 0.25; }
+                s.alpha = 1.0;
                 if(s.y > s.fadeStart){
-                    var fade = 1.0 - (s.y - s.fadeStart) / (s.maxY - s.fadeStart);
-                    alpha = Math.min(alpha, fade);
+                    s.alpha = 1.0 - (s.y - s.fadeStart) / (s.maxY - s.fadeStart);
                 }
-                s.alpha = Math.max(0.0, Math.min(1.0, alpha));
             }
         }
 
@@ -602,10 +353,10 @@ var TestFire = (function(){
         }
 
         canvas.addEventListener('mousedown', function(e){ pointer.down=true; pointer.x=e.clientX; pointer.y=e.clientY; pointer.px=pointer.x; pointer.py=pointer.y; });
-        window.addEventListener('mouseup', function(){ pointer.down=false; pointerEmber = null; });
+        window.addEventListener('mouseup', function(){ pointer.down=false; });
         window.addEventListener('mousemove', function(e){ pointer.x=e.clientX; pointer.y=e.clientY; });
         canvas.addEventListener('touchstart', function(e){ if(e.touches.length){ var t=e.touches[0]; pointer.down=true; pointer.x=t.clientX; pointer.y=t.clientY; pointer.px=pointer.x; pointer.py=pointer.y; } });
-        window.addEventListener('touchend', function(){ pointer.down=false; pointerEmber = null; });
+        window.addEventListener('touchend', function(){ pointer.down=false; });
         window.addEventListener('touchmove', function(e){ if(e.touches.length){ var t=e.touches[0]; pointer.x=t.clientX; pointer.y=t.clientY; } });
 
         function applySplats(){
@@ -639,7 +390,6 @@ var TestFire = (function(){
             var dtSec = dt;
 
             spawnEmbers();
-            updateEmbers();
             if(Math.random() < sparkChance){ spawnSpark(); }
             updateSparks(dtSec);
 
@@ -648,22 +398,7 @@ var TestFire = (function(){
                 var y = 1.0 - pointer.y / canvas.height;
                 var dx = (pointer.x - pointer.px) / canvas.width * 5.0;
                 var dy = (pointer.py - pointer.y) / canvas.height * 5.0;
-                var radius = emberSize * 0.75;
-                var threshold = 0.003;
-                if(pointerEmber){
-                    var dist = Math.abs(pointerEmber.x - x) + Math.abs(pointerEmber.y - y);
-                    if(dist > threshold){
-                        pointerEmber = { x:x, y:y, dx:dx, dy:dy + fireSpeed * 1.5, r:radius, d:3.0, life: emberLifeFrames, maxLife: emberLifeFrames };
-                        embers.push(pointerEmber);
-                    } else {
-                        pointerEmber.x = x; pointerEmber.y = y;
-                        pointerEmber.dx = dx; pointerEmber.dy = dy + fireSpeed * 1.5;
-                        pointerEmber.life = Math.max(1, emberLifeFrames);
-                    }
-                } else {
-                    pointerEmber = { x:x, y:y, dx:dx, dy:dy + fireSpeed * 1.5, r:radius, d:3.0, life: emberLifeFrames, maxLife: emberLifeFrames };
-                    embers.push(pointerEmber);
-                }
+                addSplat(x, y, dx, dy + fireSpeed * 1.5, 0.006, 3.0);
                 pointer.px = pointer.x; pointer.py = pointer.y;
             }
 
@@ -733,7 +468,6 @@ var TestFire = (function(){
 
             renderTo(null, progDisp, function(p){
                 gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, density.read.texture); gl.uniform1i(gl.getUniformLocation(p,'uDensity'),0);
-                gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, paletteTexture); gl.uniform1i(gl.getUniformLocation(p,'uPalette'),1);
                 gl.uniform2f(gl.getUniformLocation(p,'resolution'), canvas.width, canvas.height);
                 gl.uniform1f(gl.getUniformLocation(p,'glow'), glow);
                 gl.uniform2f(gl.getUniformLocation(p,'vortexScale'), vortexScaleX, vortexScaleY);
