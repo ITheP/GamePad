@@ -1,4 +1,4 @@
-/* GPU fire simulation with WebGL-based fluid dynamics */
+﻿/* GPU fire simulation with WebGL-based fluid dynamics */
 var TestFire = (function () {
     // Shorthand for element lookup by id.
     function $(id) { return document.getElementById(id); }
@@ -476,7 +476,7 @@ var TestFire = (function () {
             '    vec2 uv = v_uv;\n' +
             '    vec2 tuv = vec2(uv.x, 1.0 - uv.y);\n' +
             '    vec2 pn = uv * noiseFreq + time * vec2(noiseDriftX, noiseDriftY);\n' +
-            '    float tn = time * noiseSpeed;\n' +
+            '    float tn = time * noiseSpeed * noiseFreq * 0.1;\n' +
             '    float n = selectNoise3(vec3(pn, tn), noiseType);\n' +
             '    vec2 warp = vec2(n - 0.5) * noiseScale;\n' +
             '    tuv += warp;\n' +
@@ -671,7 +671,7 @@ var TestFire = (function () {
             'void main(){\n' +
             '    vec2 uv = v_uv;\n' +
             '    vec2 pn = uv * noiseFreq + time * vec2(noiseDriftX, noiseDriftY);\n' +
-            '    float tn = time * noiseSpeed;\n' +
+            '    float tn = time * noiseSpeed * noiseFreq * 0.1;\n' +
             '    float n = selectNoise3(vec3(pn, tn), noiseType);\n' +
             '    float warp = (n - 0.5) * noiseAmplitude * 10.0;\n' +
             '    float v = clamp(0.5 + warp, 0.0, 1.0);\n' +
@@ -772,29 +772,35 @@ var TestFire = (function () {
             return { read: createFBO(w, h), write: createFBO(w, h), swap: function () { var t = this.read; this.read = this.write; this.write = t; } };
         }
 
-        // Text rendering settings.
+        // Text Defaults
         var textEnabled = true;
         var textValue = 'Fire!';
-        var textFont = 'Arial';
-        var textSize = 96;
+        var textFont = 'Palatino Linotype';
+        var textSize = 154;
         var textOffsetX = 0.0; // -0.5..0.5 (fraction of width)
         var textOffsetY = 0.0; // -0.5..0.5 (fraction of height)
+
+        // Text Effectors Defaults
+        // Distortion
         var textStrength = 1.5;
-        var textNoiseType = 0; // 0 = Value noise, 1 = Sine warp
-        var textNoiseScale = 0.03; // Warp amplitude
-        var textNoiseFreq = 3.0;   // Warp frequency
-        var textNoiseSpeed = 0.4;
-        var textMaskNoiseType = 0;
-        var textMaskNoiseScale = 1.0;
-        var textMaskNoiseFreq = 3.0;
-        var textMaskNoiseSpeed = 0.4;
-        var textMaskNoiseContrast = 1.0;
-        var textMaskNoiseBrightnessTop = 0.0;
-        var textMaskNoiseBrightnessBottom = 0.0;
+        var textNoiseType = 7; // FBM
+        var textNoiseScale = 0.062; // Warp amplitude
+        var textNoiseFreq = 49.0;   // Warp frequency
+        var textNoiseSpeed = 2.6;
         var textNoiseDriftX = 0.0;
         var textNoiseDriftY = 0.0;
+
+        // Text Mask Defaults
+        var textMaskNoiseType = 10; // Turbulence
+        var textMaskNoiseScale = 2.76;
+        var textMaskNoiseFreq = 3.0;
+        var textMaskNoiseSpeed = 0.4;
         var textMaskDriftX = 0.0;
-        var textMaskDriftY = 0.0;
+        var textMaskDriftY = -1.65;
+        var textMaskNoiseContrast = 1.7;
+        var textMaskNoiseBrightnessTop = 0.02;
+        var textMaskNoiseBrightnessBottom = 0.34;
+
         var textMaskTopUv = 1.0;
         var textMaskBottomUv = 0.0;
         var textCanvas = document.createElement('canvas');
@@ -987,30 +993,152 @@ var TestFire = (function () {
         resize();
         createPreviewFBOs();
 
-        // Defaults
+        // Settings presets system
+        var settingsPresets = [
+            {
+                name: 'Default',
+                settings: {
+                    simScale: 0.3, jacobi: 32, curl: 77, vortexScaleX: 15.0, vortexScaleY: 27.0,
+                    velRange: 3.0, velDissipation: 0.38, denDissipation: 0.888, rdx: 45.0,
+                    buoyancy: 35.0, heatPower: -2.7, minHeat: 0.08, maxHeat: 4.0,
+                    emberRate: 18, emberSize: 0.02, emberLifeFrames: 4, emberWidth: 0.89,
+                    emberHeight: 0.02, emberOffset: 0.035, emberUniformity: 1.0,
+                    sparkChance: 0.275, glow: 1.2,
+                    textEnabled: true, textValue: 'Fire!', textFont: 'Palatino Linotype',
+                    textSize: 154, textOffsetX: 0.0, textOffsetY: 0.0,
+                    textStrength: 1.5, textNoiseType: 7, textNoiseScale: 0.062, textNoiseFreq: 49.0,
+                    textNoiseSpeed: 2.6, textNoiseDriftX: 0.0, textNoiseDriftY: 0.0,
+                    textMaskNoiseType: 10, textMaskNoiseScale: 2.76, textMaskNoiseFreq: 3.0,
+                    textMaskNoiseSpeed: 0.4, textMaskDriftX: 0.0, textMaskDriftY: -1.65,
+                    textMaskNoiseContrast: 1.7, textMaskNoiseBrightnessTop: 0.02, textMaskNoiseBrightnessBottom: 0.34
+                }
+            },
+            {
+                name: 'Calm Candle',
+                settings: {
+                    simScale: 0.25, jacobi: 24, curl: 30, vortexScaleX: 8.0, vortexScaleY: 20.0,
+                    velRange: 2.0, velDissipation: 0.5, denDissipation: 0.92, rdx: 30.0,
+                    buoyancy: 25.0, heatPower: -1.5, minHeat: 0.05, maxHeat: 3.0,
+                    emberRate: 8, emberSize: 0.015, emberLifeFrames: 6, emberWidth: 0.3,
+                    emberHeight: 0.015, emberOffset: 0.02, emberUniformity: 0.8,
+                    sparkChance: 0.05, glow: 0.8,
+                    textEnabled: true, textValue: 'Calm', textFont: 'Georgia',
+                    textSize: 120, textOffsetX: 0.0, textOffsetY: 0.0,
+                    textStrength: 1.2, textNoiseType: 7, textNoiseScale: 0.03, textNoiseFreq: 30.0,
+                    textNoiseSpeed: 1.5, textNoiseDriftX: 0.0, textNoiseDriftY: 0.0,
+                    textMaskNoiseType: 0, textMaskNoiseScale: 2.0, textMaskNoiseFreq: 4.0,
+                    textMaskNoiseSpeed: 0.3, textMaskDriftX: 0.0, textMaskDriftY: -0.8,
+                    textMaskNoiseContrast: 1.2, textMaskNoiseBrightnessTop: 0.1, textMaskNoiseBrightnessBottom: 0.4
+                }
+            },
+            {
+                name: 'Inferno',
+                settings: {
+                    simScale: 0.4, jacobi: 40, curl: 95, vortexScaleX: 25.0, vortexScaleY: 35.0,
+                    velRange: 4.0, velDissipation: 0.25, denDissipation: 0.85, rdx: 80.0,
+                    buoyancy: 60.0, heatPower: -3.5, minHeat: 0.1, maxHeat: 5.0,
+                    emberRate: 50, emberSize: 0.025, emberLifeFrames: 3, emberWidth: 1.0,
+                    emberHeight: 0.05, emberOffset: 0.02, emberUniformity: 0.6,
+                    sparkChance: 0.6, glow: 1.8,
+                    textEnabled: true, textValue: 'BURN', textFont: 'Impact',
+                    textSize: 200, textOffsetX: 0.0, textOffsetY: 0.05,
+                    textStrength: 2.0, textNoiseType: 10, textNoiseScale: 0.08, textNoiseFreq: 60.0,
+                    textNoiseSpeed: 4.0, textNoiseDriftX: 0.0, textNoiseDriftY: 0.0,
+                    textMaskNoiseType: 10, textMaskNoiseScale: 3.5, textMaskNoiseFreq: 5.0,
+                    textMaskNoiseSpeed: 0.8, textMaskDriftX: 0.0, textMaskDriftY: -2.0,
+                    textMaskNoiseContrast: 2.2, textMaskNoiseBrightnessTop: -0.1, textMaskNoiseBrightnessBottom: 0.5
+                }
+            },
+            {
+                name: 'Ethereal Wisps',
+                settings: {
+                    simScale: 0.35, jacobi: 28, curl: 50, vortexScaleX: 20.0, vortexScaleY: 40.0,
+                    velRange: 2.5, velDissipation: 0.6, denDissipation: 0.95, rdx: 25.0,
+                    buoyancy: 20.0, heatPower: -0.5, minHeat: 0.02, maxHeat: 2.0,
+                    emberRate: 12, emberSize: 0.03, emberLifeFrames: 10, emberWidth: 0.6,
+                    emberHeight: 0.03, emberOffset: 0.05, emberUniformity: 0.4,
+                    sparkChance: 0.1, glow: 1.5,
+                    textEnabled: true, textValue: 'Dream', textFont: 'Brush Script MT',
+                    textSize: 180, textOffsetX: 0.0, textOffsetY: 0.0,
+                    textStrength: 1.0, textNoiseType: 11, textNoiseScale: 0.04, textNoiseFreq: 25.0,
+                    textNoiseSpeed: 1.0, textNoiseDriftX: 0.3, textNoiseDriftY: 0.0,
+                    textMaskNoiseType: 7, textMaskNoiseScale: 4.0, textMaskNoiseFreq: 2.0,
+                    textMaskNoiseSpeed: 0.2, textMaskDriftX: 0.5, textMaskDriftY: -0.5,
+                    textMaskNoiseContrast: 1.0, textMaskNoiseBrightnessTop: 0.2, textMaskNoiseBrightnessBottom: 0.3
+                }
+            },
+            {
+                name: 'Plasma Storm',
+                settings: {
+                    simScale: 0.5, jacobi: 36, curl: 85, vortexScaleX: 30.0, vortexScaleY: 30.0,
+                    velRange: 3.5, velDissipation: 0.3, denDissipation: 0.87, rdx: 60.0,
+                    buoyancy: 45.0, heatPower: -2.0, minHeat: 0.06, maxHeat: 4.5,
+                    emberRate: 30, emberSize: 0.018, emberLifeFrames: 5, emberWidth: 0.95,
+                    emberHeight: 0.04, emberOffset: 0.025, emberUniformity: 0.7,
+                    sparkChance: 0.4, glow: 1.6,
+                    textEnabled: true, textValue: 'PLASMA', textFont: 'Consolas',
+                    textSize: 140, textOffsetX: 0.0, textOffsetY: 0.0,
+                    textStrength: 1.8, textNoiseType: 13, textNoiseScale: 0.05, textNoiseFreq: 40.0,
+                    textNoiseSpeed: 3.0, textNoiseDriftX: 0.0, textNoiseDriftY: 0.0,
+                    textMaskNoiseType: 13, textMaskNoiseScale: 2.0, textMaskNoiseFreq: 6.0,
+                    textMaskNoiseSpeed: 0.6, textMaskDriftX: 0.0, textMaskDriftY: -1.2,
+                    textMaskNoiseContrast: 1.5, textMaskNoiseBrightnessTop: 0.0, textMaskNoiseBrightnessBottom: 0.35
+                }
+            },
+            {
+                name: 'Hellfire',
+                settings: {
+                    simScale: 0.45, jacobi: 44, curl: 100, vortexScaleX: 35.0, vortexScaleY: 45.0,
+                    velRange: 4.5, velDissipation: 0.2, denDissipation: 0.83, rdx: 100.0,
+                    buoyancy: 75.0, heatPower: -4.0, minHeat: 0.12, maxHeat: 6.0,
+                    emberRate: 70, emberSize: 0.022, emberLifeFrames: 2, emberWidth: 1.1,
+                    emberHeight: 0.06, emberOffset: 0.015, emberUniformity: 0.5,
+                    sparkChance: 0.8, glow: 2.0,
+                    textEnabled: true, textValue: 'HELL', textFont: 'Impact',
+                    textSize: 250, textOffsetX: 0.0, textOffsetY: 0.08,
+                    textStrength: 2.5, textNoiseType: 8, textNoiseScale: 0.09, textNoiseFreq: 70.0,
+                    textNoiseSpeed: 5.0, textNoiseDriftX: 0.0, textNoiseDriftY: 0.0,
+                    textMaskNoiseType: 8, textMaskNoiseScale: 4.0, textMaskNoiseFreq: 4.0,
+                    textMaskNoiseSpeed: 1.0, textMaskDriftX: 0.0, textMaskDriftY: -2.5,
+                    textMaskNoiseContrast: 2.5, textMaskNoiseBrightnessTop: -0.2, textMaskNoiseBrightnessBottom: 0.6
+                }
+            }
+        ];
+
+        // UI control registry for programmatic updates
+        var uiControls = {};
+
+        // Simulation Defaults
         var dt = 1 / 60;
         var jacobi = 32;        // Pressure iterations
         var curl = 77;          // Vorticity
         var vortexScaleX = 15.0;
-        var vortexScaleY = 31.0;
-        var buoyancy = 15.0;
-        var maxHeat = 4.0;
-        var heatPower = 3.2;
-        var minHeat = 0.15;
-        var glow = 1.2;
-        var emberRate = 6;      // Embers spawned per frame
-        var emberHeight = 0.02; // Vertical spawn range near bottom
-        var emberOffset = 0.0;  // Vertical spawn offset from bottom
-        var emberWidth = 0.6;   // Screen width covered by embers
-        var emberSize = 0.008;  // Base ember radius
-        var emberUniformity = 0.7; // 0 = uniform size, 1 = edges tiny
-        var emberLifeFrames = 1; // Lifespan in frames (1-60)
-        var velDissipation = 0.3;
-        var denDissipation = 0.91;
-        var sparkChance = 0.275;
-        var sparkMax = 64;     // Max number of sparks
-        var rdx = 130.0;
+        var vortexScaleY = 27.0;
         var velRange = 3.0;
+        var velDissipation = 0.38;
+        var denDissipation = 0.888;
+        var rdx = 45.0;
+
+        // Fire Defaults
+        var buoyancy = 35.0;
+        var heatPower = -2.7;
+        var minHeat = 0.08;
+        var maxHeat = 4.0;
+
+        // Ember Defaults
+        var emberRate = 18;      // Embers spawned per frame
+        var emberSize = 0.02;  // Base ember radius
+        var emberLifeFrames = 4; // Lifespan in frames (1-60)
+        var emberWidth = 0.89;   // Screen width covered by embers
+        var emberHeight = 0.02; // Vertical spawn range near bottom
+        var emberOffset = 0.035;  // Vertical spawn offset from bottom
+        var emberUniformity = 1.0; // 0 = uniform size, 1 = edges tiny
+
+        // Misc. Defaults
+        var sparkChance = 0.275;
+        var glow = 1.2;
+
+        var sparkMax = 64;     // Max number of sparks
         var pointer = { down: false, x: 0, y: 0, px: 0, py: 0 };
         var splats = [];
         var embers = [];
@@ -1176,8 +1304,9 @@ var TestFire = (function () {
         ctrl.className = 'fire-ui';
         var textCtrl = document.createElement('div');
         textCtrl.className = 'fire-ui';
-        // Create a labeled slider row.
-        function addSlider(label, min, max, step, value, onChange, tooltip, target) {
+
+        // Create a labeled slider row with optional key for settings registry.
+        function addSlider(label, min, max, step, value, onChange, tooltip, target, settingsKey) {
             var row = document.createElement('div');
             row.className = 'fire-ui-row';
             if (tooltip) { row.title = tooltip; }
@@ -1199,6 +1328,14 @@ var TestFire = (function () {
             row.appendChild(input);
             row.appendChild(valueSpan);
             (target || ctrl).appendChild(row);
+            if (settingsKey) {
+                uiControls[settingsKey] = {
+                    type: 'slider',
+                    input: input,
+                    valueSpan: valueSpan,
+                    onChange: onChange
+                };
+            }
         }
 
         // Create a palette dropdown with preview swatches.
@@ -1263,7 +1400,7 @@ var TestFire = (function () {
         }
 
         // Create a font dropdown with font previews.
-        function addFontDropdown(label, fontList, onChange, tooltip, target) {
+        function addFontDropdown(label, fontList, onChange, tooltip, target, settingsKey) {
             var row = document.createElement('div');
             row.className = 'fire-ui-row';
             if (tooltip) { row.title = tooltip; }
@@ -1315,10 +1452,17 @@ var TestFire = (function () {
             (target || ctrl).appendChild(row);
 
             setFont(fontList[0]);
+            if (settingsKey) {
+                uiControls[settingsKey] = {
+                    type: 'fontDropdown',
+                    setFont: setFont,
+                    onChange: onChange
+                };
+            }
         }
 
         // Create a noise dropdown for text distortion options.
-        function addNoiseDropdown(label, items, onChange, tooltip, target) {
+        function addNoiseDropdown(label, items, onChange, tooltip, target, settingsKey) {
             var row = document.createElement('div');
             row.className = 'fire-ui-row';
             if (tooltip) { row.title = tooltip; }
@@ -1335,8 +1479,11 @@ var TestFire = (function () {
             var list = document.createElement('div');
             list.className = 'fire-ui-list';
 
+            var currentValue = items[0].value;
+
             function setNoise(item) {
                 nameSpan.textContent = item.label;
+                currentValue = item.value;
                 onChange(item.value);
             }
 
@@ -1368,10 +1515,19 @@ var TestFire = (function () {
             (target || ctrl).appendChild(row);
 
             setNoise(items[0]);
+            if (settingsKey) {
+                uiControls[settingsKey] = {
+                    type: 'noiseDropdown',
+                    items: items,
+                    setNoise: setNoise,
+                    onChange: onChange,
+                    getValue: function() { return currentValue; }
+                };
+            }
         }
 
         // Create a labeled text input row.
-        function addTextInput(label, value, onChange, tooltip, target) {
+        function addTextInput(label, value, onChange, tooltip, target, settingsKey) {
             var row = document.createElement('div');
             row.className = 'fire-ui-row';
             if (tooltip) { row.title = tooltip; }
@@ -1388,10 +1544,17 @@ var TestFire = (function () {
             row.appendChild(l);
             row.appendChild(input);
             (target || ctrl).appendChild(row);
+            if (settingsKey) {
+                uiControls[settingsKey] = {
+                    type: 'text',
+                    input: input,
+                    onChange: onChange
+                };
+            }
         }
 
         // Create a labeled checkbox row.
-        function addCheckbox(label, value, onChange, tooltip, target) {
+        function addCheckbox(label, value, onChange, tooltip, target, settingsKey) {
             var row = document.createElement('div');
             row.className = 'fire-ui-row';
             if (tooltip) { row.title = tooltip; }
@@ -1408,6 +1571,13 @@ var TestFire = (function () {
             row.appendChild(l);
             row.appendChild(input);
             (target || ctrl).appendChild(row);
+            if (settingsKey) {
+                uiControls[settingsKey] = {
+                    type: 'checkbox',
+                    input: input,
+                    onChange: onChange
+                };
+            }
         }
 
         // Add a section heading in the UI panel.
@@ -1417,6 +1587,148 @@ var TestFire = (function () {
             h.textContent = text;
             (target || ctrl).appendChild(h);
         }
+
+        // Apply a preset's settings to all registered UI controls.
+        function applyPreset(preset) {
+            var s = preset.settings;
+            for (var key in s) {
+                if (!s.hasOwnProperty(key) || !uiControls[key]) continue;
+                var ctrl = uiControls[key];
+                var val = s[key];
+                switch (ctrl.type) {
+                    case 'slider':
+                        ctrl.input.value = val;
+                        ctrl.valueSpan.textContent = val;
+                        ctrl.onChange(parseFloat(val));
+                        break;
+                    case 'checkbox':
+                        ctrl.input.checked = val;
+                        ctrl.onChange(val);
+                        break;
+                    case 'text':
+                        ctrl.input.value = val;
+                        ctrl.onChange(val);
+                        break;
+                    case 'fontDropdown':
+                        ctrl.setFont(val);
+                        break;
+                    case 'noiseDropdown':
+                        for (var i = 0; i < ctrl.items.length; i++) {
+                            if (ctrl.items[i].value === val) {
+                                ctrl.setNoise(ctrl.items[i]);
+                                break;
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+
+        // Get current settings from all registered UI controls.
+        function getCurrentSettings() {
+            var s = {};
+            for (var key in uiControls) {
+                if (!uiControls.hasOwnProperty(key)) continue;
+                var ctrl = uiControls[key];
+                switch (ctrl.type) {
+                    case 'slider':
+                        s[key] = parseFloat(ctrl.input.value);
+                        break;
+                    case 'checkbox':
+                        s[key] = ctrl.input.checked;
+                        break;
+                    case 'text':
+                        s[key] = ctrl.input.value;
+                        break;
+                    case 'fontDropdown':
+                        // Font stored externally, just use current value
+                        s[key] = textFont;
+                        break;
+                    case 'noiseDropdown':
+                        s[key] = ctrl.getValue ? ctrl.getValue() : 0;
+                        break;
+                }
+            }
+            return s;
+        }
+
+        // Export current settings as JSON to console.
+        function exportSettingsToConsole() {
+            var s = getCurrentSettings();
+            console.log('// Current Settings Preset');
+            console.log(JSON.stringify(s, null, 4));
+        }
+
+        // Add a preset dropdown to the UI.
+        function addPresetDropdown(label, presets, onChange, tooltip, target) {
+            var row = document.createElement('div');
+            row.className = 'fire-ui-row';
+            if (tooltip) { row.title = tooltip; }
+            var l = document.createElement('label');
+            l.textContent = label;
+            l.className = 'fire-ui-label';
+            if (tooltip) { l.title = tooltip; }
+            var wrap = document.createElement('div');
+            wrap.className = 'fire-ui-dropdown';
+            var button = document.createElement('div');
+            button.className = 'fire-ui-button';
+            if (tooltip) { button.title = tooltip; }
+            var nameSpan = document.createElement('span');
+            var list = document.createElement('div');
+            list.className = 'fire-ui-list';
+
+            function setPreset(p) {
+                nameSpan.textContent = p.name;
+                onChange(p);
+            }
+
+            for (var i = 0; i < presets.length; i++) {
+                (function (p) {
+                    var item = document.createElement('div');
+                    item.className = 'fire-ui-item';
+                    var itemName = document.createElement('span');
+                    itemName.textContent = p.name;
+                    item.appendChild(itemName);
+                    item.onclick = function () { setPreset(p); list.style.display = 'none'; };
+                    list.appendChild(item);
+                })(presets[i]);
+            }
+
+            button.onclick = function (e) {
+                e.stopPropagation();
+                list.style.display = (list.style.display === 'none') ? 'block' : 'none';
+            };
+            document.addEventListener('click', function (e) {
+                if (!wrap.contains(e.target)) list.style.display = 'none';
+            });
+
+            button.appendChild(nameSpan);
+            wrap.appendChild(button);
+            wrap.appendChild(list);
+            row.appendChild(l);
+            row.appendChild(wrap);
+            (target || ctrl).appendChild(row);
+
+            // Set first preset as current
+            nameSpan.textContent = presets[0].name;
+        }
+
+        // Add an export button to the UI.
+        function addExportButton(label, onClick, tooltip, target) {
+            var row = document.createElement('div');
+            row.className = 'fire-ui-row';
+            if (tooltip) { row.title = tooltip; }
+            var btn = document.createElement('button');
+            btn.textContent = label;
+            btn.className = 'fire-ui-button';
+            btn.style.width = '100%';
+            btn.style.cursor = 'pointer';
+            if (tooltip) { btn.title = tooltip; }
+            btn.onclick = onClick;
+            row.appendChild(btn);
+            (target || ctrl).appendChild(row);
+        }
+
         var textFonts = [
             'Arial',
             'Georgia',
@@ -1463,58 +1775,81 @@ var TestFire = (function () {
         content.appendChild(uiContainer);
         uiContainer.appendChild(ctrl);
         uiContainer.appendChild(textCtrl);
+        addHeading('General', ctrl);
+        addPresetDropdown('Saved Settings', settingsPresets, function (p) { applyPreset(p); }, 'Load a preset configuration for all settings.', ctrl);
+        addExportButton('Export Settings to Console', exportSettingsToConsole, 'Export all current settings as JSON to the browser console.', ctrl);
+
+        // Toggle UI visibility
+        function toggleUIVisibility() {
+            uiContainer.style.display = uiContainer.style.display === 'none' ? 'flex' : 'none';
+        }
+        addExportButton('Space Toggles Controls', toggleUIVisibility, 'Press Space or click this button to hide/show the control panels.', ctrl);
+
+        // Space key toggles UI (unless typing in a text input)
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                toggleUIVisibility();
+            }
+        });
+
         addPaletteDropdown('palette', palettes, function (p) { currentPalette = p; uploadPaletteTexture(currentPalette); }, 'Selects the color gradient used to map density values to flame colors. This only affects rendering, not the simulation.', ctrl);
         addHeading('Simulation', ctrl);
-        addSlider('quality (sim scale)', 0.1, 2.0, 0.05, simScale, function (v) { simScale = v; allocFBOs(); }, 'Simulation resolution scale. Increase for sharper detail but higher GPU cost; decrease for faster performance.', ctrl);
-        addSlider('pressure iterations', 1, 48, 1, jacobi, function (v) { jacobi = Math.floor(v); }, 'Number of pressure-solve iterations. More iterations reduce volume changes and make flow look less “squishy.”', ctrl);
-        addSlider('vorticity', 0.0, 100.0, 1.0, curl, function (v) { curl = v; }, 'Adds swirl via vorticity confinement. Higher values increase curl and turbulence in the flame.', ctrl);
-        addSlider('vortex scale H', 0.0, 50.0, 1.0, vortexScaleX, function (v) { vortexScaleX = v; }, 'Horizontal sampling distance for curl detection. Larger values produce broader swirls.', ctrl);
-        addSlider('vortex scale V', 0.0, 50.0, 1.0, vortexScaleY, function (v) { vortexScaleY = v; }, 'Vertical sampling distance for curl detection. Larger values produce taller swirls.', ctrl);
-        addSlider('velocity range', 1.0, 5.0, 0.5, velRange, function (v) { velRange = v; }, 'Velocity encoding range in textures. Higher allows faster motion but reduces precision for subtle flow.', ctrl);
-        addSlider('velocity dissipation', 0.0, 2.0, 0.01, velDissipation, function (v) { velDissipation = v; }, 'How quickly velocity decays each frame. Higher values calm the flow faster.', ctrl);
-        addSlider('density dissipation', 0.8, 1.0, 0.001, denDissipation, function (v) { denDissipation = v; }, 'How quickly density fades each frame. Lower values keep smoke/fire lingering longer.', ctrl);
-        addSlider('advection speed', 10.0, 500.0, 5.0, rdx, function (v) { rdx = v; }, 'Scales how far fields are pushed by velocity each frame. Higher values increase motion speed.', ctrl);
+        addSlider('Quality (simulation resolution)', 0.1, 2.0, 0.05, simScale, function (v) { simScale = v; allocFBOs(); }, 'Simulation resolution scale. Increase for sharper detail but higher GPU cost. Lower values often look better!', ctrl, 'simScale');
+        addSlider('Pressure Iterations', 1, 48, 1, jacobi, function (v) { jacobi = Math.floor(v); }, 'Number of fluid pressure-solve iterations. More iterations reduce volume changes and make flow look less "squishy."', ctrl, 'jacobi');
+        addSlider('Vorticity', 0.0, 100.0, 1.0, curl, function (v) { curl = v; }, 'Adds swirl via vorticity confinement. Higher values increase curl and turbulence in the flame.', ctrl, 'curl');
+        addSlider('Vortex Horizontal Scale', 0.0, 50.0, 1.0, vortexScaleX, function (v) { vortexScaleX = v; }, 'Horizontal sampling distance for curl detection. Larger values produce wider swirls.', ctrl, 'vortexScaleX');
+        addSlider('Vortex Vertical Scale', 0.0, 50.0, 1.0, vortexScaleY, function (v) { vortexScaleY = v; }, 'Vertical sampling distance for curl detection. Larger values produce taller swirls.', ctrl, 'vortexScaleY');
+        addSlider('Velocity Range', 1.0, 5.0, 0.5, velRange, function (v) { velRange = v; }, 'Velocity encoding range in textures. Higher allows faster motion but reduces precision for subtle flow.', ctrl, 'velRange');
+        addSlider('Velocity Dissipation', 0.0, 2.0, 0.01, velDissipation, function (v) { velDissipation = v; }, 'How quickly velocity decays each frame. Higher values calm the flow faster.', ctrl, 'velDissipation');
+        addSlider('Density Dissipation', 0.8, 1.0, 0.001, denDissipation, function (v) { denDissipation = v; }, 'How quickly density fades each frame. Higher values keep smoke/fire lingering around for longer.', ctrl, 'denDissipation');
+        addSlider('Advection Speed', 10.0, 500.0, 5.0, rdx, function (v) { rdx = v; }, 'Scales how far fields are pushed by velocity each frame. Higher values increase motion speed.', ctrl, 'rdx');
 
         addHeading('Fire', ctrl);
-        addSlider('buoyancy (rise)', 10.0, 100.0, 0.5, buoyancy, function (v) { buoyancy = v; }, 'Strength of upward lift applied from heat. Higher values make the flame rise faster overall.', ctrl);
-        addSlider('max heat', 0.5, 10.0, 0.5, maxHeat, function (v) { maxHeat = v; }, 'Density value treated as “full heat.” Lower values make the same density hotter, increasing lift.', ctrl);
-        addSlider('heat power', -5.0, 5.0, 0.1, heatPower, function (v) { heatPower = v; }, 'Shape of the heat curve. Positive makes hot cores rise much faster; negative boosts cooler edges instead.', ctrl);
-        addSlider('min heat', 0.0, 0.5, 0.01, minHeat, function (v) { minHeat = v; }, 'Minimum heat contribution so fading areas still move upward.', ctrl);
+        addSlider('Buoyancy (upwards pressure)', 10.0, 100.0, 0.5, buoyancy, function (v) { buoyancy = v; }, 'Strength of upward lift applied from heat. Higher values make the flame rise faster overall.', ctrl, 'buoyancy');
+        addSlider('Heat Power', -5.0, 5.0, 0.1, heatPower, function (v) { heatPower = v; }, 'Shape of the heat curve. Positive makes hot cores rise much faster; negative boosts cooler edges instead.', ctrl, 'heatPower');
+        addSlider('Min Heat', 0.0, 0.5, 0.01, minHeat, function (v) { minHeat = v; }, 'Minimum heat contribution so fading areas still move upward.', ctrl, 'minHeat');
+         addSlider('Max Heat', 0.5, 10.0, 0.5, maxHeat, function (v) { maxHeat = v; }, 'Density value treated as "full heat." Lower values make the same density hotter, increasing lift.', ctrl, 'maxHeat');
 
         addHeading('Embers', ctrl);
-        addSlider('embers per frame', 1, 100, 1, emberRate, function (v) { emberRate = Math.floor(v); }, 'How many new ember splats are created each frame. Higher values make the base denser and brighter.', ctrl);
-        addSlider('ember life (frames)', 1, 60, 1, emberLifeFrames, function (v) { emberLifeFrames = Math.floor(v); }, 'How long embers persist. Higher values leave longer-lasting trails before they fade out.', ctrl);
-        addSlider('ember width', 0.1, 1.2, 0.01, emberWidth, function (v) { emberWidth = v; }, 'Horizontal span of the ember spawn band (as a fraction of the screen width).', ctrl);
-        addSlider('ember height', 0.0, 0.2, 0.005, emberHeight, function (v) { emberHeight = v; }, 'Vertical thickness of the ember spawn band near the bottom.', ctrl);
-        addSlider('ember offset', 0.0, 0.5, 0.005, emberOffset, function (v) { emberOffset = v; }, 'Moves the ember spawn band upward from the bottom of the screen.', ctrl);
-        addSlider('ember size', 0.001, 0.1, 0.001, emberSize, function (v) { emberSize = v; }, 'Base radius for ember splats; larger values create thicker, softer embers.', ctrl);
-        addSlider('ember uniformity', 0.0, 1.0, 0.01, emberUniformity, function (v) { emberUniformity = v; }, 'Center weighting for ember size. 0 = all equal; 1 = edges shrink and center stays larger.', ctrl);
+        addSlider('Embers Per Frame', 1, 100, 1, emberRate, function (v) { emberRate = Math.floor(v); }, 'How many new ember splats are created each frame. Higher values make the base denser and brighter.', ctrl, 'emberRate');
+        addSlider('Ember Size', 0.001, 0.1, 0.001, emberSize, function (v) { emberSize = v; }, 'Base radius for ember splats; larger values create thicker, softer embers.', ctrl, 'emberSize');
+       addSlider('Ember Life (frames)', 1, 60, 1, emberLifeFrames, function (v) { emberLifeFrames = Math.floor(v); }, 'How long embers persist. Higher values leave longer-lasting trails before they fade out.', ctrl, 'emberLifeFrames');
+        addSlider('Ember Spawn Width', 0.1, 1.2, 0.01, emberWidth, function (v) { emberWidth = v; }, 'Width of screen embers will spawn in.', ctrl, 'emberWidth');
+        addSlider('Ember Spawn Height', 0.0, 0.8, 0.005, emberHeight, function (v) { emberHeight = v; }, 'Height of screen embers will spawn in.', ctrl, 'emberHeight');
+        addSlider('Ember Spawn Vertical Offset', 0.0, 0.5, 0.005, emberOffset, function (v) { emberOffset = v; }, 'Moves the ember spawn area upward from the bottom of the screen.', ctrl, 'emberOffset');
+         addSlider('Ember Spawn Uniformity', 0.0, 1.0, 0.01, emberUniformity, function (v) { emberUniformity = v; }, 'Center weighting for ember size. 0 = all equal; 1 = edges shrink and center stays larger.', ctrl, 'emberUniformity');
 
         addHeading('Misc.', ctrl);
-        addSlider('spark chance', 0.0, 1.0, 0.01, sparkChance, function (v) { sparkChance = v; }, 'Chance of a spark spawning each frame. Higher values produce more frequent sparks.', ctrl);
-        addSlider('glow', 0.0, 2.0, 0.01, glow, function (v) { glow = v; }, 'Strength of the soft glow around bright areas. Higher values give a hotter, blooming look.', ctrl);
+        addSlider('Spark Chance', 0.0, 1.0, 0.01, sparkChance, function (v) { sparkChance = v; }, 'Chance of a spark spawning each frame. Higher values produce more frequent sparks.', ctrl, 'sparkChance');
+        addSlider('Glow', 0.0, 2.0, 0.01, glow, function (v) { glow = v; }, 'Strength of the soft glow around bright areas. Higher values give a hotter, blooming look.', ctrl, 'glow');
 
         addHeading('Text', textCtrl);
-        addCheckbox('text enabled', textEnabled, function (v) { textEnabled = v; textDirty = true; }, 'Toggle drawing of the text mask into the fire.', textCtrl);
-        addTextInput('text', textValue, function (v) { textValue = v; textDirty = true; }, 'Text string that will be drawn into the fire.', textCtrl);
-        addFontDropdown('font', textFonts, function (v) { textFont = v; textDirty = true; }, 'Font family used to render the text.', textCtrl);
-        addSlider('font size', 10, 600, 2, textSize, function (v) { textSize = v; textDirty = true; }, 'Font size in pixels. Larger values produce bigger text.', textCtrl);
-        addSlider('text offset X', -0.5, 0.5, 0.01, textOffsetX, function (v) { textOffsetX = v; textDirty = true; }, 'Horizontal offset of the text as a fraction of screen width (0 = center).', textCtrl);
-        addSlider('text offset Y', -0.5, 0.5, 0.01, textOffsetY, function (v) { textOffsetY = v; textDirty = true; }, 'Vertical offset of the text as a fraction of screen height (0 = center).', textCtrl);
-        addNoiseDropdown('text noise', textNoiseOptions, function (v) { textNoiseType = v; }, 'Select the distortion pattern used to warp the text.', textCtrl);
-        addSlider('noise amplitude', 0.0, 0.1, 0.001, textNoiseScale, function (v) { textNoiseScale = v; }, 'Strength of the warp in UV space. Higher values distort the text more.', textCtrl);
-        addSlider('noise frequency', 0.5, 100.0, 0.1, textNoiseFreq, function (v) { textNoiseFreq = v; }, 'Density of the warp pattern. Higher values create finer ripples.', textCtrl);
-        addSlider('noise speed', 0.0, 10.0, 0.05, textNoiseSpeed, function (v) { textNoiseSpeed = v; }, 'Animation speed of the distortion over time.', textCtrl);
-        addSlider('noise drift H', -2.0, 2.0, 0.05, textNoiseDriftX, function (v) { textNoiseDriftX = v; }, 'Horizontal drift velocity for text warp noise.', textCtrl);
-        addSlider('noise drift V', -2.0, 2.0, 0.05, textNoiseDriftY, function (v) { textNoiseDriftY = v; }, 'Vertical drift velocity for text warp noise.', textCtrl);
-
+        addCheckbox('Enable Text', textEnabled, function (v) { textEnabled = v; textDirty = true; }, 'Toggle drawing of the text into the fire.', textCtrl, 'textEnabled');
+        addTextInput('Text Value', textValue, function (v) { textValue = v; textDirty = true; }, 'Text string that will be drawn into the fire.', textCtrl, 'textValue');
+        addFontDropdown('Font', textFonts, function (v) { textFont = v; textDirty = true; }, 'Font family used to render the text.', textCtrl, 'textFont');
+        addSlider('Font Size', 10, 600, 2, textSize, function (v) { textSize = v; textDirty = true; }, 'Font size in pixels. Larger values produce bigger text.', textCtrl, 'textSize');
+        addSlider('Text Horizontal Offset', -0.5, 0.5, 0.01, textOffsetX, function (v) { textOffsetX = v; textDirty = true; }, 'Horizontal offset of the text as a fraction of screen width (0 = center).', textCtrl, 'textOffsetX');
+        addSlider('Text Vertical Offset', -0.5, 0.5, 0.01, textOffsetY, function (v) { textOffsetY = v; textDirty = true; }, 'Vertical offset of the text as a fraction of screen height (0 = center).', textCtrl, 'textOffsetY');
+        addSlider('Text Strength', 0.0, 5.0, 0.1, textStrength, function (v) { textStrength = v; }, 'Intensity multiplier for the text density. Higher values make the text burn brighter.', textCtrl, 'textStrength');
+        
+        addHeading('Text Effectors', textCtrl);
         var showTextPreviews = false;
-        addCheckbox('show text previews', showTextPreviews, function (v) { showTextPreviews = v; updatePreviewVisibility(); }, 'Show live grayscale previews of the text noise and mask.', textCtrl);
+        addCheckbox('Show Noise Previews', showTextPreviews, function (v) { showTextPreviews = v; updatePreviewVisibility(); }, 'Show live grayscale previews of noise shaders applied to text.', textCtrl);
+        
+        addHeading('Distortion', textCtrl);
+        addNoiseDropdown('Distortion Noise Type', textNoiseOptions, function (v) { textNoiseType = v; }, 'Select the distortion pattern used to warp the text.', textCtrl, 'textNoiseType');
+        addSlider('Amplitude / Intensity', 0.0, 0.1, 0.001, textNoiseScale, function (v) { textNoiseScale = v; }, 'Strength of the warp in UV space. Higher values distort the text more.', textCtrl, 'textNoiseScale');
+        addSlider('Frequency / Scale', 0.5, 100.0, 0.1, textNoiseFreq, function (v) { textNoiseFreq = v; }, 'Density of the warp pattern. Higher values create finer patterns.', textCtrl, 'textNoiseFreq');
+        addSlider('Animation Speed', 0.0, 10.0, 0.05, textNoiseSpeed, function (v) { textNoiseSpeed = v; }, 'Animation speed of the distortion over time.', textCtrl, 'textNoiseSpeed');
+        addSlider('Horizontal Drift Speed', -2.0, 2.0, 0.05, textNoiseDriftX, function (v) { textNoiseDriftX = v; }, 'Horizontal drift velocity for text warp noise.', textCtrl, 'textNoiseDriftX');
+        addSlider('Vertical Drift Speed', -2.0, 2.0, 0.05, textNoiseDriftY, function (v) { textNoiseDriftY = v; }, 'Vertical drift velocity for text warp noise.', textCtrl, 'textNoiseDriftY');
+
         var textNoisePreviewWrap = document.createElement('div');
         textNoisePreviewWrap.className = 'fire-ui-preview';
         var textNoisePreviewLabel = document.createElement('div');
         textNoisePreviewLabel.className = 'fire-ui-preview-label';
-        textNoisePreviewLabel.textContent = 'Text noise preview';
+        textNoisePreviewLabel.textContent = 'Distortion preview';
         var textNoisePreviewCanvas = document.createElement('canvas');
         textNoisePreviewCanvas.className = 'fire-ui-preview-canvas';
         textNoisePreviewCanvas.width = 128;
@@ -1523,22 +1858,25 @@ var TestFire = (function () {
         textNoisePreviewWrap.appendChild(textNoisePreviewCanvas);
         textCtrl.appendChild(textNoisePreviewWrap);
 
-        addHeading('Text mask', textCtrl);
-        addNoiseDropdown('mask noise', textNoiseOptions, function (v) { textMaskNoiseType = v; }, 'Select the noise pattern that masks the text intensity.', textCtrl);
-        addSlider('mask noise scale', 0.0, 50.0, 0.06, textMaskNoiseScale, function (v) { textMaskNoiseScale = v; }, 'Overall scale of the mask noise pattern. Higher values create smaller details.', textCtrl);
-        addSlider('mask noise frequency', 0.5, 100.0, 0.1, textMaskNoiseFreq, function (v) { textMaskNoiseFreq = v; }, 'Density of the mask noise pattern. Higher values create finer holes.', textCtrl);
-        addSlider('mask noise speed', 0.0, 10.0, 0.05, textMaskNoiseSpeed, function (v) { textMaskNoiseSpeed = v; }, 'Animation speed of the mask noise.', textCtrl);
-        addSlider('mask drift H', -2.0, 2.0, 0.05, textMaskDriftX, function (v) { textMaskDriftX = v; }, 'Horizontal drift velocity for mask noise.', textCtrl);
-        addSlider('mask drift V', -2.0, 2.0, 0.05, textMaskDriftY, function (v) { textMaskDriftY = v; }, 'Vertical drift velocity for mask noise.', textCtrl);
-        addSlider('mask noise contrast', 0.0, 4.0, 0.05, textMaskNoiseContrast, function (v) { textMaskNoiseContrast = v; }, 'Contrast applied to the mask noise. Higher values create crisper holes.', textCtrl);
-        addSlider('mask brightness top', -1.0, 1.0, 0.02, textMaskNoiseBrightnessTop, function (v) { textMaskNoiseBrightnessTop = v; }, 'Brightness offset at the top of the text mask. Lower values reduce intensity.', textCtrl);
-        addSlider('mask brightness bottom', -1.0, 1.0, 0.02, textMaskNoiseBrightnessBottom, function (v) { textMaskNoiseBrightnessBottom = v; }, 'Brightness offset at the bottom of the text mask. Lower values reduce intensity.', textCtrl);
-
+        addHeading('Mask', textCtrl);
+        var textMaskreviewLabel = document.createElement('div');
+        textMaskreviewLabel.className = 'fire-ui-preview-label';
+        textMaskreviewLabel.textContent = 'Patterned mask applied over text to reduce intensity.';
+        textCtrl.appendChild(textMaskreviewLabel);
+        addNoiseDropdown('Mask Noise Type', textNoiseOptions, function (v) { textMaskNoiseType = v; }, 'Select the noise pattern that masks the text intensity.', textCtrl, 'textMaskNoiseType');
+        addSlider('Scale', 0.0, 50.0, 0.06, textMaskNoiseScale, function (v) { textMaskNoiseScale = v; }, 'Overall scale of the mask noise pattern. Higher values create smaller details.', textCtrl, 'textMaskNoiseScale');
+        addSlider('Frequency', 0.5, 100.0, 0.1, textMaskNoiseFreq, function (v) { textMaskNoiseFreq = v; }, 'Density of the mask noise pattern. Higher values create finer holes.', textCtrl, 'textMaskNoiseFreq');
+        addSlider('Animation Speed', 0.0, 10.0, 0.05, textMaskNoiseSpeed, function (v) { textMaskNoiseSpeed = v; }, 'Animation speed of the mask noise.', textCtrl, 'textMaskNoiseSpeed');
+        addSlider('Horizontal Drift Speed', -2.0, 2.0, 0.05, textMaskDriftX, function (v) { textMaskDriftX = v; }, 'Horizontal drift velocity for mask noise.', textCtrl, 'textMaskDriftX');
+        addSlider('Vertical Drift Speed', -2.0, 2.0, 0.05, textMaskDriftY, function (v) { textMaskDriftY = v; }, 'Vertical drift velocity for mask noise.', textCtrl, 'textMaskDriftY');
+        addSlider('Contrast', 0.0, 4.0, 0.05, textMaskNoiseContrast, function (v) { textMaskNoiseContrast = v; }, 'Contrast applied to the mask noise. Higher values create crisper holes.', textCtrl, 'textMaskNoiseContrast');
+        addSlider('Top Intensity', -1.0, 1.0, 0.02, textMaskNoiseBrightnessTop, function (v) { textMaskNoiseBrightnessTop = v; }, 'Brightness offset at the top of the text mask. Lower values reduce intensity.', textCtrl, 'textMaskNoiseBrightnessTop');
+        addSlider('Bottom Intensity', -1.0, 1.0, 0.02, textMaskNoiseBrightnessBottom, function (v) { textMaskNoiseBrightnessBottom = v; }, 'Brightness offset at the bottom of the text mask. Lower values reduce intensity.', textCtrl, 'textMaskNoiseBrightnessBottom');
         var textMaskPreviewWrap = document.createElement('div');
         textMaskPreviewWrap.className = 'fire-ui-preview';
         var textMaskPreviewLabel = document.createElement('div');
         textMaskPreviewLabel.className = 'fire-ui-preview-label';
-        textMaskPreviewLabel.textContent = 'Text mask preview';
+        textMaskPreviewLabel.textContent = 'Mask preview';
         var textMaskPreviewCanvas = document.createElement('canvas');
         textMaskPreviewCanvas.className = 'fire-ui-preview-canvas';
         textMaskPreviewCanvas.width = 128;
@@ -1588,6 +1926,9 @@ var TestFire = (function () {
             for (var i = embers.length - 1; i >= 0; i--) {
                 var e = embers[i];
                 addSplat(e.x, e.y, e.dx, e.dy, e.r, e.d);
+                if (pointer.down && pointerEmber === e) {
+                    continue;
+                }
                 e.life -= 1;
                 if (e.life <= 0) { embers.splice(i, 1); }
             }
@@ -1861,6 +2202,10 @@ var TestFire = (function () {
 
         // Animation loop.
         function frame(t) { step(t); requestAnimationFrame(frame); }
+
+        // Load default preset on start
+        applyPreset(settingsPresets[0]);
+
         requestAnimationFrame(frame);
     }
 
