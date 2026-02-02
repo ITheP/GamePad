@@ -1,4 +1,4 @@
-﻿/* GPU fire simulation with WebGL-based fluid dynamics */
+/* GPU fire simulation with WebGL-based fluid dynamics */
 var TestFire = (function () {
     // Shorthand for element lookup by id.
     function $(id) { return document.getElementById(id); }
@@ -888,7 +888,7 @@ var TestFire = (function () {
         var textOffsetX = 0.0; // -0.5..0.5 (fraction of width)
         var textOffsetY = 0.0; // -0.5..0.5 (fraction of height)
 
-        // Splatter Effectors Defaults
+        // Text Effectors Defaults
         // Distortion
         var effectorStrength = 1.5;
         var effectorNoiseType = 7; // FBM
@@ -898,7 +898,7 @@ var TestFire = (function () {
         var effectorNoiseDriftX = 0.0;
         var effectorNoiseDriftY = 0.0;
 
-        // Mask Defaults
+        // Text Mask Defaults
         var effectorMaskNoiseType = 10; // Turbulence
         var effectorMaskNoiseScale = 2.76;
         var effectorMaskNoiseFreq = 3.0;
@@ -911,7 +911,7 @@ var TestFire = (function () {
 
         var effectorMaskTopUv = 1.0;
         var effectorMaskBottomUv = 0.0;
-        var embersUseEffectors = false;
+        var embersUseTextEffects = false;
         var textCanvas = document.createElement('canvas');
         var textCtx = textCanvas.getContext('2d');
         var textTexture = gl.createTexture();
@@ -1141,7 +1141,7 @@ var TestFire = (function () {
                     velRange: 3.0, velDissipation: 0.38, denDissipation: 0.888, rdx: 45.0,
                     buoyancy: 35.0, heatPower: -2.7, minHeat: 0.08, maxHeat: 4.0,
                     emberRate: 18, emberSize: 0.02, emberLifeFrames: 4, emberWidth: 0.89,
-                    emberHeight: 0.02, emberOffset: 0.035, emberUniformity: 1.0, embersUseEffectors: true,
+                    emberHeight: 0.02, emberOffset: 0.035, emberUniformity: 1.0, embersUseTextEffects: false,
                     sparkChance: 0.275, glow: 1.2,
                     textEnabled: true, textValue: 'Fire!', textFont: 'Palatino Linotype',
                     textSize: 154, textOffsetX: 0.0, textOffsetY: 0.0,
@@ -1159,7 +1159,7 @@ var TestFire = (function () {
                     velRange: 2.0, velDissipation: 0.5, denDissipation: 0.92, rdx: 30.0,
                     buoyancy: 25.0, heatPower: -1.5, minHeat: 0.05, maxHeat: 3.0,
                     emberRate: 8, emberSize: 0.015, emberLifeFrames: 6, emberWidth: 0.3,
-                    emberHeight: 0.015, emberOffset: 0.02, emberUniformity: 0.8, embersUseEffectors: false,
+                    emberHeight: 0.015, emberOffset: 0.02, emberUniformity: 0.8,
                     sparkChance: 0.05, glow: 0.8,
                     textEnabled: true, textValue: 'Calm', textFont: 'Georgia',
                     textSize: 120, textOffsetX: 0.0, textOffsetY: 0.0,
@@ -1177,7 +1177,7 @@ var TestFire = (function () {
                     velRange: 4.0, velDissipation: 0.25, denDissipation: 0.85, rdx: 80.0,
                     buoyancy: 60.0, heatPower: -3.5, minHeat: 0.1, maxHeat: 5.0,
                     emberRate: 50, emberSize: 0.025, emberLifeFrames: 3, emberWidth: 1.0,
-                    emberHeight: 0.05, emberOffset: 0.02, emberUniformity: 0.6, embersUseEffectors: false,
+                    emberHeight: 0.05, emberOffset: 0.02, emberUniformity: 0.6,
                     sparkChance: 0.6, glow: 1.8,
                     textEnabled: true, textValue: 'BURN', textFont: 'Impact',
                     textSize: 200, textOffsetX: 0.0, textOffsetY: 0.05,
@@ -1195,7 +1195,7 @@ var TestFire = (function () {
                     velRange: 2.5, velDissipation: 0.6, denDissipation: 0.95, rdx: 25.0,
                     buoyancy: 20.0, heatPower: -0.5, minHeat: 0.02, maxHeat: 2.0,
                     emberRate: 12, emberSize: 0.03, emberLifeFrames: 10, emberWidth: 0.6,
-                    emberHeight: 0.03, emberOffset: 0.05, emberUniformity: 0.4, embersUseEffectors: false,
+                    emberHeight: 0.03, emberOffset: 0.05, emberUniformity: 0.4,
                     sparkChance: 0.1, glow: 1.5,
                     textEnabled: true, textValue: 'Dream', textFont: 'Brush Script MT',
                     textSize: 180, textOffsetX: 0.0, textOffsetY: 0.0,
@@ -1213,7 +1213,7 @@ var TestFire = (function () {
                     velRange: 3.5, velDissipation: 0.3, denDissipation: 0.87, rdx: 60.0,
                     buoyancy: 45.0, heatPower: -2.0, minHeat: 0.06, maxHeat: 4.5,
                     emberRate: 30, emberSize: 0.018, emberLifeFrames: 5, emberWidth: 0.95,
-                    emberHeight: 0.04, emberOffset: 0.025, emberUniformity: 0.7, embersUseEffectors: false,
+                    emberHeight: 0.04, emberOffset: 0.025, emberUniformity: 0.7,
                     sparkChance: 0.4, glow: 1.6,
                     textEnabled: true, textValue: 'PLASMA', textFont: 'Consolas',
                     textSize: 140, textOffsetX: 0.0, textOffsetY: 0.0,
@@ -1231,7 +1231,7 @@ var TestFire = (function () {
                     velRange: 4.5, velDissipation: 0.2, denDissipation: 0.83, rdx: 100.0,
                     buoyancy: 75.0, heatPower: -4.0, minHeat: 0.12, maxHeat: 6.0,
                     emberRate: 70, emberSize: 0.022, emberLifeFrames: 2, emberWidth: 1.1,
-                    emberHeight: 0.06, emberOffset: 0.015, emberUniformity: 0.5, embersUseEffectors: false,
+                    emberHeight: 0.06, emberOffset: 0.015, emberUniformity: 0.5,
                     sparkChance: 0.8, glow: 2.0,
                     textEnabled: true, textValue: 'HELL', textFont: 'Impact',
                     textSize: 250, textOffsetX: 0.0, textOffsetY: 0.08,
@@ -1298,45 +1298,11 @@ var TestFire = (function () {
                 ]
             },
             {
-                name: 'Fire White', stops: [
-                    { pos: 0.0, color: [1.0, 1.0, 1.0] },
-                    { pos: 0.4, color: [0.8, 0.15, 0.02] },
-                    { pos: 0.8, color: [1.0, 0.6, 0.1] },
-                    { pos: 1.0, color: [1.0, 0.95, 0.8] }
-                ]
-            },
-            {
-                name: 'Fire Clipped', stops: [
-                    { pos: 0.0, color: [0.0, 0.0, 0.0] },
-                    { pos: 0.4, color: [0.05, 0.0, 0.0] },
-                    { pos: 0.6, color: [0.8, 0.15, 0.02] },
-                    { pos: 0.8, color: [1.0, 0.6, 0.1] },
-                    { pos: 1.0, color: [1.0, 0.95, 0.8] }
-                ]
-            },
-            {
-                name: 'Fire Clipped 2', stops: [
-                    { pos: 0.0, color: [0.0, 0.0, 0.0] },
-                    { pos: 0.5, color: [0.0, 0.0, 0.0] },
-                    { pos: 0.6, color: [0.8, 0.15, 0.02] },
-                    { pos: 0.8, color: [1.0, 0.6, 0.1] },
-                    { pos: 1.0, color: [1.0, 0.95, 0.8] }
-                ]
-            },
-            {
                 name: 'Fire (reversed)', stops: [
-                    { pos: 0.0, color: [0.05, 0.0, 0.0] },
-                    { pos: 0.4, color: [1.0, 0.95, 0.8] },
-                    { pos: 0.8, color: [1.0, 0.6, 0.1] },
-                    { pos: 1.0, color: [0.8, 0.15, 0.02] }
-                ]
-            },
-            {
-                name: 'Fire White (reversed)', stops: [
-                    { pos: 0.0, color: [1.0, 1.0, 1.0] },
-                    { pos: 0.1, color: [1.0, 0.95, 0.8] },
-                    { pos: 0.6, color: [1.0, 0.6, 0.1] },
-                    { pos: 1.0, color: [0.8, 0.15, 0.02] }
+                    { pos: 0.0, color: [1.0, 0.95, 0.8] },
+                    { pos: 0.4, color: [1.0, 0.6, 0.1] },
+                    { pos: 0.8, color: [0.8, 0.15, 0.02] },
+                    { pos: 1.0, color: [0.05, 0.0, 0.0] }
                 ]
             },
             {
@@ -1363,6 +1329,16 @@ var TestFire = (function () {
                     { pos: 1.0, color: [1.0, 0.0, 0.0] }
                 ]
 
+            },
+            {
+                name: 'Fire + Smoke', stops: [
+                    { pos: 0.0, color: [0.05, 0.0, 0.0] },
+                    { pos: 0.4, color: [0.8, 0.15, 0.02] },
+                    { pos: 0.8, color: [1.0, 0.6, 0.1] },
+                    { pos: 0.9, color: [1.0, 0.95, 0.8] },
+                    { pos: 0.97, color: [0.55, 0.55, 0.55] },
+                    { pos: 1.0, color: [0.0, 0.0, 0.0] }
+                ]
             },
             {
                 name: 'Smoke', stops: [
@@ -1915,7 +1891,7 @@ var TestFire = (function () {
             'Cambria',
             'Consolas'
         ];
-        var effectorNoiseOptions = [
+        var textNoiseOptions = [
             { label: 'Value noise', value: 0 },
             { label: 'Sine warp', value: 1 },
             { label: 'Triangle noise', value: 2 },
@@ -1983,7 +1959,7 @@ var TestFire = (function () {
         addSlider('Ember Spawn Height', 0.0, 0.8, 0.005, emberHeight, function (v) { emberHeight = v; }, 'Height of screen embers will spawn in.', ctrl, 'emberHeight');
         addSlider('Ember Spawn Vertical Offset', 0.0, 0.5, 0.005, emberOffset, function (v) { emberOffset = v; }, 'Moves the ember spawn area upward from the bottom of the screen.', ctrl, 'emberOffset');
         addSlider('Ember Spawn Uniformity', 0.0, 1.0, 0.01, emberUniformity, function (v) { emberUniformity = v; }, 'Center weighting for ember size. 0 = all equal; 1 = edges shrink and center stays larger.', ctrl, 'emberUniformity');
-        addCheckbox('Embers Use Effectors', embersUseEffectors, function (v) { embersUseEffectors = v; }, 'Apply text noise distortion and mask effects to ember splats.', ctrl, 'embersUseEffectors');
+        addCheckbox('Embers Use Text Effects', embersUseTextEffects, function (v) { embersUseTextEffects = v; }, 'Apply text noise distortion and mask effects to ember splats.', ctrl, 'embersUseTextEffects');
 
         addHeading('Misc.', ctrl);
         addSlider('Spark Chance', 0.0, 1.0, 0.01, sparkChance, function (v) { sparkChance = v; }, 'Chance of a spark spawning each frame. Higher values produce more frequent sparks.', ctrl, 'sparkChance');
@@ -1998,12 +1974,12 @@ var TestFire = (function () {
         addSlider('Text Vertical Offset', -0.5, 0.5, 0.01, textOffsetY, function (v) { textOffsetY = v; textDirty = true; }, 'Vertical offset of the text as a fraction of screen height (0 = center).', textCtrl, 'textOffsetY');
         addSlider('Text Strength', 0.0, 5.0, 0.1, effectorStrength, function (v) { effectorStrength = v; }, 'Intensity multiplier for the text density. Higher values make the text burn brighter.', textCtrl, 'effectorStrength');
 
-        addHeading('Effectors', textCtrl);
+        addHeading('Text Effectors', textCtrl);
         var showTextPreviews = false;
         addCheckbox('Show Noise Previews', showTextPreviews, function (v) { showTextPreviews = v; updatePreviewVisibility(); }, 'Show live grayscale previews of noise shaders applied to text.', textCtrl);
 
         addHeading('Distortion', textCtrl);
-        addNoiseDropdown('Distortion Noise Type', effectorNoiseOptions, function (v) { effectorNoiseType = v; }, 'Select the distortion pattern used to warp the text.', textCtrl, 'effectorNoiseType');
+        addNoiseDropdown('Distortion Noise Type', textNoiseOptions, function (v) { effectorNoiseType = v; }, 'Select the distortion pattern used to warp the text.', textCtrl, 'effectorNoiseType');
         addSlider('Amplitude / Intensity', 0.0, 0.1, 0.001, effectorNoiseScale, function (v) { effectorNoiseScale = v; }, 'Strength of the warp in UV space. Higher values distort the text more.', textCtrl, 'effectorNoiseScale');
         addSlider('Frequency / Scale', 0.5, 100.0, 0.1, effectorNoiseFreq, function (v) { effectorNoiseFreq = v; }, 'Density of the warp pattern. Higher values create finer patterns.', textCtrl, 'effectorNoiseFreq');
         addSlider('Animation Speed', 0.0, 10.0, 0.05, effectorNoiseSpeed, function (v) { effectorNoiseSpeed = v; }, 'Animation speed of the distortion over time.', textCtrl, 'effectorNoiseSpeed');
@@ -2026,9 +2002,9 @@ var TestFire = (function () {
         addHeading('Mask', textCtrl);
         var textMaskreviewLabel = document.createElement('div');
         textMaskreviewLabel.className = 'fire-ui-preview-label';
-        textMaskreviewLabel.textContent = 'Patterned mask applied to reduce intensity.';
+        textMaskreviewLabel.textContent = 'Patterned mask applied over text to reduce intensity.';
         textCtrl.appendChild(textMaskreviewLabel);
-        addNoiseDropdown('Mask Noise Type', effectorNoiseOptions, function (v) { effectorMaskNoiseType = v; }, 'Select the noise pattern that masks the text intensity.', textCtrl, 'effectorMaskNoiseType');
+        addNoiseDropdown('Mask Noise Type', textNoiseOptions, function (v) { effectorMaskNoiseType = v; }, 'Select the noise pattern that masks the text intensity.', textCtrl, 'effectorMaskNoiseType');
         addSlider('Scale', 0.0, 50.0, 0.06, effectorMaskNoiseScale, function (v) { effectorMaskNoiseScale = v; }, 'Overall scale of the mask noise pattern. Higher values create smaller details.', textCtrl, 'effectorMaskNoiseScale');
         addSlider('Frequency', 0.5, 100.0, 0.1, effectorMaskNoiseFreq, function (v) { effectorMaskNoiseFreq = v; }, 'Density of the mask noise pattern. Higher values create finer holes.', textCtrl, 'effectorMaskNoiseFreq');
         addSlider('Animation Speed', 0.0, 10.0, 0.05, effectorMaskNoiseSpeed, function (v) { effectorMaskNoiseSpeed = v; }, 'Animation speed of the mask noise.', textCtrl, 'effectorMaskNoiseSpeed');
@@ -2199,7 +2175,7 @@ var TestFire = (function () {
         function applySplats() {
             while (splats.length) {
                 var s = splats.shift();
-                var useTextFX = s.isEmber && embersUseEffectors;
+                var useTextFX = s.isEmber && embersUseTextEffects;
                 var densityProg = useTextFX ? progSplatTextFX : progSplat;
                 
                 renderTo(density.write, densityProg, function (p) {
