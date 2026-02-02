@@ -807,6 +807,11 @@ var TestFire = (function () {
         var textCtx = textCanvas.getContext('2d');
         var textTexture = gl.createTexture();
         var textDirty = true;
+        var textScrollOffset = 0;
+        var textScrollSpeed = 100; // pixels per second
+        var textNeedsScroll = false;
+        var textTotalWidth = 0;
+        var textScrollGap = 100; // gap between repeated text
 
         var simScale = 0.3;
         var simW = 0, simH = 0;
@@ -930,18 +935,43 @@ var TestFire = (function () {
         }
 
         // Render text into the offscreen canvas and upload to GPU.
-        function updateTextTexture() {
-            if (!textDirty) return;
-            textDirty = false;
+        function updateTextTexture(scrollOffset) {
+            scrollOffset = scrollOffset || 0;
             textCtx.clearRect(0, 0, textCanvas.width, textCanvas.height);
             textCtx.save();
             textCtx.fillStyle = 'white';
-            textCtx.textAlign = 'center';
+            textCtx.textAlign = 'left';
             textCtx.textBaseline = 'middle';
             textCtx.font = textSize + 'px ' + textFont;
-            var cx = textCanvas.width * (0.5 + textOffsetX);
+            
+            // Measure text width
+            var metrics = textCtx.measureText(textValue);
+            var textW = metrics.width;
+            textTotalWidth = textW + textScrollGap;
+            textNeedsScroll = textW > textCanvas.width;
+            
             var cy = textCanvas.height * (0.5 + textOffsetY);
-            textCtx.fillText(textValue, cx, cy);
+            
+            if (textNeedsScroll) {
+                // Scrolling marquee mode - draw text twice for seamless loop
+                var startX = -scrollOffset;
+                // Wrap the offset
+                startX = startX % textTotalWidth;
+                if (startX > 0) startX -= textTotalWidth;
+                
+                // Draw multiple copies to fill screen
+                var x = startX;
+                while (x < textCanvas.width) {
+                    textCtx.fillText(textValue, x, cy);
+                    x += textTotalWidth;
+                }
+            } else {
+                // Static centered text
+                textCtx.textAlign = 'center';
+                var cx = textCanvas.width * (0.5 + textOffsetX);
+                textCtx.fillText(textValue, cx, cy);
+            }
+            
             var halfH = textSize * 0.5;
             var topPx = cy - halfH;
             var bottomPx = cy + halfH;
@@ -2155,7 +2185,20 @@ var TestFire = (function () {
 
             // Apply text after physics so it only affects visuals, not buoyancy
             if (textEnabled) {
-                updateTextTexture();
+                // When text settings change, re-check if scrolling is needed
+                if (textDirty) {
+                    textDirty = false;
+                    textScrollOffset = 0;
+                    updateTextTexture(0);
+                }
+                // Update scroll offset for marquee effect
+                if (textNeedsScroll) {
+                    textScrollOffset += textScrollSpeed * dtSec;
+                    if (textScrollOffset > textTotalWidth) {
+                        textScrollOffset -= textTotalWidth;
+                    }
+                    updateTextTexture(textScrollOffset);
+                }
                 renderTo(density.write, progText, function (p) {
                     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, density.read.texture); gl.uniform1i(gl.getUniformLocation(p, 'uTarget'), 0);
                     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, textTexture); gl.uniform1i(gl.getUniformLocation(p, 'uText'), 1);
