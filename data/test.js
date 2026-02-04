@@ -270,6 +270,7 @@ var TestFire = (function () {
             'uniform float maskTextBottom;\n' +
             'uniform float maskDriftX;\n' +
             'uniform float maskDriftY;\n' +
+            'uniform float maskAfterDistortion;\n' +
             '\n' +
             'float hash3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }\n' +
             'vec3 hash23(vec3 p){\n' +
@@ -297,7 +298,7 @@ var TestFire = (function () {
             'float hexagons3(vec3 p) { vec2 h = vec2(1.0, 1.732); vec2 av = mod(p.xy + p.z * 0.5, h) - h * 0.5; vec2 bv = mod(p.xy + p.z * 0.5 - h * 0.5, h) - h * 0.5; return smoothstep(0.0, 0.1, min(dot(av, av), dot(bv, bv))); }\n' +
             'float dots3(vec3 p) { vec2 uv = p.xy + p.z * 0.3; vec2 fv = fract(uv); return 1.0 - smoothstep(0.0, 0.35, length(fv - 0.5)); }\n' +
             'float crosshatch3(vec3 p) { vec2 uv = p.xy + p.z * 0.3; float l1 = smoothstep(0.0, 0.1, abs(fract(uv.x + uv.y) - 0.5)); float l2 = smoothstep(0.0, 0.1, abs(fract(uv.x - uv.y) - 0.5)); return l1 * l2; }\n' +
-            'float caustics3(vec3 p) { vec2 uv = p.xy + vec2(sin(p.z), cos(p.z)) * 0.5; float cv = 0.0; for (int i = 0; i < 3; i++) { float fv = float(i + 1) * 2.0; cv += sin(uv.x * fv + sin(uv.y * fv * 0.5)) * sin(uv.y * fv + sin(uv.x * fv * 0.5)); } return cv * 0.16 + 0.5; }\n' +
+            'float caustics3(vec3 p) { vec2 uv = p.xy + vec2(sin(p.z), cos(p.z)) * 0.5; float cv = 0.0; for (int i = 0; i < 3; i++) { float fv = float(i + 1) * 2.0; cv += sin(uv.x * fv + sin(uv.y * fv * 0.5) + p.z) * sin(uv.y * fv + sin(uv.x * fv * 0.5) + p.z); } return cv * 0.16 + 0.5; }\n' +
             'float voronoi3(vec3 p) {\n' +
             '    vec3 i = floor(p); vec3 f = fract(p); float md = 10.0; float md2 = 10.0;\n' +
             '    for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {\n' +
@@ -331,16 +332,17 @@ var TestFire = (function () {
             '    vec2 uv = v_uv;\n' +
             '    vec4 cur = texture2D(uTarget, uv);\n' +
             '    // Compute noise distortion at this pixel (same as text effect)\n' +
-            '    vec2 pn = uv * noiseFreq + time * vec2(noiseDriftX, noiseDriftY);\n' +
-            '    float tn = time * noiseSpeed * noiseFreq * 0.1;\n' +
+            '    vec2 pn = (uv + time * vec2(noiseDriftX, noiseDriftY)) * noiseFreq;\n' +
+            '    float tn = time * noiseSpeed;\n' +
             '    float n = selectNoise3(vec3(pn, tn), noiseType);\n' +
             '    vec2 warp = vec2(n - 0.5) * noiseScale;\n' +
             '    // Warp the UV used for distance calculation (shifts splat appearance per-pixel)\n' +
             '    vec2 warpedUV = uv + warp;\n' +
             '    // Apply mask noise to intensity (same as text effect)\n' +
             '    float scale = max(maskNoiseScale, 0.0001);\n' +
-            '    vec2 pm = (uv - vec2(0.5)) * scale + vec2(0.5);\n' +
-            '    pm = pm * maskNoiseFreq + time * vec2(maskDriftX, maskDriftY);\n' +
+            '    vec2 pm = mix(uv, warpedUV, maskAfterDistortion);\n' +
+            '    pm = (pm - vec2(0.5)) * scale + vec2(0.5);\n' +
+            '    pm = (pm + time * vec2(maskDriftX, maskDriftY)) * maskNoiseFreq;\n' +
             '    float tz = time * maskNoiseSpeed;\n' +
             '    float nm = selectNoise3(vec3(pm, tz), maskNoiseType);\n' +
             '    float textY = clamp((uv.y - maskTextBottom) / max(1e-4, (maskTextTop - maskTextBottom)), 0.0, 1.0);\n' +
@@ -376,6 +378,7 @@ var TestFire = (function () {
             'uniform float noiseDriftY;\n' +
             'uniform float maskDriftX;\n' +
             'uniform float maskDriftY;\n' +
+            'uniform float maskAfterDistortion;\n' +
             '\n' +
             'float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n' +
             'float hash3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }\n' +
@@ -504,15 +507,15 @@ var TestFire = (function () {
             '    return l1 * l2;\n' +
             '}\n' +
             'float crosshatch3(vec3 p) { return crosshatch(p.xy + p.z * 0.3); }\n' +
-            'float caustics(vec2 p) {\n' +
+            'float caustics(vec2 p, float t) {\n' +
             '    float c = 0.0;\n' +
             '    for (int i = 0; i < 3; i++) {\n' +
             '        float f = float(i + 1) * 2.0;\n' +
-            '        c += sin(p.x * f + sin(p.y * f * 0.5)) * sin(p.y * f + sin(p.x * f * 0.5));\n' +
+            '        c += sin(p.x * f + sin(p.y * f * 0.5) + t) * sin(p.y * f + sin(p.x * f * 0.5) + t);\n' +
             '    }\n' +
             '    return c * 0.16 + 0.5;\n' +
             '}\n' +
-            'float caustics3(vec3 p) { return caustics(p.xy + vec2(sin(p.z), cos(p.z)) * 0.5); }\n' +
+            'float caustics3(vec3 p) { return caustics(p.xy + vec2(sin(p.z), cos(p.z)) * 0.5, p.z); }\n' +
             'float voronoi(vec2 p) {\n' +
             '    vec2 i = floor(p); vec2 f = fract(p); float md = 10.0; float md2 = 10.0;\n' +
             '    for (int y = -1; y <= 1; y++) {\n' +
@@ -554,7 +557,6 @@ var TestFire = (function () {
             '    if (t < 14.5) return hexagons(p);\n' +
             '    if (t < 15.5) return dots(p);\n' +
             '    if (t < 16.5) return crosshatch(p);\n' +
-            '    if (t < 17.5) return caustics(p);\n' +
             '    return voronoi(p);\n' +
             '}\n' +
             'float selectNoise3(vec3 p, float t){\n' +
@@ -582,16 +584,18 @@ var TestFire = (function () {
             'void main(){\n' +
             '    vec2 uv = v_uv;\n' +
             '    vec2 tuv = vec2(uv.x, 1.0 - uv.y);\n' +
-            '    vec2 pn = uv * noiseFreq + time * vec2(noiseDriftX, noiseDriftY);\n' +
-            '    float tn = time * noiseSpeed * noiseFreq * 0.1;\n' +
+            '    vec2 pn = (uv + time * vec2(noiseDriftX, noiseDriftY)) * noiseFreq;\n' +
+            '    float tn = time * noiseSpeed;\n' +
             '    float n = selectNoise3(vec3(pn, tn), noiseType);\n' +
             '    vec2 warp = vec2(n - 0.5) * noiseScale;\n' +
             '    tuv += warp;\n' +
             '    vec4 cur = texture2D(uTarget, uv);\n' +
-            '    float baseMask = texture2D(uText, tuv).a;\n' +
+            '    vec2 maskUV = tuv;\n' +
+            '    float baseMask = texture2D(uText, maskUV).a;\n' +
             '    float scale = max(maskNoiseScale, 0.0001);\n' +
-            '    vec2 pm = (uv - 0.5) * scale + 0.5;\n' +
-            '    pm = pm * maskNoiseFreq + time * vec2(maskDriftX, maskDriftY);\n' +
+            '    vec2 pm = mix(uv, uv + warp, maskAfterDistortion);\n' +
+            '    pm = (pm - 0.5) * scale + 0.5;\n' +
+            '    pm = (pm + time * vec2(maskDriftX, maskDriftY)) * maskNoiseFreq;\n' +
             '    float tz = time * maskNoiseSpeed;\n' +
             '    float nm = selectNoise3(vec3(pm, tz), maskNoiseType);\n' +
             '    float textY = clamp((uv.y - maskTextBottom) / max(1e-4, (maskTextTop - maskTextBottom)), 0.0, 1.0);\n' +
@@ -728,7 +732,7 @@ var TestFire = (function () {
             '    float c = 0.0;\n' +
             '    for (int i = 0; i < 3; i++) {\n' +
             '        float f = float(i + 1) * 2.0;\n' +
-            '        c += sin(uv.x * f + sin(uv.y * f * 0.5)) * sin(uv.y * f + sin(uv.x * f * 0.5));\n' +
+            '        c += sin(uv.x * f + sin(uv.y * f * 0.5) + p.z) * sin(uv.y * f + sin(uv.x * f * 0.5) + p.z);\n' +
             '    }\n' +
             '    return c * 0.16 + 0.5;\n' +
             '}\n' +
@@ -912,6 +916,7 @@ var TestFire = (function () {
         var effectorMaskTopUv = 1.0;
         var effectorMaskBottomUv = 0.0;
         var embersUseEffectors = false;
+        var maskAfterDistortion = false;
         var textCanvas = document.createElement('canvas');
         var textCtx = textCanvas.getContext('2d');
         var textTexture = gl.createTexture();
@@ -1146,10 +1151,114 @@ var TestFire = (function () {
                     textEnabled: true, textValue: 'Fire!', textFont: 'Palatino Linotype',
                     textSize: 154, textOffsetX: 0.0, textOffsetY: 0.0,
                     effectorStrength: 1.5, effectorNoiseType: 7, effectorNoiseScale: 0.062, effectorNoiseFreq: 49.0,
-                    effectorNoiseSpeed: 2.6, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
+                    effectorNoiseSpeed: 0.65, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
                     effectorMaskNoiseType: 10, effectorMaskNoiseScale: 2.76, effectorMaskNoiseFreq: 3.0,
                     effectorMaskNoiseSpeed: 0.4, effectorMaskDriftX: 0.0, effectorMaskDriftY: -1.65,
-                    effectorMaskNoiseContrast: 1.7, effectorMaskNoiseBrightnessTop: 0.02, effectorMaskNoiseBrightnessBottom: 0.34
+                    effectorMaskNoiseContrast: 1.7, effectorMaskNoiseBrightnessTop: 0.02, effectorMaskNoiseBrightnessBottom: 0.34,
+                    maskAfterDistortion: false
+                }
+            },
+            {
+                name: "Nicer Default",
+                settings: {
+                    simScale: 0.3,
+                    jacobi: 32,
+                    curl: 77,
+                    vortexScaleX: 15,
+                    vortexScaleY: 27,
+                    velRange: 3,
+                    velDissipation: 0.38,
+                    denDissipation: 0.888,
+                    rdx: 45,
+                    buoyancy: 35,
+                    heatPower: -2.7,
+                    minHeat: 0.08,
+                    maxHeat: 4,
+                    emberRate: 18,
+                    emberSize: 0.02,
+                    emberLifeFrames: 4,
+                    emberWidth: 0.89,
+                    emberHeight: 0.02,
+                    emberOffset: 0.035,
+                    emberUniformity: 1,
+                    embersUseEffectors: true,
+                    sparkChance: 0.28,
+                    glow: 1.2,
+                    textEnabled: true,
+                    textValue: "Fire in the hold!",
+                    textFont: "Palatino Linotype",
+                    textSize: 154,
+                    textOffsetX: 0,
+                    textOffsetY: 0,
+                    effectorStrength: 1.5,
+                    effectorNoiseType: 7,
+                    effectorNoiseScale: 0.067,
+                    effectorNoiseFreq: 50.7,
+                    effectorNoiseSpeed: 0.65,
+                    effectorNoiseDriftX: 0,
+                    effectorNoiseDriftY: 0,
+                    effectorMaskNoiseType: 7,
+                    effectorMaskNoiseScale: 4.2,
+                    effectorMaskNoiseFreq: 8.9,
+                    effectorMaskNoiseSpeed: 0.9,
+                    effectorMaskDriftX: 0,
+                    effectorMaskDriftY: -1.65,
+                    effectorMaskNoiseContrast: 2.7,
+                    effectorMaskNoiseBrightnessTop: -0.52,
+                    effectorMaskNoiseBrightnessBottom: 0.16,
+                    maskAfterDistortion: false
+                }
+            },
+            {
+                name: "Interesting",
+                settings:
+                {
+                    simScale: 0.3,
+                    jacobi: 32,
+                    curl: 77,
+                    vortexScaleX: 15,
+                    vortexScaleY: 27,
+                    velRange: 3,
+                    velDissipation: 0.38,
+                    denDissipation: 0.888,
+                    rdx: 45,
+                    buoyancy: 10,
+                    heatPower: -2.7,
+                    minHeat: 0.08,
+                    maxHeat: 4,
+                    emberRate: 3,
+                    emberSize: 0.065,
+                    emberLifeFrames: 4,
+                    emberWidth: 0.89,
+                    emberHeight: 0.63,
+                    emberOffset: 0.035,
+                    emberUniformity: 1,
+                    embersUseEffectors: true,
+                    sparkChance: 0.28,
+                    glow: 1.2,
+                    textEnabled: true,
+                    textValue: "F",
+                    textFont: "Palatino Linotype",
+                    textSize: 456,
+                    textOffsetX: 0,
+                    textOffsetY: 0,
+                    effectorStrength: 1.5,
+                    maskAfterDistortion: false,
+                    effectorNoiseType: 7,
+                    effectorNoiseScale: 0.062,
+                    effectorNoiseFreq: 49,
+                    effectorNoiseSpeed: 0.65,
+                    effectorNoiseDriftX: 0,
+                    effectorNoiseDriftY: 0,
+                    effectorMaskNoiseType: 18,
+                    effectorMaskNoiseScale: 2.76,
+                    effectorMaskNoiseFreq: 3,
+                    effectorMaskNoiseSpeed: 0.4,
+                    effectorMaskDriftX: 0,
+                    effectorMaskDriftY: -1.65,
+                    effectorMaskNoiseContrast: 1.7,
+                    effectorMaskNoiseBrightnessTop: 0.02,
+                    effectorMaskNoiseBrightnessBottom: 0.34
                 }
             },
             {
@@ -1167,7 +1276,8 @@ var TestFire = (function () {
                     effectorNoiseSpeed: 1.5, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
                     effectorMaskNoiseType: 0, effectorMaskNoiseScale: 2.0, effectorMaskNoiseFreq: 4.0,
                     effectorMaskNoiseSpeed: 0.3, effectorMaskDriftX: 0.0, effectorMaskDriftY: -0.8,
-                    effectorMaskNoiseContrast: 1.2, effectorMaskNoiseBrightnessTop: 0.1, effectorMaskNoiseBrightnessBottom: 0.4
+                    effectorMaskNoiseContrast: 1.2, effectorMaskNoiseBrightnessTop: 0.1, effectorMaskNoiseBrightnessBottom: 0.4,
+                    maskAfterDistortion: false
                 }
             },
             {
@@ -1185,7 +1295,8 @@ var TestFire = (function () {
                     effectorNoiseSpeed: 4.0, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
                     effectorMaskNoiseType: 10, effectorMaskNoiseScale: 3.5, effectorMaskNoiseFreq: 5.0,
                     effectorMaskNoiseSpeed: 0.8, effectorMaskDriftX: 0.0, effectorMaskDriftY: -2.0,
-                    effectorMaskNoiseContrast: 2.2, effectorMaskNoiseBrightnessTop: -0.1, effectorMaskNoiseBrightnessBottom: 0.5
+                    effectorMaskNoiseContrast: 2.2, effectorMaskNoiseBrightnessTop: -0.1, effectorMaskNoiseBrightnessBottom: 0.5,
+                    maskAfterDistortion: false
                 }
             },
             {
@@ -1203,7 +1314,8 @@ var TestFire = (function () {
                     effectorNoiseSpeed: 1.0, effectorNoiseDriftX: 0.3, effectorNoiseDriftY: 0.0,
                     effectorMaskNoiseType: 7, effectorMaskNoiseScale: 4.0, effectorMaskNoiseFreq: 2.0,
                     effectorMaskNoiseSpeed: 0.2, effectorMaskDriftX: 0.5, effectorMaskDriftY: -0.5,
-                    effectorMaskNoiseContrast: 1.0, effectorMaskNoiseBrightnessTop: 0.2, effectorMaskNoiseBrightnessBottom: 0.3
+                    effectorMaskNoiseContrast: 1.0, effectorMaskNoiseBrightnessTop: 0.2, effectorMaskNoiseBrightnessBottom: 0.3,
+                    maskAfterDistortion: false
                 }
             },
             {
@@ -1221,7 +1333,8 @@ var TestFire = (function () {
                     effectorNoiseSpeed: 3.0, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
                     effectorMaskNoiseType: 13, effectorMaskNoiseScale: 2.0, effectorMaskNoiseFreq: 6.0,
                     effectorMaskNoiseSpeed: 0.6, effectorMaskDriftX: 0.0, effectorMaskDriftY: -1.2,
-                    effectorMaskNoiseContrast: 1.5, effectorMaskNoiseBrightnessTop: 0.0, effectorMaskNoiseBrightnessBottom: 0.35
+                    effectorMaskNoiseContrast: 1.5, effectorMaskNoiseBrightnessTop: 0.0, effectorMaskNoiseBrightnessBottom: 0.35,
+                    maskAfterDistortion: false
                 }
             },
             {
@@ -1239,7 +1352,8 @@ var TestFire = (function () {
                     effectorNoiseSpeed: 5.0, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
                     effectorMaskNoiseType: 8, effectorMaskNoiseScale: 4.0, effectorMaskNoiseFreq: 4.0,
                     effectorMaskNoiseSpeed: 1.0, effectorMaskDriftX: 0.0, effectorMaskDriftY: -2.5,
-                    effectorMaskNoiseContrast: 2.5, effectorMaskNoiseBrightnessTop: -0.2, effectorMaskNoiseBrightnessBottom: 0.6
+                    effectorMaskNoiseContrast: 2.5, effectorMaskNoiseBrightnessTop: -0.2, effectorMaskNoiseBrightnessBottom: 0.6,
+                    maskAfterDistortion: false
                 }
             }
         ];
@@ -1820,7 +1934,26 @@ var TestFire = (function () {
         function exportSettingsToConsole() {
             var s = getCurrentSettings();
             console.log('// Current Settings Preset');
-            console.log(JSON.stringify(s, null, 4));
+            var output = '{\n';
+            var keys = Object.keys(s);
+            for (var i = 0; i < keys.length; i++) {
+                var key = keys[i];
+                var value = s[key];
+                output += '    ' + key + ': ';
+                if (typeof value === 'string') {
+                    output += '"' + value + '"';
+                } else if (typeof value === 'boolean' || typeof value === 'number') {
+                    output += value;
+                } else {
+                    output += JSON.stringify(value);
+                }
+                if (i < keys.length - 1) {
+                    output += ',';
+                }
+                output += '\n';
+            }
+            output += '}';
+            console.log(output);
         }
 
         // Add a preset dropdown to the UI.
@@ -2001,14 +2134,15 @@ var TestFire = (function () {
         addHeading('Effectors', textCtrl);
         var showTextPreviews = false;
         addCheckbox('Show Noise Previews', showTextPreviews, function (v) { showTextPreviews = v; updatePreviewVisibility(); }, 'Show live grayscale previews of noise shaders applied to text.', textCtrl);
+        addCheckbox('Distort Mask', maskAfterDistortion, function (v) { maskAfterDistortion = v; }, 'When enabled, mask gets warped with distortion. When disabled, mask stays pure to form.', textCtrl, 'maskAfterDistortion');
 
         addHeading('Distortion', textCtrl);
         addNoiseDropdown('Distortion Noise Type', effectorNoiseOptions, function (v) { effectorNoiseType = v; }, 'Select the distortion pattern used to warp the text.', textCtrl, 'effectorNoiseType');
         addSlider('Amplitude / Intensity', 0.0, 0.1, 0.001, effectorNoiseScale, function (v) { effectorNoiseScale = v; }, 'Strength of the warp in UV space. Higher values distort the text more.', textCtrl, 'effectorNoiseScale');
         addSlider('Frequency / Scale', 0.5, 100.0, 0.1, effectorNoiseFreq, function (v) { effectorNoiseFreq = v; }, 'Density of the warp pattern. Higher values create finer patterns.', textCtrl, 'effectorNoiseFreq');
-        addSlider('Animation Speed', 0.0, 10.0, 0.05, effectorNoiseSpeed, function (v) { effectorNoiseSpeed = v; }, 'Animation speed of the distortion over time.', textCtrl, 'effectorNoiseSpeed');
-        addSlider('Horizontal Drift Speed', -2.0, 2.0, 0.05, effectorNoiseDriftX, function (v) { effectorNoiseDriftX = v; }, 'Horizontal drift velocity for text warp noise.', textCtrl, 'effectorNoiseDriftX');
-        addSlider('Vertical Drift Speed', -2.0, 2.0, 0.05, effectorNoiseDriftY, function (v) { effectorNoiseDriftY = v; }, 'Vertical drift velocity for text warp noise.', textCtrl, 'effectorNoiseDriftY');
+        addSlider('Animation Speed', 0.0, 10.0, 0.01, effectorNoiseSpeed, function (v) { effectorNoiseSpeed = v; }, 'Animation speed of the distortion over time.', textCtrl, 'effectorNoiseSpeed');
+        addSlider('Horizontal Drift Speed', -2.0, 2.0, 0.01, effectorNoiseDriftX, function (v) { effectorNoiseDriftX = v; }, 'Horizontal drift velocity for text warp noise.', textCtrl, 'effectorNoiseDriftX');
+        addSlider('Vertical Drift Speed', -2.0, 2.0, 0.01, effectorNoiseDriftY, function (v) { effectorNoiseDriftY = v; }, 'Vertical drift velocity for text warp noise.', textCtrl, 'effectorNoiseDriftY');
 
         var textNoisePreviewWrap = document.createElement('div');
         textNoisePreviewWrap.className = 'fire-ui-preview';
@@ -2032,8 +2166,8 @@ var TestFire = (function () {
         addSlider('Scale', 0.0, 50.0, 0.06, effectorMaskNoiseScale, function (v) { effectorMaskNoiseScale = v; }, 'Overall scale of the mask noise pattern. Higher values create smaller details.', textCtrl, 'effectorMaskNoiseScale');
         addSlider('Frequency', 0.5, 100.0, 0.1, effectorMaskNoiseFreq, function (v) { effectorMaskNoiseFreq = v; }, 'Density of the mask noise pattern. Higher values create finer holes.', textCtrl, 'effectorMaskNoiseFreq');
         addSlider('Animation Speed', 0.0, 10.0, 0.05, effectorMaskNoiseSpeed, function (v) { effectorMaskNoiseSpeed = v; }, 'Animation speed of the mask noise.', textCtrl, 'effectorMaskNoiseSpeed');
-        addSlider('Horizontal Drift Speed', -2.0, 2.0, 0.05, effectorMaskDriftX, function (v) { effectorMaskDriftX = v; }, 'Horizontal drift velocity for mask noise.', textCtrl, 'effectorMaskDriftX');
-        addSlider('Vertical Drift Speed', -2.0, 2.0, 0.05, effectorMaskDriftY, function (v) { effectorMaskDriftY = v; }, 'Vertical drift velocity for mask noise.', textCtrl, 'effectorMaskDriftY');
+        addSlider('Horizontal Drift Speed', -2.0, 2.0, 0.01, effectorMaskDriftX, function (v) { effectorMaskDriftX = v; }, 'Horizontal drift velocity for mask noise.', textCtrl, 'effectorMaskDriftX');
+        addSlider('Vertical Drift Speed', -2.0, 2.0, 0.01, effectorMaskDriftY, function (v) { effectorMaskDriftY = v; }, 'Vertical drift velocity for mask noise.', textCtrl, 'effectorMaskDriftY');
         addSlider('Contrast', 0.0, 4.0, 0.05, effectorMaskNoiseContrast, function (v) { effectorMaskNoiseContrast = v; }, 'Contrast applied to the mask noise. Higher values create crisper holes.', textCtrl, 'effectorMaskNoiseContrast');
         addSlider('Top Intensity', -1.0, 1.0, 0.02, effectorMaskNoiseBrightnessTop, function (v) { effectorMaskNoiseBrightnessTop = v; }, 'Brightness offset at the top of the text mask. Lower values reduce intensity.', textCtrl, 'effectorMaskNoiseBrightnessTop');
         addSlider('Bottom Intensity', -1.0, 1.0, 0.02, effectorMaskNoiseBrightnessBottom, function (v) { effectorMaskNoiseBrightnessBottom = v; }, 'Brightness offset at the bottom of the text mask. Lower values reduce intensity.', textCtrl, 'effectorMaskNoiseBrightnessBottom');
@@ -2201,7 +2335,7 @@ var TestFire = (function () {
                 var s = splats.shift();
                 var useTextFX = s.isEmber && embersUseEffectors;
                 var densityProg = useTextFX ? progSplatTextFX : progSplat;
-                
+
                 renderTo(density.write, densityProg, function (p) {
                     gl.activeTexture(gl.TEXTURE0);
                     gl.bindTexture(gl.TEXTURE_2D, density.read.texture);
@@ -2209,7 +2343,7 @@ var TestFire = (function () {
                     gl.uniform2f(gl.getUniformLocation(p, 'point'), s.x, s.y);
                     gl.uniform1f(gl.getUniformLocation(p, 'radius'), s.r);
                     gl.uniform3f(gl.getUniformLocation(p, 'color'), s.d, s.d * 0.4, 0.0);
-                    
+
                     if (useTextFX) {
                         gl.uniform1f(gl.getUniformLocation(p, 'time'), currentTime);
                         gl.uniform1f(gl.getUniformLocation(p, 'noiseScale'), effectorNoiseScale);
@@ -2229,6 +2363,7 @@ var TestFire = (function () {
                         gl.uniform1f(gl.getUniformLocation(p, 'maskTextBottom'), effectorMaskBottomUv);
                         gl.uniform1f(gl.getUniformLocation(p, 'maskDriftX'), effectorMaskDriftX);
                         gl.uniform1f(gl.getUniformLocation(p, 'maskDriftY'), effectorMaskDriftY);
+                        gl.uniform1f(gl.getUniformLocation(p, 'maskAfterDistortion'), maskAfterDistortion ? 1.0 : 0.0);
                     }
                 });
                 density.swap();
@@ -2383,6 +2518,7 @@ var TestFire = (function () {
                     gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseBrightnessBottom'), effectorMaskNoiseBrightnessBottom);
                     gl.uniform1f(gl.getUniformLocation(p, 'maskTextTop'), effectorMaskTopUv);
                     gl.uniform1f(gl.getUniformLocation(p, 'maskTextBottom'), effectorMaskBottomUv);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskAfterDistortion'), maskAfterDistortion ? 1.0 : 0.0);
                 });
                 density.swap();
             }
