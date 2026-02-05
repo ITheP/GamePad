@@ -260,7 +260,6 @@ var TestFire = (function () {
             'uniform float noiseDriftX;\n' +
             'uniform float noiseDriftY;\n' +
             'uniform float maskNoiseScale;\n' +
-            'uniform float maskNoiseFreq;\n' +
             'uniform float maskNoiseSpeed;\n' +
             'uniform float maskNoiseType;\n' +
             'uniform float maskNoiseContrast;\n' +
@@ -310,9 +309,9 @@ var TestFire = (function () {
             '    if (t < 0.5) return noise3(p);\n' +
             '    if (t < 1.5) return 0.5 + 0.5 * sin((p.x + p.y + p.z) * 3.14159);\n' +
             '    if (t < 2.5) return abs(fract(p.x + abs(fract(p.y) - 0.5) * 2.0 + abs(fract(p.z) - 0.5) * 2.0) - 0.5) * 2.0;\n' +
-            '    if (t < 3.5) return abs(fract(p.x) - 0.5) * 2.0;\n' +
+            '    if (t < 3.5) return abs(fract(p.x + p.z) - 0.5) * 2.0;\n' +
             '    if (t < 4.5) { vec3 cv = floor(p); return mod(cv.x + cv.y + cv.z, 2.0); }\n' +
-            '    if (t < 5.5) { vec3 cv = p - vec3(0.5); float r = length(cv); return sin(r * 12.56636) * 0.5 + 0.5; }\n' +
+            '    if (t < 5.5) { vec3 cv = p - vec3(0.5); float r = length(cv.xy); return sin(r * 12.56636 + p.z * 6.28318) * 0.5 + 0.5; }\n' +
             '    if (t < 6.5) { vec3 cv = p - vec3(0.5); float ag = atan(cv.y, cv.x); float r = length(cv.xy); return sin(ag * 4.0 + r * 10.0 + p.z * 5.0) * 0.5 + 0.5; }\n' +
             '    if (t < 7.5) return fbmNoise3(p);\n' +
             '    if (t < 8.5) return ridgedNoise3(p);\n' +
@@ -342,7 +341,7 @@ var TestFire = (function () {
             '    float scale = max(maskNoiseScale, 0.0001);\n' +
             '    vec2 pm = mix(uv, warpedUV, maskAfterDistortion);\n' +
             '    pm = (pm - vec2(0.5)) * scale + vec2(0.5);\n' +
-            '    pm = (pm + time * vec2(maskDriftX, maskDriftY)) * maskNoiseFreq;\n' +
+            '    pm = pm + time * vec2(maskDriftX, maskDriftY);\n' +
             '    float tz = time * maskNoiseSpeed;\n' +
             '    float nm = selectNoise3(vec3(pm, tz), maskNoiseType);\n' +
             '    float textY = clamp((uv.y - maskTextBottom) / max(1e-4, (maskTextTop - maskTextBottom)), 0.0, 1.0);\n' +
@@ -366,7 +365,6 @@ var TestFire = (function () {
             'uniform float noiseSpeed;\n' +
             'uniform float noiseType;\n' +
             'uniform float maskNoiseScale;\n' +
-            'uniform float maskNoiseFreq;\n' +
             'uniform float maskNoiseSpeed;\n' +
             'uniform float maskNoiseType;\n' +
             'uniform float maskNoiseContrast;\n' +
@@ -539,33 +537,13 @@ var TestFire = (function () {
             '    return clamp(md2 - md, 0.0, 1.0);\n' +
             '}\n' +
             '\n' +
-            'float selectNoise(vec2 p, float t){\n' +
-            '    if (t < 0.5) return noise(p);\n' +
-            '    if (t < 1.5) return sineNoise(p);\n' +
-            '    if (t < 2.5) return triNoise(p);\n' +
-            '    if (t < 3.5) return stripeNoise(p);\n' +
-            '    if (t < 4.5) return checkerNoise(p);\n' +
-            '    if (t < 5.5) return rippleNoise(p);\n' +
-            '    if (t < 6.5) return spiralNoise(p);\n' +
-            '    if (t < 7.5) return fbmNoise(p);\n' +
-            '    if (t < 8.5) return ridgedNoise(p);\n' +
-            '    if (t < 9.5) return cellularNoise(p);\n' +
-            '    if (t < 10.5) return turbulence(p);\n' +
-            '    if (t < 11.5) return marble(p);\n' +
-            '    if (t < 12.5) return wood(p);\n' +
-            '    if (t < 13.5) return plasma(p);\n' +
-            '    if (t < 14.5) return hexagons(p);\n' +
-            '    if (t < 15.5) return dots(p);\n' +
-            '    if (t < 16.5) return crosshatch(p);\n' +
-            '    return voronoi(p);\n' +
-            '}\n' +
             'float selectNoise3(vec3 p, float t){\n' +
             '    if (t < 0.5) return noise3(p);\n' +
             '    if (t < 1.5) return 0.5 + 0.5 * sin((p.x + p.y + p.z) * 3.14159);\n' +
             '    if (t < 2.5) return abs(fract(p.x + abs(fract(p.y) - 0.5) * 2.0 + abs(fract(p.z) - 0.5) * 2.0) - 0.5) * 2.0;\n' +
-            '    if (t < 3.5) return abs(fract(p.x) - 0.5) * 2.0;\n' +
+            '    if (t < 3.5) return abs(fract(p.x + p.z) - 0.5) * 2.0;\n' +
             '    if (t < 4.5) { vec3 c = floor(p); return mod(c.x + c.y + c.z, 2.0); }\n' +
-            '    if (t < 5.5) { vec3 c = p - vec3(0.5); float r = length(c); return sin(r * 12.56636) * 0.5 + 0.5; }\n' +
+            '    if (t < 5.5) { vec3 c = p - vec3(0.5); float r = length(c.xy); return sin(r * 12.56636 + p.z * 6.28318) * 0.5 + 0.5; }\n' +
             '    if (t < 6.5) { vec3 c = p - vec3(0.5); float a = atan(c.y, c.x); float r = length(c.xy); return sin(a * 4.0 + r * 10.0 + p.z * 5.0) * 0.5 + 0.5; }\n' +
             '    if (t < 7.5) return fbmNoise3(p);\n' +
             '    if (t < 8.5) return ridgedNoise3(p);\n' +
@@ -595,7 +573,7 @@ var TestFire = (function () {
             '    float scale = max(maskNoiseScale, 0.0001);\n' +
             '    vec2 pm = mix(uv, uv + warp, maskAfterDistortion);\n' +
             '    pm = (pm - 0.5) * scale + 0.5;\n' +
-            '    pm = (pm + time * vec2(maskDriftX, maskDriftY)) * maskNoiseFreq;\n' +
+            '    pm = pm + time * vec2(maskDriftX, maskDriftY);\n' +
             '    float tz = time * maskNoiseSpeed;\n' +
             '    float nm = selectNoise3(vec3(pm, tz), maskNoiseType);\n' +
             '    float textY = clamp((uv.y - maskTextBottom) / max(1e-4, (maskTextTop - maskTextBottom)), 0.0, 1.0);\n' +
@@ -613,6 +591,7 @@ var TestFire = (function () {
             'uniform sampler2D uPalette;\n' +
             'uniform vec2 resolution;\n' +
             'uniform float glow;\n' +
+            'uniform vec3 glowColor;\n' +
             'uniform vec2 vortexScale;\n' +
             'uniform vec2 texelSize;\n' +
             '\n' +
@@ -628,7 +607,7 @@ var TestFire = (function () {
             '        }\n' +
             '    }\n' +
             '    g *= 0.02 * glow;\n' +
-            '    col += vec3(1.0, 0.6, 0.2) * g;\n' +
+            '    col += glowColor * g;\n' +
             '    col = pow(col, vec3(0.85));\n' +
             '    gl_FragColor = vec4(col, 1.0);\n' +
             '}\n';
@@ -637,16 +616,20 @@ var TestFire = (function () {
         var vs_spark =
             'attribute vec2 aPos;\n' +
             'attribute float aAlpha;\n' +
+            'attribute vec3 aColor;\n' +
             'varying float vAlpha;\n' +
+            'varying vec3 vColor;\n' +
             'void main(){\n' +
             '    vAlpha = aAlpha;\n' +
+            '    vColor = aColor;\n' +
             '    gl_Position = vec4(aPos*2.0-1.0, 0.0, 1.0);\n' +
             '}\n';
         var fs_spark =
             'precision highp float;\n' +
             'varying float vAlpha;\n' +
+            'varying vec3 vColor;\n' +
             'void main(){\n' +
-            '    vec3 col = vec3(1.0, 0.8, 0.4);\n' +
+            '    vec3 col = vColor;\n' +
             '    gl_FragColor = vec4(col, vAlpha);\n' +
             '}\n';
 
@@ -752,9 +735,9 @@ var TestFire = (function () {
             '    if (t < 0.5) return noise3(p);\n' +
             '    if (t < 1.5) return 0.5 + 0.5 * sin((p.x + p.y + p.z) * 3.14159);\n' +
             '    if (t < 2.5) return abs(fract(p.x + abs(fract(p.y) - 0.5) * 2.0 + abs(fract(p.z) - 0.5) * 2.0) - 0.5) * 2.0;\n' +
-            '    if (t < 3.5) return abs(fract(p.x) - 0.5) * 2.0;\n' +
+            '    if (t < 3.5) return abs(fract(p.x + p.z) - 0.5) * 2.0;\n' +
             '    if (t < 4.5) { vec3 c = floor(p); return mod(c.x + c.y + c.z, 2.0); }\n' +
-            '    if (t < 5.5) { vec3 c = p - vec3(0.5); float r = length(c); return sin(r * 12.56636) * 0.5 + 0.5; }\n' +
+            '    if (t < 5.5) { vec3 c = p - vec3(0.5); float r = length(c.xy); return sin(r * 12.56636 + p.z * 6.28318) * 0.5 + 0.5; }\n' +
             '    if (t < 6.5) { vec3 c = p - vec3(0.5); float a = atan(c.y, c.x); float r = length(c.xy); return sin(a * 4.0 + r * 10.0 + p.z * 5.0) * 0.5 + 0.5; }\n' +
             '    if (t < 7.5) return fbmNoise3(p);\n' +
             '    if (t < 8.5) return ridgedNoise3(p);\n' +
@@ -781,7 +764,7 @@ var TestFire = (function () {
             'uniform float noiseDriftY;\n' +
             'void main(){\n' +
             '    vec2 uv = v_uv;\n' +
-            '    vec2 pn = uv * noiseFreq + time * vec2(noiseDriftX, noiseDriftY);\n' +
+            '    vec2 pn = (uv - 0.5) * noiseFreq + 0.5 + time * vec2(noiseDriftX, noiseDriftY);\n' +
             '    float tn = time * noiseSpeed * noiseFreq * 0.1;\n' +
             '    float n = selectNoise3(vec3(pn, tn), noiseType);\n' +
             '    float warp = (n - 0.5) * noiseAmplitude * 10.0;\n' +
@@ -793,7 +776,6 @@ var TestFire = (function () {
         var fs_preview_mask = common + noiseShaderCode +
             'uniform float time;\n' +
             'uniform float maskScale;\n' +
-            'uniform float maskFreq;\n' +
             'uniform float maskSpeed;\n' +
             'uniform float maskType;\n' +
             'uniform float maskContrast;\n' +
@@ -805,7 +787,7 @@ var TestFire = (function () {
             '    vec2 uv = v_uv;\n' +
             '    float scale = max(maskScale, 0.0001);\n' +
             '    vec2 pm = (uv - 0.5) * scale + 0.5;\n' +
-            '    pm = pm * maskFreq + time * vec2(maskDriftX, maskDriftY);\n' +
+            '    pm = pm + time * vec2(maskDriftX, maskDriftY);\n' +
             '    float tz = time * maskSpeed;\n' +
             '    float n = selectNoise3(vec3(pm, tz), maskType);\n' +
             '    float brightness = mix(maskBrightnessBottom, maskBrightnessTop, uv.y);\n' +
@@ -905,7 +887,6 @@ var TestFire = (function () {
         // Mask Defaults
         var effectorMaskNoiseType = 10; // Turbulence
         var effectorMaskNoiseScale = 2.76;
-        var effectorMaskNoiseFreq = 3.0;
         var effectorMaskNoiseSpeed = 0.4;
         var effectorMaskDriftX = 0.0;
         var effectorMaskDriftY = -1.65;
@@ -992,7 +973,6 @@ var TestFire = (function () {
             bindQuad(progPreviewMask);
             gl.uniform1f(gl.getUniformLocation(progPreviewMask, 'time'), time);
             gl.uniform1f(gl.getUniformLocation(progPreviewMask, 'maskScale'), effectorMaskNoiseScale);
-            gl.uniform1f(gl.getUniformLocation(progPreviewMask, 'maskFreq'), effectorMaskNoiseFreq);
             gl.uniform1f(gl.getUniformLocation(progPreviewMask, 'maskSpeed'), effectorMaskNoiseSpeed);
             gl.uniform1f(gl.getUniformLocation(progPreviewMask, 'maskType'), effectorMaskNoiseType);
             gl.uniform1f(gl.getUniformLocation(progPreviewMask, 'maskContrast'), effectorMaskNoiseContrast);
@@ -1147,12 +1127,14 @@ var TestFire = (function () {
                     buoyancy: 35.0, heatPower: -2.7, minHeat: 0.08, maxHeat: 4.0,
                     emberRate: 18, emberSize: 0.02, emberLifeFrames: 4, emberWidth: 0.89,
                     emberHeight: 0.02, emberOffset: 0.035, emberUniformity: 1.0, embersUseEffectors: true,
-                    sparkChance: 0.275, glow: 1.2,
+                    sparkChance: 0.275, glow: 1.2, palette: 'Fire',
+                    glowColorR: 1.0, glowColorG: 0.6, glowColorB: 0.2,
+                    sparkColorR: 1.0, sparkColorG: 0.8, sparkColorB: 0.4,
                     textEnabled: true, textValue: 'Fire!', textFont: 'Palatino Linotype',
                     textSize: 154, textOffsetX: 0.0, textOffsetY: 0.0,
                     effectorStrength: 1.5, effectorNoiseType: 7, effectorNoiseScale: 0.062, effectorNoiseFreq: 49.0,
                     effectorNoiseSpeed: 0.65, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
-                    effectorMaskNoiseType: 10, effectorMaskNoiseScale: 2.76, effectorMaskNoiseFreq: 3.0,
+                    effectorMaskNoiseType: 10, effectorMaskNoiseScale: 2.76,
                     effectorMaskNoiseSpeed: 0.4, effectorMaskDriftX: 0.0, effectorMaskDriftY: -1.65,
                     effectorMaskNoiseContrast: 1.7, effectorMaskNoiseBrightnessTop: 0.02, effectorMaskNoiseBrightnessBottom: 0.34,
                     maskAfterDistortion: false
@@ -1184,6 +1166,9 @@ var TestFire = (function () {
                     embersUseEffectors: true,
                     sparkChance: 0.28,
                     glow: 1.2,
+                    palette: 'Fire',
+                    glowColorR: 1.0, glowColorG: 0.6, glowColorB: 0.2,
+                    sparkColorR: 1.0, sparkColorG: 0.8, sparkColorB: 0.4,
                     textEnabled: true,
                     textValue: "Fire in the hold!",
                     textFont: "Palatino Linotype",
@@ -1199,7 +1184,6 @@ var TestFire = (function () {
                     effectorNoiseDriftY: 0,
                     effectorMaskNoiseType: 7,
                     effectorMaskNoiseScale: 4.2,
-                    effectorMaskNoiseFreq: 8.9,
                     effectorMaskNoiseSpeed: 0.9,
                     effectorMaskDriftX: 0,
                     effectorMaskDriftY: -1.65,
@@ -1236,6 +1220,9 @@ var TestFire = (function () {
                     embersUseEffectors: true,
                     sparkChance: 0.28,
                     glow: 1.2,
+                    palette: 'Fire',
+                    glowColorR: 1.0, glowColorG: 0.6, glowColorB: 0.2,
+                    sparkColorR: 1.0, sparkColorG: 0.8, sparkColorB: 0.4,
                     textEnabled: true,
                     textValue: "F",
                     textFont: "Palatino Linotype",
@@ -1252,13 +1239,66 @@ var TestFire = (function () {
                     effectorNoiseDriftY: 0,
                     effectorMaskNoiseType: 18,
                     effectorMaskNoiseScale: 2.76,
-                    effectorMaskNoiseFreq: 3,
                     effectorMaskNoiseSpeed: 0.4,
                     effectorMaskDriftX: 0,
                     effectorMaskDriftY: -1.65,
                     effectorMaskNoiseContrast: 1.7,
                     effectorMaskNoiseBrightnessTop: 0.02,
                     effectorMaskNoiseBrightnessBottom: 0.34
+                }
+            },
+            {
+                name: "Slow Burn",
+                settings:
+                {
+                    simScale: 0.3,
+                    jacobi: 32,
+                    curl: 77,
+                    vortexScaleX: 15,
+                    vortexScaleY: 27,
+                    velRange: 3,
+                    velDissipation: 0.38,
+                    denDissipation: 0.992,
+                    rdx: 10,
+                    buoyancy: 10,
+                    heatPower: -5,
+                    minHeat: 0,
+                    maxHeat: 0.5,
+                    emberRate: 18,
+                    emberSize: 0.02,
+                    emberLifeFrames: 4,
+                    emberWidth: 0.89,
+                    emberHeight: 0.02,
+                    emberOffset: 0.035,
+                    emberUniformity: 1,
+                    embersUseEffectors: true,
+                    sparkChance: 0.28,
+                    glow: 1.2,
+                    palette: 'Fire Clipped',
+                    glowColorR: 1.0, glowColorG: 0.6, glowColorB: 0.2,
+                    sparkColorR: 1.0, sparkColorG: 0.8, sparkColorB: 0.4,
+                    textEnabled: true,
+                    textValue: "Fire!",
+                    textFont: "Palatino Linotype",
+                    textSize: 154,
+                    textOffsetX: 0,
+                    textOffsetY: 0,
+                    effectorStrength: 1.5,
+                    maskAfterDistortion: false,
+                    effectorNoiseType: 7,
+                    effectorNoiseFreq: 49,
+                    effectorNoiseScale: 0.062,
+                    effectorNoiseSpeed: 0.65,
+                    effectorNoiseDriftX: 0,
+                    effectorNoiseDriftY: 0,
+                    effectorMaskNoiseType: 10,
+                    effectorMaskNoiseScale: 2.76,
+                    effectorMaskNoiseContrast: 1.7,
+                    effectorMaskNoiseBrightnessTop: 0.02,
+                    effectorMaskNoiseBrightnessBottom: 0.34,
+                    effectorMaskNoiseSpeed: 0.4,
+                    effectorMaskDriftX: 0,
+                    effectorMaskDriftY: -1.65
                 }
             },
             {
@@ -1269,12 +1309,14 @@ var TestFire = (function () {
                     buoyancy: 25.0, heatPower: -1.5, minHeat: 0.05, maxHeat: 3.0,
                     emberRate: 8, emberSize: 0.015, emberLifeFrames: 6, emberWidth: 0.3,
                     emberHeight: 0.015, emberOffset: 0.02, emberUniformity: 0.8, embersUseEffectors: false,
-                    sparkChance: 0.05, glow: 0.8,
+                    sparkChance: 0.05, glow: 0.8, palette: 'Fire',
+                    glowColorR: 1.0, glowColorG: 0.6, glowColorB: 0.2,
+                    sparkColorR: 1.0, sparkColorG: 0.8, sparkColorB: 0.4,
                     textEnabled: true, textValue: 'Calm', textFont: 'Georgia',
                     textSize: 120, textOffsetX: 0.0, textOffsetY: 0.0,
                     effectorStrength: 1.2, effectorNoiseType: 7, effectorNoiseScale: 0.03, effectorNoiseFreq: 30.0,
                     effectorNoiseSpeed: 1.5, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
-                    effectorMaskNoiseType: 0, effectorMaskNoiseScale: 2.0, effectorMaskNoiseFreq: 4.0,
+                    effectorMaskNoiseType: 0, effectorMaskNoiseScale: 2.0,
                     effectorMaskNoiseSpeed: 0.3, effectorMaskDriftX: 0.0, effectorMaskDriftY: -0.8,
                     effectorMaskNoiseContrast: 1.2, effectorMaskNoiseBrightnessTop: 0.1, effectorMaskNoiseBrightnessBottom: 0.4,
                     maskAfterDistortion: false
@@ -1288,12 +1330,14 @@ var TestFire = (function () {
                     buoyancy: 60.0, heatPower: -3.5, minHeat: 0.1, maxHeat: 5.0,
                     emberRate: 50, emberSize: 0.025, emberLifeFrames: 3, emberWidth: 1.0,
                     emberHeight: 0.05, emberOffset: 0.02, emberUniformity: 0.6, embersUseEffectors: false,
-                    sparkChance: 0.6, glow: 1.8,
+                    sparkChance: 0.6, glow: 1.8, palette: 'Fire White',
+                    glowColorR: 1.0, glowColorG: 0.8, glowColorB: 0.5,
+                    sparkColorR: 1.0, sparkColorG: 0.9, sparkColorB: 0.6,
                     textEnabled: true, textValue: 'BURN', textFont: 'Impact',
                     textSize: 200, textOffsetX: 0.0, textOffsetY: 0.05,
                     effectorStrength: 2.0, effectorNoiseType: 10, effectorNoiseScale: 0.08, effectorNoiseFreq: 60.0,
                     effectorNoiseSpeed: 4.0, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
-                    effectorMaskNoiseType: 10, effectorMaskNoiseScale: 3.5, effectorMaskNoiseFreq: 5.0,
+                    effectorMaskNoiseType: 10, effectorMaskNoiseScale: 3.5,
                     effectorMaskNoiseSpeed: 0.8, effectorMaskDriftX: 0.0, effectorMaskDriftY: -2.0,
                     effectorMaskNoiseContrast: 2.2, effectorMaskNoiseBrightnessTop: -0.1, effectorMaskNoiseBrightnessBottom: 0.5,
                     maskAfterDistortion: false
@@ -1307,12 +1351,14 @@ var TestFire = (function () {
                     buoyancy: 20.0, heatPower: -0.5, minHeat: 0.02, maxHeat: 2.0,
                     emberRate: 12, emberSize: 0.03, emberLifeFrames: 10, emberWidth: 0.6,
                     emberHeight: 0.03, emberOffset: 0.05, emberUniformity: 0.4, embersUseEffectors: false,
-                    sparkChance: 0.1, glow: 1.5,
+                    sparkChance: 0.1, glow: 1.5, palette: 'Rainbow',
+                    glowColorR: 0.6, glowColorG: 0.8, glowColorB: 1.0,
+                    sparkColorR: 0.8, sparkColorG: 0.9, sparkColorB: 1.0,
                     textEnabled: true, textValue: 'Dream', textFont: 'Brush Script MT',
                     textSize: 180, textOffsetX: 0.0, textOffsetY: 0.0,
                     effectorStrength: 1.0, effectorNoiseType: 11, effectorNoiseScale: 0.04, effectorNoiseFreq: 25.0,
                     effectorNoiseSpeed: 1.0, effectorNoiseDriftX: 0.3, effectorNoiseDriftY: 0.0,
-                    effectorMaskNoiseType: 7, effectorMaskNoiseScale: 4.0, effectorMaskNoiseFreq: 2.0,
+                    effectorMaskNoiseType: 7, effectorMaskNoiseScale: 4.0,
                     effectorMaskNoiseSpeed: 0.2, effectorMaskDriftX: 0.5, effectorMaskDriftY: -0.5,
                     effectorMaskNoiseContrast: 1.0, effectorMaskNoiseBrightnessTop: 0.2, effectorMaskNoiseBrightnessBottom: 0.3,
                     maskAfterDistortion: false
@@ -1326,12 +1372,14 @@ var TestFire = (function () {
                     buoyancy: 45.0, heatPower: -2.0, minHeat: 0.06, maxHeat: 4.5,
                     emberRate: 30, emberSize: 0.018, emberLifeFrames: 5, emberWidth: 0.95,
                     emberHeight: 0.04, emberOffset: 0.025, emberUniformity: 0.7, embersUseEffectors: false,
-                    sparkChance: 0.4, glow: 1.6,
+                    sparkChance: 0.4, glow: 1.6, palette: 'Rainbow (reversed)',
+                    glowColorR: 0.8, glowColorG: 0.4, glowColorB: 1.0,
+                    sparkColorR: 0.9, sparkColorG: 0.6, sparkColorB: 1.0,
                     textEnabled: true, textValue: 'PLASMA', textFont: 'Consolas',
                     textSize: 140, textOffsetX: 0.0, textOffsetY: 0.0,
                     effectorStrength: 1.8, effectorNoiseType: 13, effectorNoiseScale: 0.05, effectorNoiseFreq: 40.0,
                     effectorNoiseSpeed: 3.0, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
-                    effectorMaskNoiseType: 13, effectorMaskNoiseScale: 2.0, effectorMaskNoiseFreq: 6.0,
+                    effectorMaskNoiseType: 13, effectorMaskNoiseScale: 2.0,
                     effectorMaskNoiseSpeed: 0.6, effectorMaskDriftX: 0.0, effectorMaskDriftY: -1.2,
                     effectorMaskNoiseContrast: 1.5, effectorMaskNoiseBrightnessTop: 0.0, effectorMaskNoiseBrightnessBottom: 0.35,
                     maskAfterDistortion: false
@@ -1345,12 +1393,14 @@ var TestFire = (function () {
                     buoyancy: 75.0, heatPower: -4.0, minHeat: 0.12, maxHeat: 6.0,
                     emberRate: 70, emberSize: 0.022, emberLifeFrames: 2, emberWidth: 1.1,
                     emberHeight: 0.06, emberOffset: 0.015, emberUniformity: 0.5, embersUseEffectors: false,
-                    sparkChance: 0.8, glow: 2.0,
+                    sparkChance: 0.8, glow: 2.0, palette: 'Fire White',
+                    glowColorR: 1.0, glowColorG: 0.5, glowColorB: 0.1,
+                    sparkColorR: 1.0, sparkColorG: 0.7, sparkColorB: 0.3,
                     textEnabled: true, textValue: 'HELL', textFont: 'Impact',
                     textSize: 250, textOffsetX: 0.0, textOffsetY: 0.08,
                     effectorStrength: 2.5, effectorNoiseType: 8, effectorNoiseScale: 0.09, effectorNoiseFreq: 70.0,
                     effectorNoiseSpeed: 5.0, effectorNoiseDriftX: 0.0, effectorNoiseDriftY: 0.0,
-                    effectorMaskNoiseType: 8, effectorMaskNoiseScale: 4.0, effectorMaskNoiseFreq: 4.0,
+                    effectorMaskNoiseType: 8, effectorMaskNoiseScale: 4.0,
                     effectorMaskNoiseSpeed: 1.0, effectorMaskDriftX: 0.0, effectorMaskDriftY: -2.5,
                     effectorMaskNoiseContrast: 2.5, effectorMaskNoiseBrightnessTop: -0.2, effectorMaskNoiseBrightnessBottom: 0.6,
                     maskAfterDistortion: false
@@ -1390,6 +1440,12 @@ var TestFire = (function () {
         // Misc. Defaults
         var sparkChance = 0.275;
         var glow = 1.2;
+        var glowColorR = 1.0;
+        var glowColorG = 0.6;
+        var glowColorB = 0.2;
+        var sparkColorR = 1.0;
+        var sparkColorG = 0.8;
+        var sparkColorB = 0.4;
 
         var sparkMax = 64;     // Max number of sparks
         var pointer = { down: false, x: 0, y: 0, px: 0, py: 0 };
@@ -1435,6 +1491,14 @@ var TestFire = (function () {
                     { pos: 0.6, color: [0.8, 0.15, 0.02] },
                     { pos: 0.8, color: [1.0, 0.6, 0.1] },
                     { pos: 1.0, color: [1.0, 0.95, 0.8] }
+                ]
+            },
+            {
+                name: 'Yellow Fire', stops: [
+                    { pos: 0.0, color: [0.05, 0.0, 0.0] },
+                    { pos: 0.4, color: [0.8, 0.15, 0.01] },
+                    { pos: 0.8, color: [1.0, 0.6, 0.02] },
+                    { pos: 1.0, color: [1.0, 0.95, 0.05] }
                 ]
             },
             {
@@ -1509,6 +1573,38 @@ var TestFire = (function () {
                     { pos: 1.0, color: [1.0, 0.95, 0.8] }
                 ]
             },
+            {
+                name: 'Stripes', stops: [
+                    { pos: 0.00, color: [0.0, 0.0, 0.0] },
+                    { pos: 0.05, color: [1.0, 1.0, 1.0] },
+                    { pos: 0.10, color: [0.0, 0.0, 0.0] },
+                    { pos: 0.15, color: [1.0, 1.0, 1.0] },
+                    { pos: 0.20, color: [0.0, 0.0, 0.0] },
+                    { pos: 0.25, color: [1.0, 1.0, 1.0] },
+                    { pos: 0.30, color: [0.0, 0.0, 0.0] },
+                    { pos: 0.35, color: [1.0, 1.0, 1.0] },
+                    { pos: 0.40, color: [0.0, 0.0, 0.0] },
+                    { pos: 0.45, color: [1.0, 1.0, 1.0] },
+                    { pos: 0.50, color: [0.0, 0.0, 0.0] },
+                    { pos: 0.55, color: [1.0, 1.0, 1.0] },
+                    { pos: 0.60, color: [0.0, 0.0, 0.0] },
+                    { pos: 0.65, color: [1.0, 1.0, 1.0] },
+                    { pos: 0.70, color: [0.0, 0.0, 0.0] },
+                    { pos: 0.75, color: [1.0, 1.0, 1.0] },
+                    { pos: 0.80, color: [0.0, 0.0, 0.0] },
+                    { pos: 0.85, color: [1.0, 1.0, 1.0] },
+                    { pos: 0.90, color: [0.0, 0.0, 0.0] },
+                    { pos: 0.95, color: [1.0, 1.0, 1.0] },
+                    { pos: 1.00, color: [0.0, 0.0, 0.0] }
+                ]
+            },
+            {
+                name: 'Gradient', stops: [
+                    { pos: 0.00, color: [0.0, 0.0, 0.0] },
+                    { pos: 1.00, color: [1.0, 1.0, 1.0] }
+                ]
+
+            },
         ];
         var currentPalette = palettes[0];
 
@@ -1565,15 +1661,11 @@ var TestFire = (function () {
 
         uploadPaletteTexture(currentPalette);
 
-        // Todo - ember size so towards edges of the bottom embers, they are smaller and more fleeting for better fire edges, and there can be more including higher up in the middle (like a pile)
-        // If we do ember points as an array that can be filled by new random embers each frame - they can have a lifespan
-        // I think the splat framework is already set up for this - we just need to account for the mouse pointer and adding it as a new point and making sure that point's timer is reset each frame if the mouse pointer isnt moving and is still held down
-        // and the mouse click embers can be added to that with a different lifespan so they hang on screen for a moment
-        // me nice for the ember splat to also randomise splat size a bit and also misshape it so there not all perfect circles
-        // also have sliders for width and height of ember pile and how far up the screen it sits
-        // Does splats with velocity actually do anything?
-        // Splatting text
-        // Turn on borders so fluid is constrained to screen
+        // TODO: Font scroll speed (both plus and minus)
+        // When holding down a scroll bar can it suddenly scale to 80% of the window width so we have fine control of it?
+        // Combine the Scale and Frequency (i.e. Amplitude/Intensity) into single control and we dont need to have the 2 separate values as they do the same thing
+        // Tune that default animation speed for the fire etc. and have that vertical drift speed
+        // Check all slider boundaries and smooth them too
 
         // UI controls
         var uiContainer = document.createElement('div');
@@ -1616,6 +1708,84 @@ var TestFire = (function () {
             }
         }
 
+        // Create a color picker with RGB sliders and preview.
+        function addColorPicker(label, rKey, gKey, bKey, rVal, gVal, bVal, onChangeR, onChangeG, onChangeB, tooltip, target) {
+            var container = document.createElement('div');
+            container.className = 'fire-ui-color-picker';
+            if (tooltip) { container.title = tooltip; }
+
+            var headerRow = document.createElement('div');
+            headerRow.className = 'fire-ui-row';
+            var l = document.createElement('label');
+            l.textContent = label;
+            l.className = 'fire-ui-label';
+            if (tooltip) { l.title = tooltip; }
+            var preview = document.createElement('div');
+            preview.className = 'fire-ui-color-preview';
+            preview.style.width = '40px';
+            preview.style.height = '20px';
+            preview.style.border = '1px solid #666';
+            preview.style.display = 'inline-block';
+            preview.style.marginLeft = '8px';
+            preview.style.verticalAlign = 'middle';
+
+            function updatePreview() {
+                var r = Math.round(rVal * 255);
+                var g = Math.round(gVal * 255);
+                var b = Math.round(bVal * 255);
+                preview.style.backgroundColor = 'rgb(' + r + ',' + g + ',' + b + ')';
+            }
+            updatePreview();
+
+            headerRow.appendChild(l);
+            headerRow.appendChild(preview);
+            container.appendChild(headerRow);
+
+            function makeSlider(compLabel, val, onChange, key, setVal) {
+                var row = document.createElement('div');
+                row.className = 'fire-ui-row';
+                row.style.paddingLeft = '10px';
+                var sl = document.createElement('label');
+                sl.textContent = compLabel;
+                sl.className = 'fire-ui-label';
+                sl.style.width = '20px';
+                var input = document.createElement('input');
+                input.type = 'range';
+                input.min = 0; input.max = 1; input.step = 0.01; input.value = val;
+                input.className = 'fire-ui-range';
+                var valueSpan = document.createElement('span');
+                valueSpan.textContent = val.toFixed(2);
+                valueSpan.className = 'fire-ui-value';
+                input.oninput = function () {
+                    var v = parseFloat(input.value);
+                    valueSpan.textContent = v.toFixed(2);
+                    setVal(v);
+                    onChange(v);
+                    updatePreview();
+                };
+                row.appendChild(sl);
+                row.appendChild(input);
+                row.appendChild(valueSpan);
+                container.appendChild(row);
+
+                if (key) {
+                    uiControls[key] = {
+                        type: 'slider',
+                        input: input,
+                        valueSpan: valueSpan,
+                        onChange: function(v) { setVal(v); onChange(v); updatePreview(); }
+                    };
+                }
+                return { input: input, valueSpan: valueSpan };
+            }
+
+            makeSlider('R', rVal, onChangeR, rKey, function(v) { rVal = v; });
+            makeSlider('G', gVal, onChangeG, gKey, function(v) { gVal = v; });
+            makeSlider('B', bVal, onChangeB, bKey, function(v) { bVal = v; });
+
+            (target || ctrl).appendChild(container);
+        }
+
         // Create a palette dropdown with preview swatches.
         function addPaletteDropdown(label, paletteList, onChange, tooltip, target) {
             var row = document.createElement('div');
@@ -1641,6 +1811,13 @@ var TestFire = (function () {
                 swatch.style.background = paletteToCss(p);
                 onChange(p);
             }
+
+            uiControls[label] = {
+                type: 'paletteDropdown',
+                palettes: paletteList,
+                setPalette: setPalette,
+                getValue: function() { return currentPalette.name; }
+            };
 
             for (var i = 0; i < paletteList.length; i++) {
                 (function (p) {
@@ -1898,6 +2075,14 @@ var TestFire = (function () {
                             }
                         }
                         break;
+                    case 'paletteDropdown':
+                        for (var i = 0; i < ctrl.palettes.length; i++) {
+                            if (ctrl.palettes[i].name === val) {
+                                ctrl.setPalette(ctrl.palettes[i]);
+                                break;
+                            }
+                        }
+                        break;
                 }
             }
         }
@@ -1924,6 +2109,9 @@ var TestFire = (function () {
                         break;
                     case 'noiseDropdown':
                         s[key] = ctrl.getValue ? ctrl.getValue() : 0;
+                        break;
+                    case 'paletteDropdown':
+                        s[key] = ctrl.getValue ? ctrl.getValue() : '';
                         break;
                 }
             }
@@ -2120,7 +2308,13 @@ var TestFire = (function () {
 
         addHeading('Misc.', ctrl);
         addSlider('Spark Chance', 0.0, 1.0, 0.01, sparkChance, function (v) { sparkChance = v; }, 'Chance of a spark spawning each frame. Higher values produce more frequent sparks.', ctrl, 'sparkChance');
-        addSlider('Glow', 0.0, 2.0, 0.01, glow, function (v) { glow = v; }, 'Strength of the soft glow around bright areas. Higher values give a hotter, blooming look.', ctrl, 'glow');
+        addSlider('Glow', 0.0, 5.0, 0.01, glow, function (v) { glow = v; }, 'Strength of the soft glow around bright areas. Higher values give a hotter, blooming look.', ctrl, 'glow');
+        addColorPicker('Glow Color', 'glowColorR', 'glowColorG', 'glowColorB', glowColorR, glowColorG, glowColorB,
+            function (v) { glowColorR = v; }, function (v) { glowColorG = v; }, function (v) { glowColorB = v; },
+            'Color tint applied to the glow effect around bright areas.', ctrl);
+        addColorPicker('Spark Color', 'sparkColorR', 'sparkColorG', 'sparkColorB', sparkColorR, sparkColorG, sparkColorB,
+            function (v) { sparkColorR = v; }, function (v) { sparkColorG = v; }, function (v) { sparkColorB = v; },
+            'Base color of the spark lines. Affected by glow intensity.', ctrl);
 
         addHeading('Text', textCtrl);
         addCheckbox('Enable Text Effect', textEnabled, function (v) { textEnabled = v; textDirty = true; }, 'Toggle drawing of the text into the fire.', textCtrl, 'textEnabled');
@@ -2138,8 +2332,8 @@ var TestFire = (function () {
 
         addHeading('Distortion', textCtrl);
         addNoiseDropdown('Distortion Noise Type', effectorNoiseOptions, function (v) { effectorNoiseType = v; }, 'Select the distortion pattern used to warp the text.', textCtrl, 'effectorNoiseType');
-        addSlider('Amplitude / Intensity', 0.0, 0.1, 0.001, effectorNoiseScale, function (v) { effectorNoiseScale = v; }, 'Strength of the warp in UV space. Higher values distort the text more.', textCtrl, 'effectorNoiseScale');
         addSlider('Frequency / Scale', 0.5, 100.0, 0.1, effectorNoiseFreq, function (v) { effectorNoiseFreq = v; }, 'Density of the warp pattern. Higher values create finer patterns.', textCtrl, 'effectorNoiseFreq');
+        addSlider('Amplitude / Intensity', 0.0, 0.5, 0.001, effectorNoiseScale, function (v) { effectorNoiseScale = v; }, 'Strength of the warp in UV space. Higher values distort the text more.', textCtrl, 'effectorNoiseScale');
         addSlider('Animation Speed', 0.0, 10.0, 0.01, effectorNoiseSpeed, function (v) { effectorNoiseSpeed = v; }, 'Animation speed of the distortion over time.', textCtrl, 'effectorNoiseSpeed');
         addSlider('Horizontal Drift Speed', -2.0, 2.0, 0.01, effectorNoiseDriftX, function (v) { effectorNoiseDriftX = v; }, 'Horizontal drift velocity for text warp noise.', textCtrl, 'effectorNoiseDriftX');
         addSlider('Vertical Drift Speed', -2.0, 2.0, 0.01, effectorNoiseDriftY, function (v) { effectorNoiseDriftY = v; }, 'Vertical drift velocity for text warp noise.', textCtrl, 'effectorNoiseDriftY');
@@ -2163,14 +2357,13 @@ var TestFire = (function () {
         textMaskreviewLabel.textContent = 'Patterned mask applied to reduce intensity.';
         textCtrl.appendChild(textMaskreviewLabel);
         addNoiseDropdown('Mask Noise Type', effectorNoiseOptions, function (v) { effectorMaskNoiseType = v; }, 'Select the noise pattern that masks the text intensity.', textCtrl, 'effectorMaskNoiseType');
-        addSlider('Scale', 0.0, 50.0, 0.06, effectorMaskNoiseScale, function (v) { effectorMaskNoiseScale = v; }, 'Overall scale of the mask noise pattern. Higher values create smaller details.', textCtrl, 'effectorMaskNoiseScale');
-        addSlider('Frequency', 0.5, 100.0, 0.1, effectorMaskNoiseFreq, function (v) { effectorMaskNoiseFreq = v; }, 'Density of the mask noise pattern. Higher values create finer holes.', textCtrl, 'effectorMaskNoiseFreq');
+        addSlider('Frequency / Scale', 0.0, 510.0, 0.01, effectorMaskNoiseScale, function (v) { effectorMaskNoiseScale = v; }, 'Overall scale of the mask noise pattern. Higher values create smaller details.', textCtrl, 'effectorMaskNoiseScale');
+        addSlider('Contrast', 0.0, 5.0, 0.05, effectorMaskNoiseContrast, function (v) { effectorMaskNoiseContrast = v; }, 'Contrast applied to the mask noise. Higher values create crisper holes.', textCtrl, 'effectorMaskNoiseContrast');
+        addSlider('Top Intensity', -1.0, 1.0, 0.02, effectorMaskNoiseBrightnessTop, function (v) { effectorMaskNoiseBrightnessTop = v; }, 'Brightness offset at the top of the text mask. Lower values reduce intensity.', textCtrl, 'effectorMaskNoiseBrightnessTop');
+        addSlider('Bottom Intensity', -1.0, 1.0, 0.02, effectorMaskNoiseBrightnessBottom, function (v) { effectorMaskNoiseBrightnessBottom = v; }, 'Brightness offset at the bottom of the text mask. Lower values reduce intensity.', textCtrl, 'effectorMaskNoiseBrightnessBottom');
         addSlider('Animation Speed', 0.0, 10.0, 0.05, effectorMaskNoiseSpeed, function (v) { effectorMaskNoiseSpeed = v; }, 'Animation speed of the mask noise.', textCtrl, 'effectorMaskNoiseSpeed');
         addSlider('Horizontal Drift Speed', -2.0, 2.0, 0.01, effectorMaskDriftX, function (v) { effectorMaskDriftX = v; }, 'Horizontal drift velocity for mask noise.', textCtrl, 'effectorMaskDriftX');
         addSlider('Vertical Drift Speed', -2.0, 2.0, 0.01, effectorMaskDriftY, function (v) { effectorMaskDriftY = v; }, 'Vertical drift velocity for mask noise.', textCtrl, 'effectorMaskDriftY');
-        addSlider('Contrast', 0.0, 4.0, 0.05, effectorMaskNoiseContrast, function (v) { effectorMaskNoiseContrast = v; }, 'Contrast applied to the mask noise. Higher values create crisper holes.', textCtrl, 'effectorMaskNoiseContrast');
-        addSlider('Top Intensity', -1.0, 1.0, 0.02, effectorMaskNoiseBrightnessTop, function (v) { effectorMaskNoiseBrightnessTop = v; }, 'Brightness offset at the top of the text mask. Lower values reduce intensity.', textCtrl, 'effectorMaskNoiseBrightnessTop');
-        addSlider('Bottom Intensity', -1.0, 1.0, 0.02, effectorMaskNoiseBrightnessBottom, function (v) { effectorMaskNoiseBrightnessBottom = v; }, 'Brightness offset at the bottom of the text mask. Lower values reduce intensity.', textCtrl, 'effectorMaskNoiseBrightnessBottom');
         var textMaskPreviewWrap = document.createElement('div');
         textMaskPreviewWrap.className = 'fire-ui-preview';
         var textMaskPreviewLabel = document.createElement('div');
@@ -2245,6 +2438,10 @@ var TestFire = (function () {
             var baseMax = 0.25 + Math.random() * 0.55;
             var maxY = Math.min(1.0, emberOffset + baseMax);
             var range = Math.max(0.05, maxY - emberOffset);
+            var randChannel = function (base) {
+                var v = base + (Math.random() * 0.2);
+                return Math.min(1.0, Math.max(0.0, v));
+            };
             var s = {
                 x: x,
                 y: y,
@@ -2256,7 +2453,10 @@ var TestFire = (function () {
                 maxY: maxY,
                 fadeStart: emberOffset + range * 0.7,
                 alpha: 0.0,
-                fading: false
+                fading: false,
+                r: randChannel(sparkColorR),
+                g: randChannel(sparkColorG),
+                b: randChannel(sparkColorB)
             };
             sparks.push(s);
         }
@@ -2300,24 +2500,28 @@ var TestFire = (function () {
             var verts = [];
             for (var i = 0; i < sparks.length; i++) {
                 var s = sparks[i];
-                verts.push(s.px, s.py, s.alpha);
-                verts.push(s.x, s.y, s.alpha);
+                verts.push(s.px, s.py, s.alpha, s.r, s.g, s.b);
+                verts.push(s.x, s.y, s.alpha, s.r, s.g, s.b);
             }
             gl.bindBuffer(gl.ARRAY_BUFFER, sparkLineBuf);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.DYNAMIC_DRAW);
             gl.useProgram(progSpark);
             var aPos = gl.getAttribLocation(progSpark, 'aPos');
             var aAlpha = gl.getAttribLocation(progSpark, 'aAlpha');
+            var aColor = gl.getAttribLocation(progSpark, 'aColor');
             gl.enableVertexAttribArray(aPos);
             gl.enableVertexAttribArray(aAlpha);
-            gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 12, 0);
-            gl.vertexAttribPointer(aAlpha, 1, gl.FLOAT, false, 12, 8);
+            gl.enableVertexAttribArray(aColor);
+            gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 24, 0);
+            gl.vertexAttribPointer(aAlpha, 1, gl.FLOAT, false, 24, 8);
+            gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 24, 12);
             gl.enable(gl.BLEND);
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
             gl.drawArrays(gl.LINES, 0, sparks.length * 2);
             gl.disable(gl.BLEND);
             gl.disableVertexAttribArray(aPos);
             gl.disableVertexAttribArray(aAlpha);
+            gl.disableVertexAttribArray(aColor);
         }
 
         canvas.addEventListener('mousedown', function (e) { pointer.down = true; pointer.x = e.clientX; pointer.y = e.clientY; pointer.px = pointer.x; pointer.py = pointer.y; });
@@ -2353,7 +2557,6 @@ var TestFire = (function () {
                         gl.uniform1f(gl.getUniformLocation(p, 'noiseDriftX'), effectorNoiseDriftX);
                         gl.uniform1f(gl.getUniformLocation(p, 'noiseDriftY'), effectorNoiseDriftY);
                         gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseScale'), effectorMaskNoiseScale);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseFreq'), effectorMaskNoiseFreq);
                         gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseSpeed'), effectorMaskNoiseSpeed);
                         gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseType'), effectorMaskNoiseType);
                         gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseContrast'), effectorMaskNoiseContrast);
@@ -2508,7 +2711,6 @@ var TestFire = (function () {
                     gl.uniform1f(gl.getUniformLocation(p, 'noiseDriftX'), effectorNoiseDriftX);
                     gl.uniform1f(gl.getUniformLocation(p, 'noiseDriftY'), effectorNoiseDriftY);
                     gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseScale'), effectorMaskNoiseScale);
-                    gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseFreq'), effectorMaskNoiseFreq);
                     gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseSpeed'), effectorMaskNoiseSpeed);
                     gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseType'), effectorMaskNoiseType);
                     gl.uniform1f(gl.getUniformLocation(p, 'maskDriftX'), effectorMaskDriftX);
@@ -2534,6 +2736,7 @@ var TestFire = (function () {
                 gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, paletteTexture); gl.uniform1i(gl.getUniformLocation(p, 'uPalette'), 1);
                 gl.uniform2f(gl.getUniformLocation(p, 'resolution'), canvas.width, canvas.height);
                 gl.uniform1f(gl.getUniformLocation(p, 'glow'), glow);
+                gl.uniform3f(gl.getUniformLocation(p, 'glowColor'), glowColorR, glowColorG, glowColorB);
                 gl.uniform2f(gl.getUniformLocation(p, 'vortexScale'), vortexScaleX, vortexScaleY);
                 gl.uniform2f(gl.getUniformLocation(p, 'texelSize'), 1.0 / simW, 1.0 / simH);
             });

@@ -31,6 +31,10 @@
             overflow-x: visible;
             overflow-clip-margin: 200px;
         }
+        .fire-ui:has(.fire-ui-range:hover),
+        .fire-ui:has(.fire-ui-range:focus-visible) {
+            overflow: visible;
+        }
         .fire-ui-row {
             margin-bottom: 6px;
             display: grid;
@@ -90,6 +94,97 @@
         }
         .fire-ui-range {
             width: 100%;
+            height: 16px;
+            position: relative;
+            z-index: 2;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+        }
+        .fire-ui-range::-webkit-slider-runnable-track {
+            height: 6px;
+            background: linear-gradient(to right, dodgerblue var(--val, 50%), rgba(255,255,255,0.3) var(--val, 50%));
+            border-radius: 3px;
+            transition: height 120ms ease;
+        }
+        .fire-ui-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            margin-top: -4px;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            transition: width 120ms ease, height 120ms ease, margin-top 120ms ease;
+        }
+        .fire-ui-range::-moz-range-track {
+            height: 6px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+            transition: height 120ms ease;
+        }
+        .fire-ui-range::-moz-range-progress {
+            height: 6px;
+            background: dodgerblue;
+            border-radius: 3px;
+            transition: height 120ms ease;
+        }
+        .fire-ui-range::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            transition: width 120ms ease, height 120ms ease;
+        }
+        .fire-ui-range:hover,
+        .fire-ui-range:focus-visible {
+            width: 50vw;
+            height: 32px;
+            margin-top: -5px;
+            margin-bottom: -7px;
+            z-index: 3;
+        }
+        .fire-ui-range:hover::-webkit-slider-runnable-track,
+        .fire-ui-range:focus-visible::-webkit-slider-runnable-track {
+            height: 12px;
+            border-radius: 6px;
+        }
+        .fire-ui-range:hover::-webkit-slider-thumb,
+        .fire-ui-range:focus-visible::-webkit-slider-thumb {
+            width: 24px;
+            height: 24px;
+            margin-top: -6px;
+        }
+        .fire-ui-range:hover::-moz-range-track,
+        .fire-ui-range:focus-visible::-moz-range-track {
+            height: 12px;
+            border-radius: 6px;
+        }
+        .fire-ui-range:hover::-moz-range-progress,
+        .fire-ui-range:focus-visible::-moz-range-progress {
+            height: 12px;
+            border-radius: 6px;
+        }
+        .fire-ui-range:hover::-moz-range-thumb,
+        .fire-ui-range:focus-visible::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+        }
+        /* Right-side panel: expand sliders to the left */
+        .fire-ui:last-child .fire-ui-row {
+            position: relative;
+        }
+        .fire-ui:last-child .fire-ui-range:hover,
+        .fire-ui:last-child .fire-ui-range:focus-visible {
+            position: absolute;
+            right: 45px;
+            left: auto;
+            width: 50vw;
         }
         .fire-ui-value {
             font-size: 11px;
