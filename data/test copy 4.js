@@ -223,6 +223,115 @@ var TestFire = (function () {
             '    gl_FragColor = vec4(color * a, 0.0);\n' +
             '}\n';
 
+        // Composite accumulated splats onto density with effector noise/mask applied.
+        // Reads the accumulated splat buffer, applies distortion + mask, adds result to density.
+        var fs_composite_splats = common +
+            'uniform sampler2D uTarget;\n' +
+            'uniform sampler2D uSplats;\n' +
+            'uniform float time;\n' +
+            'uniform float noiseScale;\n' +
+            'uniform float noiseFreq;\n' +
+            'uniform float noiseSpeed;\n' +
+            'uniform float noiseType;\n' +
+            'uniform float noiseDriftX;\n' +
+            'uniform float noiseDriftY;\n' +
+            'uniform float maskNoiseScale;\n' +
+            'uniform float maskNoiseSpeed;\n' +
+            'uniform float maskNoiseType;\n' +
+            'uniform float maskNoiseContrast;\n' +
+            'uniform float maskNoiseBrightnessTop;\n' +
+            'uniform float maskNoiseBrightnessBottom;\n' +
+            'uniform float maskTextTop;\n' +
+            'uniform float maskTextBottom;\n' +
+            'uniform float maskDriftX;\n' +
+            'uniform float maskDriftY;\n' +
+            'uniform float maskAfterDistortion;\n' +
+            '\n' +
+            'float hash3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }\n' +
+            'vec3 hash23(vec3 p){\n' +
+            '    return fract(sin(vec3(dot(p, vec3(127.1, 311.7, 74.7)), dot(p, vec3(269.5, 183.3, 246.1)), dot(p, vec3(113.5, 271.9, 124.6)))) * 43758.5453);\n' +
+            '}\n' +
+            'float noise3(vec3 p){\n' +
+            '    vec3 i = floor(p); vec3 f = fract(p); vec3 u = f * f * (3.0 - 2.0 * f);\n' +
+            '    float a = hash3(i); float b = hash3(i + vec3(1.0, 0.0, 0.0)); float c = hash3(i + vec3(0.0, 1.0, 0.0)); float d = hash3(i + vec3(1.0, 1.0, 0.0));\n' +
+            '    float e = hash3(i + vec3(0.0, 0.0, 1.0)); float f1 = hash3(i + vec3(1.0, 0.0, 1.0)); float g = hash3(i + vec3(0.0, 1.0, 1.0)); float h = hash3(i + vec3(1.0, 1.0, 1.0));\n' +
+            '    return mix(mix(mix(a, b, u.x), mix(c, d, u.x), u.y), mix(mix(e, f1, u.x), mix(g, h, u.x), u.y), u.z);\n' +
+            '}\n' +
+            'float fbmNoise3(vec3 p){ float v = 0.0; float a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise3(p); p *= 2.0; a *= 0.5; } return v; }\n' +
+            'float ridgedNoise3(vec3 p){ float n = noise3(p); return 1.0 - abs(2.0 * n - 1.0); }\n' +
+            'float cellularNoise3(vec3 p){\n' +
+            '    vec3 i = floor(p); vec3 f = fract(p); float minDist = 10.0;\n' +
+            '    for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {\n' +
+            '        vec3 n = vec3(float(x), float(y), float(z)); vec3 hv = hash23(i + n); vec3 diff = n + hv - f; minDist = min(minDist, dot(diff, diff));\n' +
+            '    }\n' +
+            '    return 1.0 - clamp(minDist, 0.0, 1.0);\n' +
+            '}\n' +
+            'float turbulence3(vec3 p) { float v = 0.0; float a = 0.5; float fr = 1.0; for (int i = 0; i < 4; i++) { v += abs(noise3(p * fr) - 0.5) * a; a *= 0.5; fr *= 2.0; } return clamp(v * 2.0, 0.0, 1.0); }\n' +
+            'float marble3(vec3 p) { return sin(p.x * 3.0 + fbmNoise3(p) * 5.0) * 0.5 + 0.5; }\n' +
+            'float wood3(vec3 p) { float r = length(p.xy - vec2(0.5)) * 10.0; return sin(r + fbmNoise3(p) * 3.0) * 0.5 + 0.5; }\n' +
+            'float plasma3(vec3 p) { return sin(p.x * 10.0) * 0.2 + sin(p.y * 10.0) * 0.2 + sin(p.z * 10.0) * 0.2 + sin((p.x + p.y) * 7.0) * 0.2 + sin(length(p) * 10.0) * 0.2 + 0.5; }\n' +
+            'float hexagons3(vec3 p) { vec2 h = vec2(1.0, 1.732); vec2 av = mod(p.xy + p.z * 0.5, h) - h * 0.5; vec2 bv = mod(p.xy + p.z * 0.5 - h * 0.5, h) - h * 0.5; return smoothstep(0.0, 0.1, min(dot(av, av), dot(bv, bv))); }\n' +
+            'float dots3(vec3 p) { vec2 uv = p.xy + p.z * 0.3; vec2 fv = fract(uv); return 1.0 - smoothstep(0.0, 0.35, length(fv - 0.5)); }\n' +
+            'float crosshatch3(vec3 p) { vec2 uv = p.xy + p.z * 0.3; float l1 = smoothstep(0.0, 0.1, abs(fract(uv.x + uv.y) - 0.5)); float l2 = smoothstep(0.0, 0.1, abs(fract(uv.x - uv.y) - 0.5)); return l1 * l2; }\n' +
+            'float caustics3(vec3 p) { vec2 uv = p.xy + vec2(sin(p.z), cos(p.z)) * 0.5; float cv = 0.0; for (int i = 0; i < 3; i++) { float fv = float(i + 1) * 2.0; cv += sin(uv.x * fv + sin(uv.y * fv * 0.5) + p.z) * sin(uv.y * fv + sin(uv.x * fv * 0.5) + p.z); } return cv * 0.16 + 0.5; }\n' +
+            'float voronoi3(vec3 p) {\n' +
+            '    vec3 i = floor(p); vec3 f = fract(p); float md = 10.0; float md2 = 10.0;\n' +
+            '    for (int z = -1; z <= 1; z++) for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {\n' +
+            '        vec3 n = vec3(float(x), float(y), float(z)); vec3 hv = hash23(i + n); float dd = length(n + hv - f); if (dd < md) { md2 = md; md = dd; } else if (dd < md2) { md2 = dd; }\n' +
+            '    }\n' +
+            '    return clamp(md2 - md, 0.0, 1.0);\n' +
+            '}\n' +
+            'float selectNoise3(vec3 p, float t){\n' +
+            '    if (t < 0.5) return noise3(p);\n' +
+            '    if (t < 1.5) return 0.5 + 0.5 * sin((p.x + p.y + p.z) * 3.14159);\n' +
+            '    if (t < 2.5) return abs(fract(p.x + abs(fract(p.y) - 0.5) * 2.0 + abs(fract(p.z) - 0.5) * 2.0) - 0.5) * 2.0;\n' +
+            '    if (t < 3.5) return abs(fract(p.x + p.z) - 0.5) * 2.0;\n' +
+            '    if (t < 4.5) { vec3 cv = floor(p); return mod(cv.x + cv.y + cv.z, 2.0); }\n' +
+            '    if (t < 5.5) { vec3 cv = p - vec3(0.5); float r = length(cv.xy); return sin(r * 12.56636 + p.z * 6.28318) * 0.5 + 0.5; }\n' +
+            '    if (t < 6.5) { vec3 cv = p - vec3(0.5); float ag = atan(cv.y, cv.x); float r = length(cv.xy); return sin(ag * 4.0 + r * 10.0 + p.z * 5.0) * 0.5 + 0.5; }\n' +
+            '    if (t < 7.5) return fbmNoise3(p);\n' +
+            '    if (t < 8.5) return ridgedNoise3(p);\n' +
+            '    if (t < 9.5) return cellularNoise3(p);\n' +
+            '    if (t < 10.5) return turbulence3(p);\n' +
+            '    if (t < 11.5) return marble3(p);\n' +
+            '    if (t < 12.5) return wood3(p);\n' +
+            '    if (t < 13.5) return plasma3(p);\n' +
+            '    if (t < 14.5) return hexagons3(p);\n' +
+            '    if (t < 15.5) return dots3(p);\n' +
+            '    if (t < 16.5) return crosshatch3(p);\n' +
+            '    if (t < 17.5) return caustics3(p);\n' +
+            '    return voronoi3(p);\n' +
+            '}\n' +
+            '\n' +
+            'void main(){\n' +
+            '    vec2 uv = v_uv;\n' +
+            '    vec4 cur = texture2D(uTarget, uv);\n' +
+            '    vec3 accum = texture2D(uSplats, uv).rgb;\n' +
+            '    // Skip pixels with no accumulated splat contribution\n' +
+            '    float splatIntensity = max(accum.r, max(accum.g, accum.b));\n' +
+            '    if (splatIntensity < 0.001) { gl_FragColor = cur; return; }\n' +
+            '    // Compute noise distortion at this pixel\n' +
+            '    vec2 pn = (uv + time * vec2(noiseDriftX, noiseDriftY)) * noiseFreq;\n' +
+            '    float tn = time * noiseSpeed;\n' +
+            '    float n = selectNoise3(vec3(pn, tn), noiseType);\n' +
+            '    vec2 warp = vec2(n - 0.5) * noiseScale;\n' +
+            '    vec2 warpedUV = uv + warp;\n' +
+            '    // Sample the accumulated splats at the warped position (distortion!)\n' +
+            '    vec3 warpedAccum = texture2D(uSplats, warpedUV).rgb;\n' +
+            '    // Apply mask noise to intensity\n' +
+            '    float scale = max(maskNoiseScale, 0.0001);\n' +
+            '    vec2 pm = mix(uv, warpedUV, maskAfterDistortion);\n' +
+            '    pm = (pm - vec2(0.5)) * scale + vec2(0.5);\n' +
+            '    pm = pm + time * vec2(maskDriftX, maskDriftY);\n' +
+            '    float tz = time * maskNoiseSpeed;\n' +
+            '    float nm = selectNoise3(vec3(pm, tz), maskNoiseType);\n' +
+            '    float textY = clamp((uv.y - maskTextBottom) / max(1e-4, (maskTextTop - maskTextBottom)), 0.0, 1.0);\n' +
+            '    float brightness = mix(maskNoiseBrightnessBottom, maskNoiseBrightnessTop, textY);\n' +
+            '    float nmAdj = clamp((nm - 0.5) * maskNoiseContrast + 0.5 + brightness, 0.0, 1.0);\n' +
+            '    cur.rgb += warpedAccum * nmAdj;\n' +
+            '    gl_FragColor = cur;\n' +
+            '}\n';
+
         // Add density at a point with a gaussian falloff (read-modify-write).
         var fs_splat = common +
             'uniform sampler2D uTarget;\n' +
@@ -845,8 +954,10 @@ var TestFire = (function () {
         var progVort = createProgram(fs_vort);
         var progBuoy = createProgram(fs_buoy);
         var progSplat = createProgram(fs_splat);
+        var progSplatAdd = createProgram(fs_splat_add);
         var progSplatVel = createProgram(fs_splat_vel);
         var progSplatTextFX = createProgram(fs_splat_textfx);
+        var progCompositeSplats = createProgram(fs_composite_splats);
         var progText = createProgram(fs_text);
         var progDisp = createProgram(fs_display);
         var progPreviewNoise = createProgram(fs_preview_noise);
@@ -925,6 +1036,7 @@ var TestFire = (function () {
         var simScale = 0.3;
         var simW = 0, simH = 0;
         var velocity, density, pressure, divergenceFBO;
+        var splatAccumFBO; // Temp buffer for batched ember splat accumulation
 
         // Clear a framebuffer to a constant value.
         function clearFBO(fb, r, g, b, a) {
@@ -941,6 +1053,7 @@ var TestFire = (function () {
             density = createDouble(simW, simH);
             pressure = createDouble(simW, simH);
             divergenceFBO = createFBO(simW, simH);
+            splatAccumFBO = createFBO(simW, simH);
             clearFBO(velocity.read, 0.5, 0.5, 0.0, 1.0);
             clearFBO(velocity.write, 0.5, 0.5, 0.0, 1.0);
             clearFBO(density.read, 0.0, 0.0, 0.0, 0.0);
@@ -1158,7 +1271,6 @@ var TestFire = (function () {
                     emberOffset: 0,
                     emberUniformity: 0.9,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 1.2,
                     glowColorR: 1,
@@ -1216,7 +1328,6 @@ var TestFire = (function () {
                     emberOffset: 0,
                     emberUniformity: 0.97,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 1.2,
                     glowColorR: 1,
@@ -1274,7 +1385,6 @@ var TestFire = (function () {
                     emberOffset: 0.075,
                     emberUniformity: 1,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 1.24,
                     glowColorR: 0.94,
@@ -1332,7 +1442,6 @@ var TestFire = (function () {
                     emberOffset: 0.075,
                     emberUniformity: 1,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 0,
                     glowColorR: 0.94,
@@ -1390,7 +1499,6 @@ var TestFire = (function () {
                     emberOffset: 0.075,
                     emberUniformity: 1,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 0.44,
                     glowColorR: 1,
@@ -1448,7 +1556,6 @@ var TestFire = (function () {
                     emberOffset: 0.075,
                     emberUniformity: 1,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 0.8,
                     glowColorR: 1,
@@ -1506,7 +1613,6 @@ var TestFire = (function () {
                     emberOffset: 0.035,
                     emberUniformity: 1,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 1.2,
                     palette: 'Fire',
@@ -1561,7 +1667,6 @@ var TestFire = (function () {
                     emberOffset: 0.035,
                     emberUniformity: 1,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 1.2,
                     palette: 'Fire Clipped',
@@ -1616,7 +1721,6 @@ var TestFire = (function () {
                     emberOffset: 0.035,
                     emberUniformity: 0.81,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 1.2,
                     glowColorR: 1,
@@ -1674,7 +1778,6 @@ var TestFire = (function () {
                     emberOffset: 0.005,
                     emberUniformity: 0.95,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.05,
                     glow: 0.8,
                     glowColorR: 1,
@@ -1732,7 +1835,6 @@ var TestFire = (function () {
                     emberOffset: 0.115,
                     emberUniformity: 0,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 5,
                     glowColorR: 0,
@@ -1790,7 +1892,6 @@ var TestFire = (function () {
                     emberOffset: 0.115,
                     emberUniformity: 0,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.28,
                     glow: 5,
                     glowColorR: 0,
@@ -1849,7 +1950,6 @@ var TestFire = (function () {
                     emberOffset: 0.115,
                     emberUniformity: 0,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0,
                     glow: 5,
                     glowColorR: 0,
@@ -1907,7 +2007,6 @@ var TestFire = (function () {
                     emberOffset: 0.015,
                     emberUniformity: 0.5,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.8,
                     glow: 1.61,
                     glowColorR: 0.88,
@@ -1965,7 +2064,6 @@ var TestFire = (function () {
                     emberOffset: 0,
                     emberUniformity: 0,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.1,
                     glow: 1.5,
                     glowColorR: 0.6,
@@ -2023,7 +2121,6 @@ var TestFire = (function () {
                     emberOffset: 0.135,
                     emberUniformity: 0,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.4,
                     glow: 1.5,
                     glowColorR: 0.8,
@@ -2081,7 +2178,6 @@ var TestFire = (function () {
                     emberOffset: 0,
                     emberUniformity: 0,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0,
                     glow: 1.5,
                     glowColorR: 1,
@@ -2139,7 +2235,6 @@ var TestFire = (function () {
                     emberOffset: 0,
                     emberUniformity: 0.9,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0,
                     glow: 0.92,
                     glowColorR: 1,
@@ -2197,7 +2292,6 @@ var TestFire = (function () {
                     emberOffset: 0.18,
                     emberUniformity: 1,
                     embersUseEffectors: true,
-                    useRenderRegions: true,
                     sparkChance: 0.4,
                     glow: 1.69,
                     glowColorR: 0,
@@ -3193,7 +3287,6 @@ var TestFire = (function () {
         addCheckbox('Embers Use Effectors', embersUseEffectors, function (v) { embersUseEffectors = v; }, 'Apply text noise distortion and mask effects to ember splats.', ctrl, 'embersUseEffectors');
 
         addHeading('Misc.', ctrl);
-        addCheckbox('Use Render Regions', useRenderRegions, function (v) { useRenderRegions = v; }, 'Limit GPU rendering to tight regions around each ember splat for better performance.', ctrl, 'useRenderRegions');
         addSlider('Spark Chance', 0.0, 1.0, 0.01, sparkChance, function (v) { sparkChance = v; }, 'Chance of a spark spawning each frame. Higher values produce more frequent sparks.', ctrl, 'sparkChance');
         addSlider('Glow', 0.0, 5.0, 0.01, glow, function (v) { glow = v; }, 'Strength of the soft glow around bright areas. Higher values give a hotter, blooming look.', ctrl, 'glow');
         addColorPicker('Glow Color', 'glowColorR', 'glowColorG', 'glowColorB', glowColorR, glowColorG, glowColorB,
@@ -3420,64 +3513,101 @@ var TestFire = (function () {
 
         var currentTime = 0; // Track time for splat shader
 
-        var useRenderRegions = false; // Toggle scissor optimisation for splats
+        var useScissor = false; // Toggle scissor optimisation for splats
 
         // Apply queued splats to density and velocity buffers.
+        // Ember splats with effectors are batched: accumulated plainly into splatAccumFBO,
+        // then composited onto density in a single pass with effects applied once.
         function applySplats() {
+            var effectorSplats = [];
+            var normalSplats = [];
+
+            // Partition splats: effector embers vs everything else
             while (splats.length) {
                 var s = splats.shift();
-                var useTextFX = s.isEmber && embersUseEffectors;
-                var densityProg = useTextFX ? progSplatTextFX : progSplat;
+                if (s.isEmber && embersUseEffectors) {
+                    effectorSplats.push(s);
+                } else {
+                    normalSplats.push(s);
+                }
+            }
 
-                // Compute scissor box: gaussian is negligible beyond ~3.5 radii.
-                // When using effectors, add padding for noise distortion warp.
-                var splatRadii = 3.5;
-                var pad = useTextFX ? effectorNoiseScale : 0.5;
-                var extent = s.r * splatRadii + pad;
-                var sx = Math.floor((s.x - extent) * simW);
-                var sy = Math.floor((s.y - extent) * simH);
-                var sw = Math.ceil(extent * 2 * simW) + 1;
-                var sh = Math.ceil(extent * 2 * simH) + 1;
-                // Clamp to FBO bounds
-                if (sx < 0) { sw += sx; sx = 0; }
-                if (sy < 0) { sh += sy; sy = 0; }
-                if (sx + sw > simW) sw = simW - sx;
-                if (sy + sh > simH) sh = simH - sy;
-                if (sw <= 0 || sh <= 0) continue; // off-screen, skip entirely
+            // --- Phase 1: Accumulate effector ember splats into temp buffer ---
+            if (effectorSplats.length > 0) {
+                // Clear accumulation buffer
+                clearFBO(splatAccumFBO, 0.0, 0.0, 0.0, 0.0);
 
-                if (useRenderRegions) {
-                    gl.enable(gl.SCISSOR_TEST);
-                    gl.scissor(sx, sy, sw, sh);
+                // Render all ember gaussians additively (no effects, very fast)
+                gl.enable(gl.BLEND);
+                gl.blendFunc(gl.ONE, gl.ONE);
+
+                for (var i = 0; i < effectorSplats.length; i++) {
+                    var s = effectorSplats[i];
+                    renderTo(splatAccumFBO, progSplatAdd, function (p) {
+                        gl.uniform2f(gl.getUniformLocation(p, 'point'), s.x, s.y);
+                        gl.uniform1f(gl.getUniformLocation(p, 'radius'), s.r);
+                        gl.uniform3f(gl.getUniformLocation(p, 'color'), s.d, s.d * 0.4, 0.0);
+                    });
                 }
 
-                renderTo(density.write, densityProg, function (p) {
+                gl.disable(gl.BLEND);
+
+                // Single composite pass: read accumulated splats + apply effects + add to density
+                renderTo(density.write, progCompositeSplats, function (p) {
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.bindTexture(gl.TEXTURE_2D, density.read.texture);
+                    gl.uniform1i(gl.getUniformLocation(p, 'uTarget'), 0);
+                    gl.activeTexture(gl.TEXTURE1);
+                    gl.bindTexture(gl.TEXTURE_2D, splatAccumFBO.texture);
+                    gl.uniform1i(gl.getUniformLocation(p, 'uSplats'), 1);
+                    gl.uniform1f(gl.getUniformLocation(p, 'time'), currentTime);
+                    gl.uniform1f(gl.getUniformLocation(p, 'noiseScale'), effectorNoiseScale);
+                    gl.uniform1f(gl.getUniformLocation(p, 'noiseFreq'), effectorNoiseFreq);
+                    gl.uniform1f(gl.getUniformLocation(p, 'noiseSpeed'), effectorNoiseSpeed);
+                    gl.uniform1f(gl.getUniformLocation(p, 'noiseType'), effectorNoiseType);
+                    gl.uniform1f(gl.getUniformLocation(p, 'noiseDriftX'), effectorNoiseDriftX);
+                    gl.uniform1f(gl.getUniformLocation(p, 'noiseDriftY'), effectorNoiseDriftY);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseScale'), effectorMaskNoiseScale);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseSpeed'), effectorMaskNoiseSpeed);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseType'), effectorMaskNoiseType);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseContrast'), effectorMaskNoiseContrast);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseBrightnessTop'), effectorMaskNoiseBrightnessTop);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseBrightnessBottom'), effectorMaskNoiseBrightnessBottom);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskTextTop'), effectorMaskTopUv);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskTextBottom'), effectorMaskBottomUv);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskDriftX'), effectorMaskDriftX);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskDriftY'), effectorMaskDriftY);
+                    gl.uniform1f(gl.getUniformLocation(p, 'maskAfterDistortion'), maskAfterDistortion ? 1.0 : 0.0);
+                });
+                density.swap();
+
+                // Velocity splats for effector embers (still per-splat, but vel shader is cheap)
+                for (var i = 0; i < effectorSplats.length; i++) {
+                    var s = effectorSplats[i];
+                    renderTo(velocity.write, progSplatVel, function (p) {
+                        gl.activeTexture(gl.TEXTURE0);
+                        gl.bindTexture(gl.TEXTURE_2D, velocity.read.texture);
+                        gl.uniform1i(gl.getUniformLocation(p, 'uTarget'), 0);
+                        gl.uniform2f(gl.getUniformLocation(p, 'point'), s.x, s.y);
+                        gl.uniform1f(gl.getUniformLocation(p, 'radius'), s.r);
+                        gl.uniform2f(gl.getUniformLocation(p, 'force'), s.dx, s.dy);
+                        gl.uniform1f(gl.getUniformLocation(p, 'velRange'), velRange);
+                    });
+                    velocity.swap();
+                }
+            }
+
+            // --- Phase 2: Non-effector splats (original per-splat path) ---
+            for (var i = 0; i < normalSplats.length; i++) {
+                var s = normalSplats[i];
+
+                renderTo(density.write, progSplat, function (p) {
                     gl.activeTexture(gl.TEXTURE0);
                     gl.bindTexture(gl.TEXTURE_2D, density.read.texture);
                     gl.uniform1i(gl.getUniformLocation(p, 'uTarget'), 0);
                     gl.uniform2f(gl.getUniformLocation(p, 'point'), s.x, s.y);
                     gl.uniform1f(gl.getUniformLocation(p, 'radius'), s.r);
                     gl.uniform3f(gl.getUniformLocation(p, 'color'), s.d, s.d * 0.4, 0.0);
-
-                    if (useTextFX) {
-                        gl.uniform1f(gl.getUniformLocation(p, 'time'), currentTime);
-                        gl.uniform1f(gl.getUniformLocation(p, 'noiseScale'), effectorNoiseScale);
-                        gl.uniform1f(gl.getUniformLocation(p, 'noiseFreq'), effectorNoiseFreq);
-                        gl.uniform1f(gl.getUniformLocation(p, 'noiseSpeed'), effectorNoiseSpeed);
-                        gl.uniform1f(gl.getUniformLocation(p, 'noiseType'), effectorNoiseType);
-                        gl.uniform1f(gl.getUniformLocation(p, 'noiseDriftX'), effectorNoiseDriftX);
-                        gl.uniform1f(gl.getUniformLocation(p, 'noiseDriftY'), effectorNoiseDriftY);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseScale'), effectorMaskNoiseScale);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseSpeed'), effectorMaskNoiseSpeed);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseType'), effectorMaskNoiseType);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseContrast'), effectorMaskNoiseContrast);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseBrightnessTop'), effectorMaskNoiseBrightnessTop);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskNoiseBrightnessBottom'), effectorMaskNoiseBrightnessBottom);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskTextTop'), effectorMaskTopUv);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskTextBottom'), effectorMaskBottomUv);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskDriftX'), effectorMaskDriftX);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskDriftY'), effectorMaskDriftY);
-                        gl.uniform1f(gl.getUniformLocation(p, 'maskAfterDistortion'), maskAfterDistortion ? 1.0 : 0.0);
-                    }
                 });
                 density.swap();
 
@@ -3491,10 +3621,6 @@ var TestFire = (function () {
                     gl.uniform1f(gl.getUniformLocation(p, 'velRange'), velRange);
                 });
                 velocity.swap();
-
-                if (useRenderRegions) {
-                    gl.disable(gl.SCISSOR_TEST);
-                }
             }
         }
 
