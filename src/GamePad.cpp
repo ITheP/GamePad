@@ -993,7 +993,27 @@ void setupController()
   // bleGamepadConfig.setIncludeRzAxis(false);
 
   bleGamepadConfig.setAutoReport(false);
+
+  //   Display.fillRect(0, 0, 100, 100, C_BLACK);
+  // RRE.printStr(20, 20, "A");
+  // Display.display();
+  // delay(250);
+
+#ifdef DEBUG_MARKS
+  Debug::Mark(2, __LINE__, __FILE__, __func__);
+#endif
+
   bleGamepad.begin(&bleGamepadConfig); // Note - changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
+
+#ifdef DEBUG_MARKS
+  Debug::Mark(3, __LINE__, __FILE__, __func__);
+#endif
+
+  // Display.fillRect(0, 0, 100, 100, C_BLACK);
+  // RRE.printStr(20, 20, "B");
+  // Display.display();
+  // delay(250);
+
 }
 
 void SetupLittleFS()

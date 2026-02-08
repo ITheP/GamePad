@@ -3193,7 +3193,7 @@ var TestFire = (function () {
         addCheckbox('Embers Use Effectors', embersUseEffectors, function (v) { embersUseEffectors = v; }, 'Apply text noise distortion and mask effects to ember splats.', ctrl, 'embersUseEffectors');
 
         addHeading('Misc.', ctrl);
-        addCheckbox('Use Render Regions', useRenderRegions, function (v) { useRenderRegions = v; }, 'Limit GPU rendering to tight regions around each ember splat for better performance.', ctrl, 'useRenderRegions');
+        addCheckbox('Use Render Regions', useRenderRegions, function (v) { useRenderRegions = v; }, 'When drawing embers, clip region drawn to only around embers themselves for better performance. Can introduce artifacts. Recommend leaving this on.', ctrl, 'useRenderRegions');
         addSlider('Spark Chance', 0.0, 1.0, 0.01, sparkChance, function (v) { sparkChance = v; }, 'Chance of a spark spawning each frame. Higher values produce more frequent sparks.', ctrl, 'sparkChance');
         addSlider('Glow', 0.0, 5.0, 0.01, glow, function (v) { glow = v; }, 'Strength of the soft glow around bright areas. Higher values give a hotter, blooming look.', ctrl, 'glow');
         addColorPicker('Glow Color', 'glowColorR', 'glowColorG', 'glowColorB', glowColorR, glowColorG, glowColorB,
