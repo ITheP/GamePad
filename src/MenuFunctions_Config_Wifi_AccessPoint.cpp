@@ -206,13 +206,13 @@ void MenuFunctions::Config_Update_WiFi_AccessPoint()
 
     int listMovement = 0;
 
-    if (PRESSED == Menus::SelectState())
+    if (DIGITAL_PRESSED == Menus::SelectState())
     {
         showScrollIcons = true;
 
-        if (PRESSED == Menus::UpState() && Menus::UpJustChanged())
+        if (DIGITAL_PRESSED == Menus::UpState() && Menus::UpJustChanged())
             listMovement = 1;
-        else if (PRESSED == Menus::DownState() && Menus::DownJustChanged())
+        else if (DIGITAL_PRESSED == Menus::DownState() && Menus::DownJustChanged())
             listMovement = -1;
     }
     else

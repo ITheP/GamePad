@@ -79,7 +79,7 @@ void RenderInput_Icon(Input *input)
 // #endif
 
     // Only draw if required - otherwise we might just be blanking previous icon
-    if (input->TrueIcon != NONE)
+    if (input->TrueIcon != UNDEFINED)
       RREIcon.drawChar(input->XPos, input->YPos, input->TrueIcon);
   }
 }
@@ -101,7 +101,7 @@ void RenderInput_DoubleIcon(Input *input)
     Serial.println("Icon.Button up [" + String(input->BluetoothInput) + "]: " + String(input->Label));
 #endif
 
-    if (input->FalseIcon != NONE)
+    if (input->FalseIcon != UNDEFINED)
     {
       RREIcon.drawChar(input->XPos, input->YPos, input->FalseIcon);
       RREIcon.drawChar(input->XPos + 16, input->YPos, input->FalseIcon + 1);
@@ -113,7 +113,7 @@ void RenderInput_DoubleIcon(Input *input)
     Serial.println("Icon.Button down [" + String(input->BluetoothInput) + "]: " + String(input->Label));
 #endif
 
-    if (input->TrueIcon != NONE)
+    if (input->TrueIcon != UNDEFINED)
       RREIcon.drawChar(input->XPos, input->YPos, input->TrueIcon);
 
     RREIcon.drawChar(input->XPos + 16, input->YPos, input->TrueIcon + 1);

@@ -53,11 +53,11 @@ void MenuFunctions::Config_Update_Profile()
   int showScrollIcons = false;
 
   // if (SecondRollover)
-  if (PRESSED == Menus::SelectState())
+  if (DIGITAL_PRESSED == Menus::SelectState())
   {
-    if (PRESSED == Menus::UpState() && Menus::UpJustChanged())
+    if (DIGITAL_PRESSED == Menus::UpState() && Menus::UpJustChanged())
       SelectedProfileId++;
-    else if (PRESSED == Menus::DownState() && Menus::DownJustChanged())
+    else if (DIGITAL_PRESSED == Menus::DownState() && Menus::DownJustChanged())
       SelectedProfileId--;
 
     if (SelectedProfileId < 0)
@@ -76,9 +76,9 @@ void MenuFunctions::Config_Update_Profile()
 
     showScrollIcons = true;
   }
-  else if (PRESSED == Menus::BackState())
+  else if (DIGITAL_PRESSED == Menus::BackState())
   {
-    if (PRESSED == Menus::UpState())
+    if (DIGITAL_PRESSED == Menus::UpState())
     {
       // Copy operations
 
@@ -119,7 +119,7 @@ void MenuFunctions::Config_Update_Profile()
         }
       }
     }
-    else if (PRESSED == Menus::DownState())
+    else if (DIGITAL_PRESSED == Menus::DownState())
     {
       // Paste initiation
 

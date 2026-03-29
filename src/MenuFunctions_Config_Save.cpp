@@ -46,7 +46,7 @@ void MenuFunctions::Config_Update_SaveSettings()
   int showScrollIcons = false;
 
   // if (SecondRollover)
-  if (PRESSED == Menus::SelectState() && currentSaveState != SAVE_COMPLETED)
+  if (DIGITAL_PRESSED == Menus::SelectState() && currentSaveState != SAVE_COMPLETED)
   {
     if (Menus::SelectJustChanged())
     {

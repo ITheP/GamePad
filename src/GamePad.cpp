@@ -174,17 +174,26 @@ void setupDisplay()
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   // if (!Display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS, &Wire, OLED_RESET)) {
-  if (!Display.begin(SCREEN_ADDRESS, true))
+  // if (!Display.begin(SCREEN_ADDRESS, true))
+  if (!Display.init())
   {
     // Alternative handling - Spit out an error over serial connection if problem with display
     // Serial.begin(SERIAL_SPEED);
     // delay(200);
+
+    // Things to check...
+    // Wrong i2c address
+    // Pins are all correct
+    // Bus / Wire issues
+    // Physical electronics all in place
+
     Serial.println("⛔ Critical failure, display failed to start. Halting!");
     Debug::WarningFlashes(LittleFSFailedToMount);
   }
 
   // Display.invertDisplay(true);
 
+  Display.setAutoDisplay(false); // We will call display() manually after each frame is rendered - allows us to control exactly when the screen updates and avoid unnecessary updates
   Display.clearDisplay();
   Display.display();
 }
@@ -219,7 +228,7 @@ void RenderGlint(int frame)
   {
     if (x >= 0 && x < LOGO_WIDTH)
     {
-      if (Display.getPixel(x, y))
+      if (Display.readPixel(x, y))  // LovyanGFX - use .getPixel with Adafruit
         gleamPixels[gleamCount++] = {(uint8_t)x, (uint8_t)y};
 
       if (gleamCount >= MAX_GLEAM_PIXELS)
@@ -536,7 +545,7 @@ void setupHatInputs()
     {
       Serial.print(" ");
 
-      hatInput->IndividualStates[j] = NOT_PRESSED;
+      hatInput->IndividualStates[j] = DIGITAL_NOT_PRESSED;
       hatInput->IndividualStateChangedWhen[j] = 0;
 
       uint8_t pin = hatInput->Pins[j];
@@ -1013,7 +1022,6 @@ void setupController()
   // RRE.printStr(20, 20, "B");
   // Display.display();
   // delay(250);
-
 }
 
 void SetupLittleFS()
@@ -1057,7 +1065,7 @@ void setup()
 
   delay(10); // Give pins on start up time to settle if theres any power up glitching
 
-  Wire.begin(I2C_SDA, I2C_SCL);
+  //Wire.begin(I2C_SDA, I2C_SCL);
 
   // This checked on and handled better when we get to setupUSB()
   // but we can't do pretty visuals etc. until other parts are configured
@@ -1181,7 +1189,7 @@ void setup()
 #ifdef STRAIGHT_TO_CONFIG_MENU
   if (true)
 #else
-  if (digitalRead(BootPin_StartInConfiguration) == PRESSED)
+  if (digitalRead(BootPin_StartInConfiguration) == DIGITAL_PRESSED)
 #endif
   {
     MenuFunctions::Config_Setup();
@@ -1196,7 +1204,7 @@ void setup()
 #endif
 
     // We stay on this screen showing basic help until button released
-    while (digitalRead(BootPin_StartInConfiguration) == PRESSED)
+    while (digitalRead(BootPin_StartInConfiguration) == DIGITAL_PRESSED)
       ;
 
     Display.clearDisplay();
@@ -1576,19 +1584,19 @@ void MainLoop()
       // so we can't just send a Bluetooth press, wait a bit to see what release happens - might not be wanted
 
       // if has linked input then
-      if (input->LongPressChildInput != NONE)
+      if (input->LongPressChildInput != UNDEFINED)
       {
         unsigned long timeDifference = timeCheck - input->ValueState.StateChangedWhen;
         // Serial.println("NAME - " + String(input->Label));
         // Serial.println("State - " + String(state) + " for " + String(input->ValueState.Value));
 
-        if (state == PRESSED)
+        if (state == DIGITAL_PRESSED)
         {
-          if (input->ValueState.Value != LONG_PRESS_MONITORING)
+          if (input->ValueState.Value != DIGITAL_LONG_PRESS_MONITORING)
           {
             // Serial.println("LONG PRESS - MONITORING INITIATED");
 
-            input->ValueState.Value = LONG_PRESS_MONITORING;
+            input->ValueState.Value = DIGITAL_LONG_PRESS_MONITORING;
             input->ValueState.StateChangedWhen = timeCheck;
             someControlStateJustChanged = true;
           }
@@ -1610,9 +1618,9 @@ void MainLoop()
             RenderInput_BlankingArea(input, percentage);
           }
         }
-        else // if (state == NOT_PRESSED)
+        else // if (state == DIGITAL_NOT_PRESSED)
         {
-          if (input->ValueState.Value == LONG_PRESS_MONITORING)
+          if (input->ValueState.Value == DIGITAL_LONG_PRESS_MONITORING)
           {
             if (timeDifference >= input->LongPressTiming)
             {
@@ -1620,7 +1628,7 @@ void MainLoop()
 
               // Serial.println("LONG PRESS - ESCALATING TO CHILD");
               //  first, de-escalate the long press monitoring
-              input->ValueState.Value = NOT_PRESSED;
+              input->ValueState.Value = DIGITAL_NOT_PRESSED;
 
               // pass along child input to have its release processed
               input = input->LongPressChildInput;
@@ -1630,8 +1638,8 @@ void MainLoop()
             else
             {
               // This was a short press, so we need to trigger the primary input
-              input->ValueState.Value = NOT_PRESSED; // Will force a press when we process the input below
-              state = PRESSED;                       // Force a pretend pressing for this cycle for this input
+              input->ValueState.Value = DIGITAL_NOT_PRESSED; // Will force a press when we process the input below
+              state = DIGITAL_PRESSED;                       // Force a pretend pressing for this cycle for this input
               // Next loop will pick up it is not pressed any more and do the release
               // Serial.println("LONG PRESS - SHORT PRESSED");
 
@@ -1644,13 +1652,13 @@ void MainLoop()
           // like UI components and LED's to show long enough the user can see them
           if (input->AutoHold > timeCheck)
           {
-            state = PRESSED;
+            state = DIGITAL_PRESSED;
           }
         }
       }
 
       // Process when state has changed
-      if (state != input->ValueState.Value && input->ValueState.Value != LONG_PRESS_MONITORING)
+      if (state != input->ValueState.Value && input->ValueState.Value != DIGITAL_LONG_PRESS_MONITORING)
       {
         // Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
         input->ValueState.PreviousValue = !state;
@@ -1692,12 +1700,12 @@ void MainLoop()
 
         ControllerReport customOperationControllerReport = ReportToController;
 
-        if (state == PRESSED)
+        if (state == DIGITAL_PRESSED)
         {
           // PRESSED!
 
           // Any extra special custom to specific controller code
-          if (input->CustomOperationPressed != NONE)
+          if (input->CustomOperationPressed != UNDEFINED)
             customOperationControllerReport = input->CustomOperationPressed();
 
           if (customOperationControllerReport == ReportToController)
@@ -1721,7 +1729,7 @@ void MainLoop()
           // RELEASED!!
 
           // Any extra special custom to specific controller code
-          if (input->CustomOperationReleased != NONE)
+          if (input->CustomOperationReleased != UNDEFINED)
             customOperationControllerReport = input->CustomOperationReleased();
 
           if (customOperationControllerReport == ReportToController)
@@ -1782,7 +1790,7 @@ void MainLoop()
         input->RenderOperation(input);
 
         // Any extra special custom to specific controller code
-        if (input->CustomOperationPressed != NONE)
+        if (input->CustomOperationPressed != UNDEFINED)
           input->CustomOperationPressed();
 
         sendReport = true;
@@ -1823,7 +1831,7 @@ void MainLoop()
       {
         // Might not be using all pins
         uint8_t pin = hatInput->Pins[j];
-        if (pin != NONE)
+        if (pin != UNDEFINED)
         {
           int individualState = digitalRead(pin);
           if (individualState != hatInput->IndividualStates[j])
@@ -1843,19 +1851,19 @@ void MainLoop()
     subState = 1;                   // First possible value with something there (1 = Up. 0 = neutral/nothing position)
 
     // Special edge case
-    if (hatInput->IndividualStates[0] == PRESSED && hatInput->IndividualStates[3] == PRESSED)
+    if (hatInput->IndividualStates[0] == DIGITAL_PRESSED && hatInput->IndividualStates[3] == DIGITAL_PRESSED)
       hatCurrentState = 8;
     else
     {
       // Step 3, check values accounting for 2 press diagonals. We go backwards so other states are checked before the 0 button, which lets us check the 3+0 button combination extra buffer thingy
       for (int j = 0; j < 4; j++)
       {
-        if (hatInput->IndividualStates[j] == PRESSED) // Pressed
+        if (hatInput->IndividualStates[j] == DIGITAL_PRESSED) // Pressed
         {
           hatCurrentState = subState;
 
           // Check the diagonal by checking next pin (i.e. both pins pressed)
-          if (hatInput->IndividualStates[j + 1] == PRESSED)
+          if (hatInput->IndividualStates[j + 1] == DIGITAL_PRESSED)
             hatCurrentState++; // also pressed, so make diagonal
 
           break; // Bail from loop - no point in checking for further pressed keys, should be physically impossible on a hat (or be irrelevant)
@@ -1880,7 +1888,7 @@ void MainLoop()
       hatInput->RenderOperation(hatInput);
 
       // Any general hat level extra operations
-      if (hatInput->CustomOperation != NONE)
+      if (hatInput->CustomOperation != UNDEFINED)
         hatInput->CustomOperation(hatInput);
 
       ControllerReport extraOperationControllerReport = ReportToController; // DontReportToController;
@@ -1889,7 +1897,7 @@ void MainLoop()
                                                                             // we can use hat activities for onboard operations (such as menu navigation)
                                                                             // without it being reported back via bluetooth
 
-      if (hatInput->ExtraOperation[hatCurrentState] != NONE)
+      if (hatInput->ExtraOperation[hatCurrentState] != UNDEFINED)
         extraOperationControllerReport = hatInput->ExtraOperation[hatCurrentState]();
 
       if (extraOperationControllerReport == ReportToController)
@@ -1982,6 +1990,13 @@ void MainLoop()
   }
 #endif
 
+#ifdef SCREEN_IDLE_TEST
+  if (ControllerIdle_Screen == false)
+  {
+    ControllerIdle_Screen = true;
+    InitIdleEffect();
+  }
+#else
   // Call idle screen effects etc. if controllers not had anything pressed for a while
   if (timeSinceLastAnyControlChanged >= IDLE_SCREEN_TIMEOUT)
   {
@@ -2023,6 +2038,7 @@ void MainLoop()
       StopIdleEffect();
     }
   }
+#endif
 
   // Bluetooth
   BTConnectionState = bleGamepad.isConnected();
@@ -2157,12 +2173,21 @@ void MainLoop()
       MainBenchmark.Snapshot("Loop.IdleEffect", showBenchmark);
 #endif
       //}
+
+#ifdef FORCE_FPS_DISPLAY
+      Display.fillRect(HALF_SCREEN_WIDTH, 0, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
+      itoa(FPS, buffer, 10);
+      RREDefault.printStr(ALIGN_RIGHT, 0, buffer);
+#endif
     }
 
 #ifdef DEBUG_MARKS
     Debug::Mark(1000, __LINE__, __FILE__, __func__, "Display Update");
 #endif
 
+    // Display.fillRect(50,50, 50, 50, C_WHITE); // Clear screen ready for new frame - better to do this here than in the individual render operations so we can be sure it happens after them all and only once per frame
+    // RREDefault.setColor(C_WHITE);
+    // RREDefault.printStr(50, 45, "Test");
     Display.display();
 
 #ifdef INCLUDE_BENCHMARKS

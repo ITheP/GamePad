@@ -64,7 +64,7 @@ void InitIdleEffect()
         p->x = sp->x + (rand() % (sp->w));
         p->y = sp->y + (rand() % (sp->h));
 
-        if (Display.getPixel((int)p->x, (int)p->y) == 0)
+        if (Display.readPixel((int)p->x, (int)p->y) == 0)       // Adafruit was getPixel
             break;
     }
 
@@ -136,7 +136,7 @@ void RenderIdleEffect()
 
         // Horizontal collision
         if (xi_try < 0 || xi_try >= SCREEN_WIDTH ||
-            Display.getPixel(xi_try, p.lastY) == C_WHITE)
+            Display.readPixel(xi_try, p.lastY) == C_WHITE)        // Adafruit was getPixel
         {
 
             if (millis() > nextSpawnTime)
@@ -201,7 +201,7 @@ void RenderIdleEffect()
 
         // Vertical bounces
         if (yi_try < 0 || yi_try >= SCREEN_HEIGHT ||
-            Display.getPixel(p.lastX, yi_try) == C_WHITE)
+            Display.readPixel(p.lastX, yi_try) == C_WHITE)       // Adafruit was getPixel
         {
             newVy = -newVy;
 
@@ -219,7 +219,7 @@ void RenderIdleEffect()
         int yi_final = yi_try;
 
         // Final new position checks
-        if (Display.getPixel(xi_final, yi_final) == C_WHITE)
+        if (Display.readPixel(xi_final, yi_final) == C_WHITE)       // Adafruit was getPixel
         {
             // Clash - something white was there already
             // stay where we are but change velocities to try again next time

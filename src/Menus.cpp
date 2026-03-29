@@ -31,12 +31,12 @@ float MenuStartTime = 0.0;
 #define MenuStartDelay 0.75 // Seconds before menu starts scrolling (if it scrolls)
 
 int Menus::MenusStatus = OFF;
-Menu *Menus::RootMenu = NONE;
-Menu *Menus::CurrentMenu = NONE;
+Menu *Menus::RootMenu = UNDEFINED;
+Menu *Menus::CurrentMenu = UNDEFINED;
 
 // Having a default MenuOption that does nothing helps save us check for null reference on
 // uninitialised CurrentMenuOption later on
-MenuOption *NoMenuOption = new MenuOption{"None", NONE, NONE, NONE};
+MenuOption *NoMenuOption = new MenuOption{"None", UNDEFINED, UNDEFINED, UNDEFINED};
 
 MenuOption *Menus::CurrentMenuOption;
 
@@ -44,18 +44,18 @@ MenuOption MainMenuOptions[] = {
     // Name is first menu item we initialise to to make sure Device Name is drawn, so appears as default screen information
     // even when menu's haven't been engaged yet.
     // Has own special rendering of text so we don't get menu icons etc. being drawn
-    {"Name", NONE, NONE, MenuFunctions::InitName, NONE, NONE},
+    {"Name", UNDEFINED, UNDEFINED, MenuFunctions::InitName, UNDEFINED, UNDEFINED},
 
-    {"Battery", Icon_Menu_Battery, "Battery", MenuFunctions::InitBattery, MenuFunctions::UpdateBattery, NONE},
-    {"BT", Icon_Menu_Bluetooth, "Bluetooth", MenuFunctions::InitBluetooth, MenuFunctions::UpdateBluetooth, NONE},
-    {"WiFi", Icon_Menu_WiFi, "WiFi", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, NONE},
-    {"USB", Icon_Menu_USB, "USB", MenuFunctions::InitUSB, MenuFunctions::UpdateUSB, NONE},
-    {"FPS", Icon_Menu_FPS, "FPS", MenuFunctions::InitFPS, MenuFunctions::UpdateFPS, NONE},
-    {"Web Server", Icon_Menu_WebServer, "Web Server", MenuFunctions::InitWebServer, MenuFunctions::UpdateWebServer, NONE},
-    {"About", Icon_Menu_QuestionMark, "About", MenuFunctions::InitAbout, NONE, NONE},
-    {"Version", Icon_Menu_Version, "About", MenuFunctions::InitVersion, NONE, NONE},
-    {"Debug", Icon_Menu_Debug, "Debug", MenuFunctions::InitDebug, NONE, NONE},
-    {"Stats", Icon_Menu_Stats, "Stats", MenuFunctions::InitStats, NONE, NONE}};
+    {"Battery", Icon_Menu_Battery, "Battery", MenuFunctions::InitBattery, MenuFunctions::UpdateBattery, UNDEFINED},
+    {"BT", Icon_Menu_Bluetooth, "Bluetooth", MenuFunctions::InitBluetooth, MenuFunctions::UpdateBluetooth, UNDEFINED},
+    {"WiFi", Icon_Menu_WiFi, "WiFi", MenuFunctions::InitWiFi, MenuFunctions::UpdateWiFi, UNDEFINED},
+    {"USB", Icon_Menu_USB, "USB", MenuFunctions::InitUSB, MenuFunctions::UpdateUSB, UNDEFINED},
+    {"FPS", Icon_Menu_FPS, "FPS", MenuFunctions::InitFPS, MenuFunctions::UpdateFPS, UNDEFINED},
+    {"Web Server", Icon_Menu_WebServer, "Web Server", MenuFunctions::InitWebServer, MenuFunctions::UpdateWebServer, UNDEFINED},
+    {"About", Icon_Menu_QuestionMark, "About", MenuFunctions::InitAbout, UNDEFINED, UNDEFINED},
+    {"Version", Icon_Menu_Version, "About", MenuFunctions::InitVersion, UNDEFINED, UNDEFINED},
+    {"Debug", Icon_Menu_Debug, "Debug", MenuFunctions::InitDebug, UNDEFINED, UNDEFINED},
+    {"Stats", Icon_Menu_Stats, "Stats", MenuFunctions::InitStats, UNDEFINED, UNDEFINED}};
 
 Menu Menus::MainMenu = {
     MainMenuOptions,
@@ -65,12 +65,12 @@ Menu Menus::MainMenu = {
     0};
 
 MenuOption ConfigMenuOptions[] = {
-    {"Help", Icon_Menu_QuestionMark, "Help", MenuFunctions::Config_Init_Help, MenuFunctions::Config_Update_Help, NONE}, // Name is first menu item we initialise to to make sure Device Name is drawn. Has own special rendering of text so we don't get menu icons etc. being drawn
-    {"Profile", Icon_Menu_Smile, "Profile", MenuFunctions::Config_Init_Profile, MenuFunctions::Config_Update_Profile, NONE},
-    {"WiFi Access Point", Icon_Menu_WiFi, "WiFi Access Point", MenuFunctions::Config_Init_WiFi_AccessPoint, MenuFunctions::Config_Update_WiFi_AccessPoint, NONE},
+    {"Help", Icon_Menu_QuestionMark, "Help", MenuFunctions::Config_Init_Help, MenuFunctions::Config_Update_Help, UNDEFINED}, // Name is first menu item we initialise to to make sure Device Name is drawn. Has own special rendering of text so we don't get menu icons etc. being drawn
+    {"Profile", Icon_Menu_Smile, "Profile", MenuFunctions::Config_Init_Profile, MenuFunctions::Config_Update_Profile, UNDEFINED},
+    {"WiFi Access Point", Icon_Menu_WiFi, "WiFi Access Point", MenuFunctions::Config_Init_WiFi_AccessPoint, MenuFunctions::Config_Update_WiFi_AccessPoint, UNDEFINED},
     {"WiFi Password", Icon_Menu_Key, "WiFi Password", MenuFunctions::Config_Init_WiFi_Password, MenuFunctions::Config_Update_WiFi_Password, MenuFunctions::Config_Exit_WiFi_Password},
     {"Hotspot", Icon_Menu_WiFi, "Hotspot", MenuFunctions::Config_Init_Hotspot, MenuFunctions::Config_Update_Hotspot, MenuFunctions::Config_Exit_Hotspot},
-    {"Save Config", Icon_Menu_Save, "Save Settings", MenuFunctions::Config_Init_SaveSettings, MenuFunctions::Config_Update_SaveSettings, NONE}};
+    {"Save Config", Icon_Menu_Save, "Save Settings", MenuFunctions::Config_Init_SaveSettings, MenuFunctions::Config_Update_SaveSettings, UNDEFINED}};
 
 Menu Menus::ConfigMenu = {
     ConfigMenuOptions,
@@ -112,7 +112,7 @@ void Menus::InitMenuItemDisplay(int useMenuOptionLabel)
   if (useMenuOptionLabel)
     Menus::InitMenuItemDisplay(CurrentMenuOption->Label, ScrollCheck);
   else
-    Menus::InitMenuItemDisplay(NONE);
+    Menus::InitMenuItemDisplay(UNDEFINED);
 }
 
 // Menu auto-scrolls text if too long to fit on screen
@@ -122,7 +122,7 @@ void Menus::InitMenuItemDisplay(char *text, MenuScrollState scrollStatus)
 
   RREIcon.drawChar(0, 2, CurrentMenuOption->Icon);
 
-  if (text != NONE)
+  if (text != UNDEFINED)
     UpdateMenuText(text, scrollStatus);
 }
 
@@ -388,9 +388,9 @@ ControllerReport Menus::MoveDown()
 
 void Menus::Config_CheckForMenuChange()
 {
-  if (PRESSED == UpState() && UpJustChanged())
+  if (DIGITAL_PRESSED == UpState() && UpJustChanged())
     CurrentMenu->MoveUp();
-  else if (PRESSED == DownState() && DownJustChanged())
+  else if (DIGITAL_PRESSED == DownState() && DownJustChanged())
     CurrentMenu->MoveDown();
 }
 
@@ -424,12 +424,12 @@ void Menus::Config_CheckInputs()
         input->ValueState.StateChangedWhen = timeCheck;
         input->ValueState.StateJustChanged = true;
 
-        if (state == PRESSED)
+        if (state == DIGITAL_PRESSED)
         {
           // PRESSED!
 
           // Any extra special custom to specific controller code
-          if (input->CustomOperationPressed != NONE)
+          if (input->CustomOperationPressed != UNDEFINED)
             input->CustomOperationPressed();
         }
         else
@@ -437,7 +437,7 @@ void Menus::Config_CheckInputs()
           // RELEASED!
 
           // Any extra special custom to specific controller code
-          if (input->CustomOperationReleased != NONE)
+          if (input->CustomOperationReleased != UNDEFINED)
             input->CustomOperationReleased();
         }
       }

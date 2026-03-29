@@ -34,7 +34,7 @@ public:
     static ControllerReport ToggleMenuMode();
 
     static void InitMenuItemDisplay(int useMenuOptionLabel);
-    static void InitMenuItemDisplay(char *text = NONE, MenuScrollState scrollStatus = NoScrollNeeded);
+    static void InitMenuItemDisplay(char *text = UNDEFINED, MenuScrollState scrollStatus = NoScrollNeeded);
     static void UpdateMenuText(char *text, int scrollStatus);
     static void DisplayMenuTextOptimised();
     static void DisplayMenuText();

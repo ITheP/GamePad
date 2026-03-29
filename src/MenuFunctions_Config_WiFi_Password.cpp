@@ -113,7 +113,7 @@ void MenuFunctions::Config_Update_WiFi_Password()
   bool downJustChanged = Menus::DownJustChanged();
 
   // Select button handling - character scrolling
-  if (selectState == PRESSED)
+  if (selectState == DIGITAL_PRESSED)
   {
     if (!selectHeld)
     {
@@ -135,9 +135,9 @@ void MenuFunctions::Config_Update_WiFi_Password()
     {
       // Select is still held - handle up/down button scrolling
 
-      if (upState == PRESSED || downState == PRESSED)
+      if (upState == DIGITAL_PRESSED || downState == DIGITAL_PRESSED)
       {
-        int direction = (upState == PRESSED) ? -1 : 1;
+        int direction = (upState == DIGITAL_PRESSED) ? -1 : 1;
 
         if (upJustChanged || downJustChanged)
         {
@@ -170,7 +170,7 @@ void MenuFunctions::Config_Update_WiFi_Password()
         else if (currentCharIndex > (ASCII_MAX - ASCII_MIN))
           currentCharIndex = 0;
       }
-      else if (upState == NOT_PRESSED && downState == NOT_PRESSED)
+      else if (upState == DIGITAL_NOT_PRESSED && downState == DIGITAL_NOT_PRESSED)
       {
         // Both buttons released
         buttonPressTime = 0;
@@ -181,7 +181,7 @@ void MenuFunctions::Config_Update_WiFi_Password()
 
     showScrollIcons = true;
   }
-  else if (selectState == NOT_PRESSED && selectJustChanged)
+  else if (selectState == DIGITAL_NOT_PRESSED && selectJustChanged)
   {
     // Select just released
     selectHeld = false;
@@ -211,7 +211,7 @@ void MenuFunctions::Config_Update_WiFi_Password()
   }
 
   // Back button handling - cursor backward and ignore character
-  if (backState == PRESSED && backJustChanged)
+  if (backState == DIGITAL_PRESSED && backJustChanged)
   {
     if (cursorPos > 0)
     {
@@ -227,7 +227,7 @@ void MenuFunctions::Config_Update_WiFi_Password()
   }
 
   // Check for menu navigation (only when select is not held)
-  if (selectState != PRESSED)
+  if (selectState != DIGITAL_PRESSED)
   {
     Menus::Config_CheckForMenuChange();
   }

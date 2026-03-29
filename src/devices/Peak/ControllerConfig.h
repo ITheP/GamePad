@@ -7,7 +7,7 @@
 
 // Notes
 
-// To specify a setting specifying a function call, use NONE. If you ignore the setting, it should default to NONE. Equivalent of nullptr;
+// To specify a setting specifying a function call, use NOT_DEFINED. If you ignore the setting, it should default to NOT_DEFINED. Equivalent of nullptr;
 // e.g. .BluetoothSetOperation = NON
 
 // Recommended max number of physical LED's
@@ -18,7 +18,7 @@
 // and remembering standard USB 2.0 ports are typically rated for 500mA, and USB 3.0 ports 900 mA
 
 // General configuration - reminder some config options are in Config.h
-#define LIVE_BATTERY                // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
+//#define LIVE_BATTERY                // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
 #define USE_ONBOARD_LED           // Enable onboard Neopixel LED
 #define STATUS_LED_COMBINE_INPUTS // Status LED includes a generalised colour made up of Status colour + other LED's (in an approximately additive way)
 #define USE_EXTERNAL_LED          // Enable external LEDs - may want to check the ExternalLED_FastLEDCount below too
@@ -107,47 +107,47 @@ extern IconRun ControllerGfx[];
 //      +3v3
 //      +3v3
 //      RST
-#define PIN_04_D01_A1 4 // [Whammy] OK pud ADC1_3 Touch_01
-#define PIN_05_D02_A2 5 // [Hat1 R] OK pud ADC1_4 Touch_02
-#define PIN_06_D03_A3 6 // [Hat1 L] OK pud ADC1_5 Touch_03
-#define PIN_07_D04_A4 7 // [Blue  ] OK pud ADC1_6 Touch_04
-#define PIN_15_D05 15   // [Green ] OK pud adc2_4           - Do not use for ADC
-#define PIN_16_D06 16   // [Orange] OK pud adc2_5           - Do not use for ADC
-#define PIN_17_D07 17   // [Yellow] OK pud adc2_6           - Do not use for ADC
-#define PIN_18_D08 18   // [      ] OK pud adc2_7           - Do not use for ADC
-#define PIN_08_D09 8    // [Red   ] OK pud ADC1_7 Touch_08  - I2C SDA default
-//      PIN_3         XX  //             pud ADC1_2 Touch_03  - Boot Strapping pin (JTAG signal source) - DO NOT USE
-//      PIN_46        XX  //                                  - Boot Strapping pin (Chip boot mode and ROM messages printing), input only, no internal pull up/down - DO NOT USE
-#define PIN_09_D10_A5 9  // [      ] OK pud ADC1_8 Touch_09  - I2C SCL Default
-#define PIN_10_D11_A6 10 // [Tilt  ] OK pud ACD1_9 Touch_10  -                      SPI3 CS
-#define PIN_11_D12 11    // [      ] OK pud adc2_0 Touch_11  - Do not use for ADC - SPI3 MOSI
-#define PIN_12_D13 12    // [      ] OK pud adc2_1 Touch_12  - Do not use for ADC - SPI3 CLK
-#define PIN_13_D14 13    // [Start ] OK pud adc2_2 Touch_13  - Do not use for ADC - SPI3 MISO
-#define PIN_14_D15 14    // [Select] OK pud adc2_3 Touch_14  - Do not use for ADC
-//      +5v in            //                                  - +5v from USB if IN-OUT jumper bridged
+#define PIN_04_D01_A1 4     // [Whammy] OK pud ADC1_3 Touch_01
+#define PIN_05_D02_A2 5     // [Hat1 R] OK pud ADC1_4 Touch_02
+#define PIN_06_D03_A3 6     // [Hat1 L] OK pud ADC1_5 Touch_03
+#define PIN_07_D04_A4 7     // [Blue  ] OK pud ADC1_6 Touch_04
+#define PIN_15_D05 15       // [Green ] OK pud adc2_4           - Do not use for ADC
+#define PIN_16_D06 16       // [Orange] OK pud adc2_5           - Do not use for ADC
+#define PIN_17_D07 17       // [Yellow] OK pud adc2_6           - Do not use for ADC
+#define PIN_18_D08 18       // [      ] OK pud adc2_7           - Do not use for ADC
+#define PIN_08_D09 8        // [Red   ] OK pud ADC1_7 Touch_08  - I2C SDA default
+//      PIN_3         XX    //             pud ADC1_2 Touch_03  - Boot Strapping pin (JTAG signal source) - DO NOT USE
+//      PIN_46        XX    //                                  - Boot Strapping pin (Chip boot mode and ROM messages printing), input only, no internal pull up/down - DO NOT USE
+#define PIN_09_D10_A5 9     // [      ] OK pud ADC1_8 Touch_09  - I2C SCL Default
+#define PIN_10_D11_A6 10    // [Tilt  ] OK pud ACD1_9 Touch_10  -                      SPI3 CS
+#define PIN_11_D12 11       // [      ] OK pud adc2_0 Touch_11  - Do not use for ADC - SPI3 MOSI
+#define PIN_12_D13 12       // [      ] OK pud adc2_1 Touch_12  - Do not use for ADC - SPI3 CLK
+#define PIN_13_D14 13       // [Start ] OK pud adc2_2 Touch_13  - Do not use for ADC - SPI3 MISO
+#define PIN_14_D15 14       // [Select] OK pud adc2_3 Touch_14  - Do not use for ADC
+//      +5v in              //                                  - +5v from USB if IN-OUT jumper bridged
 //      Gnd
 
 // SIDE TWO
 //      Gnd
-//      TX            43  //                                  - UART0 TX/Debug
-//      RX            44  //                                  - UART0 RX/Debug
-#define PIN_01_D16_A7 1 // [      ] OK pud ADC1_0 Touch_01
-#define PIN_02_D17_A8 2 // [      ] OK pud ADC1_1 Touch_02
-#define PIN_42_D18 42   // [      ] ok                      - JTAG MTMS
-#define PIN_41_D19 41   // [FlipSc] ok                      - JTAG MTDI
-#define PIN_40_D20 40   // [Screen] ok                      - JTAG MTDO
-#define PIN_39_D21 39   // [Screen] ok                      - JTAG MTCK, SPI2 CS
-#define PIN_38_D22 38   // [ExtLED] ok                      - External Status LED
-//      PIN_37            // [      ] ok                      - SPI2 MISO - Ok to use if not used for Octal SPI Flash or PSRAM (model specific)
-//      PIN_36            // [      ] ok                      - SPI2 CLK  - Ok to use if not used for Octal SPI Flash or PSRAM (model specific)
-//      PIN_35            // [      ] ok                      - SPI2 MOSI - Ok to use if not used for Octal SPI Flash or PSRAM (model specific)
-//      PIN_0             //                                  - Boot Strapping Pin Boot Mode
-//      PIN_45            //                                  - Boot Strapping Pin VDD SPI Voltage (VDD_SPI voltage, selects between 1.8v and 3.3v)
-#define PIN_48_D23 48 // [IntLED] ok                      - Internal NEOPIXEL (default internal pin reference)
-#define PIN_47_D24 47 // [ExtLED] ok                      - External LED's
-#define PIN_21_D25 21 // [      ] OK pud
-//      PIN_20        XX  //                                  - USB_D+ - if reconfigured as normal GPIO, USB-JTAG functionality unavailable - i.e. don't expect USB to work! - DO NOT USE
-//      PIN 19        XX  //                                  - USB_D- - DO NOT USE
+//      TX            43    //                                  - UART0 TX/Debug
+//      RX            44    //                                  - UART0 RX/Debug
+#define PIN_01_D16_A7 1     // [      ] OK pud ADC1_0 Touch_01
+#define PIN_02_D17_A8 2     // [      ] OK pud ADC1_1 Touch_02
+#define PIN_42_D18 42       // [      ] ok                      - JTAG MTMS
+#define PIN_41_D19 41       // [FlipSc] ok                      - JTAG MTDI
+#define PIN_40_D20 40       // [Screen] ok                      - JTAG MTDO
+#define PIN_39_D21 39       // [Screen] ok                      - JTAG MTCK, SPI2 CS
+#define PIN_38_D22 38       // [ExtLED] ok                      - External Status LED
+//      PIN_37              // [      ] ok                      - SPI2 MISO - Ok to use if not used for Octal SPI Flash or PSRAM (model specific)
+//      PIN_36              // [      ] ok                      - SPI2 CLK  - Ok to use if not used for Octal SPI Flash or PSRAM (model specific)
+//      PIN_35              // [      ] ok                      - SPI2 MOSI - Ok to use if not used for Octal SPI Flash or PSRAM (model specific)
+//      PIN_0               //                                  - Boot Strapping Pin Boot Mode
+//      PIN_45              //                                  - Boot Strapping Pin VDD SPI Voltage (VDD_SPI voltage, selects between 1.8v and 3.3v)
+#define PIN_48_D23 48       // [IntLED] ok                      - Internal NEOPIXEL (default internal pin reference)
+#define PIN_47_D24 47       // [ExtLED] ok                      - External LED's
+#define PIN_21_D25 21       // [      ] OK pud
+//      PIN_20        XX    //                                  - USB_D+ - if reconfigured as normal GPIO, USB-JTAG functionality unavailable - i.e. don't expect USB to work! - DO NOT USE
+//      PIN 19        XX    //                                  - USB_D- - DO NOT USE
 //      Gnd
 //      Gnd
 
@@ -159,41 +159,41 @@ extern IconRun ControllerGfx[];
 #define BATTERY_MONITOR_PIN PIN_02_D17_A8 // Battery Voltage - 20K ohm to Gnd + 10K ohm to +ve
 
 // Guitar Neck Buttons
-#define HAT1_Up_PIN PIN_05_D02_A2     // [05] <Gray>
-#define HAT1_Down_PIN PIN_06_D03_A3   // [06] <Brown>
-#define BUTTON_Blue_PIN PIN_07_D04_A4 // [07] <Blue> 4th
-#define BUTTON_Green_PIN PIN_15_D05   // [15] <Green> 1st
-#define BUTTON_Orange_PIN PIN_16_D06  // [16] <Orange> 5th
-#define BUTTON_Yellow_PIN PIN_17_D07  // [17] <Yellow> 3rd
-// Gnd                                        // [G ] <Black> - Set as Gnd
-#define BUTTON_Red_PIN PIN_08_D09 // [18] <Red> 2nd
+#define HAT1_Up_PIN             PIN_05_D02_A2   // [05] <Gray>
+#define HAT1_Down_PIN           PIN_06_D03_A3   // [06] <Brown>
+#define BUTTON_Blue_PIN         PIN_07_D04_A4   // [07] <Blue> 4th
+#define BUTTON_Green_PIN        PIN_15_D05      // [15] <Green> 1st
+#define BUTTON_Orange_PIN       PIN_16_D06      // [16] <Orange> 5th
+#define BUTTON_Yellow_PIN       PIN_17_D07      // [17] <Yellow> 3rd
+// Gnd                                          // [G ] <Black> - Set as Gnd
+#define BUTTON_Red_PIN          PIN_08_D09      // [18] <Red> 2nd
 
 // Extra buttons
-#define BUTTON_Tilt_PIN PIN_10_D11_A6 // [10] < > Tilt Sensor
-// 11 Spare?                                  // [11] <White>
-// 12 Spare?                                  // [12] <Black>
+#define BUTTON_Tilt_PIN         PIN_10_D11_A6   // [10] < > Tilt Sensor
+// 11 Spare?                                    // [11] <White>
+// 12 Spare?                                    // [12] <Black>
 
 // End Buttons
-#define BUTTON_Start_PIN PIN_13_D14  // [13] <Red>
-#define BUTTON_Select_PIN PIN_12_D13 // PIN_14_D15    // [14] <White>
-// Gnd                                        // [G ]
+#define BUTTON_Start_PIN        PIN_13_D14      // [13] <Red>
+#define BUTTON_Select_PIN       PIN_12_D13       // PIN_14_D15    // [14] <White>
+// Gnd                                          // [G ]
 
-#define BUTTON_FlipScreen_PIN PIN_41_D19
+#define BUTTON_FlipScreen_PIN   PIN_41_D19
 
 // Whammy Bar / POT
-// +3.3v                                      // [+V] <Red>
-#define ANALOG_Whammy_PIN PIN_04_D01_A1 // [04] <White> - Pot Reading
-// Gnd                                        // [G ] <Black>
+// +3.3v                                        // [+V] <Red>
+#define ANALOG_Whammy_PIN       PIN_04_D01_A1   // [04] <White> - Pot Reading
+// Gnd                                          // [G ] <Black>
 
 // Screen block (TWO SETS OF WIRE COLOURS - accidentally soldered the block socket wrong way around, doh, so lists what colour should have been, then what was actually used
-// +3.3v                                      // [+V] <Red> <Gray> - V++ (ignore pin 36)
-// Gnd                                        // [G ] <Black> <Brown> - set as Gnd (ignore pin 39)
-#define EXTERNAL_LED_PIN PIN_38_D22 // [  ] <Yellow> <Blue> - External NeoPixel Status LED (was PIN_47_D24)
-#define I2C_SDA PIN_39_D21          // [39] <Orange> <Green> - Screen - SDA
-#define I2C_SCL PIN_40_D20          // [40] <Green> <Orange> - Screen - SCK
-// 41                                         // [41] <Yellow> - Rotator Switch 1
-// 42                                         // [42] <Black> - Rotator Switch 2
-// -- Spare                                   // [  ] <Gray> <Red>
+// +3.3v                                        // [+V] <Red> <Gray> - V++ (ignore pin 36)
+// Gnd                                          // [G ] <Black> <Brown> - set as Gnd (ignore pin 39)
+#define EXTERNAL_LED_PIN        PIN_38_D22      // [  ] <Yellow> <Blue> - External NeoPixel Status LED (was PIN_47_D24)
+#define I2C_SDA                 PIN_39_D21      // [39] <Orange> <Green> - Screen - SDA
+#define I2C_SCL                 PIN_40_D20      // [40] <Green> <Orange> - Screen - SCK
+// 41                                           // [41] <Yellow> - Rotator Switch 1
+// 42                                           // [42] <Black> - Rotator Switch 2
+// -- Spare                                     // [  ] <Gray> <Red>
 
 // Onboard pins
 #define ONBOARD_LED_PIN PIN_48_D23
@@ -254,7 +254,7 @@ extern Input *AnalogInputs[];
 
 // Hat states, for all possible hats
 // (for simplicity, all hats are passed to bleGamepad library, even if not used)
-// To define a hat without a pin/control point, set pin to NONE - e.g. might only want to use up/down but not left/right
+// To define a hat without a pin/control point, set pin to NOT_DEFINED - e.g. might only want to use up/down but not left/right
 
 extern unsigned char HatValues[];
 

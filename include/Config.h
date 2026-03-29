@@ -6,9 +6,11 @@
 //#define EXTRA_SERIAL_DEBUG_PLUS   // ...further detail, but can flood serial output somewhat!
 //#define INCLUDE_BENCHMARKS        // Includes some basic performance statistics of running device over serial
 //#define INCLUDE_BENCHMARKS_LED    // Basic performance stats for LED processing
-//#define STRAIGHT_TO_CONFIG_MENU     // Skip straight to config menu on start up for easier testing
+//#define STRAIGHT_TO_CONFIG_MENU   // Skip straight to config menu on start up for easier testing
 //#define WHITE_SCREEN              // Display will show a solid white screen, handy when physically aligning panel in device
-#define DEBUG_MARKS                  // Extra debug logging that survives crashes
+//#define DEBUG_MARKS                 // Extra debug logging that survives crashes
+#define SCREEN_IDLE_TEST            // Forces screen idle effect to kick in on start (handy for testing)
+#define FORCE_FPS_DISPLAY           // Forces display of FPS separate from Menu variant (handy for testing)
 
 #define SETUP_DELAY     250         // Delay between stages of initial start up
                                     // Could be pretty much instant, but having a delay gives a chance to display

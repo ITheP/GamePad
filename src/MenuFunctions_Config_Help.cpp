@@ -31,13 +31,13 @@ void MenuFunctions::Config_Update_Help()
 {
   int showScrollIcons = false;
 
-  if (PRESSED == Menus::SelectState())
+  if (DIGITAL_PRESSED == Menus::SelectState())
   {
     // Check for buttons being held down
     // Initially scrolled 1 pixel at a time but was a bit slow!
-    if (PRESSED == Menus::UpState())
+    if (DIGITAL_PRESSED == Menus::UpState())
       ConfigHelpPixelOffset += 2;
-    if (PRESSED == Menus::DownState())
+    if (DIGITAL_PRESSED == Menus::DownState())
       ConfigHelpPixelOffset -= 2;
 
     int textLineHeight = FONT_SMALL_HEIGHT;
