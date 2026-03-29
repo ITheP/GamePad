@@ -3,7 +3,9 @@
 #include "Config.h"
 #include "Defines.h"
 #include "Structs.h"
-#include <Adafruit_SH110X.h>
+//#include <Adafruit_SH110X.h>
+#define NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
+#include <Adafruit_SSD1306.h>
 
 void FlipScreen(Input* input);
 
@@ -22,9 +24,10 @@ void FlipScreen(Input* input);
 #define OLED_RESET -1        // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C  // See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 //Adafruit_SSD1306 Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-extern Adafruit_SH1106G Display;
+//extern Adafruit_SH1106G Display;
+extern Adafruit_SSD1306 Display;
 
-#define C_WHITE SH110X_WHITE
-#define C_BLACK SH110X_BLACK
-// #define C_WHITE SSD1306_WHITE
-// #define C_BLACK SSD1306_BLACK
+//#define C_WHITE SH110X_WHITE
+//#define C_BLACK SH110X_BLACK
+#define C_WHITE SSD1306_WHITE
+#define C_BLACK SSD1306_BLACK

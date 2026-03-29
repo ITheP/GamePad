@@ -7,5 +7,6 @@
 const char* DeviceNames[] = { "Ellen", "Holly", "Indy", "Smudge", "Peanut", "Claire", "Eleanor", "Evilyn", "Andy", "Toya", "Verity", "Laura", "Eagle",
                         "Kevin", "Sophie", "Carla", "Hannah", "Becky", "Trent", "Jean", "Sebastian", "Phil", "Colin", "Berry", "Bazil", "Anne",
                         "Bella", "Vivian", "Bunny", "Thomas", "Giles", "David", "John", "Penny", "Beverly", "Dannie", "Ginny", "Samantha", "Sam",
-                        "Lisa", "Charlie", "Albert", "Shoe", "Stevie" };
+                        "Lisa", "Charlie", "Albert", "Shoe", "Stevie", "Apple", "Orange", "Walnut", "Banana", "Cherry", "Nutcake", "Ramone", "Beef",
+                        "Mintcake", "Twiglet", "Homer", "Megany" };
 int DeviceNamesCount = sizeof(DeviceNames) / sizeof(DeviceNames[0]);

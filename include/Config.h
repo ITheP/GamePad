@@ -6,9 +6,10 @@
 //#define EXTRA_SERIAL_DEBUG_PLUS   // ...further detail, but can flood serial output somewhat!
 //#define INCLUDE_BENCHMARKS        // Includes some basic performance statistics of running device over serial
 //#define INCLUDE_BENCHMARKS_LED    // Basic performance stats for LED processing
-//#define STRAIGHT_TO_CONFIG_MENU     // Skip straight to config menu on start up for easier testing
+//#define STRAIGHT_TO_CONFIG_MENU   // Skip straight to config menu on start up for easier testing
 //#define WHITE_SCREEN              // Display will show a solid white screen, handy when physically aligning panel in device
-#define DEBUG_MARKS                  // Extra debug logging that survives crashes
+#define DEBUG_MARKS                 // Extra debug logging that survives crashes
+#define FORCE_FPS_DISPLAY           // Debug variant of Show FPS in top right corner of screen (don't need to be in menus)
 
 #define SETUP_DELAY     250         // Delay between stages of initial start up
                                     // Could be pretty much instant, but having a delay gives a chance to display
@@ -30,3 +31,6 @@
 #define SUB_SECOND_COUNT         30     // Number of sub-samples to take across a second when calculating clicks per second counts. Higher number = more accurate but more overhead.
 #define DISPLAY_UPDATE_RATE      0.016  // Fraction of a second to wait between display updates - 0.016 = 16ms = ~60FPS
 #define LED_UPDATE_RATE          0.005  // Fraction of a second to wait between throttled updates - default is faster than 60fps to account for animation effects where we want faster propagation across LED arrays
+
+// Undefine below if using SPI
+//#define SCREEN_INTERFACE_I2C

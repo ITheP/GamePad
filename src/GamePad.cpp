@@ -2,7 +2,9 @@
 #include <WiFi.h>
 #include <vector>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SH110X.h>
+// #include <Adafruit_SH110X.h>
+#define NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
+#include <Adafruit_SSD1306.h>
 #include <RREFont.h>
 #include <BleGamepad.h>
 #include <FS.h>
@@ -10,6 +12,7 @@
 // #include <esp_private/panic_internal.h>
 #include "Profiles.h"
 #include "Profile.h"
+#include "Device.h"
 #include "Config.h"
 #include "Defines.h"
 #include "IconMappings.h"
@@ -46,15 +49,15 @@ void (*LoopOperation)(void);
 
 uint32_t rnd = random();
 
-// When configured for use, set of random names for controller. Actual name is picked using ESP32-S3's unique identity as a key to the name - means we can flash to multiple
-// devices and they should all get decently unique names.
-// Max 17 chars for a name (final name will be longer after adding automated bits to the end of the name for bluetooth variants)
-// Anything longer, name wont fit on display we are using!
-const char *DeviceNames[] = {"Ellen", "Holly", "Indy", "Smudge", "Peanut", "Claire", "Eleanor", "Evilyn", "Andy", "Toya", "Verity", "Laura", "Eagle",
-                             "Kevin", "Sophie", "Carla", "Hannah", "Becky", "Trent", "Jean", "Sebastian", "Phil", "Colin", "Berry", "Bazil", "Anne",
-                             "Bella", "Vivian", "Bunny", "Thomas", "Giles", "David", "John", "Penny", "Beverly", "Dannie", "Ginny", "Samantha", "Sam",
-                             "Lisa", "Charlie", "Albert", "Shoe", "Stevie"};
-int DeviceNamesCount = sizeof(DeviceNames) / sizeof(DeviceNames[0]);
+// // When configured for use, set of random names for controller. Actual name is picked using ESP32-S3's unique identity as a key to the name - means we can flash to multiple
+// // devices and they should all get decently unique names.
+// // Max 17 chars for a name (final name will be longer after adding automated bits to the end of the name for bluetooth variants)
+// // Anything longer, name wont fit on display we are using!
+// const char *DeviceNames[] = {"Ellen", "Holly", "Indy", "Smudge", "Peanut", "Claire", "Eleanor", "Evilyn", "Andy", "Toya", "Verity", "Laura", "Eagle",
+//                              "Kevin", "Sophie", "Carla", "Hannah", "Becky", "Trent", "Jean", "Sebastian", "Phil", "Colin", "Berry", "Bazil", "Anne",
+//                              "Bella", "Vivian", "Bunny", "Thomas", "Giles", "David", "John", "Penny", "Beverly", "Dannie", "Ginny", "Samantha", "Sam",
+//                              "Lisa", "Charlie", "Albert", "Shoe", "Stevie"};
+// int DeviceNamesCount = sizeof(DeviceNames) / sizeof(DeviceNames[0]);
 
 // -----------------------------------------------------
 // LED stuff (include after controller definition)
@@ -174,7 +177,13 @@ void setupDisplay()
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   // if (!Display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS, &Wire, OLED_RESET)) {
+
+#ifdef SCREEN_INTERFACE_I2C
   if (!Display.begin(SCREEN_ADDRESS, true))
+#else
+  SPI.begin(SCREEN_SPI2_SCK_PIN, -1, SCREEN_SPI2_MOSI_PIN); // -1 as no MISO required
+  if (!Display.begin(SSD1306_SWITCHCAPVCC))
+#endif
   {
     // Alternative handling - Spit out an error over serial connection if problem with display
     // Serial.begin(SERIAL_SPEED);
@@ -184,6 +193,11 @@ void setupDisplay()
   }
 
   // Display.invertDisplay(true);
+
+#ifdef SCREEN_INTERFACE_I2C
+// This MIGHT be required if using SH1106 display with SSD1306 as driver
+//Display.setCursor(2, 0);
+#endif
 
   Display.clearDisplay();
   Display.display();
@@ -1013,7 +1027,6 @@ void setupController()
   // RRE.printStr(20, 20, "B");
   // Display.display();
   // delay(250);
-
 }
 
 void SetupLittleFS()
@@ -1057,7 +1070,11 @@ void setup()
 
   delay(10); // Give pins on start up time to settle if theres any power up glitching
 
+#ifdef SCREEN_INTERFACE_I2C
   Wire.begin(I2C_SDA, I2C_SCL);
+#else
+  SPI.begin(SCREEN_SPI2_SCK_PIN, SCREEN_SPI2_MISO_PIN, SCREEN_SPI2_MOSI_PIN); // MISO = -1 if not used, but still needs to be defined for SPI to work, even if not used. Default is 19 on many boards, but can be changed here if needed.
+#endif
 
   // This checked on and handled better when we get to setupUSB()
   // but we can't do pretty visuals etc. until other parts are configured
@@ -2157,6 +2174,13 @@ void MainLoop()
       MainBenchmark.Snapshot("Loop.IdleEffect", showBenchmark);
 #endif
       //}
+
+#ifdef FORCE_FPS_DISPLAY
+      Display.fillRect(HALF_SCREEN_WIDTH, 0, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
+      itoa(FPS, buffer, 10);
+      RREDefault.printStr(ALIGN_RIGHT, 0, buffer);
+#endif
+
     }
 
 #ifdef DEBUG_MARKS

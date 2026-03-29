@@ -1,20 +1,28 @@
 #include "Screen.h"
 #include "Stats.h"
 #include "Battery.h"
+#define NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
+#include <Adafruit_SSD1306.h>
 
 // I2C 4 pin (display theoretical FPS maxes out around 48fps)
+#ifdef SCREEN_INTERFACE_I2C
 Adafruit_SH1106G Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#else
 // SPI 7 pin (display theoretical FPS maxes out around 976fps)
-// TODO
+Adafruit_SSD1306 Display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, SCREEN_SPI2_DC, SCREEN_SPI2_RST_PIN, SCREEN_SPI2_CS);
+
+#endif
 
 // Screen orientation functions
 int ScreenOrientation = 0;
 int PreviousScreenOrientation = 0;
 
-void FlipScreen(Input* input) {
+void FlipScreen(Input *input)
+{
 #ifdef LIVE_BATTERY
   // Don't draw if we are showing the end game battery warning
-  if (Battery::PreviousBatteryLevel == 0) {
+  if (Battery::PreviousBatteryLevel == 0)
+  {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("Flip Screen cancelled - BatteryLevel 0");
 #endif
@@ -22,15 +30,15 @@ void FlipScreen(Input* input) {
   }
 #endif
 
-// #ifdef EXTRA_SERIAL_DEBUG
-//   Serial.println("Flip Screen " + String(input->ValueState.Value));
-// #endif
+  // #ifdef EXTRA_SERIAL_DEBUG
+  //   Serial.println("Flip Screen " + String(input->ValueState.Value));
+  // #endif
 
   // Set orientation will also need flipping
 
   // Note: Define FLIP_SCREEN_TOGGLE in controller config .h if you want a flip screen button to toggle each press, rather than a button hold to toggle screen orientation
   // .setRotation does not require Display.display() to be called
-  
+
 #ifdef FLIP_SCREEN_TOGGLE
   if (input->Value == HIGH)
     return;
@@ -50,7 +58,8 @@ void FlipScreen(Input* input) {
   Display.setRotation(ScreenOrientation);
 #endif
 
-  if (ScreenOrientation != PreviousScreenOrientation) {
+  if (ScreenOrientation != PreviousScreenOrientation)
+  {
     // Flip current content
     // Note that the main DrawMainScreen() is only partial in what it draws - doesn't include all the individual control points and dynamic values.
     // So we have a little (slow but functional) screen flipping routine to make sure what is already there is copied exactly as is, rather than clearing and redrawing the main screen.
@@ -58,8 +67,10 @@ void FlipScreen(Input* input) {
     // We only need to cover 1/2 the screen, as it is swapping places with the other half.
     int height = SCREEN_HEIGHT >> 1;
 
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < SCREEN_WIDTH; x++) {
+    for (int y = 0; y < height; y++)
+    {
+      for (int x = 0; x < SCREEN_WIDTH; x++)
+      {
         // Read the pixel starting from the top-left corner
         int topPixel = Display.getPixel(x, y);
 
@@ -67,7 +78,8 @@ void FlipScreen(Input* input) {
         int bottomPixel = Display.getPixel(SCREEN_WIDTH - 1 - x, SCREEN_HEIGHT - 1 - y);
 
         // Only drawing where there are actual differences saves a bit of time
-        if (topPixel != bottomPixel) {
+        if (topPixel != bottomPixel)
+        {
           // Draw the bottom pixel to the top position
           Display.drawPixel(x, y, bottomPixel);
 

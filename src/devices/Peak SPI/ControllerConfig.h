@@ -1,0 +1,570 @@
+#pragma once
+
+#include "Structs.h"
+#include "Stats.h"
+#include "RenderText.h"
+#include "IconMappings.h"
+
+// Notes
+
+// To specify a setting specifying a function call, use NONE. If you ignore the setting, it should default to NONE. Equivalent of nullptr;
+// e.g. .BluetoothSetOperation = NON
+
+// Recommended max number of physical LED's
+// Using a typical 5V USB without high-current capabilities, it should be safe to power
+// 10-15 NeoPixels at moderate usage (around 20-30mA per LED)
+// 5-8 NeoPixels at full brightness (60mA per LED)
+// ...accounting for an extra 100 or so mA for controller
+// and remembering standard USB 2.0 ports are typically rated for 500mA, and USB 3.0 ports 900 mA
+
+// General configuration - reminder some config options are in Config.h
+//#define LIVE_BATTERY                // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
+#define USE_ONBOARD_LED           // Enable onboard Neopixel LED
+#define STATUS_LED_COMBINE_INPUTS // Status LED includes a generalised colour made up of Status colour + other LED's (in an approximately additive way)
+#define USE_EXTERNAL_LED          // Enable external LEDs - may want to check the ExternalLED_FastLEDCount below too
+#define WIFI                      // Enable WiFi (required for web server)
+#define WEBSERVER                 // Enable on board web server
+
+#define CLEAR_STATS_ON_FLIP // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
+
+// Go into idle LED effects mode after 10 seconds
+#define IDLE_LED_TIMEOUT 10.0
+#define IDLE_SCREEN_TIMEOUT 30.0
+#define IDLE_EFFECT_RESTART 60.0
+
+// =====
+// LED's
+
+// Mappings to physical Neopixel/equivalent LED offsets
+#define LED_Status 0
+// #define LED_Green           1
+// #define LED_Red             2
+// #define LED_Yellow          3
+// #define LED_Blue            4
+// #define LED_Orange          5
+// #define LED_Tilt            6
+// #define LED_Status_Copy     7
+// #define LED_Hat_Off         8
+// #define LED_Hat_1           9
+// #define LED_Hat_2           10
+// #define LED_Hat_3           11
+// #define LED_Hat_4           12
+// #define LED_Hat_5           13
+// #define LED_Hat_6           14
+// #define LED_Hat_7           15
+// #define LED_Hat_8           16
+// #define LED_DigitalTest     17
+// #define LED_DigitalTest_Count (15+17)
+// // Non fading LED's after this point
+// #define LED_Whammy          (LED_DigitalTest + LED_DigitalTest_Count)
+// #define LED_Whammy_Count    8
+
+#define LED_TOTALCOUNT 1
+
+#define LED_BRIGHTNESS 20 // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
+
+#define ONBOARD_LED_FADE_RATE (1.0 / 0.2) // 0.15 is the total amount of seconds a complete 255->0 fade will be over
+
+#define EXTERNAL_LED_FADE_RATE (1.0 / 0.1) // 0.075 is the total amount of seconds a complete 255->0 fade will be over (actual result is approximate)
+#define EXTERNAL_LED_TYPE WS2812B          // WS2852
+#define EXTERNAL_LED_COLOR_ORDER GRB
+
+// External pin EXTERNAL_LED_PIN defined lower down
+#define ExternalLED_Count LED_TOTALCOUNT        // Space for all LEDs - in our case 5 neck buttons, 1 status LED + 1 status LED clone
+#define ExternalLED_FadeCount LED_Status        // Auto-fade of LED's - basically fades all LED's in ExternalLED array up to this point.
+                                                // RECOMMENDATION: if physically possible, stick all fading LED's at the start of your array, and non fading ones at the end - less overhead then
+                                                // Less overhead then
+#define ExternalLED_FastLEDCount LED_TOTALCOUNT // Match ExternalLED_Count for all LEDs, but set to e.g. 1 (assuming LED 0 is the status led) for only the first status LED to be used
+                                                // Lets us simplify code complexity for the sake of processing some extra LED logic but only want the status one installed (save battery life mode!)
+#define ExternalLED_StatusLED LED_Status        // LED to use as an external Status - copy of internal status. Do not define if you have no external status led.
+
+// List of LED's we want cloning (lets you copy LED values between each other)
+// e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
+// Actual definition in .cpp file
+extern IntPair LEDClones[];
+extern int LEDClones_Count;
+
+// ======================
+// User Interface Related
+#define uiGuitar_xPos 12
+#define uiGuitar_yPos 16
+
+#define uiWhammyX 117
+#define uiWhammyY 17
+#define uiWhammyW 7
+#define uiWhammyH 31
+
+extern IconRun ControllerGfx[];
+
+// ===============
+// PIN definitions
+// pud = pull up pull down resistor available
+// Do not use ADC2 pins for ADC - ESP32-S3 ADC2 has issues (especially if using wireless/bluetooth) and is easier just to not use it than faff around
+
+// Extra details on configuration and what it means - see project Wiki https://github.com/ITheP/GamePad/wiki/ESP32-S3
+
+// SIDE ONE
+//      Pin Name       Pin Number  [ Device Usage   ] Usable?                 - Extra Notes + Default usage
+//      +3v3
+//      +3v3
+//      RST
+#define PIN_04_D01_A1   4       // [Whammy          ] ok pud ADC1_3 Touch_01
+#define PIN_05_D02_A2   5       // [Hat1 Right      ] ok pud ADC1_4 Touch_02
+#define PIN_06_D03_A3   6       // [Hat1 Left       ] ok pud ADC1_5 Touch_03
+#define PIN_07_D04_A4   7       // [Blue            ] ok pud ADC1_6 Touch_04
+#define PIN_15_D05      15      // [Green           ] ok pud adc2_4           - Do not use for ADC
+#define PIN_16_D06      16      // [Orange          ] ok pud adc2_5           - Do not use for ADC
+#define PIN_17_D07      17      // [Yellow          ] ok pud adc2_6           - Do not use for ADC
+#define PIN_18_D08      18      // [----------------] OK pud adc2_7           - Do not use for ADC
+#define PIN_08_D09      8       // [Red             ] ok pud ADC1_7 Touch_08  - I2C SDA default
+//      PIN_3           XX      //                       pud ADC1_2 Touch_03  - DO NOT USE - Boot Strapping pin (JTAG signal source)
+//      PIN_46          XX                                                    - DO NOT USE - Boot Strapping pin (Chip boot mode and ROM messages printing), input only, no internal pull up/down
+#define PIN_09_D10_A5   9       // [----------------] OK pud ADC1_8 Touch_09  - I2C SCL Default
+#define PIN_10_D11_A6   10      // [Tilt            ] ok pud ACD1_9 Touch_10  -                      H/W SPI3 CS
+#define PIN_11_D12      11      // [----------------] OK pud adc2_0 Touch_11  - Do not use for ADC - H/W SPI3 MOSI/SDA
+#define PIN_12_D13      12      // [----------------] OK pud adc2_1 Touch_12  - Do not use for ADC - H/W SPI3 SCK/CLK
+#define PIN_13_D14      13      // [Start           ] ok pud adc2_2 Touch_13  - Do not use for ADC - H/W SPI3 MISO
+#define PIN_14_D15      14      // [Select          ] ok pud adc2_3 Touch_14  - Do not use for ADC
+//      +5v in                  //                                            - +5v from USB if IN-OUT jumper bridged
+//      Gnd
+
+// SIDE TWO
+//      Pin Name       Pin Number  [Our Device Usage] Usable?                  - Extra Notes
+//      Gnd
+//      TX              43      //                                            - UART0 TX/Debug
+//      RX              44      //                                            - UART0 RX/Debug
+#define PIN_01_D16_A7   1       // [----------------] OK pud ADC1_0 Touch_01
+#define PIN_02_D17_A8   2       // [Battery Monitor ] OK pud ADC1_1 Touch_02
+#define PIN_42_D18      42      // [----------------] OK                      - JTAG MTMS
+#define PIN_41_D19      41      // [FlipScreen      ] ok                      - JTAG MTDI
+#define PIN_40_D20      40      // [Screen SPI2 DC  ] ok                      - JTAG MTDO
+#define PIN_39_D21      39      // [Screen SPI2 CS  ] ok                      - JTAG MTCK, SPI2 CS
+#define PIN_38_D22      38      // [Screen SPI2 CLK ] ok                      - H/W SPI2 SCK/CLK (default, cleanest clock)
+#define PIN_37_D23      37      // [Ext. Status LED ] OK                      - H/W SPI2 MISO                   - Ok to use if not used for Octal SPI Flash or PSRAM (model specific)
+#define PIN_36_D24      36      // [Screen SPI2 RST ] ok                      - H/W SPI2 SCK/CLK (alternate)    - Ok to use if not used for Octal SPI Flash or PSRAM (model specific)
+#define PIN_35_D25      35      // [Screen SPI2 MOSI] ok                      - H/W SPI2 MOSI/SDA               - Ok to use if not used for Octal SPI Flash or PSRAM (model specific)
+//      PIN_0                   //                                            - Boot Strapping Pin Boot Mode
+//      PIN_45                  //                                            - Boot Strapping Pin VDD SPI Voltage (VDD_SPI voltage, selects between 1.8v and 3.3v)
+#define PIN_48_D23      48      // [Internal LED    ] ok                      - Internal NEOPIXEL (default internal pin reference)
+#define PIN_47_D24      47      // [External LED    ] ok                      - External LED's
+#define PIN_21_D25      21      // [----------------] OK pud
+//      PIN_20          XX                                                    - USB_D+ - DO NOT USE - If reconfigured as normal GPIO, USB-JTAG functionality unavailable - i.e. don't expect USB to work!
+//      PIN 19          XX                                                    - USB_D- - DO NOT USE
+//      Gnd
+//      Gnd
+
+// ==================================================
+// All possible points ordered into Blocks/connectors
+// Documented wire color in <brackets> was used in prototype
+
+// Battery monitor ... 10k -> +3.3, 20k -> Gnd
+#define BATTERY_MONITOR_PIN     PIN_02_D17_A8   // Battery Voltage - 20K ohm to Gnd + 10K ohm to +ve
+
+// Guitar Neck Buttons [8 block]
+#define HAT1_Up_PIN             PIN_05_D02_A2   // [05] <Gray>
+#define HAT1_Down_PIN           PIN_06_D03_A3   // [06] <Brown>
+#define BUTTON_Blue_PIN         PIN_07_D04_A4   // [07] <Blue> 4th
+#define BUTTON_Green_PIN        PIN_15_D05      // [15] <Green> 1st
+#define BUTTON_Orange_PIN       PIN_16_D06      // [16] <Orange> 5th
+#define BUTTON_Yellow_PIN       PIN_17_D07      // [17] <Yellow> 3rd
+// Gnd                                          // [G ] <Black> - Set as Gnd
+#define BUTTON_Red_PIN          PIN_08_D09      // [18] <Red> 2nd
+
+// Extra buttons [3 block]
+#define BUTTON_Tilt_PIN         PIN_10_D11_A6   // [10] < > Tilt Sensor
+// 11 Spare?                                    // [11] <White>
+// 12 Spare?                                    // [12] <Black>
+
+// End Buttons [3 block]
+#define BUTTON_Start_PIN        PIN_13_D14      // [13] <Red>
+#define BUTTON_Select_PIN       PIN_12_D13      // PIN_14_D15    // [14] <White>
+// Gnd                                          // [G ]
+
+#define BUTTON_FlipScreen_PIN   PIN_41_D19
+
+// Whammy Bar / POT [3 block]
+// +3.3v                                        // [+V] <Red>
+#define ANALOG_Whammy_PIN       PIN_04_D01_A1   // [04] <White> - Pot Reading
+// Gnd                                          // [G ] <Black>
+
+// Screen block [8 block] (TWO SETS OF WIRE COLOURS - accidentally soldered the block socket wrong way around, doh, so lists what colour should have been, then what was actually used
+// +3.3v                                        // [+V] <Red> <Gray> - V++ (ignore pin 36)
+// Gnd                                          // [G ] <Black> <Brown> - set as Gnd (ignore pin 39)
+#define SCREEN_SPI2_MOSI_PIN    PIN_35_D25      // Screen SPI2 MOSI/SDA
+#define SCREEN_SPI2_RST_PIN     PIN_36_D24      // Screen RST
+#define EXTERNAL_LED_PIN        PIN_37_D23      // [  ] <Yellow> <Blue> - External NeoPixel Status LED
+#define SCREEN_SPI2_SCK_PIN     PIN_38_D22      // Screen SPI2 SCK/CLK
+#define SCREEN_SPI2_CS          PIN_39_D21      // [39] <Orange> <Green> - Screen - CS
+#define SCREEN_SPI2_DC          PIN_40_D20      // [40] <Green> <Orange> - Screen - DC
+
+// Just for reference
+#define SCREEN_SPI2_MISO_PIN    -1              // Not required in our case
+
+// Onboard pins
+#define ONBOARD_LED_PIN         PIN_48_D23
+
+// Inputs defined individually to make referencing them multiple times easier elsewhere (if required)
+
+// ========================
+// Digital Inputs (buttons)
+
+// extern Input DigitalInput_Green;
+// extern Input DigitalInput_Red;
+// extern Input DigitalInput_Yellow;
+// extern Input DigitalInput_Blue;
+// extern Input DigitalInput_Orange;
+// extern Input DigitalInput_Start;
+// extern Input DigitalInput_Select;
+// extern Input DigitalInput_Tilt;
+
+#define ENABLE_FLIP_SCREEN // Required if below is defined
+// #define FLIP_SCREEN_TOGGLE 1 // FlipScreen can either toggle on and off with a button press (enable), or holding a button down sets its flipped state (disable)
+extern Input DigitalInput_FlipScreen;
+
+// For controlling configuration menu
+extern uint8_t BootPin_StartInConfiguration;
+extern uint8_t Menu_UpPin;
+extern char Menu_UpLabel[];
+extern uint8_t Menu_DownPin;
+extern char Menu_DownLabel[];
+extern uint8_t MenuSelectPin;
+extern char Menu_SelectLabel[];
+extern uint8_t Menu_BackPin;
+extern char Menu_BackLabel[];
+
+// Buttons used for configuration menu
+extern Input *DigitalInputs_ConfigMenu[];
+extern Input DigitalInput_Config_Up;
+extern Input DigitalInput_Config_Down;
+extern Input DigitalInput_Config_Select;
+extern Input DigitalInput_Config_Back;
+
+// DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
+extern Input *DigitalInputs[];
+
+// =============
+// Analog inputs
+
+#define Enable_Slider1 1
+
+// Specific inputs we need references to
+// extern Input AnalogInputs_Whammy;
+
+extern Input *AnalogInputs[];
+
+// ==========
+// Hat inputs
+
+// Assumes hats are used Hat1 -> 4
+
+// Hat states, for all possible hats
+// (for simplicity, all hats are passed to bleGamepad library, even if not used)
+// To define a hat without a pin/control point, set pin to NONE - e.g. might only want to use up/down but not left/right
+
+extern unsigned char HatValues[];
+
+// Hat used for up/down strum bar
+// HatInput Hat0;
+
+extern HatInput *HatInputs[];
+
+// -----------------------------------------------------
+// Array sizes
+
+extern IntPair LEDClones[];
+extern int LEDClones_Count;
+
+extern Stats Stats_Neck;
+extern Stats Stats_Green;
+extern Stats Stats_Red;
+extern Stats Stats_Yellow;
+extern Stats Stats_Blue;
+extern Stats Stats_Orange;
+
+extern Stats Stats_StrumBar;
+extern Stats Stats_HatUp;
+extern Stats Stats_HatDown;
+
+extern Stats *AllStats[];
+extern int AllStats_Count;
+
+extern int ControllerGfx_RunCount;
+extern int AnalogInputs_Count;
+extern int HatInputs_Count;
+extern int DigitalInputs_Count;
+
+extern ExternalLEDConfig *MiscLEDEffects[];
+extern ExternalLEDConfig *IdleLEDEffects[];
+
+extern int ControllerGfx_RunCount;
+extern int AnalogInputs_Count;
+extern int HatInputs_Count;
+extern int DigitalInputs_Count;
+extern int DigitalInputs_ConfigMenu_Count;
+extern int MiscLEDEffects_Count;
+extern int IdleLEDEffects_Count;
+
+// -----------------------------------------------------
+// Special case code specific to this controller
+
+void Custom_RenderHatStrumState(HatInput *hatInput);
+
+// -----------------------------------------------------
+// Version references
+extern char ControllerDeviceNameType[];
+extern char ControllerType[];
+extern char ModelNumber[];
+extern char FirmwareRevision[];
+extern char HardwareRevision[];
+extern char SoftwareRevision[];
+
+// Config menu stuff
+
+// Config menu text - injected into UI in relevant places
+#define DIGITALINPUT_CONFIG_UP_LABEL "Strum Up"
+#define DIGITALINPUT_CONFIG_DOWN_LABEL "Strum Down"
+#define DIGITALINPUT_CONFIG_SELECT_LABEL "Green Button"
+#define DIGITALINPUT_CONFIG_BACK_LABEL "Red Button"
+
+// Message that appears in Config help menu
+// Will include controller specific instructions
+// Note: See Style definition in RenderText.h for limitations
+
+static const TextLine ConfigHelpText[] = {
+    // {STYLE_NONE, "This is a test"},
+    // {STYLE_H1, "This is H1"},
+    // {STYLE_NONE, "This is a test"},
+    // {STYLE_BOLD, "This is Bold"},
+    // {STYLE_UNDERLINE, "This is Underline"},
+    // {STYLE_BOLD | STYLE_UNDERLINE, "This is Bold Underline"},
+    // {STYLE_SEPARATOR, ""},
+    // {STYLE_SEPARATOR, "This is a separator"},
+    // {STYLE_HIGHLIGHT, "This is Highlighted"},
+    // {STYLE_CENTRED, "This is centred"},
+    // {STYLE_ALIGNRIGHT, "Aligned Right"},
+    // {STYLE_HIGHLIGHT | STYLE_CENTRED, "Highlighted Centred"},
+    // {STYLE_NONE, "This is a test"},
+    // {STYLE_BULLET, "1 This is a test"},
+    // {STYLE_BULLET, "2 This is a test"},
+    // {STYLE_BULLET, "3 This is a test"},
+
+    {STYLE_H1, "Help"},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL " +"},
+    {STYLE_NONE, DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL},
+    {STYLE_NONE, "to scroll this help text."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL},
+    {STYLE_NONE, "to change menu."},
+    {STYLE_NONE, "Different menus use"},
+    {STYLE_NONE, "controller buttons"},
+    {STYLE_NONE, "in different ways."},
+    {STYLE_NONE, "See below for details."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "This configuration "},
+    {STYLE_NONE, "screen allows you to"},
+    {STYLE_NONE, "alter profiles, enter"},
+    {STYLE_NONE, "WiFi details, etc."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Note WiFi is only used"},
+    {STYLE_NONE, "to enable access to a"},
+    {STYLE_NONE, "web server on the device"},
+    {STYLE_NONE, "and is not required to"},
+    {STYLE_NONE, "operate as a controller."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Once changes are"},
+    {STYLE_NONE, "complete, don't forget"},
+    {STYLE_NONE, "to go to the save menu."},
+    {STYLE_NONE, "and save."},
+    {STYLE_NONE, ""},
+    {STYLE_SEPARATOR, ""},
+    {STYLE_NONE, ""},
+    {STYLE_H1, " Profile", Icon_Menu_Smile},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Device allows for"},
+    {STYLE_NONE, "multiple profiles with"},
+    {STYLE_NONE, "with own"},
+    {STYLE_NONE, ""},
+    {STYLE_BULLET, "Unique Device name"},
+    {STYLE_BULLET, "Wifi settings"},
+    {STYLE_BULLET, "Unique Bluetooth"},
+    {STYLE_BULLET, "identify", Icon_IGNORE},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Handy if you want to"},
+    {STYLE_NONE, "pair your controller"},
+    {STYLE_NONE, "with multiple"},
+    {STYLE_NONE, "devices and on"},
+    {STYLE_NONE, "different WiFi networks."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Normally controller uses"},
+    {STYLE_NONE, "the default profile."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Profiles 1-5 are accessed"},
+    {STYLE_NONE, "are accessed on"},
+    {STYLE_NONE, "controller power-up by"},
+    {STYLE_NONE, "by holding down"},
+    {STYLE_NONE, "corresponding"},
+    {STYLE_NONE, "green, red, yellow, blue"},
+    {STYLE_NONE, "or orange buttons on the"},
+    {STYLE_NONE, "guitar neck."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "You set the WiFi settings"},
+    {STYLE_NONE, "for each profile"},
+    {STYLE_NONE, "separately."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Different bluetooth"},
+    {STYLE_NONE, "identities need device"},
+    {STYLE_NONE, "pairing for each profile."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "You can copy/paste"},
+    {STYLE_NONE, "profile settings to"},
+    {STYLE_NONE, "make it easy to"},
+    {STYLE_NONE, "duplicate WiFi"},
+    {STYLE_NONE, "configurations etc."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, ""},
+    {STYLE_H1, "Moving between Profiles"},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "In the Profile menu,"},
+    {STYLE_NONE, "hold " DIGITALINPUT_CONFIG_SELECT_LABEL},
+    {STYLE_NONE, "and then use"},
+    {STYLE_NONE, DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL},
+    {STYLE_NONE, "to move between profiles."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, ""},
+    {STYLE_H1, "Copying Profiles"},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "In the Profile menu,"},
+    {STYLE_NONE, "hold " DIGITALINPUT_CONFIG_BACK_LABEL},
+    {STYLE_NONE, "to access a profile"},
+    {STYLE_NONE, "copy/paste function."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Then hold " DIGITALINPUT_CONFIG_UP_LABEL},
+    {STYLE_NONE, "to copy the current."},
+    {STYLE_NONE, "profile."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Move to your target"},
+    {STYLE_NONE, "profile (see earlier)"},
+    {STYLE_NONE, "and hold " DIGITALINPUT_CONFIG_BACK_LABEL},
+    {STYLE_NONE, "to access copy/paste"},
+    {STYLE_NONE, "again. Finally"},
+    {STYLE_NONE, "hold " DIGITALINPUT_CONFIG_DOWN_LABEL},
+    {STYLE_NONE, "to paste the settings."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Settings will not be"},
+    {STYLE_NONE, "saved until you go to"},
+    {STYLE_NONE, "the Save menu."},
+    {STYLE_NONE, ""},
+    {STYLE_SEPARATOR, ""},
+    {STYLE_NONE, ""},
+    {STYLE_H1, "WiFi Set-up", Icon_Menu_WiFi},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Wifi Settings let you..."},
+    {STYLE_NONE, ""},
+    {STYLE_BULLET, "Select required WiFi"},
+    {STYLE_BULLET, "access point", Icon_IGNORE},
+    {STYLE_BULLET, "Set a password"},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Note that passwords"},
+    {STYLE_NONE, "are saved in the"},
+    {STYLE_NONE, "controller in an"},
+    {STYLE_NONE, "encrypted format"},
+    {STYLE_NONE, "but are visible in"},
+    {STYLE_NONE, "this configuration"},
+    {STYLE_NONE, "screen."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, ""},
+    {STYLE_H1, "WiFi Access Point"},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "A list of WiFi access"},
+    {STYLE_NONE, "points are"},
+    {STYLE_NONE, "automatically scanned"},
+    {STYLE_NONE, "and updated every few"},
+    {STYLE_NONE, "seconds."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL},
+    {STYLE_NONE, "and then use"},
+    {STYLE_NONE, DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL},
+    {STYLE_NONE, "to move to the access"},
+    {STYLE_NONE, "point you want to use."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "In the list, a small"},
+    {STYLE_NONE, "bar is shown to the left"},
+    {STYLE_NONE, "of the access point"},
+    {STYLE_NONE, "to show signal strength"},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, ""},
+    {STYLE_H1, "WiFi Password", Icon_Menu_Key},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "In the password menu"},
+    {STYLE_NONE, "any currently known"},
+    {STYLE_NONE, "password will be"},
+    {STYLE_NONE, "shown. The password"},
+    {STYLE_NONE, "will be blank if none"},
+    {STYLE_NONE, "has been specified yet."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "There will be a flashing"},
+    {STYLE_NONE, "cursor at the end"},
+    {STYLE_NONE, "of the password."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL},
+    {STYLE_NONE, "and then use"},
+    {STYLE_NONE, DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL},
+    {STYLE_NONE, "to scroll through a"},
+    {STYLE_NONE, "list of characters"},
+    {STYLE_NONE, "for the current letter"},
+    {STYLE_NONE, "in the password."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Once a letter is"},
+    {STYLE_NONE, "selected, the cursor"},
+    {STYLE_NONE, "will automatically move"},
+    {STYLE_NONE, "to the next position."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Press " DIGITALINPUT_CONFIG_BACK_LABEL},
+    {STYLE_NONE, "to delete the last"},
+    {STYLE_NONE, "letter and move the"},
+    {STYLE_NONE, "cursor back."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "A status is shown for the"},
+    {STYLE_NONE, "entered password"},
+    {STYLE_NONE, "and if it works with your"},
+    {STYLE_NONE, "your selected WiFi access"},
+    {STYLE_NONE, "point."},
+    {STYLE_NONE, ""},
+    {STYLE_SEPARATOR, ""},
+    {STYLE_NONE, ""},
+    {STYLE_H1, "Save Settings", Icon_Menu_Save},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL},
+    {STYLE_NONE, "to save any changes."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "ALL profile settings"},
+    {STYLE_NONE, "will be saved."},
+    {STYLE_NONE, ""},
+    {STYLE_BOLD, "Warning:"},
+    {STYLE_NONE, "If you do not save,"},
+    {STYLE_NONE, "all changes will be"},
+    {STYLE_NONE, "lost."},
+    {STYLE_NONE, ""},
+    {STYLE_SEPARATOR, ""},
+    {STYLE_NONE, ""},
+    {STYLE_H1, "Notes", Icon_Menu_QuestionMark},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "To access other menus,"},
+    {STYLE_NONE, "during normal controller"},
+    {STYLE_NONE, "operations, hold down"},
+    {STYLE_NONE, "the Select Button."},
+    {STYLE_NONE, ""},
+    {STYLE_NONE, "If WiFi is"},
+    {STYLE_NONE, "configured and OK"},
+    {STYLE_NONE, "then the main WiFi menu"},
+    {STYLE_NONE, "will show an IP Address"},
+    {STYLE_NONE, "(if available) to"},
+    {STYLE_NONE, "access further"},
+    {STYLE_NONE, "functionality and"},
+    {STYLE_NONE, "information from a"},
+    {STYLE_NONE, "standard web browser."},
+    {STYLE_NONE, ""},
+    {STYLE_SEPARATOR, ""},
+    {STYLE_NONE, ""}
+    };
