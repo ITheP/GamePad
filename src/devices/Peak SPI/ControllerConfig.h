@@ -99,7 +99,8 @@ extern IconRun ControllerGfx[];
 // ===============
 // PIN definitions
 // pud = pull up pull down resistor available
-// Do not use ADC2 pins for ADC - ESP32-S3 ADC2 has issues (especially if using wireless/bluetooth) and is easier just to not use it than faff around
+// Do not use ADC2 pins for ADC - ESP32-S3 ADC2 has issues, especially if using wireless/bluetooth. It shares hardware with the Wi‑Fi block,
+// so reads can fail, block, or get noisy while Wi‑Fi is active). Is easier just to not use it than faff around
 
 // Extra details on configuration and what it means - see project Wiki https://github.com/ITheP/GamePad/wiki/ESP32-S3
 
@@ -119,12 +120,12 @@ extern IconRun ControllerGfx[];
 #define PIN_08_D09      8       // [Red             ] ok pud ADC1_7 Touch_08  - I2C SDA default
 //      PIN_3           XX      //                       pud ADC1_2 Touch_03  - DO NOT USE - Boot Strapping pin (JTAG signal source)
 //      PIN_46          XX                                                    - DO NOT USE - Boot Strapping pin (Chip boot mode and ROM messages printing), input only, no internal pull up/down
-#define PIN_09_D10_A5   9       // [----------------] OK pud ADC1_8 Touch_09  - I2C SCL Default
+#define PIN_09_D10_A5   9       // [A1--------------] OK pud ADC1_8 Touch_09  - I2C SCL Default
 #define PIN_10_D11_A6   10      // [Tilt            ] ok pud ACD1_9 Touch_10  -                      H/W SPI3 CS
 #define PIN_11_D12      11      // [----------------] OK pud adc2_0 Touch_11  - Do not use for ADC - H/W SPI3 MOSI/SDA
-#define PIN_12_D13      12      // [----------------] OK pud adc2_1 Touch_12  - Do not use for ADC - H/W SPI3 SCK/CLK
-#define PIN_13_D14      13      // [Start           ] ok pud adc2_2 Touch_13  - Do not use for ADC - H/W SPI3 MISO
-#define PIN_14_D15      14      // [Select          ] ok pud adc2_3 Touch_14  - Do not use for ADC
+#define PIN_12_D13      12      // [Start           ] OK pud adc2_1 Touch_12  - Do not use for ADC - H/W SPI3 SCK/CLK
+#define PIN_13_D14      13      // [Select          ] ok pud adc2_2 Touch_13  - Do not use for ADC - H/W SPI3 MISO
+#define PIN_14_D15      14      // [----------------] ok pud adc2_3 Touch_14  - Do not use for ADC
 //      +5v in                  //                                            - +5v from USB if IN-OUT jumper bridged
 //      Gnd
 
@@ -169,6 +170,8 @@ extern IconRun ControllerGfx[];
 #define BUTTON_Yellow_PIN       PIN_17_D07      // [17] <Yellow> 3rd
 // Gnd                                          // [G ] <Black> - Set as Gnd
 #define BUTTON_Red_PIN          PIN_08_D09      // [18] <Red> 2nd
+
+#define ABUTTON_TEST_PIN        PIN_09_D10_A5   // [07] <> Test
 
 // Extra buttons [3 block]
 #define BUTTON_Tilt_PIN         PIN_10_D11_A6   // [10] < > Tilt Sensor

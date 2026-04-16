@@ -3,13 +3,14 @@
 #include <stdint.h>
 
 #define EXTRA_SERIAL_DEBUG          // Enable to print loads of extra information to serial
-//#define EXTRA_SERIAL_DEBUG_PLUS   // ...further detail, but can flood serial output somewhat!
+//#define EXTRA_SERIAL_DEBUG_PLUS   // ...further detail including analog input values, but can flood serial output somewhat!
 //#define INCLUDE_BENCHMARKS        // Includes some basic performance statistics of running device over serial
 //#define INCLUDE_BENCHMARKS_LED    // Basic performance stats for LED processing
 //#define STRAIGHT_TO_CONFIG_MENU   // Skip straight to config menu on start up for easier testing
 //#define WHITE_SCREEN              // Display will show a solid white screen, handy when physically aligning panel in device
-#define DEBUG_MARKS                 // Extra debug logging that survives crashes
-#define FORCE_FPS_DISPLAY           // Debug variant of Show FPS in top right corner of screen (don't need to be in menus)
+//#define DEBUG_MARKS                 // Extra debug logging that survives crashes
+//#define FORCE_FPS_DISPLAY           // Debug variant of Show FPS in top right corner of screen (don't need to be in menus)
+//#define STRAIGHT_TO_IDLE_SCREEN     // Skip straight to idle screen on start up for easier testing of idle screen and effects
 
 #define SETUP_DELAY     250         // Delay between stages of initial start up
                                     // Could be pretty much instant, but having a delay gives a chance to display

@@ -148,10 +148,10 @@ void AnalogArrayEffects::PointWithTail(void *analogInput, float time)
 
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
-  // int amount = map(input->ValueState.Value, input->MinValue, input->MaxValue, -20, 275); // Map slightly outside 0-255 range
+  // int amount = map(input->ValueState.Value, input->MinAnalogValue, input->MaxAnalogValue, -20, 275); // Map slightly outside 0-255 range
   // amount = constrain(amount, 0, 255);                           // ...then clip to range
-  int16_t minValue = input->MinValue;
-  int16_t maxValue = input->MaxValue;
+  int16_t minValue = input->MinAnalogValue;
+  int16_t maxValue = input->MaxAnalogValue;
   int amount = constrain(input->ValueState.Value, minValue, maxValue);
   amount = map(amount, minValue, maxValue, -10, 265); // Slight tweak to the extremes to make sure min value shows nothing and max engages just before controls max point is reached
 

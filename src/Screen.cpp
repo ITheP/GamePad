@@ -2,15 +2,16 @@
 #include "Stats.h"
 #include "Battery.h"
 #define NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
-#include <Adafruit_SSD1306.h>
+#include <Adafruit_SH110X.h>
+//#include <Adafruit_SSD1306.h>
 
 // I2C 4 pin (display theoretical FPS maxes out around 48fps)
 #ifdef SCREEN_INTERFACE_I2C
 Adafruit_SH1106G Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #else
 // SPI 7 pin (display theoretical FPS maxes out around 976fps)
-Adafruit_SSD1306 Display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, SCREEN_SPI2_DC, SCREEN_SPI2_RST_PIN, SCREEN_SPI2_CS);
-
+//Adafruit_SSD1306 Display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, SCREEN_SPI2_DC, SCREEN_SPI2_RST_PIN, SCREEN_SPI2_CS);
+Adafruit_SH1106G Display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, SCREEN_SPI2_DC, SCREEN_SPI2_RST_PIN, SCREEN_SPI2_CS);
 #endif
 
 // Screen orientation functions

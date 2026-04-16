@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-#define IDLE_MAX_PARTICLE_COUNT 128             // 256 particles benchmarked at under 1ms overhead with current effect. Screen can get a bit crowded with 256 though.
+#define IDLE_MAX_PARTICLE_COUNT 128             // 256 particles benchmarked at under 1ms overhead with current effect. Screen can get a bit crowded with 256 though. 4096 worked fine with SPI used as display bus
 
 struct IdleSpawnPoint {
     int x;

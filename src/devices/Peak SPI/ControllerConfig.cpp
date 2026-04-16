@@ -84,6 +84,105 @@ Input *DigitalInputs_ConfigMenu[] = {
     &DigitalInput_Config_Down,
     &DigitalInput_Config_Select,
     &DigitalInput_Config_Back};
+
+// =============
+// Analog inputs
+// Defined before Digital Inputs incase Digital Inputs need to reference them as VirtualPinInputs
+
+#define Enable_Slider1 1
+
+// Analog Button -
+// Specific inputs we need references to
+// On @ value e.g. 4000 -> 2000 = trigger
+// Off @ value e.g. 2000 -> 3000 = release
+// Secondary AnalogInput
+// ...Straight Analog input only enabled/pressed when on/off in Analog button is in pressed state (i.e. emulate values going into it)
+// ...Analog wobble engage - when button is on, and variance in value is above a certain threshold it enables the secondary AnalogInput then passes through the value (e.g. simulates whammy bar). Include a threshold trigger e.g. to push harder to engage, and then for the e.g. wobble a scaling factor -> the secondary analoginput's range
+
+// AnalogInput Input type needs a `Virtual Trigger` reference
+// Process AnalogButtons first and they set a virtual Analog value against them
+// Then when processing AnalogInputs, if input = virtual (i.e. has a reference to an AnalogButton), it gets its value from the AnalogButton instead of the pin reading
+// HAVE TO MAKE SURE MULTIPLE INPUTS TO SAME TARGET DONT OVERRIDE EACH OTHER IF NOT IN USE
+
+// Test Virtual Source - maps test analog to triggered red button press + whammy bar when triggered
+Input AnalogInputs_Virtual_TriggeredWhammy =
+{
+        .Pin = ABUTTON_TEST_PIN,
+        .Label = "Virtual Triggered Whammy",
+        .BluetoothInput = NONE,
+        .DefaultValue = NOT_PRESSED,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 1000,
+        .MaxAnalogValue = 3000,
+        .TriggerOnValue = 2600,
+        .TriggerOffValue = 2800,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = NONE
+};
+
+// Specific inputs we need references to
+Input AnalogInputs_Whammy =
+    {
+        .Pin = ANALOG_Whammy_PIN,
+        .VirtualPinInput = &AnalogInputs_Virtual_TriggeredWhammy, // TODO MAKE THIS AN ARRAY
+        .Label = "Whammy",
+        .BluetoothInput = NONE,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 2300,
+        .MaxAnalogValue = 3500,
+        .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = &BleGamepad::setSlider1,
+        .RenderOperation = RenderInput_AnalogBar_Vert, .XPos = uiWhammyX + 2, .YPos = uiWhammyY + 2, .RenderWidth = uiWhammyW - 4, .RenderHeight = uiWhammyH - 4,
+        .TrueIcon = NONE, .FalseIcon = NONE,
+        .OnboardLED = {CRGB::Pink, true}
+        // .LEDConfig = new ExternalLEDConfig {
+        //     .LEDNumbers = { LED_Whammy,  (LED_Whammy+1), (LED_Whammy+2), (LED_Whammy+3), (LED_Whammy+4), (LED_Whammy+5), (LED_Whammy+6), (LED_Whammy+7)
+        //       },
+        //     .PrimaryColour = { CRGB(255, 54, 96), true},
+        //     .SecondaryColour = { CRGB::Green, false},
+        //     //.Effect = &AnalogEffects::BlendedHue
+        //     //.Effect = &AnalogEffects::SimpleSet_Fill
+        //     //.Effect = &AnalogArrayEffects::BuildBlendToEnd
+        //     //.Effect = &AnalogArrayEffects::SquishBlendToPoint
+        //     .Effect = &AnalogArrayEffects::PointWithTail
+        //     // .Effect = &LEDConfig::AnalogEffect_SimpleSet
+        //     // .Effect = &LEDConfig::AnalogEffect_Throb
+        //     // .Effect = &LEDConfig::AnalogEffect_Hue
+        //     // .Effect = &LEDConfig::AnalogEffect_StartAtHue
+        //     // .Effect = &LEDConfig::AnalogEffect_EndAtHue
+        //     // .Effect = &LEDConfig::AnalogEffect_BlendedStartAtHue
+        //     // .Effect = &LEDConfig::AnalogEffect_BlendedEndAtHue
+        // }
+};
+
+// Input AnalogInputs_VirtualWhammyTest =
+// {
+//         .VirtualPin = &AnalogInputs_Test_TriggeredWobble,
+//         .Label = "Virtual Whammy Test",
+//         .BluetoothInput = NONE,
+//         .DefaultValue = -1,
+//         .MinAnalogValue = 2800,
+//         .MaxAnalogValue = 2000,
+//         .BluetoothPressOperation = NONE,
+//         .BluetoothReleaseOperation = NONE,
+//         .BluetoothSetOperation = &BleGamepad::setSlider1,
+//         .AnalogRenderOperation = RenderInput_AnalogBar_Vert,
+//         .XPos = uiWhammyX + 2,
+//         .YPos = uiWhammyY + 2,
+//         .RenderWidth = uiWhammyW - 4,
+//         .RenderHeight = uiWhammyH - 4,
+//         .TrueIcon = NONE,
+//         .FalseIcon = NONE,
+//         .OnboardLED = {CRGB::Pink, true}
+// };
+
+Input *AnalogInputs[] = {
+    &AnalogInputs_Whammy,
+    &AnalogInputs_Virtual_TriggeredWhammy
+};
+
+
 // Digital inputs
 
 Input DigitalInput_Green = // Green button on guitar neck
@@ -110,10 +209,28 @@ Input DigitalInput_Green = // Green button on guitar neck
      //     .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
      //     .Chance = (uint32_t)(0.01 * 0xFFFF) // 10% chance of sparkle
      // },
-     .ProfileId = 1};
+     .ProfileId = 1
+    };
 
 Input DigitalInput_Red = // Red button on guitar neck
-    {.Pin = BUTTON_Red_PIN, .Label = "Red", .BluetoothInput = BUTTON_2, .DefaultValue = HIGH, .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE, .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 69, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE, .Statistics = &Stats_Red, .OnboardLED = {CRGB(255, 0, 0), true},
+    {
+        .Pin = BUTTON_Red_PIN,
+        .VirtualPinInput = &AnalogInputs_Virtual_TriggeredWhammy,
+        .Label = "Red",
+        .BluetoothInput = BUTTON_2,
+        .DefaultValue = HIGH,
+        .BluetoothPressOperation = &BleGamepad::press,
+        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = RenderInput_Rectangle,
+        .XPos = uiGuitar_xPos + 69,
+        .YPos = uiGuitar_yPos + 13,
+        .RenderWidth = 4,
+        .RenderHeight = 5,
+        .TrueIcon = NONE,
+        .FalseIcon = NONE,
+        .Statistics = &Stats_Red,
+        .OnboardLED = {CRGB(255, 0, 0), true},
      // .LEDConfig = new ExternalLEDConfig{
      //   .LEDNumber = LED_Red,
      //   .PrimaryColour = { CRGB(255, 0, 0), true },
@@ -121,7 +238,8 @@ Input DigitalInput_Red = // Red button on guitar neck
      //   .Effect = &DigitalEffects::Pulse,
      //   .Rate = 255.0 * 2
      // },
-     .ProfileId = 2};
+        .ProfileId = 2
+    };
 
 Input DigitalInput_Yellow = // Yellow button on guitar neck
     {.Pin = BUTTON_Yellow_PIN, .Label = "Yellow", .BluetoothInput = BUTTON_4, .DefaultValue = HIGH, .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE, .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 62, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE, .Statistics = &Stats_Yellow, .OnboardLED = {CRGB(255, 255, 0), true},
@@ -284,38 +402,6 @@ Input *DigitalInputs[] = {
 //   //{ PIN_D13, "Home", HOME_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 },
 //   //{ PIN_A5, "Back", BACK_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 }
 // };
-
-// =============
-// Analog inputs
-
-#define Enable_Slider1 1
-
-// Specific inputs we need references to
-Input AnalogInputs_Whammy =
-    {
-        .Pin = ANALOG_Whammy_PIN, .Label = "Whammy", .BluetoothInput = NONE, .DefaultValue = -1, .MinValue = 2300, .MaxValue = 3500, .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = &BleGamepad::setSlider1, .RenderOperation = RenderInput_AnalogBar_Vert, .XPos = uiWhammyX + 2, .YPos = uiWhammyY + 2, .RenderWidth = uiWhammyW - 4, .RenderHeight = uiWhammyH - 4, .TrueIcon = NONE, .FalseIcon = NONE, .OnboardLED = {CRGB::Pink, true}
-        // .LEDConfig = new ExternalLEDConfig {
-        //     .LEDNumbers = { LED_Whammy,  (LED_Whammy+1), (LED_Whammy+2), (LED_Whammy+3), (LED_Whammy+4), (LED_Whammy+5), (LED_Whammy+6), (LED_Whammy+7)
-        //       },
-        //     .PrimaryColour = { CRGB(255, 54, 96), true},
-        //     .SecondaryColour = { CRGB::Green, false},
-        //     //.Effect = &AnalogEffects::BlendedHue
-        //     //.Effect = &AnalogEffects::SimpleSet_Fill
-        //     //.Effect = &AnalogArrayEffects::BuildBlendToEnd
-        //     //.Effect = &AnalogArrayEffects::SquishBlendToPoint
-        //     .Effect = &AnalogArrayEffects::PointWithTail
-        //     // .Effect = &LEDConfig::AnalogEffect_SimpleSet
-        //     // .Effect = &LEDConfig::AnalogEffect_Throb
-        //     // .Effect = &LEDConfig::AnalogEffect_Hue
-        //     // .Effect = &LEDConfig::AnalogEffect_StartAtHue
-        //     // .Effect = &LEDConfig::AnalogEffect_EndAtHue
-        //     // .Effect = &LEDConfig::AnalogEffect_BlendedStartAtHue
-        //     // .Effect = &LEDConfig::AnalogEffect_BlendedEndAtHue
-        // }
-};
-
-Input *AnalogInputs[] = {
-    &AnalogInputs_Whammy};
 
 // ==========
 // Hat inputs
