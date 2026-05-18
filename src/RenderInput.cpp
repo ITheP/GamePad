@@ -152,7 +152,7 @@ void RenderInput_AnalogBar_Vert(Input *input)
   // Clear any old bar
   Display.fillRect(xPos, yPos, width, height, C_BLACK);
 
-  int16_t value = input->ValueState.Value;
+  int16_t value = input->ValueState.AnalogValue;
   int16_t minValue = input->MinAnalogValue;
   int16_t maxValue = input->MaxAnalogValue;
   int16_t constrainedState = constrain(value, minValue, maxValue);

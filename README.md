@@ -53,14 +53,13 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 - [x] Basic text style formatting of Help text
 - [x] Save user config to flash
 - [x] Save user stats to flash
-- [ ] Query around power brownout on off and saving
+- [x] Query around power brownout on off and saving
 - [ ] Save to flash encryption
 - [ ] Hiding of existing password (show 1st/last chars only) - UI specific, don't overwrite saved passwords
 - [ ] Default Device Names from default Profiles
 - [x] Trigger on button down, and button up, and alternative long press triggers (so can e.g. hold button to access menus while retaining its ability to be used in game)
 - [ ] One effect can affect others - e.g. buttons held down affect colour of another effect
-- [ ] HAT code needs tweaking to finish it completely
-- [ ] Impliment analog stick support
+- [x] HAT code needs tweaking to finish it completely
 - [ ] Add more stats tracking
 - [ ] Add alternative screens (for more detailed stats etc.) though possibly not needed with web server
 - [ ] Inactivity screen blanking/LED blanking [power saving]
@@ -122,6 +121,10 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 - [ ] Run time configurable LEDs (disable if power below certain level, turn on/off in options)
 - [ ] If External LED's powered on when empty battery kicks in - turn them all off to preserve battery power
   
+## To Do - Inputs
+- [ ] Analog x/y controllers (thumbsticks)
+- [ ] Auto-calibration of analog inputs
+
 ## To Do - Electronics
 
 - [x] Battery level monitoring
@@ -132,9 +135,12 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 - [ ] LED's that only power up when USB connected
 - [ ] USB charging while playing from USB power (hot plug-able while playing)
 - [ ] Dual battery power (possibly one dedicated to device so isn't effected by LEDs)
-- [ ] Include SPI variant of OLED screen. Currently using I2C, limits max FPS to around 48 due to I2C interface limitations. SPI uses more pins but can push 900+fps - i.e. far lower device load and so faster response.
+- [X] Include SPI variant of OLED screen. Currently using I2C, limits max FPS to around 48 due to I2C interface limitations. SPI uses more pins but can push 900+fps - i.e. far lower device load and so faster response.
 - [ ] Include digital and analog input matrix to allow for far more inputs than pins on esp32-s3 dev module
-
+- [x] Velostat based analog inputs
+- [X] Analog inputs with digital on/off trigger points
+- [X] Virtual analog inputs that can be used as an analog or digital pin value equivalent in other inputs
+  
 ## To Do - Other
 
 - [ ] Stop writing code so much and actually impliment/convert some more physical controllers to use it!

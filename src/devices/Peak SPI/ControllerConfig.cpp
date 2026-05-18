@@ -105,17 +105,39 @@ Input *DigitalInputs_ConfigMenu[] = {
 // HAVE TO MAKE SURE MULTIPLE INPUTS TO SAME TARGET DONT OVERRIDE EACH OTHER IF NOT IN USE
 
 // Test Virtual Source - maps test analog to triggered red button press + whammy bar when triggered
-Input AnalogInputs_Virtual_TriggeredWhammy =
+// SO WE NEED TO MAP MULTIPLE OF THESE FOR THE RED ORANGE GREEN BLUE YELLOW
+
+// Virtual AnalogInput effectively takes a physical input, and turns it into a virtual source for other inputs
+// e.g. an input that acts as both a digital on/off input and an analoge input
+// AnalogInputs and DigitalInputs can reference this Virtual input as a VirtualPinInput source and grab values
+Input AnalogInputs_Virtual_TriggeredGreen =
 {
-        .Pin = ABUTTON_TEST_PIN,
-        .Label = "Virtual Triggered Whammy",
+        .Pin = BUTTON_Green_PIN,
+        .Label = "Virtual Trig. Green + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
-        .MinAnalogValue = 1000,
-        .MaxAnalogValue = 3000,
+        .MinAnalogValue = 2200,
+        .MaxAnalogValue = 2900,
         .TriggerOnValue = 2600,
-        .TriggerOffValue = 2800,
+        .TriggerOffValue = 2300,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = NONE
+};
+
+Input AnalogInputs_Virtual_TriggeredRed =
+{
+        .Pin = BUTTON_Red_PIN,
+        .Label = "Virtual Trig. Red + A. Whammy",
+        .BluetoothInput = NONE,
+        .DefaultValue = NOT_PRESSED,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 2500,
+        .MaxAnalogValue = 4095,
+        .TriggerOnValue = 2800,
+        .TriggerOffValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
@@ -123,10 +145,11 @@ Input AnalogInputs_Virtual_TriggeredWhammy =
 };
 
 // Specific inputs we need references to
+// So the Whammy input can get its input EITHER from the actual pin, or drag in a value (if being provided) from the Virtual Pin.
 Input AnalogInputs_Whammy =
     {
         .Pin = ANALOG_Whammy_PIN,
-        .VirtualPinInput = &AnalogInputs_Virtual_TriggeredWhammy, // TODO MAKE THIS AN ARRAY
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen, &AnalogInputs_Virtual_TriggeredRed},
         .Label = "Whammy",
         .BluetoothInput = NONE,
         .DefaultAnalogValue = -1,
@@ -179,14 +202,32 @@ Input AnalogInputs_Whammy =
 
 Input *AnalogInputs[] = {
     &AnalogInputs_Whammy,
-    &AnalogInputs_Virtual_TriggeredWhammy
+    &AnalogInputs_Virtual_TriggeredGreen,
+    &AnalogInputs_Virtual_TriggeredRed
 };
 
 
 // Digital inputs
 
 Input DigitalInput_Green = // Green button on guitar neck
-    {.Pin = BUTTON_Green_PIN, .Label = "Green", .BluetoothInput = BUTTON_1, .DefaultValue = HIGH, .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE, .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 76, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE, .Statistics = &Stats_Green, .OnboardLED = {CRGB(0, 255, 0), true},
+    {
+        .Pin = NONE, // BUTTON_Green_PIN,
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen},
+        .Label = "Green",
+        .BluetoothInput = BUTTON_1,
+        .DefaultValue = HIGH,
+        .BluetoothPressOperation = &BleGamepad::press,
+        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = RenderInput_Rectangle,
+        .XPos = uiGuitar_xPos + 76,
+        .YPos = uiGuitar_yPos + 13,
+        .RenderWidth = 4,
+        .RenderHeight = 5,
+        .TrueIcon = NONE,
+        .FalseIcon = NONE,
+        .Statistics = &Stats_Green,
+        .OnboardLED = {CRGB(0, 255, 0), true},
      // .LEDConfig = new ExternalLEDConfig {
      //     //.LEDNumber = LED_Green,
      //     .LEDNumbers = { LED_DigitalTest,  (LED_DigitalTest+1), (LED_DigitalTest+2), (LED_DigitalTest+3), (LED_DigitalTest+4), (LED_DigitalTest+5), (LED_DigitalTest+6), (LED_DigitalTest+7),
@@ -214,8 +255,8 @@ Input DigitalInput_Green = // Green button on guitar neck
 
 Input DigitalInput_Red = // Red button on guitar neck
     {
-        .Pin = BUTTON_Red_PIN,
-        .VirtualPinInput = &AnalogInputs_Virtual_TriggeredWhammy,
+        .Pin = NONE, // BUTTON_Red_PIN,
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredRed},
         .Label = "Red",
         .BluetoothInput = BUTTON_2,
         .DefaultValue = HIGH,

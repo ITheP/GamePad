@@ -83,7 +83,7 @@ inline void SetFontIcon()
   TextLineHeight = RREHeight_Icon;
 }
 
-extern char buffer[128];
+extern char buffer[512];
 
 // XPos should specify centre render point
 inline void PrintCenteredNumber(int xpos, int ypos, unsigned long val)

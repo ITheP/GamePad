@@ -51,8 +51,9 @@ enum class VirtualPinModes : uint8_t {
 typedef struct Input {
   uint8_t Pin;
    // Currently only works with AnalogTriggeredInputs
-  Input *VirtualPinInput;                       // Rather than getting state from reading a pin, gets it from another input
+  std::vector<Input*> VirtualPinInputs;         // Rather than getting state from reading a pin, gets it from another input
                                                 // Means we can e.g. have 1 input acting as a button and also triggering an analog separate input
+  //int VirtualPinInputsCount;
   VirtualPinModes VirtualPinMode;
 
   char* Label;
