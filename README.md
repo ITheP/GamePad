@@ -72,6 +72,7 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 - [ ] Controller idle - on display idle keep to max ?3? pixel for first ?20? seconds in case actually in game and don't want performance drop of long term idle effect overhead.
 - [ ] Shift logos out of Icons font into own Logo font to free up icon space, and devices font for device images
 - [x] Separate LED and Screen idle triggers and timings (allows for different overheads to affect the device separately)
+- [ ] Boot info/hardware info should separate out virtual input info
 
 ## To Do - Config & Prefs
 - [x] User selectable configuration in web
