@@ -34,11 +34,11 @@ public:
     static ControllerReport ToggleMenuMode();
 
     static void InitMenuItemDisplay(int useMenuOptionLabel);
-    static void InitMenuItemDisplay(char *text = NONE, MenuScrollState scrollStatus = NoScrollNeeded);
-    static void UpdateMenuText(char *text, int scrollStatus);
+    static void InitMenuItemDisplay(const char *text = NONE, MenuScrollState scrollStatus = NoScrollNeeded);
+    static void UpdateMenuText(const char *text, int scrollStatus);
     static void DisplayMenuTextOptimised();
     static void DisplayMenuText();
-    static void DisplayMenuBasicCenteredText(char *text);
+    static void DisplayMenuBasicCenteredText(const char *text);
 
     static void Setup(Menu *menu);
     static void HandleMain();

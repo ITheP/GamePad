@@ -116,7 +116,7 @@ void Menus::InitMenuItemDisplay(int useMenuOptionLabel)
 }
 
 // Menu auto-scrolls text if too long to fit on screen
-void Menus::InitMenuItemDisplay(char *text, MenuScrollState scrollStatus)
+void Menus::InitMenuItemDisplay(const char *text, MenuScrollState scrollStatus)
 {
   Display.fillRect(0, 0, MenuTextStartX - 1, 13, C_BLACK);
 
@@ -130,7 +130,7 @@ void Menus::InitMenuItemDisplay(char *text, MenuScrollState scrollStatus)
 // Call ... checkScrollNeeded = true,  scrollDefinitelyNeeded = false if you aren't too sure text will fit
 // Call ... checkScrollNeeded = false, scrollDefinitelyNeeded = true  if you KNOW text will NOT fit on screen
 // We do all this to try minimise needless overhead checking for text fit to work out if we need to scroll or not
-void Menus::UpdateMenuText(char *text, int scrollStatus)
+void Menus::UpdateMenuText(const char *text, int scrollStatus)
 {
   if (scrollStatus == ScrollCheck)
   {
@@ -297,12 +297,12 @@ void Menus::FinishScrollingText()
 }
 
 // Super simple display of basic centered text - no icons or anything (e.g. used for Device Name)
-void Menus::DisplayMenuBasicCenteredText(char *text)
+void Menus::DisplayMenuBasicCenteredText(const char *text)
 {
   ScrollMenuText = OFF; // Just in case any previous ongoing scrolling is happening!
 
   Display.fillRect(0, 0, SCREEN_WIDTH, 13, C_BLACK);
-  RREDefault.printStr(ALIGN_CENTER, -1, text);
+  RREDefault.printStr(ALIGN_CENTER, -1, const_cast<char*>(text));
 }
 
 // Used for animated Menu line - a visual indicator that we are in menu mode

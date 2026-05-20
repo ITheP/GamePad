@@ -15,7 +15,7 @@ struct AccessPoint {
   bool selected;      // Preferred flag
 
   unsigned char WiFiCharacter;
-  char *WiFiStatus;
+  const char *WiFiStatus;
 };
 
 class Network
@@ -23,7 +23,7 @@ class Network
 public:
     static void HandleWiFi(int second);
     static int WiFiDisabled;
-    static char *WiFiStatus;
+    static const char *WiFiStatus;
     static unsigned char WiFiCharacter;
     static int8_t WiFiStrength;
 

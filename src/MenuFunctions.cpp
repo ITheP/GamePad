@@ -93,7 +93,7 @@ void MenuFunctions::InitVersion()
 }
 
 // Wifi menu item
-char *LastWiFiStatus = NONE;
+const char *LastWiFiStatus = NONE;
 
 void MenuFunctions::InitWiFi()
 {

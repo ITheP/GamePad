@@ -56,7 +56,7 @@ typedef struct Input {
   //int VirtualPinInputsCount;
   VirtualPinModes VirtualPinMode;
 
-  char* Label;
+  const char* Label;
   int BluetoothInput;
   int16_t DefaultValue;
   int16_t DefaultAnalogValue;

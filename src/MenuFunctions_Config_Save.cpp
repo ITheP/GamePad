@@ -109,20 +109,20 @@ void MenuFunctions::Config_Draw_SaveSettings()
     int centeredY = MenuContentStartY + 20 - iconOffset;
     
     RenderIcon(Icon, centeredX, centeredY, 0, 0);
-    RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Saving...");
-    RREDefault.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "release to cancel");
+    RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 3,  const_cast<char*>("Saving..."));
+    RREDefault.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, const_cast<char*>("release to cancel"));
   }
   else if (currentSaveState == SAVE_COMPLETED)
   {
     RenderIcon(Icon_Check_Yes, checkX, checkY, 0, 0);
-    RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 3, "All done!");
-    RREDefault.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "Save Complete");
+    RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 3, const_cast<char*>("All done!"));
+    RREDefault.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, const_cast<char*>("Save Complete"));
   }
   else if (currentSaveState == SAVE_CANCELLED)
   {
     RenderIcon(Icon_Check_No, checkX, checkY, 0, 0);
-    RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL);
-    RREDefault.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "Save Cancelled");
+    RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 3, const_cast<char*>("Hold " DIGITALINPUT_CONFIG_SELECT_LABEL));
+    RREDefault.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, const_cast<char*>("Save Cancelled"));
 
     unsigned long elapsed = millis() - FrameTimer;
     if (elapsed > 2000)
@@ -130,7 +130,7 @@ void MenuFunctions::Config_Draw_SaveSettings()
   }
   else
   {
-    RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 3, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL);
-    RREDefault.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, "to save");
+    RREDefault.printStr(ALIGN_CENTER, MenuContentStartY - 3, const_cast<char*>("Hold " DIGITALINPUT_CONFIG_SELECT_LABEL));
+    RREDefault.printStr(ALIGN_CENTER, SCREEN_HEIGHT - TextLineHeight, const_cast<char*>("to save"));
   }
 }

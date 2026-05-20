@@ -150,6 +150,7 @@ Input AnalogInputs_Whammy =
     {
         .Pin = ANALOG_Whammy_PIN,
         .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen, &AnalogInputs_Virtual_TriggeredRed},
+        .VirtualPinMode = VirtualPinModes::RequireValueToBePressed, // Only take analog values from virtual pin when they are also in a pressed state
         .Label = "Whammy",
         .BluetoothInput = NONE,
         .DefaultAnalogValue = -1,

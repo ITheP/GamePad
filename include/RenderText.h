@@ -103,21 +103,21 @@ inline void ResetPrintDisplayLine(int yOffset = 0, int xOffset = 0, void (*fontF
   fontFunc();
 }
 
-inline void PrintDisplayLine(char *text)
+inline void PrintDisplayLine(const char *text)
 {
-  RRE.printStr(TextXPos, TextYPos, text);
+  RRE.printStr(TextXPos, TextYPos, const_cast<char*>(text));
   TextYPos += TextLineHeight;
 }
 
-inline void PrintDisplayLineCentered(char *text)
+inline void PrintDisplayLineCentered(const char *text)
 {
-  RRE.printStr(ALIGN_CENTER, TextYPos, text);
+  RRE.printStr(ALIGN_CENTER, TextYPos, const_cast<char*>(text));
   TextYPos += TextLineHeight;
 }
 
-inline void PrintDisplayLineRight(char *text)
+inline void PrintDisplayLineRight(const char *text)
 {
-  RRE.printStr(ALIGN_RIGHT, TextYPos, text);
+  RRE.printStr(ALIGN_RIGHT, TextYPos, const_cast<char*>(text));
   TextYPos += TextLineHeight;
 }
 

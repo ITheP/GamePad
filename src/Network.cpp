@@ -253,7 +253,7 @@ bool Network::TestInProgress = false;
 unsigned long Network::TestStartTime = 0;
 
 unsigned char Network::WiFiCharacter;
-char *Network::WiFiStatus = WiFi_UnknownStatus;
+const char *Network::WiFiStatus = WiFi_UnknownStatus;
 int8_t Network::WiFiStrength;
 
 unsigned char Network::WiFiStatusCharacter;

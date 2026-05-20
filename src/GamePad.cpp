@@ -188,8 +188,13 @@ void setupDisplay()
     // Alternative handling - Spit out an error over serial connection if problem with display
     // Serial.begin(SERIAL_SPEED);
     // delay(200);
+
+#ifdef REQUIRE_DISPLAY
     Serial.println("⛔ Critical failure, display failed to start. Halting!");
     Debug::WarningFlashes(LittleFSFailedToMount);
+#else
+    Serial.println("⛔ Critical failure, display failed to start. This will be ignored as REQUIRE_DISPLAY is not defined, but be aware this cause unexpected issues.");
+#endif
   }
 
   // Display.invertDisplay(true);
@@ -400,14 +405,14 @@ void setupWiFi()
 
   WiFi.onEvent([](WiFiEvent_t event)
                {
-  if (event == SYSTEM_EVENT_STA_GOT_IP) {
+  if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) { //  SYSTEM_EVENT_STA_GOT_IP) {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("🛜 ✅ WiFi connected...");
     Serial.println("🌐 ✅ ...web server active");
 #endif
     Web::WiFiEnabled();
   } else if
-  (event == SYSTEM_EVENT_STA_DISCONNECTED) {
+  (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) { // SYSTEM_EVENT_STA_DISCONNECTED
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("🛜 ❌ WiFi disconnected...");
     Serial.println("🌐 ⚠️ ...web server inactive");
@@ -809,7 +814,7 @@ void setupProfile()
   {
     Serial.println("👤 🛜 ⛔ No WiFi specified, WiFi functionality disabled");
     Network::WiFiDisabled = true;
-    Network::WiFiStatus = "WiFi Disabled (Not Configured)";
+    Network::WiFiStatus = const_cast<const char *>("WiFi Disabled (Not Configured)");
     Network::WiFiCharacter = Icon_WiFi_Disabled;
   }
   else
@@ -1455,8 +1460,12 @@ void MainLoop()
   MainBenchmark.Start("Loop", showBenchmark);
 #endif
 
-  delay(200);
+#ifdef INPUT_SERIAL_DEBUG_PLUS
+  delay(250);
+
   Serial.print("\033[3J\033[2J\033[H");
+  // Serial.print("\033[H");
+#endif
 
   // SubSecond flagging - specific integer used for things like sub second sliding window calculations of UpDownCounts
   SubSecond = (int)(Now * SUB_SECOND_COUNT) % SUB_SECOND_COUNT;
@@ -1621,14 +1630,16 @@ void MainLoop()
 
       // Serial.println("Digital input i=" + String(i) + " for " + String(input->Label) + " raw: " + String(state) + ", Pre.ValueState.State: " + String(input->ValueState.Value));
 
+#ifdef INPUT_SERIAL_DEBUG_PLUS
       snprintf(buffer, sizeof(buffer),
-               "Digital input %2d [%40s]: raw: %4d, Pre.ValueState.      Value: %4d",
+               "Digital input %2d [%-35s]: raw: %4d, Pre.ValueState.      Value: %4d",
                i,
                input->Label,
                state,
                input->ValueState.Value);
 
       Serial.println(buffer);
+#endif
 
       // Combine with virtual pin if required
       // TODO: This may be an array
@@ -1642,15 +1653,14 @@ void MainLoop()
 
           state = state && virtualinput->ValueState.Value;
 
-          // Serial.println(", virtual input of " + String(input->VirtualPinInput->ValueState.Value) + ", and a final state calculation of " + String(state));
-          // Serial.println("    Virtual input <- " + String(virtualinput->ValueState.AnalogValue) + " + Virtual Trigger: " + String(virtualinput->ValueState.Value) + ", Final: " + String(state));
-
+#ifdef INPUT_SERIAL_DEBUG_PLUS
           snprintf(buffer, sizeof(buffer),
-                   "    Virtual input <- %4d + Virtual Trigger: %d, Constrained to %4d, Ranged to %4d, Final: %4d",
+                   "    Virtual input <- %4d + Virtual Trigger: %d, Final state %4d",
                    virtualinput->ValueState.AnalogValue,
                    virtualinput->ValueState.Value,
                    state);
           Serial.println(buffer);
+#endif
         }
       }
 
@@ -1853,9 +1863,10 @@ void MainLoop()
     if (input->Pin != NONE)
       analogState = analogRead(input->Pin);
 
+#ifdef INPUT_SERIAL_DEBUG_PLUS
     // Serial.println("Analog input i=" + String(i) + " for " + String(input->Label) + " raw: " + String(analogState) + ", Pre.ValueState.AnalogValue: " + String(input->ValueState.AnalogValue));
     snprintf(buffer, sizeof(buffer),
-             "Analog  input %2d [%40s]: raw: %4d, Pre.ValueState.AnalogValue: %4d - Min/Max: %4d/%-4d, Trigger On/OFf: %4d/%-4d",
+             "Analog  input %2d [%-35s]: raw: %4d, Pre.ValueState.AnalogValue: %4d - Min/Max: %4d/%-4d, Trigger On/OFf: %4d/%-4d",
              i,
              input->Label,
              analogState,
@@ -1866,11 +1877,8 @@ void MainLoop()
              input->TriggerOffValue);
 
     Serial.println(buffer);
+#endif
 
-    // TODO: May be an array of virtual pints (e.g. Whammy bar triggered by multiple analog buttons)
-    // We take the highest value of the physical or virtual pin, so if either is being pressed it counts,
-    // and if both are being pressed it takes the stronger press - e.g. for a whammy bar that can be triggered by an actual whammy bar or by an analog button.
-    // Ff both are being used at the same time we want the strongest signal to come through. If one is released the other should still maintain control.
     if (input->VirtualPinInputs.size() > 0)
     {
       // Work out how to copy over the virtual analog value
@@ -1882,7 +1890,7 @@ void MainLoop()
 
         Input *virtualinput = input->VirtualPinInputs[j];
 
-        if (virtualinput->VirtualPinMode == VirtualPinModes::RequireValueToBePressed)
+        if (input->VirtualPinMode == VirtualPinModes::RequireValueToBePressed)
         {
           // TODO: Warnings on startup - virtual input dependant on TriggerOn/OffValue controls but if they haven't set them then warn! If both not set then warn!
           if (virtualinput->ValueState.Value == PRESSED)
@@ -1897,36 +1905,38 @@ void MainLoop()
         int16_t testB = 0;
 
         // Only process if if actually has a value
-        if (virtualState > 0)
-        {
-          // Remap virtual state range to active input range
-          // If it gets used below instead of the analogState, it should already be in the analogStates range, including high/low end clipping, and fit inside its constrained values below just fine
-          int16_t constrainedVirtualState = constrain(virtualState, virtualinput->MinAnalogValue, virtualinput->MaxAnalogValue);
-          int16_t rangedVirtualState = map(constrainedVirtualState, virtualinput->MinAnalogValue, virtualinput->MaxAnalogValue, input->MinAnalogValue, input->MaxAnalogValue); // Scale range to match Bluetooth range. Ranged state min/max theoretically 0->4095
+        //  if (virtualState > 0)
+        // {
+        // Remap virtual state range to active input range
+        // If it gets used below instead of the analogState, it should already be in the analogStates range, including high/low end clipping, and fit inside its constrained values below just fine
+        int16_t constrainedVirtualState = constrain(virtualState, virtualinput->MinAnalogValue, virtualinput->MaxAnalogValue);
+        int16_t rangedVirtualState = map(constrainedVirtualState, virtualinput->MinAnalogValue, virtualinput->MaxAnalogValue, input->MinAnalogValue, input->MaxAnalogValue); // Scale range to match Bluetooth range. Ranged state min/max theoretically 0->4095
 
-          testA = constrainedVirtualState;
-          testB = rangedVirtualState;
+        testA = constrainedVirtualState;
+        testB = rangedVirtualState;
 
-          // And finally, override read in value if the virtual value turns out to be bigger
-          if (rangedVirtualState > analogState)
-            analogState = rangedVirtualState;
+        // And finally, override read in value if the virtual value turns out to be bigger
+        if (rangedVirtualState > analogState)
+          analogState = rangedVirtualState;
 
-          snprintf(buffer, sizeof(buffer),
-                   "    Virtual input <- %4d + Virtual Trigger: %d, Constrained to [%4d] %4d [%4d], Ranged to [%4d] %4d [%4d], Final: %4d",
-                   virtualinput->ValueState.AnalogValue,
-                   virtualinput->ValueState.Value,
-                   virtualinput->MinAnalogValue,
-                   testA,
-                   virtualinput->MaxAnalogValue,
-                   input->MinAnalogValue,
-                   testB,
-                   input->MaxAnalogValue,
-                   analogState);
-        }
-
-        // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
+#ifdef INPUT_SERIAL_DEBUG_PLUS
+        snprintf(buffer, sizeof(buffer),
+                 "    Virtual input <- %4d + Virtual Trigger: %d, Constrained to [%4d] %4d [%4d], Ranged to [%4d] %4d [%4d], Final: %4d",
+                 virtualinput->ValueState.AnalogValue,
+                 virtualinput->ValueState.Value,
+                 virtualinput->MinAnalogValue,
+                 testA,
+                 virtualinput->MaxAnalogValue,
+                 input->MinAnalogValue,
+                 testB,
+                 input->MaxAnalogValue,
+                 analogState);
 
         Serial.println(buffer);
+#endif
+        // }
+
+        // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
       }
 
       // At this point, the largest analogState found (post processing possible pin + all virtual pins with whatever individual ranges they may have)
@@ -1977,11 +1987,12 @@ void MainLoop()
     }
 
     // We only register a change if it is above a certain level of change (kind of like smoothing it but without smoothing it)
-    float threshold = .03 * 4095; // 3% change required
+    float threshold = .01 * 4095; // 1% change required
     int previousAnalogValue = input->ValueState.AnalogValue;
 
+#ifdef INPUT_SERIAL_DEBUG_PLUS
     snprintf(buffer, sizeof(buffer),
-             "... Final calc.    - %4d                        , Constrained to [%4d] %4d [%4d], BT Ranged to [%4d] %5d [%5d], Triggered: [%4d] %d [%4d]",
+             "    Final calc.    - %4d                 , Constrained to [%4d] %4d [%4d], BT Ranged to [%4d] %5d [%5d], Triggered: [%4d] %d [%4d]",
              input->ValueState.AnalogValue,
              input->MinAnalogValue,
              constrain(analogState, input->MinAnalogValue, input->MaxAnalogValue),
@@ -1994,6 +2005,7 @@ void MainLoop()
              input->TriggerOffValue);
 
     Serial.println(buffer);
+#endif
 
     int16_t minAnalogValue = input->MinAnalogValue;
     int16_t maxAnalogValue = input->MaxAnalogValue;
@@ -2003,62 +2015,62 @@ void MainLoop()
         // If we have changed my more than 3% or we have bottomed out/topped out of the range, then we process
         analogState < (previousAnalogValue - threshold) || analogState > (previousAnalogValue + threshold) ||
         (constrainedState != previousAnalogValue && (constrainedState == minAnalogValue || constrainedState == maxAnalogValue)
-        // If we are at an extreme end of the range, we want to make sure it registers even if within the threshold (i.e. to min or max possible)
-       ))
+         // If we are at an extreme end of the range, we want to make sure it registers even if within the threshold (i.e. to min or max possible)
+         ))
     {
-     // if (analogState != input->ValueState.AnalogValue)
-     // {
-        input->ValueState.AnalogValue = analogState;
-        input->ValueState.PreviousValue = previousAnalogValue;
-        input->ValueState.StateChangedWhen = micros(); // ToDo: More accurate setting here, as there have been delays
+      // if (analogState != input->ValueState.AnalogValue)
+      // {
+      input->ValueState.AnalogValue = constrainedState;
+      input->ValueState.PreviousValue = previousAnalogValue;
+      input->ValueState.StateChangedWhen = micros(); // ToDo: More accurate setting here, as there have been delays
 
-        someControlStateJustChanged = true;
+      someControlStateJustChanged = true;
 
-        input->ValueState.StateJustChanged = false;
+      input->ValueState.StateJustChanged = false;
 
-        //         // Check if this input tracks trigger on/off values
-        //         if (input->TriggerOnValue > 0)
-        //         {
-        //           if (analogState >= input->TriggerOnValue && input->ValueState.Value == NOT_PRESSED)
-        //           {
-        //             input->ValueState.Value = PRESSED;
-        // #ifdef EXTRA_SERIAL_DEBUG_PLUS
-        //             Serial.println("Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
-        // #endif
+      //         // Check if this input tracks trigger on/off values
+      //         if (input->TriggerOnValue > 0)
+      //         {
+      //           if (analogState >= input->TriggerOnValue && input->ValueState.Value == NOT_PRESSED)
+      //           {
+      //             input->ValueState.Value = PRESSED;
+      // #ifdef EXTRA_SERIAL_DEBUG_PLUS
+      //             Serial.println("Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
+      // #endif
 
-        //             input->ValueState.StateJustChanged = true;
-        //             input->ValueState.StateJustChangedLED = true;
-        //           }
-        //           else if (analogState <= input->TriggerOffValue && input->ValueState.Value == PRESSED)
-        //           {
-        //             input->ValueState.Value = NOT_PRESSED;
+      //             input->ValueState.StateJustChanged = true;
+      //             input->ValueState.StateJustChangedLED = true;
+      //           }
+      //           else if (analogState <= input->TriggerOffValue && input->ValueState.Value == PRESSED)
+      //           {
+      //             input->ValueState.Value = NOT_PRESSED;
 
-        // #ifdef EXTRA_SERIAL_DEBUG_PLUS
-        //             Serial.println("Analog to Digital Trigger OFF: " + String(input->Label) + " - " + String(analogState));
-        // #endif
+      // #ifdef EXTRA_SERIAL_DEBUG_PLUS
+      //             Serial.println("Analog to Digital Trigger OFF: " + String(input->Label) + " - " + String(analogState));
+      // #endif
 
-        //             input->ValueState.StateJustChanged = true;
-        //             input->ValueState.StateJustChangedLED = true;
-        //           }
-        //         }
+      //             input->ValueState.StateJustChanged = true;
+      //             input->ValueState.StateJustChangedLED = true;
+      //           }
+      //         }
 
-        // Final analog handling
+      // Final analog handling
 
-        int16_t rangedState = map(constrainedState, minAnalogValue, maxAnalogValue, 0, 32737); // Scale range to match Bluetooth range. Ranged state min/max theoretically 0->4095
+      int16_t rangedState = map(constrainedState, minAnalogValue, maxAnalogValue, 0, 32737); // Scale range to match Bluetooth range. Ranged state min/max theoretically 0->4095
 
-        // Serial.println("Constrained " + String(constrainedState) + " - Ranged; " + String(rangedState));
+      // Serial.println("Constrained " + String(constrainedState) + " - Ranged; " + String(rangedState));
 
-        // Push to bluetooth if relevant to this input
-        if (input->BluetoothSetOperation != NONE)
-          (bleGamepad.*(input->BluetoothSetOperation))(rangedState);
+      // Push to bluetooth if relevant to this input
+      if (input->BluetoothSetOperation != NONE)
+        (bleGamepad.*(input->BluetoothSetOperation))(rangedState);
 
-        // RenderOperation may be specific to if this input is analog or a triggered variant, plus any Virtual Pin dependences on this input.
-        // When virtual, recommend you leave relevant rendering to the dependant control
-        if (input->RenderOperation != NONE)
-          input->RenderOperation(input);
+      // RenderOperation may be specific to if this input is analog or a triggered variant, plus any Virtual Pin dependences on this input.
+      // When virtual, recommend you leave relevant rendering to the dependant control
+      if (input->RenderOperation != NONE)
+        input->RenderOperation(input);
 
-        sendReport = true;
-      }
+      sendReport = true;
+    }
     //}
   }
 
@@ -2461,26 +2473,38 @@ void MainLoop()
   Debug::Mark(1100, __LINE__, __FILE__, __func__, "End");
 #endif
 
-  Serial.print("#Inputs: ");
-  // Print an overview of input states
+#ifdef INPUT_SERIAL_DEBUG_PLUS
+  Serial.println();
+#endif
+
+#ifdef INPUT_SERIAL_DEBUG
+  // Serial.print("#Inputs: ");
+  //  Print an overview of input states
   for (int i = 0; i < DigitalInputs_Count; i++)
   {
     input = DigitalInputs[i];
-    Serial.print(" [d" + String(i) + "]" + String(input->ValueState.Value));
+    Serial.print("d" + String(i) + ":" + String(input->ValueState.Value) + ", ");
   }
   for (int i = 0; i < AnalogInputs_Count; i++)
   {
     input = AnalogInputs[i];
-    Serial.print(" [a" + String(i) + "]" + String(input->ValueState.AnalogValue) + "." + String(input->ValueState.Value));
+    Serial.print("a" + String(i) + "a:" + String(input->ValueState.AnalogValue) + ", a" + String(i) + "d:" + String(input->ValueState.Value) + ", ");
   }
   // Hats
   for (int i = 0; i < HatInputs_Count; i++)
   {
     hatInput = HatInputs[i];
-    Serial.print(" [h" + String(i) + "]" + String(hatInput->ValueState.Value));
+    Serial.print("h" + String(i) + ":" + String(hatInput->ValueState.Value) + ", ");
   }
 
   Serial.println();
+#endif
+
+  // #ifdef INPUT_SERIAL_DEBUG_PLUS
+  //   // Print a couple of blank lines just in case to make sure theres a clear area under the input serial debug display
+  //   for (int i = 0; i < 3; i++)
+  //     Serial.println("                                                                                                                                                          ");
+  // #endif
 
   Frame++;
 

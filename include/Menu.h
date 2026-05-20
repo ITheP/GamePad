@@ -5,9 +5,9 @@
 
 typedef struct MenuOption
 {
-    char *Description;
+    const char *Description;
     unsigned char Icon;
-    char *Label;
+    const char *Label;
     void (*InitOperation)();
     void (*Operation)();
     void (*ExitOperation)();
