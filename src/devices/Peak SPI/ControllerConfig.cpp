@@ -107,11 +107,23 @@ Input *DigitalInputs_ConfigMenu[] = {
 // Test Virtual Source - maps test analog to triggered red button press + whammy bar when triggered
 // SO WE NEED TO MAP MULTIPLE OF THESE FOR THE RED ORANGE GREEN BLUE YELLOW
 
+// Sensitive Hall Switch
+// .MinAnalogValue = 2500,
+// .MaxAnalogValue = 4095,
+// .TriggerOnValue = 2800,
+// .TriggerOffValue = 2500,
+
+// Cheap Hall Switch
+// .MinAnalogValue = 2200,
+// .MaxAnalogValue = 2900,
+// .TriggerOnValue = 2600,
+// .TriggerOffValue = 2300,
+
 // Virtual AnalogInput effectively takes a physical input, and turns it into a virtual source for other inputs
 // e.g. an input that acts as both a digital on/off input and an analoge input
 // AnalogInputs and DigitalInputs can reference this Virtual input as a VirtualPinInput source and grab values
 Input AnalogInputs_Virtual_TriggeredGreen =
-{
+    {
         .Pin = BUTTON_Green_PIN,
         .Label = "Virtual Trig. Green + A. Whammy",
         .BluetoothInput = NONE,
@@ -124,41 +136,94 @@ Input AnalogInputs_Virtual_TriggeredGreen =
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE
-};
+        .RenderOperation = NONE};
 
 Input AnalogInputs_Virtual_TriggeredRed =
-{
+    {
         .Pin = BUTTON_Red_PIN,
         .Label = "Virtual Trig. Red + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
-        .MinAnalogValue = 2500,
-        .MaxAnalogValue = 4095,
-        .TriggerOnValue = 2800,
-        .TriggerOffValue = 2500,
+        .MinAnalogValue = 2200,
+        .MaxAnalogValue = 2900,
+        .TriggerOnValue = 2600,
+        .TriggerOffValue = 2300,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE
-};
+        .RenderOperation = NONE};
+
+Input AnalogInputs_Virtual_TriggeredYellow =
+    {
+        .Pin = BUTTON_Yellow_PIN,
+        .Label = "Virtual Trig. Yellow + A. Whammy",
+        .BluetoothInput = NONE,
+        .DefaultValue = NOT_PRESSED,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 2200,
+        .MaxAnalogValue = 2900,
+        .TriggerOnValue = 2600,
+        .TriggerOffValue = 2300,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = NONE};
+
+Input AnalogInputs_Virtual_TriggeredBlue =
+    {
+        .Pin = BUTTON_Blue_PIN,
+        .Label = "Virtual Trig. Blue + A. Whammy",
+        .BluetoothInput = NONE,
+        .DefaultValue = NOT_PRESSED,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 2200,
+        .MaxAnalogValue = 2900,
+        .TriggerOnValue = 2600,
+        .TriggerOffValue = 2300,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = NONE};
+
+Input AnalogInputs_Virtual_TriggeredOrange =
+    {
+        .Pin = BUTTON_Orange_PIN,
+        .Label = "Virtual Trig. Orange + A. Whammy",
+        .BluetoothInput = NONE,
+        .DefaultValue = NOT_PRESSED,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 2200,
+        .MaxAnalogValue = 2900,
+        .TriggerOnValue = 2600,
+        .TriggerOffValue = 2300,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = NONE};
 
 // Specific inputs we need references to
 // So the Whammy input can get its input EITHER from the actual pin, or drag in a value (if being provided) from the Virtual Pin.
 Input AnalogInputs_Whammy =
     {
         .Pin = ANALOG_Whammy_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen, &AnalogInputs_Virtual_TriggeredRed},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen, &AnalogInputs_Virtual_TriggeredRed, &AnalogInputs_Virtual_TriggeredYellow, &AnalogInputs_Virtual_TriggeredBlue, &AnalogInputs_Virtual_TriggeredOrange},
         .VirtualPinMode = VirtualPinModes::RequireValueToBePressed, // Only take analog values from virtual pin when they are also in a pressed state
         .Label = "Whammy",
         .BluetoothInput = NONE,
         .DefaultAnalogValue = -1,
         .MinAnalogValue = 2300,
         .MaxAnalogValue = 3500,
-        .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = &BleGamepad::setSlider1,
-        .RenderOperation = RenderInput_AnalogBar_Vert, .XPos = uiWhammyX + 2, .YPos = uiWhammyY + 2, .RenderWidth = uiWhammyW - 4, .RenderHeight = uiWhammyH - 4,
-        .TrueIcon = NONE, .FalseIcon = NONE,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = &BleGamepad::setSlider1,
+        .RenderOperation = RenderInput_AnalogBar_Vert,
+        .XPos = uiWhammyX + 2,
+        .YPos = uiWhammyY + 2,
+        .RenderWidth = uiWhammyW - 4,
+        .RenderHeight = uiWhammyH - 4,
+        .TrueIcon = NONE,
+        .FalseIcon = NONE,
         .OnboardLED = {CRGB::Pink, true}
         // .LEDConfig = new ExternalLEDConfig {
         //     .LEDNumbers = { LED_Whammy,  (LED_Whammy+1), (LED_Whammy+2), (LED_Whammy+3), (LED_Whammy+4), (LED_Whammy+5), (LED_Whammy+6), (LED_Whammy+7)
@@ -204,9 +269,10 @@ Input AnalogInputs_Whammy =
 Input *AnalogInputs[] = {
     &AnalogInputs_Whammy,
     &AnalogInputs_Virtual_TriggeredGreen,
-    &AnalogInputs_Virtual_TriggeredRed
-};
-
+    &AnalogInputs_Virtual_TriggeredRed,
+    &AnalogInputs_Virtual_TriggeredYellow,
+    &AnalogInputs_Virtual_TriggeredBlue,
+    &AnalogInputs_Virtual_TriggeredOrange};
 
 // Digital inputs
 
@@ -229,30 +295,29 @@ Input DigitalInput_Green = // Green button on guitar neck
         .FalseIcon = NONE,
         .Statistics = &Stats_Green,
         .OnboardLED = {CRGB(0, 255, 0), true},
-     // .LEDConfig = new ExternalLEDConfig {
-     //     //.LEDNumber = LED_Green,
-     //     .LEDNumbers = { LED_DigitalTest,  (LED_DigitalTest+1), (LED_DigitalTest+2), (LED_DigitalTest+3), (LED_DigitalTest+4), (LED_DigitalTest+5), (LED_DigitalTest+6), (LED_DigitalTest+7),
-     //       (LED_DigitalTest + 8),  (LED_DigitalTest+9), (LED_DigitalTest+10), (LED_DigitalTest+11), (LED_DigitalTest+12), (LED_DigitalTest+13), (LED_DigitalTest+14)
-     //       // TEMPORARY
-     //       ,
-     //       (LED_DigitalTest + 14 + 1), (LED_DigitalTest + 14 + 2), (LED_DigitalTest + 14 + 3), (LED_DigitalTest + 14 + 4), (LED_DigitalTest + 14 + 5),
-     //       (LED_DigitalTest + 14 + 6), (LED_DigitalTest + 14 + 7), (LED_DigitalTest + 14 + 8), (LED_DigitalTest + 14 + 9), (LED_DigitalTest + 14 + 10),
-     //       (LED_DigitalTest + 14 + 11), (LED_DigitalTest + 14 + 12), (LED_DigitalTest + 14 + 13), (LED_DigitalTest + 14 + 14),
-     //       (LED_DigitalTest + 14 + 15), (LED_DigitalTest + 14 + 16), (LED_DigitalTest + 14 + 17)
-     //     },
-     //     .PrimaryColour = { CRGB(0, 255, 0), true },
-     //     .SecondaryColour = { CRGB(255, 0, 0), false },
-     //     //.Effect = &DigitalEffects::Throb,
-     //     ///.Effect = &DigitalArrayEffects::Rain,
-     //     //.Effect = &DigitalArrayEffects::BlendedRain,
-     //     //.Effect = &DigitalArrayEffects::SparkleTimeHue,
-     //     .Effect = &DigitalArrayEffects::SparkleTimeBlend,
-     //     .RunEffectConstantly = true,
-     //     .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
-     //     .Chance = (uint32_t)(0.01 * 0xFFFF) // 10% chance of sparkle
-     // },
-     .ProfileId = 1
-    };
+        // .LEDConfig = new ExternalLEDConfig {
+        //     //.LEDNumber = LED_Green,
+        //     .LEDNumbers = { LED_DigitalTest,  (LED_DigitalTest+1), (LED_DigitalTest+2), (LED_DigitalTest+3), (LED_DigitalTest+4), (LED_DigitalTest+5), (LED_DigitalTest+6), (LED_DigitalTest+7),
+        //       (LED_DigitalTest + 8),  (LED_DigitalTest+9), (LED_DigitalTest+10), (LED_DigitalTest+11), (LED_DigitalTest+12), (LED_DigitalTest+13), (LED_DigitalTest+14)
+        //       // TEMPORARY
+        //       ,
+        //       (LED_DigitalTest + 14 + 1), (LED_DigitalTest + 14 + 2), (LED_DigitalTest + 14 + 3), (LED_DigitalTest + 14 + 4), (LED_DigitalTest + 14 + 5),
+        //       (LED_DigitalTest + 14 + 6), (LED_DigitalTest + 14 + 7), (LED_DigitalTest + 14 + 8), (LED_DigitalTest + 14 + 9), (LED_DigitalTest + 14 + 10),
+        //       (LED_DigitalTest + 14 + 11), (LED_DigitalTest + 14 + 12), (LED_DigitalTest + 14 + 13), (LED_DigitalTest + 14 + 14),
+        //       (LED_DigitalTest + 14 + 15), (LED_DigitalTest + 14 + 16), (LED_DigitalTest + 14 + 17)
+        //     },
+        //     .PrimaryColour = { CRGB(0, 255, 0), true },
+        //     .SecondaryColour = { CRGB(255, 0, 0), false },
+        //     //.Effect = &DigitalEffects::Throb,
+        //     ///.Effect = &DigitalArrayEffects::Rain,
+        //     //.Effect = &DigitalArrayEffects::BlendedRain,
+        //     //.Effect = &DigitalArrayEffects::SparkleTimeHue,
+        //     .Effect = &DigitalArrayEffects::SparkleTimeBlend,
+        //     .RunEffectConstantly = true,
+        //     .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
+        //     .Chance = (uint32_t)(0.01 * 0xFFFF) // 10% chance of sparkle
+        // },
+        .ProfileId = 1};
 
 Input DigitalInput_Red = // Red button on guitar neck
     {
@@ -273,46 +338,96 @@ Input DigitalInput_Red = // Red button on guitar neck
         .FalseIcon = NONE,
         .Statistics = &Stats_Red,
         .OnboardLED = {CRGB(255, 0, 0), true},
-     // .LEDConfig = new ExternalLEDConfig{
-     //   .LEDNumber = LED_Red,
-     //   .PrimaryColour = { CRGB(255, 0, 0), true },
-     //   .SecondaryColour = { CRGB(0, 0, 0), false },
-     //   .Effect = &DigitalEffects::Pulse,
-     //   .Rate = 255.0 * 2
-     // },
-        .ProfileId = 2
-    };
+        // .LEDConfig = new ExternalLEDConfig{
+        //   .LEDNumber = LED_Red,
+        //   .PrimaryColour = { CRGB(255, 0, 0), true },
+        //   .SecondaryColour = { CRGB(0, 0, 0), false },
+        //   .Effect = &DigitalEffects::Pulse,
+        //   .Rate = 255.0 * 2
+        // },
+        .ProfileId = 2};
 
 Input DigitalInput_Yellow = // Yellow button on guitar neck
-    {.Pin = BUTTON_Yellow_PIN, .Label = "Yellow", .BluetoothInput = BUTTON_4, .DefaultValue = HIGH, .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE, .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 62, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE, .Statistics = &Stats_Yellow, .OnboardLED = {CRGB(255, 255, 0), true},
-     // .LEDConfig = new ExternalLEDConfig {
-     //     .LEDNumber = LED_Yellow,
-     //     .PrimaryColour = { CRGB(255, 255, 0), true },
-     //     .SecondaryColour = { CRGB(255, 255, 0), false },
-     //     .Effect = &DigitalEffects::TimeHue,
-     //     .Rate = 255.0 * 2
-     // },
-     .ProfileId = 3}; // Onboard LED set to slightly off yellow, then if red is pressed as well, you can kind of see it a bit
+    {
+        .Pin = NONE, // BUTTON_Yellow_PIN,
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredYellow},
+        .Label = "Yellow",
+        .BluetoothInput = BUTTON_4,
+        .DefaultValue = HIGH,
+        .BluetoothPressOperation = &BleGamepad::press,
+        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = RenderInput_Rectangle,
+        .XPos = uiGuitar_xPos + 62,
+        .YPos = uiGuitar_yPos + 13,
+        .RenderWidth = 4,
+        .RenderHeight = 5,
+        .TrueIcon = NONE,
+        .FalseIcon = NONE,
+        .Statistics = &Stats_Yellow,
+        .OnboardLED = {CRGB(255, 255, 0), true},
+        // .LEDConfig = new ExternalLEDConfig {
+        //     .LEDNumber = LED_Yellow,
+        //     .PrimaryColour = { CRGB(255, 255, 0), true },
+        //     .SecondaryColour = { CRGB(255, 255, 0), false },
+        //     .Effect = &DigitalEffects::TimeHue,
+        //     .Rate = 255.0 * 2
+        // },
+        .ProfileId = 3}; // Onboard LED set to slightly off yellow, then if red is pressed as well, you can kind of see it a bit
 
 Input DigitalInput_Blue = // Blue button on guitar neck
-    {.Pin = BUTTON_Blue_PIN, .Label = "Blue", .BluetoothInput = BUTTON_3, .DefaultValue = HIGH, .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE, .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 55, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE, .Statistics = &Stats_Blue, .OnboardLED = {CRGB(0, 0, 255), true},
-     // .LEDConfig = new ExternalLEDConfig {
-     //     .LEDNumber = LED_Blue,
-     //     .PrimaryColour = { CRGB(0, 0, 255), true },
-     //     .SecondaryColour = { CRGB(0, 0, 255), false },
-     //     .Effect = &DigitalEffects::MoveRainbow,
-     //     .Rate = 27.0
-     // },
-     .ProfileId = 4};
+    {
+        .Pin = NONE, // BUTTON_Blue_PIN,
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredBlue},
+        .Label = "Blue",
+        .BluetoothInput = BUTTON_3,
+        .DefaultValue = HIGH,
+        .BluetoothPressOperation = &BleGamepad::press,
+        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = RenderInput_Rectangle,
+        .XPos = uiGuitar_xPos + 55,
+        .YPos = uiGuitar_yPos + 13,
+        .RenderWidth = 4,
+        .RenderHeight = 5,
+        .TrueIcon = NONE,
+        .FalseIcon = NONE,
+        .Statistics = &Stats_Blue,
+        .OnboardLED = {CRGB(0, 0, 255), true},
+        // .LEDConfig = new ExternalLEDConfig {
+        //     .LEDNumber = LED_Blue,
+        //     .PrimaryColour = { CRGB(0, 0, 255), true },
+        //     .SecondaryColour = { CRGB(0, 0, 255), false },
+        //     .Effect = &DigitalEffects::MoveRainbow,
+        //     .Rate = 27.0
+        // },
+        .ProfileId = 4};
 
 Input DigitalInput_Orange = // Orange button on guitar neck
-    {.Pin = BUTTON_Orange_PIN, .Label = "Orange", .BluetoothInput = BUTTON_5, .DefaultValue = HIGH, .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE, .RenderOperation = RenderInput_Rectangle, .XPos = uiGuitar_xPos + 48, .YPos = uiGuitar_yPos + 13, .RenderWidth = 4, .RenderHeight = 5, .TrueIcon = NONE, .FalseIcon = NONE, .Statistics = &Stats_Orange, .OnboardLED = {CRGB(255, 128, 0), true},
-     // .LEDConfig = new ExternalLEDConfig {
-     //     .LEDNumber = LED_Orange,
-     //     .PrimaryColour = { CRGB(255, 128, 0), true },
-     //     .SecondaryColour = { CRGB(255, 128, 0), false }
-     // },
-     .ProfileId = 5}; // Onboard LED Slightly off colour again, so additional red looks different
+    {
+        .Pin = NONE, // BUTTON_Orange_PIN,
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredOrange},
+        .Label = "Orange",
+        .BluetoothInput = BUTTON_5,
+        .DefaultValue = HIGH,
+        .BluetoothPressOperation = &BleGamepad::press,
+        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = RenderInput_Rectangle,
+        .XPos = uiGuitar_xPos + 48,
+        .YPos = uiGuitar_yPos + 13,
+        .RenderWidth = 4,
+        .RenderHeight = 5,
+        .TrueIcon = NONE,
+        .FalseIcon = NONE,
+        .Statistics = &Stats_Orange,
+        .OnboardLED = {CRGB(255, 128, 0), true},
+        // .LEDConfig = new ExternalLEDConfig {
+        //     .LEDNumber = LED_Orange,
+        //     .PrimaryColour = { CRGB(255, 128, 0), true },
+        //     .SecondaryColour = { CRGB(255, 128, 0), false }
+        // },
+        .ProfileId = 5}; // Onboard LED Slightly off colour again, so additional red looks different
 
 // TEST - same as select but with some LED
 Input DigitalInput_Start_LongPress = // Select button on main body
@@ -461,27 +576,27 @@ HatInput Hat0 =
     {
         .Pins = {HAT1_Up_PIN, NONE, HAT1_Down_PIN, NONE}, .Label = "Hat0", .BluetoothHat = 0, .DefaultValue = 0, .RenderOperation = RenderInput_Hat, .XPos = -4, .YPos = 25, .RenderWidth = 15, .RenderHeight = 15, .StartIcon = Icon_DPad_Neutral,
         .ExtraOperation = {
-            NONE,             // Centred
-            Menus::MoveUp,    // Up
-            NONE,             // Up Right
-            NONE,             // Right
-            NONE,             // Down Right
-            Menus::MoveDown,  // Down
-            NONE,             // Down Left
-            NONE,             // Left
-            NONE              // Up Left
+            NONE,            // Centred
+            Menus::MoveUp,   // Up
+            NONE,            // Up Right
+            NONE,            // Right
+            NONE,            // Down Right
+            Menus::MoveDown, // Down
+            NONE,            // Down Left
+            NONE,            // Left
+            NONE             // Up Left
         },
         .CustomOperation = Custom_RenderHatStrumState,
         .Statistics = {
-            NONE,             // Centred
-            &Stats_HatUp,     // Up
-            NONE,             // Up Right
-            NONE,             // Right
-            NONE,             // Down Right
-            &Stats_HatDown,   // Down
-            NONE,             // Down Left
-            NONE,             // Left
-            NONE              // Up Left
+            NONE,           // Centred
+            &Stats_HatUp,   // Up
+            NONE,           // Up Right
+            NONE,           // Right
+            NONE,           // Down Right
+            &Stats_HatDown, // Down
+            NONE,           // Down Left
+            NONE,           // Left
+            NONE            // Up Left
         },
         .OnboardLED = {{}, {CRGB::Red, true}, {}, {}, {}, {CRGB::Green, true}, {}, {}, {}},
         .LEDConfigs = {nullptr,
@@ -521,15 +636,15 @@ int IdleLEDEffects_Count = sizeof(IdleLEDEffects) / sizeof(IdleLEDEffects[0]);
 // HAT has secondary rendering, with up/down also mapped to strum bar up/down which we want to visualise
 void Custom_RenderHatStrumState(HatInput *hatInput)
 {
-  // Special Case drawing of extra HAT interaction - the digital d-pad up/down also map to the strum bar up/down
-  Display.fillRect(26, 25, 15, 15, C_BLACK);
-  char c;
-  if (hatInput->ValueState.Value == HAT_POS_UP)
-    c = Icon_Guitar2_CenterTop;
-  else if (hatInput->ValueState.Value == HAT_POS_DOWN)
-    c = Icon_Guitar2_CenterBottom;
-  else
-    c = Icon_Guitar2_CenterOff;
+    // Special Case drawing of extra HAT interaction - the digital d-pad up/down also map to the strum bar up/down
+    Display.fillRect(26, 25, 15, 15, C_BLACK);
+    char c;
+    if (hatInput->ValueState.Value == HAT_POS_UP)
+        c = Icon_Guitar2_CenterTop;
+    else if (hatInput->ValueState.Value == HAT_POS_DOWN)
+        c = Icon_Guitar2_CenterBottom;
+    else
+        c = Icon_Guitar2_CenterOff;
 
-  RREIcon.drawChar(26, 25, c);
+    RREIcon.drawChar(26, 25, c);
 }

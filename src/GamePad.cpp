@@ -986,28 +986,28 @@ void setupController()
   Serial.println("... Controller Type: Gamepad");
 
   bleGamepadConfig.setVid(VID);
-  Serial.println("... VID: " + String(VID));
+  Serial.println("... VID: " + String(VID));    // Cosmetic
 
   bleGamepadConfig.setPid(PID);
-  Serial.println("... PID: " + String(PID));
+  Serial.println("... PID: " + String(PID));    // Cosmetic
 
   bleGamepadConfig.setModelNumber(ModelNumber);
-  Serial.println("... Model Number: " + String(ModelNumber));
+  Serial.println("... Model Number: " + String(ModelNumber));    // Cosmetic
 
   bleGamepadConfig.setSerialNumber(SerialNumber);
-  Serial.println("... Serial Number: " + String(SerialNumber));
+  Serial.println("... Serial Number: " + String(SerialNumber));    // Cosmetic
 
   Serial.println("... Core build: " + String(GetBuildVersion()));
 
   // TODO: Revision versions in config file
   bleGamepadConfig.setFirmwareRevision(FirmwareRevision); // Version of this firmware
-  Serial.println("... Firmware: v" + String(FirmwareRevision));
+  Serial.println("... Firmware: v" + String(FirmwareRevision));    // Cosmetic
 
   bleGamepadConfig.setHardwareRevision(HardwareRevision); // Version of circuit board etc.
-  Serial.println("... Hardware: v" + String(HardwareRevision));
+  Serial.println("... Hardware: v" + String(HardwareRevision));    // Cosmetic
 
   bleGamepadConfig.setSoftwareRevision(SoftwareRevision);
-  Serial.println("... Software: v" + String(SoftwareRevision));
+  Serial.println("... Software: v" + String(SoftwareRevision));    // Cosmetic
 
   bleGamepadConfig.setHidReportId(1);
 

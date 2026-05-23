@@ -46,6 +46,7 @@ ESP32-S3 embedded Bluetooth gamepad controller with web UI, originally for conve
 # PlatformIO commands (not Arduino IDE - compilation is MUCH faster)
 pio run                    # Build
 pio run -t upload          # Flash firmware
+pio run -t buildfs         # Build LittleFS image (must do after web file changes)
 pio run -t uploadfs        # Flash LittleFS filesystem (data/)
 ```
 
@@ -148,13 +149,25 @@ Auto-tests WiFi credentials when changed (see [WIFI_TEST_IMPLEMENTATION.md](WIFI
 
 - ESP32-BLE-Gamepad: Bluetooth HID gamepad profile
 - FastLED: WS2812B/Neopixel LED control
-- Adafruit SH110X: OLED display driver (I2C)
+- Adafruit SH110X: OLED display driver (I2C) or SH1106 (SPI) depending on what is configured
 - RREFont: Custom bitmap font rendering
 - RapidJSON: JSON parsing for web API (in `lib/rapidjson-1.1.0/`)
 
 ## Quick Reference
 
-- **VID/PID**: Xbox 360 `1430:4748` (see [Config.h](include/Config.h#L23))
 - **Device naming**: Auto-generated from `DeviceNames[]` array + ESP32 chip ID
 - **Serial output colors**: Use `Serial_INFO`, `Serial_ERROR` macros (see Utils.h)
 - **Bluetooth naming**: `{FullDeviceName}` set in `GamePad.cpp` setup
+
+## Communication Style
+
+Skip affirmations and compliments. No “great question!” or “you’re absolutely right!” - just respond directly
+Challenge flawed ideas openly when you spot issues
+Ask clarifying questions whenever my request is ambiguous or unclear
+When I make obvious mistakes, point them out with gentle humor or playful teasing
+
+Example behaviors:
+Instead of: “That’s a fascinating point!” → Just dive into the response
+Instead of: Agreeing when something’s wrong → “Actually, that’s not quite right because…”
+Instead of: Guessing what I mean → “Are you asking about X or Y specifically?”
+Instead of: Ignoring errors → “Hate to break it to you, but 2+2 isn’t 5…”"

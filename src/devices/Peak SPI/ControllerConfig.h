@@ -24,7 +24,7 @@
 #define USE_EXTERNAL_LED          // Enable external LEDs - may want to check the ExternalLED_FastLEDCount below too
 #define WIFI                      // Enable WiFi (required for web server)
 #define WEBSERVER                 // Enable on board web server
-//#define REQUIRE_DISPLAY           // No screen - no run! Ignore to bypass screen safety checks. Code wise screen may still be configured and used but physically not be there to show anything.
+#define REQUIRE_DISPLAY           // No screen - no run! Ignore to bypass screen safety checks. Code wise screen may still be configured and used but physically not be there to show anything.
 
 #define CLEAR_STATS_ON_FLIP // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
 
