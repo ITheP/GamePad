@@ -22,7 +22,13 @@ char SoftwareRevision[] = "1.0";
 
 // List of LED's we want cloning (lets you copy LED values between each other)
 // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
-IntPair LEDClones[] = {}; //{ LED_Status, LED_Status_Copy } };
+IntPair LEDClones[] = {
+    {LED_Green, LED_Green_Neck},
+    {LED_Red, LED_Red_Neck},
+    {LED_Yellow, LED_Yellow_Neck},
+    {LED_Blue, LED_Blue_Neck},
+    {LED_Orange, LED_Orange_Neck}
+}; //{ LED_Status, LED_Status_Copy } };
 int LEDClones_Count = sizeof(LEDClones) / sizeof(LEDClones[0]);
 
 IconRun ControllerGfx[] = {
@@ -118,6 +124,38 @@ Input *DigitalInputs_ConfigMenu[] = {
 // .MaxAnalogValue = 2900,
 // .TriggerOnValue = 2600,
 // .TriggerOffValue = 2300,
+
+// TODO: Another AnalogInput Virtual Type
+// On if in range / off if out of range
+// so can map capacitive slider into button press
+// May be best to have a new input type.... MappedAnalogInput
+// then we can read it once, have a series of mapped values e.g. Analoge to array of on/off states
+// where it iterates through each boundary range
+// e.g. Button 1 = 4096-3800, Button 2= 3799-3600
+// etc.
+// We always want to scan all buttons to reset ones that are being unset
+// To make this work we simply...
+// MappedAnalogInput is proccessed FIRST to populate a value
+// AnalogInput_Virtual for each
+
+//hmmmmmmm
+//maybe we can just...
+//Input AnalogInputs_Virtual_MappedTriggeredGreen =
+//.pin = the analog pin (doesnt matter if it's read more than once)
+//.VirtualPinMode = MappedAnalogToPressed
+//.MinAnalogValue and MaxAnalogValue give the range its considered on
+// TODO
+// The VirtualPinMode on the digital - make sure default is ok else needs to be a value for the existing analog inputs that just reads the on/off value
+// and then extra entries to get the new MappedTriggeredGreen value
+// Hmmm
+// OK the VirtualPinMode keep as is its about how virtual values are USED not valculated
+// need a new CalculationMode which is 0 by default and everything uses
+// but for our new MappedTriggered... variant it's flagged 
+//  MappedAnalogToPressed = 2                  // For analog inputs, maps the value from the virtual input's analog value range to digital on/off
+
+// Note if you wanted to optimise rereading same pin, then it saves the existing value doesnt it already
+// if we saved the frame it was saved on, we can just compaire frame number to see if already read and if different read it else reuse it
+// really depends on overhead of re-reading an input multiple times
 
 // Virtual AnalogInput effectively takes a physical input, and turns it into a virtual source for other inputs
 // e.g. an input that acts as both a digital on/off input and an analoge input
@@ -295,28 +333,13 @@ Input DigitalInput_Green = // Green button on guitar neck
         .FalseIcon = NONE,
         .Statistics = &Stats_Green,
         .OnboardLED = {CRGB(0, 255, 0), true},
-        // .LEDConfig = new ExternalLEDConfig {
-        //     //.LEDNumber = LED_Green,
-        //     .LEDNumbers = { LED_DigitalTest,  (LED_DigitalTest+1), (LED_DigitalTest+2), (LED_DigitalTest+3), (LED_DigitalTest+4), (LED_DigitalTest+5), (LED_DigitalTest+6), (LED_DigitalTest+7),
-        //       (LED_DigitalTest + 8),  (LED_DigitalTest+9), (LED_DigitalTest+10), (LED_DigitalTest+11), (LED_DigitalTest+12), (LED_DigitalTest+13), (LED_DigitalTest+14)
-        //       // TEMPORARY
-        //       ,
-        //       (LED_DigitalTest + 14 + 1), (LED_DigitalTest + 14 + 2), (LED_DigitalTest + 14 + 3), (LED_DigitalTest + 14 + 4), (LED_DigitalTest + 14 + 5),
-        //       (LED_DigitalTest + 14 + 6), (LED_DigitalTest + 14 + 7), (LED_DigitalTest + 14 + 8), (LED_DigitalTest + 14 + 9), (LED_DigitalTest + 14 + 10),
-        //       (LED_DigitalTest + 14 + 11), (LED_DigitalTest + 14 + 12), (LED_DigitalTest + 14 + 13), (LED_DigitalTest + 14 + 14),
-        //       (LED_DigitalTest + 14 + 15), (LED_DigitalTest + 14 + 16), (LED_DigitalTest + 14 + 17)
-        //     },
-        //     .PrimaryColour = { CRGB(0, 255, 0), true },
-        //     .SecondaryColour = { CRGB(255, 0, 0), false },
-        //     //.Effect = &DigitalEffects::Throb,
-        //     ///.Effect = &DigitalArrayEffects::Rain,
-        //     //.Effect = &DigitalArrayEffects::BlendedRain,
-        //     //.Effect = &DigitalArrayEffects::SparkleTimeHue,
-        //     .Effect = &DigitalArrayEffects::SparkleTimeBlend,
-        //     .RunEffectConstantly = true,
-        //     .Rate = 255.0, // sparkle -> 0.0069,  BlendedRain and Rain -> 0.069 //255.0 * 2
-        //     .Chance = (uint32_t)(0.01 * 0xFFFF) // 10% chance of sparkle
-        // },
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = LED_Green,
+            .PrimaryColour = { CRGB(0, 255, 0), true },
+            .SecondaryColour = { CRGB(96, 96, 96), true },
+            .Effect = &AnalogEffects::ConstrainedSimpleSet,
+            .RunEffectConstantly = true,
+         },
         .ProfileId = 1};
 
 Input DigitalInput_Red = // Red button on guitar neck
@@ -338,13 +361,13 @@ Input DigitalInput_Red = // Red button on guitar neck
         .FalseIcon = NONE,
         .Statistics = &Stats_Red,
         .OnboardLED = {CRGB(255, 0, 0), true},
-        // .LEDConfig = new ExternalLEDConfig{
-        //   .LEDNumber = LED_Red,
-        //   .PrimaryColour = { CRGB(255, 0, 0), true },
-        //   .SecondaryColour = { CRGB(0, 0, 0), false },
-        //   .Effect = &DigitalEffects::Pulse,
-        //   .Rate = 255.0 * 2
-        // },
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = LED_Red,
+            .PrimaryColour = { CRGB(255, 0, 0), true },
+            .SecondaryColour = { CRGB(96, 96, 96), true },
+            .Effect = &AnalogEffects::SimpleSet,
+            .RunEffectConstantly = true,
+         },
         .ProfileId = 2};
 
 Input DigitalInput_Yellow = // Yellow button on guitar neck
@@ -366,13 +389,13 @@ Input DigitalInput_Yellow = // Yellow button on guitar neck
         .FalseIcon = NONE,
         .Statistics = &Stats_Yellow,
         .OnboardLED = {CRGB(255, 255, 0), true},
-        // .LEDConfig = new ExternalLEDConfig {
-        //     .LEDNumber = LED_Yellow,
-        //     .PrimaryColour = { CRGB(255, 255, 0), true },
-        //     .SecondaryColour = { CRGB(255, 255, 0), false },
-        //     .Effect = &DigitalEffects::TimeHue,
-        //     .Rate = 255.0 * 2
-        // },
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = LED_Yellow,
+            .PrimaryColour = { CRGB(255, 255, 0), true },
+            .SecondaryColour = { CRGB(96, 96, 96), true },
+            .Effect = &AnalogEffects::SimpleSet,
+            .RunEffectConstantly = true,
+         },
         .ProfileId = 3}; // Onboard LED set to slightly off yellow, then if red is pressed as well, you can kind of see it a bit
 
 Input DigitalInput_Blue = // Blue button on guitar neck
@@ -394,13 +417,13 @@ Input DigitalInput_Blue = // Blue button on guitar neck
         .FalseIcon = NONE,
         .Statistics = &Stats_Blue,
         .OnboardLED = {CRGB(0, 0, 255), true},
-        // .LEDConfig = new ExternalLEDConfig {
-        //     .LEDNumber = LED_Blue,
-        //     .PrimaryColour = { CRGB(0, 0, 255), true },
-        //     .SecondaryColour = { CRGB(0, 0, 255), false },
-        //     .Effect = &DigitalEffects::MoveRainbow,
-        //     .Rate = 27.0
-        // },
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = LED_Blue,
+            .PrimaryColour = { CRGB(0, 0, 255), true },
+            .SecondaryColour = { CRGB(96, 96, 96), true },
+            .Effect = &AnalogEffects::SimpleSet,
+            .RunEffectConstantly = true,
+         },
         .ProfileId = 4};
 
 Input DigitalInput_Orange = // Orange button on guitar neck
@@ -422,17 +445,36 @@ Input DigitalInput_Orange = // Orange button on guitar neck
         .FalseIcon = NONE,
         .Statistics = &Stats_Orange,
         .OnboardLED = {CRGB(255, 128, 0), true},
-        // .LEDConfig = new ExternalLEDConfig {
-        //     .LEDNumber = LED_Orange,
-        //     .PrimaryColour = { CRGB(255, 128, 0), true },
-        //     .SecondaryColour = { CRGB(255, 128, 0), false }
-        // },
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = LED_Orange,
+            .PrimaryColour = { CRGB(255, 128, 0), true },
+            .SecondaryColour = { CRGB(96, 96, 96), true },
+            .Effect = &AnalogEffects::SimpleSet,
+            .RunEffectConstantly = true,
+         },
         .ProfileId = 5}; // Onboard LED Slightly off colour again, so additional red looks different
 
 // TEST - same as select but with some LED
 Input DigitalInput_Start_LongPress = // Select button on main body
     {
-        .Pin = BUTTON_Start_PIN, .Label = "Start Long Press", .BluetoothInput = NONE, .DefaultValue = HIGH, .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE, .CustomOperationPressed = Menus::ToggleMenuMode, .CustomOperationReleased = NONE, .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 56, .YPos = uiGuitar_yPos + 3, .RenderWidth = 16, .RenderHeight = 5, .TrueIcon = Icon_Menu, .FalseIcon = NONE, .Statistics = &Stats_Start_LongPress, .OnboardLED = {CRGB(255, 255, 255), true}
+        .Pin = BUTTON_Start_PIN,
+        .Label = "Start Long Press",
+        .BluetoothInput = NONE,
+        .DefaultValue = HIGH,
+        .BluetoothPressOperation = &BleGamepad::press,
+        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothSetOperation = NONE,
+        .CustomOperationPressed = Menus::ToggleMenuMode,
+        .CustomOperationReleased = NONE,
+        .RenderOperation = RenderInput_Icon,
+        .XPos = uiGuitar_xPos + 56,
+        .YPos = uiGuitar_yPos + 3,
+        .RenderWidth = 16,
+        .RenderHeight = 5,
+        .TrueIcon = Icon_Menu,
+        .FalseIcon = NONE,
+        .Statistics = &Stats_Start_LongPress,
+        .OnboardLED = {CRGB(255, 255, 255), true}
         //     .LEDConfig = new ExternalLEDConfig {
         //     .LEDNumber = LED_Orange,
         //     .PrimaryColour = { CRGB(255, 255, 255), true },
@@ -442,7 +484,21 @@ Input DigitalInput_Start_LongPress = // Select button on main body
 
 Input DigitalInput_Start = // Start button on main body
     {
-        .Pin = BUTTON_Start_PIN, .Label = "Start", .BluetoothInput = BUTTON_7, .DefaultValue = HIGH, .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE, .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 56, .YPos = uiGuitar_yPos + 3, .RenderWidth = 16, .RenderHeight = 5, .TrueIcon = Icon_Start, .FalseIcon = NONE, .OnboardLED = {CRGB(255, 128, 0), true},
+        .Pin = BUTTON_Start_PIN,
+        .Label = "Start",
+        .BluetoothInput = BUTTON_7,
+        .DefaultValue = HIGH,
+        .BluetoothPressOperation = &BleGamepad::press,
+        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = RenderInput_Icon,
+        .XPos = uiGuitar_xPos + 56,
+        .YPos = uiGuitar_yPos + 3,
+        .RenderWidth = 16,
+        .RenderHeight = 5,
+        .TrueIcon = Icon_Start,
+        .FalseIcon = NONE,
+        .OnboardLED = {CRGB(255, 128, 0), true},
         .LongPressTiming = 1000 * 1000,                       // 1sec = 1000ms = 1000000us
         .LongPressChildInput = &DigitalInput_Start_LongPress, // Long press on Start button will trigger Select Long Press
         .ShortPressReleaseTime = 100 * 1000                   // When short press is triggered, rather than instantly going to off state, keep on for this many ms to allow for e.g. LED to show reasonably clearly
@@ -486,7 +542,21 @@ Input DigitalInput_Select = // Select button on main body
 
 Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled vertically
     {
-        .Pin = BUTTON_Tilt_PIN, .Label = "Tilt", .BluetoothInput = BUTTON_9, .DefaultValue = HIGH, .BluetoothPressOperation = &BleGamepad::press, .BluetoothReleaseOperation = &BleGamepad::release, .BluetoothSetOperation = NONE, .RenderOperation = RenderInput_Icon, .XPos = uiGuitar_xPos + 91, .YPos = uiGuitar_yPos + 2, .RenderWidth = 7, .RenderHeight = 7, .TrueIcon = Icon_Tilt, .FalseIcon = NONE, .OnboardLED = {CRGB(0, 255, 255), true}
+        .Pin = BUTTON_Tilt_PIN,
+        .Label = "Tilt",
+        .BluetoothInput = BUTTON_9,
+        .DefaultValue = HIGH,
+        .BluetoothPressOperation = &BleGamepad::press,
+        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = RenderInput_Icon,
+        .XPos = uiGuitar_xPos + 91,
+        .YPos = uiGuitar_yPos + 2,
+        .RenderWidth = 7,
+        .RenderHeight = 7,
+        .TrueIcon = Icon_Tilt,
+        .FalseIcon = NONE,
+        .OnboardLED = {CRGB(0, 255, 255), true}
         // .LEDConfig = new ExternalLEDConfig {
         //     .LEDNumber = LED_Tilt,
         //     .PrimaryColour = { CRGB(0, 255, 255), true },
@@ -497,17 +567,25 @@ Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled 
 #define ENABLE_FLIP_SCREEN // Required if below is defined
 // #define FLIP_SCREEN_TOGGLE 1 // FlipScreen can either toggle on and off with a button press (enable), or holding a button down sets its flipped state (disable)
 Input DigitalInput_FlipScreen = // Lever on main body, will be flipped into a permanent on or off state, not just pressed
-    {.Pin = BUTTON_FlipScreen_PIN, .Label = "Flip Screen", .BluetoothInput = NONE, .DefaultValue = -2, .BluetoothPressOperation = NONE, .BluetoothReleaseOperation = NONE, .BluetoothSetOperation = NONE,
+    {
+        .Pin = BUTTON_FlipScreen_PIN,
+        .Label = "Flip Screen",
+        .BluetoothInput = NONE,
+        .DefaultValue = -2,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
 #ifdef CLEAR_STATS_ON_FLIP
-     .CustomOperationPressed = ResetAllCurrentStats, // When screen flips, we reset all the stats
+        .CustomOperationPressed = ResetAllCurrentStats, // When screen flips, we reset all the stats
 #endif
-     .RenderOperation = FlipScreen,
-     .XPos = 0,
-     .YPos = 0,
-     .RenderWidth = 0,
-     .RenderHeight = 0,
-     .TrueIcon = NONE,
-     .FalseIcon = NONE};
+        .RenderOperation = FlipScreen,
+        .XPos = 0,
+        .YPos = 0,
+        .RenderWidth = 0,
+        .RenderHeight = 0,
+        .TrueIcon = NONE,
+        .FalseIcon = NONE
+    };
 
 // DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
 Input *DigitalInputs[] = {
@@ -618,7 +696,17 @@ HatInput *HatInputs[] = {
 // Miscellaneous LED effects
 ExternalLEDConfig *MiscLEDEffects[] = {};
 
-ExternalLEDConfig *IdleLEDEffects[] = {};
+ExternalLEDConfig *IdleLEDEffects[] = {
+    new ExternalLEDConfig {
+        // All LED's except status clone
+        .LEDNumbers = { 1,2,3,4,5,6,7,8,9,
+                        10,11 },
+        .Effect = &GeneralArrayEffects::Random,
+        .Rate =  1.5,
+        .Chance = (uint32_t)(0.1 * 0xFFFF),
+        .CustomTag = 64.0
+     }
+};
 
 // -----------------------------------------------------
 // Array sizes

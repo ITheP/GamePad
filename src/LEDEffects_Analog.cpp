@@ -16,7 +16,8 @@ void AnalogEffects::Test(void *digitalInput, float time)
   // Serial.println(String(time) + ": Analog Test called");
 }
 
-// Note, values are mapped outside of final 0-255 range and then clipped to range - means tiny wobbles or variance at extremes should be stabalised
+// Basic analog mapping from Primary to Secondary colour based on value. Nothing fancy.
+// Note, values are mapped outside of final 0-255 range and then clipped to range - means tiny wobbles or variance at extremes should be stabilised
 void AnalogEffects::SimpleSet(void *analogInput, float time)
 {
   Input *input = static_cast<Input *>(analogInput);
@@ -26,6 +27,21 @@ void AnalogEffects::SimpleSet(void *analogInput, float time)
   int amount = map(input->ValueState.Value, 0, 4095, -20, 275); // Map slightly outside 0-255 range
   amount = constrain(amount, 0, 255);                           // ...then clip to range
   *(ledConfig->ExternalLED) = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);
+}
+
+// Basic analog mapping from Primary to Secondary colour based on value based on Min/Max range set on input. Nothing fancy.
+// Note, values are mapped outside of final 0-255 range and then clipped to range - means tiny wobbles or variance at extremes should be stabilised
+void AnalogEffects::ConstrainedSimpleSet(void *analogInput, float time)
+{
+  Input *input = static_cast<Input *>(analogInput);
+
+  ExternalLEDConfig *ledConfig = input->LEDConfig;
+
+  //int amount = map(input->ValueState.Value, input->MinAnalogValue, input->MaxAnalogValue, 0, 255); // Map slightly outside 0-255 range
+ int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275); // Map slightly outside 0-255 range
+ // amount = constrain(amount, 0, 255);                           // ...then clip to range
+  *(ledConfig->ExternalLED) = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);
+  Serial.println("ConstrainedSimpleSet: Value: " + String(input->ValueState.Value) + ", Analog: " + String(input->ValueState.AnalogValue) + ", Amount: " + String(amount) + " - Primary: " + String(ledConfig->PrimaryColour.Colour.r) + "," + String(ledConfig->PrimaryColour.Colour.g) + "," + String(ledConfig->PrimaryColour.Colour.b) + " - Secondary: " + String(ledConfig->SecondaryColour.Colour.r) + "," + String(ledConfig->SecondaryColour.Colour.g) + "," + String(ledConfig->SecondaryColour.Colour.b));  
 }
 
 void AnalogEffects::Throb(void *analogInput, float time)

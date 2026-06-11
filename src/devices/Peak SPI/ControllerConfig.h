@@ -37,13 +37,18 @@
 // LED's
 
 // Mappings to physical Neopixel/equivalent LED offsets
-#define LED_Status 0
-// #define LED_Green           1
-// #define LED_Red             2
-// #define LED_Yellow          3
-// #define LED_Blue            4
-// #define LED_Orange          5
-// #define LED_Tilt            6
+#define LED_Status          0
+#define LED_Green           1
+#define LED_Red             2
+#define LED_Yellow          3
+#define LED_Blue            4
+#define LED_Orange          5
+#define LED_Tilt            6
+#define LED_Green_Neck      7
+#define LED_Red_Neck        8
+#define LED_Yellow_Neck     9
+#define LED_Blue_Neck       10
+#define LED_Orange_Neck     11
 // #define LED_Status_Copy     7
 // #define LED_Hat_Off         8
 // #define LED_Hat_1           9
@@ -60,9 +65,9 @@
 // #define LED_Whammy          (LED_DigitalTest + LED_DigitalTest_Count)
 // #define LED_Whammy_Count    8
 
-#define LED_TOTALCOUNT 1
+#define LED_TOTALCOUNT 12
 
-#define LED_BRIGHTNESS 20 // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
+#define LED_BRIGHTNESS 255 // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
 
 #define ONBOARD_LED_FADE_RATE (1.0 / 0.2) // 0.15 is the total amount of seconds a complete 255->0 fade will be over
 

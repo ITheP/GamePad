@@ -45,6 +45,7 @@ class AnalogEffects
 public:
   static void Test(void *analogInput, float time);
   static void SimpleSet(void *analogInput, float time);
+  static void ConstrainedSimpleSet(void *analogInput, float time);
   static void Throb(void *analogInput, float time); // Colour moves from Secondary to Primary colour and then loops back around
                                                     // ExternalLEDRate = speed of throb i.e. (uint8_t)(Now * ExternalLEDRate) == 0 -> 255
   static void BlendedHue(void *analogInput, float time);
