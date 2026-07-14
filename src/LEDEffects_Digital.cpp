@@ -5,7 +5,7 @@
 extern int ExternalLedsEnabled[];
 
 void DigitalEffects::Test(void *digitalInput, float time)
-{
+{Serial.println("CA");
   Input *input = static_cast<Input *>(digitalInput);
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 

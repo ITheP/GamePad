@@ -155,12 +155,11 @@ void MenuFunctions::Config_Draw_Hotspot()
 
   ResetPrintDisplayLine(MenuContentStartY, 0, SetFontSmall);
 
-
-
-  if (SecondFlipFlop) {
-    sprintf(buffer, "Connect to WiFi %s", HotspotName.c_str());
-    PrintDisplayLineCentered(buffer);
-    sprintf(buffer, "Browse %s", WiFi.softAPIP().toString().c_str());
+  if (Second % 4 > 1) {
+    //sprintf(buffer, "Connect to WiFi %s");
+    //PrintDisplayLineCentered(buffer);
+    PrintDisplayLineCentered("Connect to WiFi...");
+    sprintf(buffer, "'%s'", HotspotName.c_str()); //WiFi.softAPIP().toString().c_str());
     PrintDisplayLineCentered(buffer);
   }
   else {

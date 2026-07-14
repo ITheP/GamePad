@@ -10,14 +10,22 @@
 
 extern CRGB ExternalLeds[];
 
+int Battery::State = POWER_Battery;
 int Battery::PreviousBatteryLevel = -1;
-int Battery::CurrentBatterySensorReading = 0;
-int Battery::CurrentBatteryPercentage = 0;
+int Battery::ClampedBatterySensorReading = 0;
+int Battery::ClampedBatteryPercentage = 0;
 int Battery::CumulativeBatterySensorReadings = 0;
 int Battery::BatteryLevelReadingsCount = 0;
-float Battery::Voltage = 0.0;
+int Battery::PowerSensorReading = 0;
+float Battery::ClampedVoltage = 0.0;
+float Battery::RawVoltage = 0.0;
 
-int Battery::GetLevel()
+#if defined(USE_EXTERNAL_LED) && defined(ExternalLED_StatusLED)
+// Forward declaration - will be defined in device config
+enum class LEDStrip;
+#endif
+
+void Battery::CalculateState()
 {
   // We have had multiple readings, so average them out and update current battery level
   if (BatteryLevelReadingsCount == 0)
@@ -25,38 +33,62 @@ int Battery::GetLevel()
     // This may get called between a previous reading and next one
     // We like having a few averaged readings rather than just doing 1 here and returning that
     // so we put up with it and simply return last reading
-    return CurrentBatteryPercentage;
+    //return CurrentBatteryPercentage;
+    return;
   }
-  else
-    CurrentBatterySensorReading = CumulativeBatterySensorReadings / BatteryLevelReadingsCount;
+
+  // We will clamp this reading lower down to effectively ignore any readings that are too high or too low, so we can easily have a 0% -> 100% reading without going outside this range in the UI
+  ClampedBatterySensorReading = CumulativeBatterySensorReadings / BatteryLevelReadingsCount;
 
   CumulativeBatterySensorReadings = 0; // Ready for next round of readings
   BatteryLevelReadingsCount = 0;       // Set up to start readings again
 
-  if (CurrentBatterySensorReading > BAT_MAX)
+  // Not clamped yet, still raw
+  float adcVoltage = (ClampedBatterySensorReading / ADC_RESOLUTION) * ADC_REF;
+  RawVoltage = adcVoltage * BAT_DIVIDER_RATIO;
+
+  // Clamp things down
+  if (ClampedBatterySensorReading > BAT_MAX)
   {
-#if defined(EXTRA_SERIAL_DEBUG) && defined(USE_EXLIVE_BATTERYTERNAL_LED)
+#if defined(EXTRA_SERIAL_DEBUG)
     Serial.printf("🔋 ⚠️ Battery sensor reading was above the max value! Max: %d, Reading: %d\n", BAT_MAX, CurrentBatterySensorReading);
 #endif
-    CurrentBatterySensorReading = BAT_MAX;
+    ClampedBatterySensorReading = BAT_MAX;
   }
-  else if (CurrentBatterySensorReading < BAT_MIN)
+  else if (ClampedBatterySensorReading < BAT_MIN)
   {
-#if defined(EXTRA_SERIAL_DEBUG) && defined(USE_EXLIVE_BATTERYTERNAL_LED)
+#if defined(EXTRA_SERIAL_DEBUG)
     Serial.printf("🔋 ⚠️ Battery sensor reading was below the min! Min: %d, Reading: %d\n", BAT_MIN, CurrentBatterySensorReading);
 #endif
-    CurrentBatterySensorReading = BAT_MIN;
+    ClampedBatterySensorReading = BAT_MIN;
   }
 
-  CurrentBatteryPercentage = (CurrentBatterySensorReading - BAT_MIN) * 100.0 / (BAT_MAX - BAT_MIN);
+  ClampedBatteryPercentage = (ClampedBatterySensorReading - BAT_MIN) * 100.0 / (BAT_MAX - BAT_MIN);
+  ClampedVoltage = fmap(ClampedBatteryPercentage, 0.0, 100.0, BAT_MINV, BAT_MAXV);
 
-  Voltage = fmap(CurrentBatteryPercentage, 0.0, 100.0, BAT_MINV, BAT_MAXV);
+  // Work out if we are powered by battery, usb, or charging the battery
+  // Note there is no `charging` state we can actually query, so we estimate based on
+  // battery level and if we are powered by USB or not. May get it wrong.
+  // Assumption is we are 100% battery + USB power = charging
+  // Monitoring during testing generally showed it to be 4095 with occasional slight drop down 10-20, but was very rare.
+  PowerSensorReading = analogRead(POWER_MONITOR_PIN);
+  float powerVoltage = (PowerSensorReading / ADC_RESOLUTION) * ADC_REF; // * PWR_DIVIDER_RATIO;
+
+  if (powerVoltage > PWR_PRESENT_THRESHOLD)
+  {
+    if (ClampedBatteryPercentage == 100)
+      State = POWER_USB; // Powered by USB, but battery is full, so not charging
+    else
+      State = POWER_Charging; // Powered by USB and battery is not full, so we are charging
+  }
+  else
+    State = POWER_Battery; // Not powered by USB, so we are on battery
 
 #ifdef EXTRA_SERIAL_DEBUG_PLUS
   Serial.println("Battery Sensor Limited: " + String(CurrentBatterySensorReading) + ", Battery %: " + String(CurrentBatteryPercentage) + ", Approx Battery Voltage: " + String(Voltage));
 #endif
 
-  return CurrentBatteryPercentage;
+  //return CurrentBatteryPercentage;
 }
 
 #define BatteryEmptyXPos ((SCREEN_WIDTH - 48) >> 1)
@@ -97,7 +129,7 @@ void Battery::DrawEmpty(int secondRollover, int SecondFlipFlop, bool IncludeLED)
 
 #if defined(USE_EXTERNAL_LED) && defined(ExternalLED_StatusLED)
       // Always make sure the external status LED is updated too
-      ExternalLeds[ExternalLED_StatusLED] = StatusLed[0];
+      ExternalLeds[(int)LEDStrip::Status] = StatusLed[0]; // ExternalLED_StatusLED] = StatusLed[0];
 #endif
 
       FastLED.show();

@@ -403,6 +403,29 @@ void Menus::Config_CheckInputs()
   uint16_t state;
   Input *input;
 
+  // Just in case these are used for digital input virtual pins
+  for (int i = 0; i < AnalogInputs_Count; i++)
+  {
+    input = AnalogInputs[i];
+    uint16_t analogState = 0;
+
+    if (input->Pin != NONE)
+      analogState = analogRead(input->Pin);
+
+    // Set triggered state if above TriggerOnValue
+    if (input->TriggerOnValue > 0 && analogState > input->TriggerOnValue)
+    {
+      
+      Serial.println("Analog Input Set: " + String(input->Label));
+      input->ValueState.Value = PRESSED;
+    }
+    else
+    {
+      //Serial.println("Analog Input Cleared: " + String(input->Label));
+      input->ValueState.Value = NOT_PRESSED;
+    }
+  }
+
   for (int i = 0; i < DigitalInputs_ConfigMenu_Count; i++)
   {
     input = DigitalInputs_ConfigMenu[i];
@@ -414,6 +437,20 @@ void Menus::Config_CheckInputs()
     {
       // Compare current with previous, and timing, so we can de-bounce if required
       state = digitalRead(input->Pin);
+
+      // Also check virtual inputs
+      if (state == NOT_PRESSED && input->VirtualPinInputs.size() > 0)
+      {
+        for (int j = 0; j < input->VirtualPinInputs.size(); j++)
+        {
+          if (input->VirtualPinInputs[j]->ValueState.Value == PRESSED)
+          {
+            //Serial.println("Virtual Digital Input Set: " + String(input->Label));
+            state = PRESSED;
+            break;
+          }
+        }
+      }
 
       // Process when state has changed
       if (state != input->ValueState.Value)

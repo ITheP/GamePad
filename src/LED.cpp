@@ -119,7 +119,7 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
           {
             // if (ledConfig != nullptr)
             //{
-            if (input->ValueState.Value == LOW)
+            if (input->ValueState.Value == PRESSED)
             {
               // Pressed
               ledConfig->StartTime = Now; // Start time LED was engaged, in case we want to apply to some effects

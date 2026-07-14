@@ -2,10 +2,10 @@
 
 #include <stdint.h>
 
-#define EXTRA_SERIAL_DEBUG          // Enable to print loads of extra information to serial
+//#define EXTRA_SERIAL_DEBUG          // Enable to print loads of extra information to serial
 //#define EXTRA_SERIAL_DEBUG_PLUS   // ...further detail including analog input values, but can flood serial output somewhat!
-//#define INPUT_SERIAL_DEBUG          // Basic per frame serial output overview of input states
-#define INPUT_SERIAL_DEBUG_PLUS   // Enables detailed serial output of input states, including digital, analog and virtual.
+//#define INPUT_SERIAL_DEBUG        // Basic per frame serial output overview of input states
+//#define INPUT_SERIAL_DEBUG_PLUS     // Enables detailed serial output of input states, including digital, analog, virtual and battery states.
                                     // Includes sending ANSI codes to reset cursor position to provide a static display in a suitable terminal.
                                     // Also sticks a delay() in to give a chance to read the output better
                                     // Usually used to fine tune hardware

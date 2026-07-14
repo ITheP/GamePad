@@ -290,7 +290,7 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
         // Selected item indicator
         // Base size of left/right arrow icons is 7x7 px
         static int middle = ((SCREEN_HEIGHT - MenuContentStartY - 7) / 2) + MenuContentStartY + 2;
-        int iconOffset = (Menus::MenuFrame >> 2) % 3;
+        int iconOffset = (Menus::MenuFrame >> 3) % 3;
         RenderIcon(Icon_Arrow_Right + iconOffset, 0, middle, 7, 7);
     }
 

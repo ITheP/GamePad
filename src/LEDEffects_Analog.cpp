@@ -24,7 +24,7 @@ void AnalogEffects::SimpleSet(void *analogInput, float time)
 
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
-  int amount = map(input->ValueState.Value, 0, 4095, -20, 275); // Map slightly outside 0-255 range
+  int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275); // Map slightly outside 0-255 range
   amount = constrain(amount, 0, 255);                           // ...then clip to range
   *(ledConfig->ExternalLED) = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);
 }
@@ -37,12 +37,33 @@ void AnalogEffects::ConstrainedSimpleSet(void *analogInput, float time)
 
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
-  //int amount = map(input->ValueState.Value, input->MinAnalogValue, input->MaxAnalogValue, 0, 255); // Map slightly outside 0-255 range
- int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275); // Map slightly outside 0-255 range
+  int amount = map(input->ValueState.AnalogValue, input->MinAnalogValue, input->MaxAnalogValue, 0, 255); // Map slightly outside 0-255 range
+ //int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275); // Map slightly outside 0-255 range
  // amount = constrain(amount, 0, 255);                           // ...then clip to range
   *(ledConfig->ExternalLED) = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);
-  Serial.println("ConstrainedSimpleSet: Value: " + String(input->ValueState.Value) + ", Analog: " + String(input->ValueState.AnalogValue) + ", Amount: " + String(amount) + " - Primary: " + String(ledConfig->PrimaryColour.Colour.r) + "," + String(ledConfig->PrimaryColour.Colour.g) + "," + String(ledConfig->PrimaryColour.Colour.b) + " - Secondary: " + String(ledConfig->SecondaryColour.Colour.r) + "," + String(ledConfig->SecondaryColour.Colour.g) + "," + String(ledConfig->SecondaryColour.Colour.b));  
+  //Serial.println("ConstrainedSimpleSet: Value: " + String(input->ValueState.Value) + ", Analog: " + String(input->ValueState.AnalogValue) + ", Amount: " + String(amount) + " - Primary: " + String(ledConfig->PrimaryColour.Colour.r) + "," + String(ledConfig->PrimaryColour.Colour.g) + "," + String(ledConfig->PrimaryColour.Colour.b) + " - Secondary: " + String(ledConfig->SecondaryColour.Colour.r) + "," + String(ledConfig->SecondaryColour.Colour.g) + "," + String(ledConfig->SecondaryColour.Colour.b));  
+
+  Serial.println("Analog LED slot=" + String(ledConfig->LEDNumber) + " color=" + String(amount));
 }
+
+
+// void AnalogEffects::ConstrainedSimpleSet(void *analogInput, float time)
+// {
+//   Input *input = static_cast<Input *>(analogInput);
+//   ExternalLEDConfig *ledConfig = input->LEDConfig;
+
+//   int16_t minValue = input->MinAnalogValue;
+//   int16_t maxValue = input->MaxAnalogValue;
+
+//   int16_t rawValue = constrain(input->ValueState.AnalogValue, minValue, maxValue);
+//   int amount = map(rawValue, minValue, maxValue, 0, 255);
+//   amount = constrain(amount, 0, 255);
+
+//   *(ledConfig->ExternalLED) = blend(
+//       ledConfig->SecondaryColour.Colour,
+//       ledConfig->PrimaryColour.Colour,
+//       amount);
+// }
 
 void AnalogEffects::Throb(void *analogInput, float time)
 {
@@ -68,7 +89,7 @@ void AnalogEffects::BlendedHue(void *analogInput, float time)
 
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
-  int amount = map(input->ValueState.Value, 0, 4095, -20, 275);
+  int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275);
   amount = constrain(amount, 0, 255);
   *(ledConfig->ExternalLED) = blend(ledConfig->SecondaryColour.Colour, CHSV(amount + ledConfig->PrimaryHSV.h, 255, 255), amount);
 }
@@ -80,7 +101,7 @@ void AnalogEffects::Hue(void *analogInput, float time)
 
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
-  int amount = map(input->ValueState.Value, 0, 4095, -20, 275);
+  int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275);
   amount = constrain(amount, 0, 255);
   *(ledConfig->ExternalLED) = CHSV(amount + ledConfig->PrimaryHSV.h, 255, 255);
 }
@@ -93,7 +114,7 @@ void AnalogEffects::StartAtHue(void *analogInput, float time)
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
   // Colour = hue, offset by source colour
-  int amount = map(input->ValueState.Value, 0, 4095, -20, 275);
+  int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275);
   amount = constrain(amount, 0, 255);
   amount = map(amount, 0, 255, 0, 255 - 32);
   *(ledConfig->ExternalLED) = CHSV(amount + ledConfig->PrimaryHSV.h, 255, 255);
@@ -106,7 +127,7 @@ void AnalogEffects::EndAtHue(void *analogInput, float time)
 
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
-  int amount = map(input->ValueState.Value, 0, 4095, -20, 275);
+  int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275);
   amount = constrain(amount, 0, 255);
   amount = map(amount, 0, 255, 32, 255);
   *(ledConfig->ExternalLED) = CHSV(amount + ledConfig->PrimaryHSV.h, 255, 255);
@@ -119,7 +140,7 @@ void AnalogEffects::BlendedStartAtHue(void *analogInput, float time)
 
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
-  int amount = map(input->ValueState.Value, 0, 4095, -20, 275);
+  int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275);
   amount = constrain(amount, 0, 255);
   int remappedAmount = map(amount, 0, 255, 0, 255 - 32);
   *(ledConfig->ExternalLED) = blend(ledConfig->SecondaryColour.Colour, CHSV(remappedAmount + ledConfig->PrimaryHSV.h, 255, 255), amount);
@@ -132,7 +153,7 @@ void AnalogEffects::BlendedEndAtHue(void *analogInput, float time)
 
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
-  int amount = map(input->ValueState.Value, 0, 4095, -20, 275);
+  int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275);
   amount = constrain(amount, 0, 255);
   int remappedAmount = map(amount, 0, 255, 32, 255);
   //*(input->ExternalLED) = CHSV(amount + input->PrimaryHSV.h, 255, 255);

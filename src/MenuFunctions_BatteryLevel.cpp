@@ -28,7 +28,7 @@ static char Battery_Wired[] = "Wired";
 // Battery menu item
 void MenuFunctions::DrawBatteryLevel()
 {
-  float batteryLevel = Battery::Voltage;
+  float batteryLevel = Battery::ClampedVoltage;
   const char *text;
 
   if (batteryLevel <= 3.3)
@@ -44,8 +44,8 @@ void MenuFunctions::DrawBatteryLevel()
 
   snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s %d%% %.1fv",
            text,
-           Battery::CurrentBatteryPercentage,
-           Battery::Voltage);
+           Battery::ClampedBatteryPercentage,
+           Battery::ClampedVoltage);
 
   Menus::UpdateMenuText(Menus::MenuTextBuffer, NoScrollNeeded);
 

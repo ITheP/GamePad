@@ -23,11 +23,11 @@ char SoftwareRevision[] = "1.0";
 // List of LED's we want cloning (lets you copy LED values between each other)
 // e.g. when you might have multiple physical LED's that you want to share the same value, such as a light ring where you want the whole thing lit up at multiple points
 IntPair LEDClones[] = {
-    {LED_Green, LED_Green_Neck},
-    {LED_Red, LED_Red_Neck},
-    {LED_Yellow, LED_Yellow_Neck},
-    {LED_Blue, LED_Blue_Neck},
-    {LED_Orange, LED_Orange_Neck}
+    // {LED_Green, LED_Green_Neck},
+    // {LED_Red, LED_Red_Neck},
+    // {LED_Yellow, LED_Yellow_Neck},
+    // {LED_Blue, LED_Blue_Neck},
+    // {LED_Orange, LED_Orange_Neck}
 }; //{ LED_Status, LED_Status_Copy } };
 int LEDClones_Count = sizeof(LEDClones) / sizeof(LEDClones[0]);
 
@@ -66,30 +66,6 @@ Stats *AllStats[] = {
 int AllStats_Count = sizeof(AllStats) / sizeof(AllStats[0]);
 
 // ToDo: RenderStats - what gets rendered where (icon/text, position, stats value, left/mid/right aligned)
-
-// Early boot - config initiation and menu buttons
-// Very specific, low level handling
-// before device has booted (generally used to configure WiFi)
-
-// Assumes this pin is defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
-uint8_t BootPin_StartInConfiguration = BUTTON_Select_PIN;
-
-// Assumes these pins are defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
-Input DigitalInput_Config_Up = {.Pin = HAT1_Up_PIN, .Label = DIGITALINPUT_CONFIG_UP_LABEL};
-Input DigitalInput_Config_Down = {.Pin = HAT1_Down_PIN, .Label = DIGITALINPUT_CONFIG_DOWN_LABEL};
-Input DigitalInput_Config_Select = {.Pin = BUTTON_Green_PIN, .Label = DIGITALINPUT_CONFIG_SELECT_LABEL};
-Input DigitalInput_Config_Back = {.Pin = BUTTON_Red_PIN, .Label = DIGITALINPUT_CONFIG_BACK_LABEL};
-
-// Input DigitalInput_Config_MenuUp = { .Pin = HAT1_Up_PIN, .Label = "Strum Up", .CustomOperationPressed = &Menus::Config_UpPressed, .CustomOperationReleased = &Menus::Config_UpReleased };
-// Input DigitalInput_Config_MenuDown = { .Pin = HAT1_Down_PIN, .Label = "Strum Down", .CustomOperationPressed = &Menus::Config_DownPressed, .CustomOperationReleased = &Menus::Config_DownReleased };
-// Input DigitalInput_Config_Select = { .Pin = BUTTON_Green_PIN, .Label = "Green Button", .CustomOperationPressed = &Menus::Config_SelectPressed, .CustomOperationReleased = &Menus::Config_SelectReleased };
-// Input DigitalInput_Config_Back = { .Pin = BUTTON_Red_PIN, .Label = "Red Button", .CustomOperationPressed = &Menus::Config_BackPressed, .CustomOperationReleased = &Menus::Config_BackReleased };
-
-Input *DigitalInputs_ConfigMenu[] = {
-    &DigitalInput_Config_Up,
-    &DigitalInput_Config_Down,
-    &DigitalInput_Config_Select,
-    &DigitalInput_Config_Back};
 
 // =============
 // Analog inputs
@@ -174,7 +150,16 @@ Input AnalogInputs_Virtual_TriggeredGreen =
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE};
+        .RenderOperation = NONE,
+    
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = (int)LEDStrip::Green_Neck,
+            .PrimaryColour = { CRGB(96, 96, 96), true },
+            .SecondaryColour = { CRGB(0, 255, 0), true },
+            .Effect = &AnalogEffects::ConstrainedSimpleSet,
+            .RunEffectConstantly = true,
+         },
+        };
 
 Input AnalogInputs_Virtual_TriggeredRed =
     {
@@ -190,7 +175,16 @@ Input AnalogInputs_Virtual_TriggeredRed =
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE};
+        .RenderOperation = NONE,
+
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = (int)LEDStrip::Red_Neck,
+            .PrimaryColour = { CRGB(96, 96, 96), true },
+            .SecondaryColour = { CRGB(255, 0, 0), true },
+            .Effect = &AnalogEffects::ConstrainedSimpleSet,
+            .RunEffectConstantly = true,
+         },
+    };
 
 Input AnalogInputs_Virtual_TriggeredYellow =
     {
@@ -206,7 +200,16 @@ Input AnalogInputs_Virtual_TriggeredYellow =
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE};
+        .RenderOperation = NONE,
+
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = (int)LEDStrip::Yellow_Neck,
+            .PrimaryColour = { CRGB(96, 96, 96), true },
+            .SecondaryColour = { CRGB(255, 255, 0), true },
+            .Effect = &AnalogEffects::ConstrainedSimpleSet,
+            .RunEffectConstantly = true,
+         },
+    };
 
 Input AnalogInputs_Virtual_TriggeredBlue =
     {
@@ -222,7 +225,16 @@ Input AnalogInputs_Virtual_TriggeredBlue =
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE};
+        .RenderOperation = NONE,
+
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = (int)LEDStrip::Blue_Neck,
+            .PrimaryColour = { CRGB(96, 96, 96), true },
+            .SecondaryColour = { CRGB(0, 0, 255), true },
+            .Effect = &AnalogEffects::ConstrainedSimpleSet,
+            .RunEffectConstantly = true,
+         },
+    };
 
 Input AnalogInputs_Virtual_TriggeredOrange =
     {
@@ -238,7 +250,16 @@ Input AnalogInputs_Virtual_TriggeredOrange =
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE};
+        .RenderOperation = NONE,
+
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = (int)LEDStrip::Orange_Neck,
+            .PrimaryColour = { CRGB(96, 96, 96), true },
+            .SecondaryColour = { CRGB(255, 64, 0), true },
+            .Effect = &AnalogEffects::ConstrainedSimpleSet,
+            .RunEffectConstantly = true,
+         },
+    };
 
 // Specific inputs we need references to
 // So the Whammy input can get its input EITHER from the actual pin, or drag in a value (if being provided) from the Virtual Pin.
@@ -250,8 +271,8 @@ Input AnalogInputs_Whammy =
         .Label = "Whammy",
         .BluetoothInput = NONE,
         .DefaultAnalogValue = -1,
-        .MinAnalogValue = 2300,
-        .MaxAnalogValue = 3500,
+        .MinAnalogValue = 300,
+        .MaxAnalogValue = 4000,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = &BleGamepad::setSlider1,
@@ -334,11 +355,9 @@ Input DigitalInput_Green = // Green button on guitar neck
         .Statistics = &Stats_Green,
         .OnboardLED = {CRGB(0, 255, 0), true},
         .LEDConfig = new ExternalLEDConfig {
-            .LEDNumber = LED_Green,
+            .LEDNumber = (int)LEDStrip::Green,
             .PrimaryColour = { CRGB(0, 255, 0), true },
-            .SecondaryColour = { CRGB(96, 96, 96), true },
-            .Effect = &AnalogEffects::ConstrainedSimpleSet,
-            .RunEffectConstantly = true,
+            .SecondaryColour = { CRGB(0, 255, 0), false }
          },
         .ProfileId = 1};
 
@@ -362,11 +381,9 @@ Input DigitalInput_Red = // Red button on guitar neck
         .Statistics = &Stats_Red,
         .OnboardLED = {CRGB(255, 0, 0), true},
         .LEDConfig = new ExternalLEDConfig {
-            .LEDNumber = LED_Red,
+            .LEDNumber = (int)LEDStrip::Red,
             .PrimaryColour = { CRGB(255, 0, 0), true },
-            .SecondaryColour = { CRGB(96, 96, 96), true },
-            .Effect = &AnalogEffects::SimpleSet,
-            .RunEffectConstantly = true,
+            .SecondaryColour = { CRGB(255, 0, 0), false }
          },
         .ProfileId = 2};
 
@@ -390,11 +407,9 @@ Input DigitalInput_Yellow = // Yellow button on guitar neck
         .Statistics = &Stats_Yellow,
         .OnboardLED = {CRGB(255, 255, 0), true},
         .LEDConfig = new ExternalLEDConfig {
-            .LEDNumber = LED_Yellow,
+            .LEDNumber = (int)LEDStrip::Yellow,
             .PrimaryColour = { CRGB(255, 255, 0), true },
-            .SecondaryColour = { CRGB(96, 96, 96), true },
-            .Effect = &AnalogEffects::SimpleSet,
-            .RunEffectConstantly = true,
+            .SecondaryColour = { CRGB(255, 255, 0), false }
          },
         .ProfileId = 3}; // Onboard LED set to slightly off yellow, then if red is pressed as well, you can kind of see it a bit
 
@@ -418,11 +433,9 @@ Input DigitalInput_Blue = // Blue button on guitar neck
         .Statistics = &Stats_Blue,
         .OnboardLED = {CRGB(0, 0, 255), true},
         .LEDConfig = new ExternalLEDConfig {
-            .LEDNumber = LED_Blue,
+            .LEDNumber = (int)LEDStrip::Blue,
             .PrimaryColour = { CRGB(0, 0, 255), true },
-            .SecondaryColour = { CRGB(96, 96, 96), true },
-            .Effect = &AnalogEffects::SimpleSet,
-            .RunEffectConstantly = true,
+            .SecondaryColour = { CRGB(0, 0, 255), false }
          },
         .ProfileId = 4};
 
@@ -446,11 +459,9 @@ Input DigitalInput_Orange = // Orange button on guitar neck
         .Statistics = &Stats_Orange,
         .OnboardLED = {CRGB(255, 128, 0), true},
         .LEDConfig = new ExternalLEDConfig {
-            .LEDNumber = LED_Orange,
-            .PrimaryColour = { CRGB(255, 128, 0), true },
-            .SecondaryColour = { CRGB(96, 96, 96), true },
-            .Effect = &AnalogEffects::SimpleSet,
-            .RunEffectConstantly = true,
+            .LEDNumber = (int)LEDStrip::Orange,
+            .PrimaryColour = { CRGB(255, 96, 0), true },
+            .SecondaryColour = { CRGB(255, 96, 0), false }
          },
         .ProfileId = 5}; // Onboard LED Slightly off colour again, so additional red looks different
 
@@ -475,7 +486,7 @@ Input DigitalInput_Start_LongPress = // Select button on main body
         .FalseIcon = NONE,
         .Statistics = &Stats_Start_LongPress,
         .OnboardLED = {CRGB(255, 255, 255), true}
-        //     .LEDConfig = new ExternalLEDConfig {
+        // .LEDConfig = new ExternalLEDConfig {
         //     .LEDNumber = LED_Orange,
         //     .PrimaryColour = { CRGB(255, 255, 255), true },
         //     .SecondaryColour = { CRGB(255, 0, 255), false }
@@ -564,9 +575,11 @@ Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled 
         // }
 };
 
-#define ENABLE_FLIP_SCREEN // Required if below is defined
-// #define FLIP_SCREEN_TOGGLE 1 // FlipScreen can either toggle on and off with a button press (enable), or holding a button down sets its flipped state (disable)
-Input DigitalInput_FlipScreen = // Lever on main body, will be flipped into a permanent on or off state, not just pressed
+// Set following in .h if we have a flipscreen button
+//#define ENABLE_FLIP_SCREEN          // Required if below is defined
+//#define FLIP_SCREEN_TOGGLE 1        // FlipScreen can either toggle on and off with a button press (enable), or holding a button down sets its flipped state (disable)
+
+Input DigitalInput_FlipScreen =     // Lever on main body, will be flipped into a permanent on or off state, not just pressed
     {
         .Pin = BUTTON_FlipScreen_PIN,
         .Label = "Flip Screen",
@@ -699,14 +712,52 @@ ExternalLEDConfig *MiscLEDEffects[] = {};
 ExternalLEDConfig *IdleLEDEffects[] = {
     new ExternalLEDConfig {
         // All LED's except status clone
-        .LEDNumbers = { 1,2,3,4,5,6,7,8,9,
-                        10,11 },
+        .LEDNumbers = {
+            (int)LEDStrip::Status,
+           // (int)LEDStrip::Tilt,
+            (int)LEDStrip::Green,
+            (int)LEDStrip::Red,
+            (int)LEDStrip::Yellow, 
+            (int)LEDStrip::Blue,
+            (int)LEDStrip::Orange,
+            (int)LEDStrip::Orange_Neck, 
+            (int)LEDStrip::Blue_Neck,
+            (int)LEDStrip::Yellow_Neck,
+            (int)LEDStrip::Red_Neck, 
+            (int)LEDStrip::Green_Neck
+        },
         .Effect = &GeneralArrayEffects::Random,
         .Rate =  1.5,
         .Chance = (uint32_t)(0.1 * 0xFFFF),
         .CustomTag = 64.0
      }
 };
+
+
+// Early boot - config initiation and menu buttons
+// Very specific, low level handling
+// before device has booted (generally used to configure WiFi)
+
+// Assumes this pin is defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
+uint8_t BootPin_StartInConfiguration = BUTTON_Select_PIN;
+
+// Assumes these pins are defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
+Input DigitalInput_Config_Up = {.Pin = HAT1_Up_PIN, .Label = DIGITALINPUT_CONFIG_UP_LABEL};
+Input DigitalInput_Config_Down = {.Pin = HAT1_Down_PIN, .Label = DIGITALINPUT_CONFIG_DOWN_LABEL};
+Input DigitalInput_Config_Select = {.VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen}, .Label = DIGITALINPUT_CONFIG_SELECT_LABEL};
+Input DigitalInput_Config_Back = {.VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredRed}, .Label = DIGITALINPUT_CONFIG_BACK_LABEL};
+
+// Input DigitalInput_Config_MenuUp = { .Pin = HAT1_Up_PIN, .Label = "Strum Up", .CustomOperationPressed = &Menus::Config_UpPressed, .CustomOperationReleased = &Menus::Config_UpReleased };
+// Input DigitalInput_Config_MenuDown = { .Pin = HAT1_Down_PIN, .Label = "Strum Down", .CustomOperationPressed = &Menus::Config_DownPressed, .CustomOperationReleased = &Menus::Config_DownReleased };
+// Input DigitalInput_Config_Select = { .Pin = BUTTON_Green_PIN, .Label = "Green Button", .CustomOperationPressed = &Menus::Config_SelectPressed, .CustomOperationReleased = &Menus::Config_SelectReleased };
+// Input DigitalInput_Config_Back = { .Pin = BUTTON_Red_PIN, .Label = "Red Button", .CustomOperationPressed = &Menus::Config_BackPressed, .CustomOperationReleased = &Menus::Config_BackReleased };
+
+Input *DigitalInputs_ConfigMenu[] = {
+    &DigitalInput_Config_Up,
+    &DigitalInput_Config_Down,
+    &DigitalInput_Config_Select,
+    &DigitalInput_Config_Back};
+
 
 // -----------------------------------------------------
 // Array sizes

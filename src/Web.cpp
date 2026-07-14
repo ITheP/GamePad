@@ -243,11 +243,19 @@ esp_err_t Web::Send_DeviceInfo(httpd_req_t *req)
 
 esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
 {
-    char json[128];
+    char json[256];
+    
+    Battery::CalculateState();
+    bool isCharging = (Battery::State == POWER_Charging);
+    bool isPoweredByUSB = (Battery::State == POWER_USB || isCharging);
+
     snprintf(json, sizeof(json),
-             "{\"BatteryLevel\":%d, \"BatteryVoltage\":%.2f}",
-             Battery::GetLevel(),
-             Battery::Voltage);
+             "{\"BatteryLevel\":%d, \"BatteryVoltage\":%.2f, \"RawVoltage\":%.2f, \"IsCharging\":%s, \"IsPoweredByUSB\":%s}",
+             Battery::ClampedBatteryPercentage,
+             Battery::ClampedVoltage,
+             Battery::RawVoltage,
+             isCharging ? "true" : "false",
+             isPoweredByUSB ? "true" : "false");
 
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, json, strlen(json));

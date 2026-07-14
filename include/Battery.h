@@ -5,8 +5,12 @@
 
 const float Vcc = 2.4;
 
-const float Bat_MaxVoltage = 4.2;      // Max voltage of our external battery. May physically go higher, but thats fine, this is the theoretical normal max.
-const float Bat_MaxReadVoltage = 2.4;  // Our external voltage max value after accounting for voltage divider of incoming battery level. Also means the analogRead of this never maxes out and stays within a more accurate reading range on ESP32-S3
+const float Bat_MaxVoltage = 4.2;       // Max voltage of our external battery. May physically go higher, but thats fine, this is the theoretical normal max.
+const float Bat_MaxReadVoltage = 2.4;   // Our external voltage max value after accounting for voltage divider of incoming battery level. Also means the analogRead of this never maxes out and stays within a more accurate reading range on ESP32-S3
+
+#define POWER_Battery 0                 // Power coming from battery
+#define POWER_USB 1                     // Power coming from external source (USB or other)
+#define POWER_Charging 2                // Battery is being charged by external source (USB or other)
 
 // Battery level information https://batteryint.com/blogs/news/18650-battery-voltage#:~:text=Minimum%20Voltage%20Threshold%3A%20When%20the%20battery%20is%20depleted%2C,avoid%20damaging%20the%20battery%27s%20internal%20structure%20and%20chemistry.
 // Measured voltage mappings
@@ -42,15 +46,19 @@ const float Bat_MaxReadVoltage = 2.4;  // Our external voltage max value after a
 class Battery {
 public:
     static void TakeReading();
-    static int GetLevel();
+    static void CalculateState();
     static void DrawEmpty(int secondRollover, int SecondFlipFlop, bool IncludeLED = true);
 
+    static int State;
+
     static int PreviousBatteryLevel;
-    static int CurrentBatterySensorReading;
-    static int CurrentBatteryPercentage;
+    static int ClampedBatterySensorReading;
+    static int ClampedBatteryPercentage;
     static int CumulativeBatterySensorReadings;
     static int BatteryLevelReadingsCount;
-    static float Voltage;
+    static int PowerSensorReading;
+    static float ClampedVoltage;
+    static float RawVoltage;
 };
 
 inline void Battery::TakeReading() {

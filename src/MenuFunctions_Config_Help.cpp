@@ -21,6 +21,7 @@
 int ConfigHelpTextSize = sizeof(ConfigHelpText) / sizeof(ConfigHelpText[0]);
 int ConfigHelpTextPos = 0;
 int ConfigHelpPixelOffset = 0;
+int ScrollSpeed = 1;    // Anything above 2 pixels is a bit mental. Recommend 1 or 2.
 
 void MenuFunctions::Config_Init_Help()
 {
@@ -36,9 +37,9 @@ void MenuFunctions::Config_Update_Help()
     // Check for buttons being held down
     // Initially scrolled 1 pixel at a time but was a bit slow!
     if (PRESSED == Menus::UpState())
-      ConfigHelpPixelOffset += 2;
+      ConfigHelpPixelOffset += ScrollSpeed;
     if (PRESSED == Menus::DownState())
-      ConfigHelpPixelOffset -= 2;
+      ConfigHelpPixelOffset -= ScrollSpeed;
 
     int textLineHeight = FONT_SMALL_HEIGHT;
 

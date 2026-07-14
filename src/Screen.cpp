@@ -41,7 +41,7 @@ void FlipScreen(Input *input)
   // .setRotation does not require Display.display() to be called
 
 #ifdef FLIP_SCREEN_TOGGLE
-  if (input->Value == HIGH)
+  if (input->ValueState.Value == HIGH || input->ValueState.StateJustChanged == false)
     return;
 
   if (ScreenOrientation == 2)

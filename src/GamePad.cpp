@@ -132,7 +132,7 @@ int SecondFlipFlop = false; // Flag flipping between 0 and 1 every second to all
 int PreviousSubSecond = -1;
 int SubSecond = 0;
 int SubSecondRollover = false; // SubSecond flag for things like statistics sampling
-int SubSecondFlipFlop = false;
+//int SubSecondFlipFlop = false;
 
 char LastBatteryIcon = 0;
 int LastSerialState = -1;
@@ -156,12 +156,13 @@ int ControllerIdleJustUnset_Screen = false;
 void setupShowBattery()
 {
   Battery::TakeReading();
-  int currentBatteryLevel = Battery::GetLevel();
+  Battery::CalculateState();
+  int currentBatteryLevel = Battery::ClampedBatteryPercentage;
 
   Display.fillRect(HALF_SCREEN_WIDTH, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
   snprintf(buffer, sizeof(buffer), "%d%% %.1fv",
-           Battery::CurrentBatteryPercentage,
-           Battery::Voltage);
+           Battery::ClampedBatteryPercentage,
+           Battery::ClampedVoltage);
 
   RREDefault.printStr(ALIGN_RIGHT, SCREEN_HEIGHT - RREHeight_fixed_8x16, buffer);
 }
@@ -290,7 +291,11 @@ void setupBattery()
   Serial.println("🔋 Setting up Battery...");
 
   // Battery hardware monitoring
+  pinMode(POWER_MONITOR_PIN, INPUT);
   pinMode(BATTERY_MONITOR_PIN, INPUT);
+  // measure 0->2.2v - theoretically voltage divider on e.g. 3.8v needs 1.9v
+  // 0db is more accurate but only 1.1v in range
+  analogSetPinAttenuation(BATTERY_MONITOR_PIN, ADC_6db);
 
   // Make sure we have atleast one battery reading completed
   Battery::TakeReading();
@@ -776,17 +781,71 @@ void setupProfile()
   // Along with holding separate WiFi details and configurations if required.
   int profileId = 0;
 
+  // TODO:> ALSO TRIGGER FROM ANALOG (may be virtualised) INPUTS
+
   Input *input;
-  for (int i = 0; i < DigitalInputs_Count; i++)
+
+  // Check analog inputs for a digital analog value to check for a profile, and populate values for virtual pins for digital inputs if required
+  for (int i = 0; i < AnalogInputs_Count; i++)
   {
-    input = DigitalInputs[i];
-    if (input->ProfileId > 0)
+    input = AnalogInputs[i];
+    uint16_t analogState = 0;
+
+    if (input->Pin != NONE)
+      analogState = analogRead(input->Pin);
+
+    // Set triggered state if above TriggerOnValue
+    if (input->TriggerOnValue > 0 && analogState > input->TriggerOnValue)
     {
-      if (digitalRead(input->Pin) == LOW)
+      input->ValueState.Value = PRESSED;
+
+      // Check if this analog input itself has a ProfileId set
+      if (input->ProfileId > 0)
       {
         profileId = input->ProfileId;
         ProfileOverrideInput = input;
-        Serial.println("🔗 Bluetooth Id Override : " + String(ESPChipIdOffset));
+        Serial.println("🔗 Bluetooth Id Override : " + String(profileId));
+      }
+    }
+    else
+    {
+      input->ValueState.Value = NOT_PRESSED;
+    }
+  }
+
+  // Nothing yet? Check digital inputs
+  if (profileId == 0)
+  {
+    for (int i = 0; i < DigitalInputs_Count; i++)
+    {
+      input = DigitalInputs[i];
+      if (input->ProfileId > 0)
+      {
+        uint16_t state = NOT_PRESSED;
+
+        // Check physical pin
+        if (input->Pin != NONE)
+          state = digitalRead(input->Pin);
+
+        // Also check virtual inputs
+        if (state == NOT_PRESSED && input->VirtualPinInputs.size() > 0)
+        {
+          for (int j = 0; j < input->VirtualPinInputs.size(); j++)
+          {
+            if (input->VirtualPinInputs[j]->ValueState.Value == PRESSED)
+            {
+              state = PRESSED;
+              break;
+            }
+          }
+        }
+
+        if (state == PRESSED)
+        {
+          profileId = input->ProfileId;
+          ProfileOverrideInput = input;
+          Serial.println("🔗 Bluetooth Id Override : " + String(profileId));
+        }
       }
     }
   }
@@ -986,28 +1045,28 @@ void setupController()
   Serial.println("... Controller Type: Gamepad");
 
   bleGamepadConfig.setVid(VID);
-  Serial.println("... VID: " + String(VID));    // Cosmetic
+  Serial.println("... VID: " + String(VID)); // Cosmetic
 
   bleGamepadConfig.setPid(PID);
-  Serial.println("... PID: " + String(PID));    // Cosmetic
+  Serial.println("... PID: " + String(PID)); // Cosmetic
 
   bleGamepadConfig.setModelNumber(ModelNumber);
-  Serial.println("... Model Number: " + String(ModelNumber));    // Cosmetic
+  Serial.println("... Model Number: " + String(ModelNumber)); // Cosmetic
 
   bleGamepadConfig.setSerialNumber(SerialNumber);
-  Serial.println("... Serial Number: " + String(SerialNumber));    // Cosmetic
+  Serial.println("... Serial Number: " + String(SerialNumber)); // Cosmetic
 
   Serial.println("... Core build: " + String(GetBuildVersion()));
 
   // TODO: Revision versions in config file
-  bleGamepadConfig.setFirmwareRevision(FirmwareRevision); // Version of this firmware
-  Serial.println("... Firmware: v" + String(FirmwareRevision));    // Cosmetic
+  bleGamepadConfig.setFirmwareRevision(FirmwareRevision);       // Version of this firmware
+  Serial.println("... Firmware: v" + String(FirmwareRevision)); // Cosmetic
 
-  bleGamepadConfig.setHardwareRevision(HardwareRevision); // Version of circuit board etc.
-  Serial.println("... Hardware: v" + String(HardwareRevision));    // Cosmetic
+  bleGamepadConfig.setHardwareRevision(HardwareRevision);       // Version of circuit board etc.
+  Serial.println("... Hardware: v" + String(HardwareRevision)); // Cosmetic
 
   bleGamepadConfig.setSoftwareRevision(SoftwareRevision);
-  Serial.println("... Software: v" + String(SoftwareRevision));    // Cosmetic
+  Serial.println("... Software: v" + String(SoftwareRevision)); // Cosmetic
 
   bleGamepadConfig.setHidReportId(1);
 
@@ -1148,7 +1207,8 @@ void setup()
   // In this case undefine LIVE_BATTERY to skip power checks.
   // TODO: This may change if/when decent power is in place (and charging gets us out of this loop). Note that display will need re-clearing and the logo re-drawing.
 #ifdef LIVE_BATTERY
-  int currentBatteryLevel = Battery::GetLevel();
+  Battery::CalculateState();
+  int currentBatteryLevel = Battery::CurrentBatteryPercentage;
   if (currentBatteryLevel == 0)
   {
     // Simulate SecondRollover and SecondFlipFlop
@@ -1519,14 +1579,15 @@ void MainLoop()
 #endif
 
     // Battery stuff
-    int currentBatteryLevel = Battery::GetLevel();
+    Battery::CalculateState();
+    int currentBatteryLevel = Battery::ClampedBatteryPercentage;
 
     // TODO: NOTE current h/w, charging is separate to powering device so can't happen at the same time. However in the future.... :)
     bool charging = false;
 
     // Serial.println("Battery level: " + String(currentBatteryLevel));
 
-    if (charging)
+    if (Battery::State == POWER_Charging)
     {
       if (SecondFlipFlop)
         LastBatteryIcon = Icon_Battery;
@@ -1921,7 +1982,7 @@ void MainLoop()
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
         snprintf(buffer, sizeof(buffer),
-                 "    Virtual input <- %4d + Virtual Trigger: %d, Constrained to [%4d] %4d [%4d], Ranged to [%4d] %4d [%4d], Final: %4d",
+                 "    Virtual input <- %4d + Virtual Trigger: %d, Constrained to [%4d] %4d [%4d], Ranged to [%4d] %4d [%4d], Final: %4d - [%s]",
                  virtualinput->ValueState.AnalogValue,
                  virtualinput->ValueState.Value,
                  virtualinput->MinAnalogValue,
@@ -1930,7 +1991,8 @@ void MainLoop()
                  input->MinAnalogValue,
                  testB,
                  input->MaxAnalogValue,
-                 analogState);
+                 analogState,
+                 virtualinput->Label);
 
         Serial.println(buffer);
 #endif
@@ -2475,6 +2537,25 @@ void MainLoop()
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
   Serial.println();
+
+  bool isCharging = (Battery::State == POWER_Charging);
+  bool isPoweredByUSB = (Battery::State == POWER_USB || isCharging);
+
+  snprintf(buffer, sizeof(buffer),
+           "Battery state: CurrentSensorReading: %4d, CurrentPercentage: %3d - Cumulative: %5d/%-2d, PowerSensorReading: %4d, Voltage: %.2f, RawVoltage: %.2f - IsCharging: %s, IsPoweredByUSB: %s",
+           Battery::ClampedBatterySensorReading,
+           Battery::ClampedBatteryPercentage,
+           Battery::CumulativeBatterySensorReadings,
+           Battery::BatteryLevelReadingsCount,
+           Battery::PowerSensorReading,
+           Battery::ClampedVoltage,
+           Battery::RawVoltage,
+           isCharging ? "1" : "0",
+           isPoweredByUSB ? "1" : "0");
+
+  Serial.println(buffer);
+
+  Serial.println(); // Extra blank line helps cover up any previous output that might have been left on the serial monitor if an extra line got printed
 #endif
 
 #ifdef INPUT_SERIAL_DEBUG

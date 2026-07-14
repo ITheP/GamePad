@@ -121,6 +121,7 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 - [ ] Independent LED effects (e.g. based on Stats)
 - [ ] Run time configurable LEDs (disable if power below certain level, turn on/off in options)
 - [ ] If External LED's powered on when empty battery kicks in - turn them all off to preserve battery power
+- [ ] In config mode, have a special ConfigLEDs array of colours and set them on. Easy to e.g. have red/green lit up for menu help them (i.e. just shows ones relevant)
   
 ## To Do - Inputs
 - [ ] Analog x/y controllers (thumbsticks)
