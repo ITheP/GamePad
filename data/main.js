@@ -131,6 +131,12 @@ function updateBatteryInformation() {
             let batteryVoltage = data.BatteryVoltage;
             let batteryLevel = data.BatteryLevel;
 
+            let RawVoltage = data.RawVoltage;
+            let IsCharging = data.IsCharging;
+            let IsPoweredByUSB = data.IsPoweredByUSB;
+
+            console.log(`Battery Info: Voltage=${batteryVoltage}V, Level=${batteryLevel}%, RawVoltage=${RawVoltage}, IsCharging=${IsCharging}, IsPoweredByUSB=${IsPoweredByUSB}`);
+
             setGauge(ui.batteryVoltage, 3.3, 4.2, batteryVoltage, "v", "⚡", "Empty");
             setGauge(ui.batteryLevel, 0, 100, batteryLevel, "%", "🔋", "Empty");
         })

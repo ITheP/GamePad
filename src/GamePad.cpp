@@ -1957,6 +1957,23 @@ void MainLoop()
           if (virtualinput->ValueState.Value == PRESSED)
             virtualState = virtualinput->ValueState.AnalogValue;
         }
+        else if (input->VirtualPinMode == VirtualPinModes::RequireValueToBePressedAndHaveBeenPartlyReleased)
+        {
+          if (virtualinput->ValueState.Value == PRESSED) {
+            // If AnalogValue drops below latch value and then goes above it again,
+            // then make sure the latch is enabled (we go above again so if it goes below
+            // and stays below, theres no false trigger if the button is just on its way to turning off)
+            if (virtualinput->ValueState.SubState == 0 && virtualinput->ValueState.AnalogValue < virtualinput->TriggerPartlyReleasedValue)
+              virtualinput->ValueState.SubState = 1;
+            else if (virtualinput->ValueState.SubState == 1 && virtualinput->ValueState.AnalogValue > virtualinput->TriggerPartlyReleasedValue)
+              virtualinput->ValueState.SubState = 2;
+
+            if (virtualinput->ValueState.SubState == 2)
+              virtualState = virtualinput->ValueState.AnalogValue;
+          }
+          else
+            virtualinput->ValueState.SubState = false;     // Reset latch if not pressed
+        }
         else
         {
           virtualState = virtualinput->ValueState.AnalogValue;

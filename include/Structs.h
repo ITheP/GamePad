@@ -33,7 +33,8 @@ typedef struct State {
   int16_t PreviousValue;
   int16_t AnalogValue;                    // Separate Analog values means we can also set digital Values based on analog inputs while keeping track of the analog
   int16_t PreviousAnalogValue;
-  int16_t VirtualAnalogvalue;             // May match the AnalogValue but may also 
+  int16_t VirtualAnalogvalue;             // May match the AnalogValue but may also
+  int16_t SubState;                          // General purpose latch we can e.g. set under certain conditions
 } State;
 
 // enum class VirtualAnalogCopyTypes : uint8_t {
@@ -42,8 +43,15 @@ typedef struct State {
 // };
 
 enum class VirtualPinModes : uint8_t {
-  Default = 0,                               // For Digital Inputs it grabs value from ValueState.Value and Analog Inputs grabs value from ValueState.AnalogValue
-  RequireValueToBePressed = 1                // For analog inputs requires ValueState.Value == PRESSED to use ValueState.AnalogValue, else uses minimum value (not pressed)
+// For Digital Inputs it grabs value from ValueState.Value and Analog Inputs grabs value from ValueState.AnalogValue
+  Default = 0,                               
+  // For analog inputs requires ValueState.Value == PRESSED to use ValueState.AnalogValue, else uses minimum value (not pressed)
+  RequireValueToBePressed = 1,               
+ // For analog inputs requires ValueState.Value == PRESSED to use ValueState.AnalogValue, else uses minimum value (not pressed).
+ // Also requires that input has been released to a certain point before this engages.
+// Originally purposed for guitar controller analog neck button -> whammy bar emulation but so it wouldn't kick in if you wanted to fully
+// hold the button and use the actual whammy bar
+ RequireValueToBePressedAndHaveBeenPartlyReleased = 2
 };
 
 
@@ -70,6 +78,7 @@ typedef struct Input {
   int16_t TriggerOnValue;                       // For analog button - the value at which the button is considered on/pressed
   int16_t TriggerOffValue;                      // For analog button - the value at which the  button is considered off/released                                    
                                                 // E.g. Trigger at 2000 and release at 4000 so pressure variance doesn't cause a rapid on/off around the trigger point
+  int16_t TriggerPartlyReleasedValue;           // E.g. Partial dissengagement post full press before virtual analog emulation engages
 
   //int16_t VirtualDigitalPin;                    // When used, sets PRESSED/RELEASED here based on trigger points, for use as a virtual digital pin on digital inputs
   //VirtualAnalogCopyTypes VirtualAnalogCopyType; // How to copy over values into virtual values

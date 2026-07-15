@@ -43,7 +43,7 @@ void AnalogEffects::ConstrainedSimpleSet(void *analogInput, float time)
   *(ledConfig->ExternalLED) = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);
   //Serial.println("ConstrainedSimpleSet: Value: " + String(input->ValueState.Value) + ", Analog: " + String(input->ValueState.AnalogValue) + ", Amount: " + String(amount) + " - Primary: " + String(ledConfig->PrimaryColour.Colour.r) + "," + String(ledConfig->PrimaryColour.Colour.g) + "," + String(ledConfig->PrimaryColour.Colour.b) + " - Secondary: " + String(ledConfig->SecondaryColour.Colour.r) + "," + String(ledConfig->SecondaryColour.Colour.g) + "," + String(ledConfig->SecondaryColour.Colour.b));  
 
-  Serial.println("Analog LED slot=" + String(ledConfig->LEDNumber) + " color=" + String(amount));
+  //Serial.println("Analog LED slot=" + String(ledConfig->LEDNumber) + " color=" + String(amount));
 }
 
 
