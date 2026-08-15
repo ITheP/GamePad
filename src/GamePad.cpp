@@ -34,6 +34,9 @@
 #include "Debug.h"
 #include "Web.h"
 
+#include "driver/rmt.h"
+#include "driver/gpio.h"
+
 // Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
 #include "DeviceConfig.h"
 
@@ -525,30 +528,114 @@ void setupPulseInputs()
   // Pulse Inputs
   Serial.println();
   Serial_INFO;
-  Serial.println("🎚 Pulse Inputs: " + String(PulseInputs_Count));
+  Serial.println("🎚 Pulse Inputs on RMT: " + String(PulseInputs_Count));
 
-  if (PulseInputs_Count > 0)
+  // ESP32 has 8 RMT channels total:
+  // Channels 0–3 RX (Receive) only
+  // Channels 4–7 TX (Transmit) only
+  // We want to use RX channels, so we need to make sure we use channel 4-7
+  // TODO: Check correct number error if > 4
   {
+    int count = PulseInputs_Count;
+    if (PulseInputs_Count > 4)
+    {
+      Serial_ERROR;
+      Serial.println("Warning: ESP32-S3 only supports up to 4 RMT RX channels. Only first 4 PulseInput definitions will be used.");
+      count = 4;
+    }
+
     PulseInput *pulseInput;
-    for (int i = 0; i < PulseInputs_Count; i++)
+    for (int i = 0; i < count; i++)
     {
       pulseInput = PulseInputs[i];
 
       Serial.print("..." + String(pulseInput->Label));
 
-      if (pulseInput->Pin != NONE)
-      {
-        Serial.print(", <- pin " + String(pulseInput->Pin));
+      pinMode(pulseInput->Pin, INPUT_PULLUP);
+      rmt_channel_t rmt_channel = (rmt_channel_t)(i); // Channel 4, 5, 6, 7
 
-        pinMode(pulseInput->Pin, INPUT_PULLDOWN);
+      // 2. Uninstall any existing driver state on this channel
+      rmt_driver_uninstall(rmt_channel);
+
+      rmt_config_t config = {};
+      config.rmt_mode = RMT_MODE_RX;
+      config.channel = rmt_channel;
+      config.gpio_num = (gpio_num_t)pulseInput->Pin;
+      config.clk_div = 80;      // 1 µs resolution (80 MHz / 80 = 1 MHz)
+      config.mem_block_num = 1; // MUST be 1 on ESP32-S3 RX channels
+
+      config.rx_config.filter_en = true;
+      config.rx_config.filter_ticks_thresh = 10; // ignore <10 µs glitches
+      config.rx_config.idle_threshold = 1000;    // 20 ms max pulse
+
+      // ESP_ERROR_CHECK(rmt_config(&config));
+      // ESP_ERROR_CHECK(rmt_driver_install(config.channel, 1000, 0));
+      // ESP_ERROR_CHECK(rmt_rx_start(config.channel, true));
+
+      Serial.printf(" started on pin %d, RMT channel %d, clk_div %d, filter_ticks_thresh %d, idle_threshold %d",
+                    pulseInput->Pin,
+                    config.channel,
+                    config.clk_div,
+                    config.rx_config.filter_ticks_thresh,
+                    config.rx_config.idle_threshold);
+      Serial.println();
+      
+      esp_err_t err = rmt_config(&config);
+      if (err != ESP_OK)
+      {
+        Serial.printf("RMT config failed on channel %d: %s\n", i, esp_err_to_name(err));
       }
 
-      Serial.println();
-    }
+      // Install driver with a 2048-byte ring buffer (Must be > 256 bytes)
+      err = rmt_driver_install(config.channel, 2048, 0);
+      if (err != ESP_OK)
+      {
+        Serial.printf("RMT driver install failed on channel %d: %s\n", i, esp_err_to_name(err));
+      }
 
-    AttachPulseInputInterrupts();
+      // Start receiver
+      err = rmt_rx_start(config.channel, true);
+      if (err != ESP_OK)
+      {
+        Serial.printf("RMT rx_start failed on channel %d: %s\n", i, esp_err_to_name(err));
+      }
+    }
   }
 }
+
+// void setupPulseInputs()
+// {
+// #ifdef DEBUG_MARKS
+//   Debug::Mark(1, __LINE__, __FILE__, __func__);
+// #endif
+
+//   // Pulse Inputs
+//   Serial.println();
+//   Serial_INFO;
+//   Serial.println("🎚 Pulse Inputs: " + String(PulseInputs_Count));
+
+//   if (PulseInputs_Count > 0)
+//   {
+//     PulseInput *pulseInput;
+//     for (int i = 0; i < PulseInputs_Count; i++)
+//     {
+//       pulseInput = PulseInputs[i];
+
+//       Serial.print("..." + String(pulseInput->Label));
+
+//       if (pulseInput->Pin != NONE)
+//       {
+//         Serial.print(", <- pin " + String(pulseInput->Pin));
+
+//         pinMode(pulseInput->Pin, INPUT_PULLDOWN);
+//       }
+
+//       Serial.println();
+//     }
+
+//     AttachPulseInputInterrupts();
+//   }
+// }
 
 void setupAnalogInputs()
 {
@@ -1964,39 +2051,129 @@ void MainLoop()
   {
     pulseInput = PulseInputs[i];
 
-    if (pulseInput->Count > 0)
+    rmt_channel_t channel = (rmt_channel_t)(RMT_CHANNEL_4 + i);
+
+    RingbufHandle_t rb = NULL;
+    if (rmt_get_ringbuf_handle(channel, &rb) == ESP_OK && rb != NULL)
     {
-      portENTER_CRITICAL(&pulseMux);
-      uint32_t high_us = pulseInput->HighPulseUs;
-      uint32_t period_us = pulseInput->TotalPeriodUs;
-      uint32_t count = pulseInput->Count;
-      pulseInput->Count = 0;
-      pulseInput->HighPulseUs = 0;
-      pulseInput->TotalPeriodUs = 0;
-      portEXIT_CRITICAL(&pulseMux);
+      size_t length = 0;
 
-      // sanity bounds: ignore spikes
-      //if (period_us >= 200 && period_us <= 10000)
-      //{
-        // Use high_us directly to map zones (preferred)
-        uint16_t value = (uint16_t)constrain((high_us / count), 0, 65535);
-        pulseInput->ValueState.AnalogValue = value;
+      rmt_item32_t *items = (rmt_item32_t *)xRingbufferReceive(rb, &length, 0);
 
-        // optional: compute duty or convert to Hz
-        // float duty = (float)high_us / (float)period_us * 100.0f;
-        // float freq = 1e6f / (float)period_us;
+      //   if (item && length >= sizeof(rmt_item32_t))
+      //   {
+      //     // Each item contains HIGH then LOW durations
+      //     uint32_t highPulseUs = item->duration0;
+      //     uint32_t lowPulseUs = item->duration1;
+      //     uint32_t periodUs = highPulseUs + lowPulseUs;
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-        Serial.printf("Pulse   input %2d [%-35s]: High: %4d us | Count: %4d | Period: %4d us | value: %6d\n",
-                      i,
-                      pulseInput->Label,
-                      high_us,
-                      count,
-                      period_us,
-                      value);
-#endif
-      //}
+      //     pulseInput->HighPulseUs = highPulseUs;
+      //     pulseInput->TotalPeriodUs = periodUs;
+      //     pulseInput->FreshData = true;
+
+      //     vRingbufferReturnItem(rb, item);
+      //   }
+      // }
+
+      if (items != NULL && length >= sizeof(rmt_item32_t))
+      {
+        int num_items = length / sizeof(rmt_item32_t);
+
+        // Loop through all items returned in this transaction
+        for (int j = 0; j < num_items; j++)
+        {
+          rmt_item32_t item = items[j];
+
+          // Skip RMT end-of-packet markers (zero duration)
+          if (item.duration0 == 0 && item.duration1 == 0)
+            continue;
+
+          uint32_t highPulseUs = 0;
+          uint32_t lowPulseUs = 0;
+
+          // Check level0 and level1 bits to identify HIGH vs LOW
+          if (item.level0 == 1)
+          {
+            highPulseUs = item.duration0;
+          }
+          else
+          {
+            lowPulseUs = item.duration0;
+          }
+
+          if (item.level1 == 1)
+          {
+            highPulseUs = item.duration1;
+          }
+          else
+          {
+            lowPulseUs = item.duration1;
+          }
+
+          // Store measurements
+          pulseInput->HighPulseUs = highPulseUs;
+          pulseInput->TotalPeriodUs = highPulseUs + lowPulseUs;
+          pulseInput->FreshData = true;
+        }
+
+        // Return buffer memory back to FreeRTOS
+        vRingbufferReturnItem(rb, (void *)items);
+      }
     }
+
+    if (pulseInput->FreshData)
+    {
+      pulseInput->FreshData = false;
+
+      Serial.printf("High: %u us, Period: %u us\n",
+                    pulseInput->HighPulseUs,
+                    pulseInput->TotalPeriodUs);
+    }
+
+    //     if (pulseInput->Count > 0)
+    //     {
+    //       portENTER_CRITICAL(&pulseMux);
+    //       uint32_t high_us = pulseInput->HighPulseUs;
+    //       uint32_t period_us = pulseInput->TotalPeriodUs;
+    //       uint32_t count = pulseInput->Count;
+    //       pulseInput->Count = 0;
+    //       pulseInput->HighPulseUs = 0;
+    //       pulseInput->TotalPeriodUs = 0;
+    //       portEXIT_CRITICAL(&pulseMux);
+
+    //       // sanity bounds: ignore spikes
+    //       //if (period_us >= 200 && period_us <= 10000)
+    //       //{
+    //         // Use high_us directly to map zones (preferred)
+    //         uint16_t value = (uint16_t)constrain((high_us / count), 0, 65535);
+    //         pulseInput->ValueState.AnalogValue = value;
+
+    //         // optional: compute duty or convert to Hz
+    //         // float duty = (float)high_us / (float)period_us * 100.0f;
+    //         // float freq = 1e6f / (float)period_us;
+
+    // #ifdef INPUT_SERIAL_DEBUG_PLUS
+    //         Serial.printf("Pulse   input %2d [%-35s]: High: %4d us | Count: %4d | Period: %8d us | value: %6d\n",
+    //                       i,
+    //                       pulseInput->Label,
+    //                       high_us,
+    //                       count,
+    //                       period_us,
+    //                       value);
+    // #endif
+    //       //}
+    //     }
+    //     else
+    //     {
+    //       #ifdef INPUT_SERIAL_DEBUG_PLUS
+    //         Serial.printf("pulse   input %2d [%-35s]: High: %4d us | Count: %4d | Period: %4d us\n",
+    //                       i,
+    //                       pulseInput->Label,
+    //                       pulseInput->HighPulseUs,
+    //                       pulseInput->Count,
+    //                       pulseInput->TotalPeriodUs);
+    // #endif
+    //     }
   }
 
 #ifdef INCLUDE_BENCHMARKS

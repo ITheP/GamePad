@@ -13,6 +13,9 @@
 #include <Screen.h>
 #include "Menus.h"
 
+#include "driver/rmt.h"
+#include "driver/gpio.h"
+
 char ControllerDeviceNameType[] = "Guitar";
 char ControllerType[] = "Guitar Controller";
 char ModelNumber[] = "Guitar 1.0";
@@ -283,52 +286,113 @@ Input AnalogInputs_Virtual_TriggeredOrange =
 // Pulse inputs are treated like analog inputs in that
 // their frequency (which may vary) is taken as the equivalent to
 // an analog signal
+// WARNING - only certain pins can be used for RMT RX
+// ✔ GPIO 4–15
+// ✔ GPIO 18–19
+// ✔ GPIO 21–23
+// ✔ GPIO 25–27
+// ✔ GPIO 32–33
 PulseInput PulseInput_Slider =
     {
         .Pin = ANALOG_Capacitor_PIN,
         .Label = "Pulse Capacitance Board",
     };
 
-// Interrupt handler(s) for above. Need to be located in IRAM_ATTR Ram
-// Also need to calculate pulse width based on falling and rising edge
-// Tests showed around 20k interupts a second coming from controller. We don't need
-// all that so limit to about 200 values.
-void IRAM_ATTR handleSliderEdge() {
-    if (PulseInput_Slider.Count == 21)
-        return;
+// // Interrupt handler(s) for above. Need to be located in IRAM_ATTR Ram
+// // Also need to calculate pulse width based on falling and rising edge
+// // Tests showed around 20k interupts a second coming from controller. We don't need
+// // all that so limit to about 200 values.
+// void IRAM_ATTR handleSliderEdge() {
+//     if (PulseInput_Slider.Count == 21)
+//         return;
 
-    int lvl = gpio_get_level((gpio_num_t)PulseInput_Slider.Pin); // gpio_get_level is faster in ISR
+//     int lvl = gpio_get_level((gpio_num_t)PulseInput_Slider.Pin);
+//     uint32_t now = esp_timer_get_time();   // µs timestamp
 
-    uint32_t now = esp_timer_get_time(); // µs
+//     if (lvl) {  // Rising edge
+//         // Only compute previous cycle if both timestamps exist
+//         if (PulseInput_Slider.RiseTime != 0 &&
+//             PulseInput_Slider.LastFallTime != 0)
+//         {
+//             // High pulse of previous cycle: fall1 - rise1
+//             uint32_t highPulseUs =
+//                 PulseInput_Slider.LastFallTime - PulseInput_Slider.RiseTime;
 
-    if (lvl) { // rising edge
-        uint32_t highPulseUs = PulseInput_Slider.LastFallTime - PulseInput_Slider.RiseTime;
-        
-        if (highPulseUs < 10000) {
-            if (PulseInput_Slider.RiseTime != 0 && PulseInput_Slider.LastFallTime != 0) {
-                PulseInput_Slider.TotalPeriodUs += now - PulseInput_Slider.RiseTime;                    // rise2 - rise1
-                PulseInput_Slider.HighPulseUs   += PulseInput_Slider.LastFallTime - PulseInput_Slider.RiseTime; // fall1 - rise1
-                PulseInput_Slider.Count++;
-            }
-            //PulseInput_Slider.Ignored = false;
-        }
-        //else
-        //{
-            //PulseInput_Slider.Ignored = true;
-        //}
-            PulseInput_Slider.RiseTime = now;
-    } else { // falling edge
-        if (PulseInput_Slider.Count == 20)
-            PulseInput_Slider.Count = 21; // stop counting until processed
-        
-        PulseInput_Slider.LastFallTime = now;
-    }
-}
+//             if (highPulseUs < 10000) {
+//                 // Period: rise2 - rise1
+//                 PulseInput_Slider.TotalPeriodUs += now - PulseInput_Slider.RiseTime;
 
-void AttachPulseInputInterrupts() {
-    pinMode(PulseInput_Slider.Pin, INPUT_PULLDOWN);
-    attachInterrupt(digitalPinToInterrupt(PulseInput_Slider.Pin), handleSliderEdge, CHANGE);
-}
+//                 // Accumulate high pulse
+//                 PulseInput_Slider.HighPulseUs += highPulseUs;
+
+//                 PulseInput_Slider.Count++;
+//             }
+//         }
+
+//         // Update rise time for the *next* cycle
+//         PulseInput_Slider.RiseTime = now;
+//     }
+//     else {  // Falling edge
+//         // Reject invalid cycles early
+//         uint32_t highPulseUs = now - PulseInput_Slider.RiseTime;
+
+//         if (highPulseUs < 10000) {
+//             // Only accept valid fall times
+//             PulseInput_Slider.LastFallTime = now;
+//         }
+//         // else: ignore this fall, do not update LastFallTime
+//     }
+// }
+
+// void AttachPulseInputInterrupts() {
+//     pinMode(PulseInput_Slider.Pin, INPUT_PULLDOWN);
+//     attachInterrupt(digitalPinToInterrupt(PulseInput_Slider.Pin), handleSliderEdge, CHANGE);
+// }
+
+//#define SLIDER_PIN 32
+// #define RMT_CHANNEL RMT_CHANNEL_0
+
+// void setupRMT() {
+//     rmt_config_t config;
+//     config.rmt_mode = RMT_MODE_RX;
+//     config.channel = RMT_CHANNEL;
+//     config.gpio_num = (gpio_num_t)PulseInput_Slider.Pin;
+//     config.clk_div = 80;  // 1 µs resolution (80 MHz / 80 = 1 MHz)
+//     config.mem_block_num = 1;
+
+//     config.rx_config.filter_en = true;
+//     config.rx_config.filter_ticks_thresh = 10;  // ignore <10 µs glitches
+//     config.rx_config.idle_threshold = 20000;    // 20 ms max pulse
+
+//     ESP_ERROR_CHECK(rmt_config(&config));
+//     ESP_ERROR_CHECK(rmt_driver_install(config.channel, 1000, 0));
+// }
+
+// void startRMT() {
+//     ESP_ERROR_CHECK(rmt_rx_start(RMT_CHANNEL, true));
+// }
+
+// void readPulse() {
+//     RingbufHandle_t rb = NULL;
+//     rmt_get_ringbuf_handle(RMT_CHANNEL, &rb);
+//     if (!rb) return;
+
+//     size_t length = 0;
+//     rmt_item32_t* item = (rmt_item32_t*)xRingbufferReceive(rb, &length, 0);
+
+//     if (item) {
+//         // Each item contains HIGH then LOW durations
+//         uint32_t highPulseUs = item->duration0;
+//         uint32_t lowPulseUs  = item->duration1;
+//         uint32_t periodUs    = highPulseUs + lowPulseUs;
+
+//         PulseInput_Slider.HighPulseUs = highPulseUs;
+//         PulseInput_Slider.TotalPeriodUs = periodUs;
+//         PulseInput_Slider.FreshData = true;
+
+//         vRingbufferReturnItem(rb, item);
+//     }
+// }
 
 // Virtual inputs for slider
 // Note that although 1 input may provide multiple banded triggers, we need to create a separate virtual input for
@@ -347,8 +411,8 @@ Input AnalogInputs_Virtual_SliderGreen =
         .DefaultAnalogValue = -1,
         .MinAnalogValue = 0,
         .MaxAnalogValue = 4096,
-        .TriggerOnValue = 101,           // Slider trigger frequency is > 100 < 300, so we set the trigger on/off either side of that
-        .TriggerOffValue = 299,
+        .TriggerOnValue = 7,           // Slider trigger frequency is > 100 < 300, so we set the trigger on/off either side of that
+        .TriggerOffValue = 19,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
