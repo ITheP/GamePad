@@ -266,6 +266,13 @@ extern Input DigitalInput_Config_Back;
 extern Input *DigitalInputs[];
 
 // =============
+// Pulse inputs
+
+extern PulseInput *PulseInputs[];
+// Bit of hardcoding required to attach pulse tracking code to interrupts in a specific way
+void AttachPulseInputInterrupts();
+
+// =============
 // Analog inputs
 
 #define Enable_Slider1 1
@@ -320,6 +327,7 @@ extern ExternalLEDConfig *MiscLEDEffects[];
 extern ExternalLEDConfig *IdleLEDEffects[];
 
 extern int ControllerGfx_RunCount;
+extern int PulseInputs_Count;
 extern int AnalogInputs_Count;
 extern int HatInputs_Count;
 extern int DigitalInputs_Count;

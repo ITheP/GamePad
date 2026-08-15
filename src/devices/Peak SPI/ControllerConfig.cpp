@@ -136,18 +136,28 @@ int AllStats_Count = sizeof(AllStats) / sizeof(AllStats[0]);
 // Virtual AnalogInput effectively takes a physical input, and turns it into a virtual source for other inputs
 // e.g. an input that acts as both a digital on/off input and an analoge input
 // AnalogInputs and DigitalInputs can reference this Virtual input as a VirtualPinInput source and grab values
+
+// NOTE: When TriggeOffValue < TriggerOnValue then we process as input stays on until this boundary is reached (release)
+// When TriggerOffValue > TriggerOnValue then it is also considered off if the value is above the TriggerOffValue - which lets
+// us account for banded areas. In this case, the TriggerOnValue is also counted as the lower boundary to turn off at.
+
 Input AnalogInputs_Virtual_TriggeredGreen =
     {
         .Pin = BUTTON_Green_PIN,
+        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
         .Label = "Virtual Trig. Green + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
-        .MinAnalogValue = 2200,
-        .MaxAnalogValue = 2900,
-        .TriggerOnValue = 2600,
-        .TriggerOffValue = 2300,
+        .MinAnalogValue = 2140,
+        .MaxAnalogValue = 2350,
+        .TriggerOnValue = 2140 + 60,
+        .TriggerOffValue = 2140 + 60,
         .TriggerPartlyReleasedValue = 2500,
+        //NEW PROPERTY??? - when the wobble has been triggered then the off value is extended downward beyond the normal off value
+        //.TriggerPartlyReleasedOffValue = 2300,
+        // might already do this
+        // HMMMMMMMMMMMMMMMM
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
@@ -165,14 +175,15 @@ Input AnalogInputs_Virtual_TriggeredGreen =
 Input AnalogInputs_Virtual_TriggeredRed =
     {
         .Pin = BUTTON_Red_PIN,
+        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
         .Label = "Virtual Trig. Red + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
-        .MinAnalogValue = 2200,
-        .MaxAnalogValue = 2900,
-        .TriggerOnValue = 2600,
-        .TriggerOffValue = 2300,
+        .MinAnalogValue = 2230,
+        .MaxAnalogValue = 2420,
+        .TriggerOnValue = 2230 + 60,
+        .TriggerOffValue = 2230 + 60,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -191,14 +202,15 @@ Input AnalogInputs_Virtual_TriggeredRed =
 Input AnalogInputs_Virtual_TriggeredYellow =
     {
         .Pin = BUTTON_Yellow_PIN,
+        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
         .Label = "Virtual Trig. Yellow + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
         .MinAnalogValue = 2200,
-        .MaxAnalogValue = 2900,
-        .TriggerOnValue = 2600,
-        .TriggerOffValue = 2300,
+        .MaxAnalogValue = 2400,
+        .TriggerOnValue = 2200 + 60,
+        .TriggerOffValue = 2200 + 60,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -217,14 +229,15 @@ Input AnalogInputs_Virtual_TriggeredYellow =
 Input AnalogInputs_Virtual_TriggeredBlue =
     {
         .Pin = BUTTON_Blue_PIN,
+        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
         .Label = "Virtual Trig. Blue + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
-        .MinAnalogValue = 2200,
-        .MaxAnalogValue = 2900,
-        .TriggerOnValue = 2600,
-        .TriggerOffValue = 2300,
+        .MinAnalogValue = 2190,
+        .MaxAnalogValue = 2400,
+        .TriggerOnValue = 2190 + 60,
+        .TriggerOffValue = 2190 + 60,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -243,14 +256,15 @@ Input AnalogInputs_Virtual_TriggeredBlue =
 Input AnalogInputs_Virtual_TriggeredOrange =
     {
         .Pin = BUTTON_Orange_PIN,
+        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
         .Label = "Virtual Trig. Orange + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
-        .MinAnalogValue = 2270,
-        .MaxAnalogValue = 2900,
-        .TriggerOnValue = 2600,
-        .TriggerOffValue = 2300,
+        .MinAnalogValue = 2290,
+        .MaxAnalogValue = 2490,
+        .TriggerOnValue = 2290 + 60,
+        .TriggerOffValue = 2290 + 60,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -265,6 +279,116 @@ Input AnalogInputs_Virtual_TriggeredOrange =
             .RunEffectConstantly = true,
          },
     };
+
+// Pulse inputs are treated like analog inputs in that
+// their frequency (which may vary) is taken as the equivalent to
+// an analog signal
+PulseInput PulseInput_Slider =
+    {
+        .Pin = ANALOG_Capacitor_PIN,
+        .Label = "Pulse Capacitance Board",
+    };
+
+// Interrupt handler(s) for above. Need to be located in IRAM_ATTR Ram
+// Also need to calculate pulse width based on falling and rising edge
+// Tests showed around 20k interupts a second coming from controller. We don't need
+// all that so limit to about 200 values.
+void IRAM_ATTR handleSliderEdge() {
+    if (PulseInput_Slider.Count == 21)
+        return;
+
+    int lvl = gpio_get_level((gpio_num_t)PulseInput_Slider.Pin); // gpio_get_level is faster in ISR
+
+    uint32_t now = esp_timer_get_time(); // µs
+
+    if (lvl) { // rising edge
+        uint32_t highPulseUs = PulseInput_Slider.LastFallTime - PulseInput_Slider.RiseTime;
+        
+        if (highPulseUs < 10000) {
+            if (PulseInput_Slider.RiseTime != 0 && PulseInput_Slider.LastFallTime != 0) {
+                PulseInput_Slider.TotalPeriodUs += now - PulseInput_Slider.RiseTime;                    // rise2 - rise1
+                PulseInput_Slider.HighPulseUs   += PulseInput_Slider.LastFallTime - PulseInput_Slider.RiseTime; // fall1 - rise1
+                PulseInput_Slider.Count++;
+            }
+            //PulseInput_Slider.Ignored = false;
+        }
+        //else
+        //{
+            //PulseInput_Slider.Ignored = true;
+        //}
+            PulseInput_Slider.RiseTime = now;
+    } else { // falling edge
+        if (PulseInput_Slider.Count == 20)
+            PulseInput_Slider.Count = 21; // stop counting until processed
+        
+        PulseInput_Slider.LastFallTime = now;
+    }
+}
+
+void AttachPulseInputInterrupts() {
+    pinMode(PulseInput_Slider.Pin, INPUT_PULLDOWN);
+    attachInterrupt(digitalPinToInterrupt(PulseInput_Slider.Pin), handleSliderEdge, CHANGE);
+}
+
+// Virtual inputs for slider
+// Note that although 1 input may provide multiple banded triggers, we need to create a separate virtual input for
+// each banded trigger so that they can have their own LED's and effects
+// E.g. capacitance strip may output 0-512 for green, 513-1024 for red, etc.
+// Recommend banded values sit in the middle of the TriggerOnValue and TriggerOffValue ranges
+// to account for any small variance in signals
+Input AnalogInputs_Virtual_SliderGreen =
+    {
+        .Pin = NONE, // ANALOG_Capacitor_PIN,
+        .VirtualPulseInputs = { &PulseInput_Slider },
+        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
+        .Label = "Virtual Banded Trig. Green",
+        .BluetoothInput = NONE,
+        .DefaultValue = NOT_PRESSED,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 0,
+        .MaxAnalogValue = 4096,
+        .TriggerOnValue = 101,           // Slider trigger frequency is > 100 < 300, so we set the trigger on/off either side of that
+        .TriggerOffValue = 299,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = NONE,
+    
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = (int)LEDStrip::Green_Neck,
+            .PrimaryColour = { CRGB(96, 96, 96), true },
+            .SecondaryColour = { CRGB(0, 255, 0), true },
+            .Effect = &AnalogEffects::ConstrainedSimpleSet,
+            .RunEffectConstantly = true,
+         },
+        };
+
+Input AnalogInputs_Virtual_BandedTriggeredRed =
+    {
+        .Pin = NONE, // ANALOG_Capacitor_PIN,
+        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
+        .Label = "Virtual Banded Trig. Red",
+        .BluetoothInput = NONE,
+        .DefaultValue = NOT_PRESSED,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 0,
+        .MaxAnalogValue = 4096,
+        .TriggerOnValue = 300,          // Slider trigger frequency is > 300 < 500, so we set the trigger on/off either side of that
+        .TriggerOffValue = 499,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = NONE,
+
+        .LEDConfig = new ExternalLEDConfig {
+            .LEDNumber = (int)LEDStrip::Red_Neck,
+            .PrimaryColour = { CRGB(96, 96, 96), true },
+            .SecondaryColour = { CRGB(255, 0, 0), true },
+            .Effect = &AnalogEffects::ConstrainedSimpleSet,
+            .RunEffectConstantly = true,
+         },
+    };
+
 
 // Specific inputs we need references to
 // So the Whammy input can get its input EITHER from the actual pin, or drag in a value (if being provided) from the Virtual Pin.
@@ -337,7 +461,15 @@ Input *AnalogInputs[] = {
     &AnalogInputs_Virtual_TriggeredRed,
     &AnalogInputs_Virtual_TriggeredYellow,
     &AnalogInputs_Virtual_TriggeredBlue,
-    &AnalogInputs_Virtual_TriggeredOrange};
+    &AnalogInputs_Virtual_TriggeredOrange,
+    &AnalogInputs_Virtual_SliderGreen,
+   // &AnalogInputs_Virtual_BandedTriggeredRed
+};
+
+
+PulseInput *PulseInputs[] = {
+    &PulseInput_Slider
+};
 
 // Digital inputs
 
@@ -771,6 +903,7 @@ Input *DigitalInputs_ConfigMenu[] = {
 int ControllerGfx_RunCount = sizeof(ControllerGfx) / sizeof(ControllerGfx[0]);
 int DigitalInputs_ConfigMenu_Count = sizeof(DigitalInputs_ConfigMenu) / sizeof(DigitalInputs_ConfigMenu[0]);
 int DigitalInputs_Count = sizeof(DigitalInputs) / sizeof(DigitalInputs[0]);
+int PulseInputs_Count = sizeof(PulseInputs) / sizeof(PulseInputs[0]);
 int AnalogInputs_Count = sizeof(AnalogInputs) / sizeof(AnalogInputs[0]);
 int HatInputs_Count = sizeof(HatInputs) / sizeof(HatInputs[0]);
 int MiscLEDEffects_Count = sizeof(MiscLEDEffects) / sizeof(MiscLEDEffects[0]);

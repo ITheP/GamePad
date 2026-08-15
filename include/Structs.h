@@ -43,25 +43,46 @@ typedef struct State {
 // };
 
 enum class VirtualPinModes : uint8_t {
-// For Digital Inputs it grabs value from ValueState.Value and Analog Inputs grabs value from ValueState.AnalogValue
+  // For Digital Inputs it grabs value from ValueState.Value and Analog Inputs grabs value from ValueState.AnalogValue
   Default = 0,                               
   // For analog inputs requires ValueState.Value == PRESSED to use ValueState.AnalogValue, else uses minimum value (not pressed)
   RequireValueToBePressed = 1,               
- // For analog inputs requires ValueState.Value == PRESSED to use ValueState.AnalogValue, else uses minimum value (not pressed).
- // Also requires that input has been released to a certain point before this engages.
-// Originally purposed for guitar controller analog neck button -> whammy bar emulation but so it wouldn't kick in if you wanted to fully
-// hold the button and use the actual whammy bar
- RequireValueToBePressedAndHaveBeenPartlyReleased = 2
+  // For analog inputs requires ValueState.Value == PRESSED to use ValueState.AnalogValue, else uses minimum value (not pressed).
+  // Also requires that input has been released to a certain point before this engages.
+  // Originally purposed for guitar controller analog neck button -> whammy bar emulation but so it wouldn't kick in if you wanted to fully
+  // hold the button and use the actual whammy bar
+  RequireValueToBePressedAndHaveBeenPartlyReleased = 2
 };
 
+// Pulse input
+// Not used directly, but rather as a base for other inputs to trigger from
+// Effectively acts as an analog source (converting pulses to frequency)
+typedef struct PulseInput {
+  uint8_t Pin;
+
+  const char* Label;
+ 
+  volatile uint32_t RiseTime;
+  volatile uint32_t LastFallTime;   // <-- new
+  volatile uint32_t HighPulseUs;
+  volatile uint32_t TotalPeriodUs;
+  volatile int Count;
+ 
+ // volatile bool Ignored;
+  State ValueState;
+ } PulseInput;
 
 // General input (Digital and Analog - e.g. buttons)
 typedef struct Input {
   uint8_t Pin;
+  // adc_attenuation_t AnalogAttenuation;          // Defaults to default ADC_0db - approx 0-1.1v
+  //                                               // 0–1.5V signal, use ADC_2_5db
+  //                                               // 0–2.2V signal, use ADC_6db
+  //                                               // 0–3.3V signal, use ADC_11db
    // Currently only works with AnalogTriggeredInputs
-  std::vector<Input*> VirtualPinInputs;         // Rather than getting state from reading a pin, gets it from another input
-                                                // Means we can e.g. have 1 input acting as a button and also triggering an analog separate input
-  //int VirtualPinInputsCount;
+  std::vector<Input*> VirtualPinInputs;            // Rather than getting state from reading a pin, gets it from another input
+                                                   // Means we can e.g. have 1 input acting as a button and also triggering an analog separate input
+  std::vector<PulseInput*> VirtualPulseInputs;     // Pulse inputs - equivalent of above
   VirtualPinModes VirtualPinMode;
 
   const char* Label;

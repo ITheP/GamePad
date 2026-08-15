@@ -47,6 +47,8 @@ Input *ProfileOverrideInput = nullptr; // Input on device boot that caused usage
 
 void (*LoopOperation)(void);
 
+portMUX_TYPE pulseMux = portMUX_INITIALIZER_UNLOCKED;
+
 uint32_t rnd = random();
 
 // // When configured for use, set of random names for controller. Actual name is picked using ESP32-S3's unique identity as a key to the name - means we can flash to multiple
@@ -132,7 +134,7 @@ int SecondFlipFlop = false; // Flag flipping between 0 and 1 every second to all
 int PreviousSubSecond = -1;
 int SubSecond = 0;
 int SubSecondRollover = false; // SubSecond flag for things like statistics sampling
-//int SubSecondFlipFlop = false;
+// int SubSecondFlipFlop = false;
 
 char LastBatteryIcon = 0;
 int LastSerialState = -1;
@@ -514,6 +516,40 @@ void setupDigitalInputs()
   }
 }
 
+void setupPulseInputs()
+{
+#ifdef DEBUG_MARKS
+  Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
+  // Pulse Inputs
+  Serial.println();
+  Serial_INFO;
+  Serial.println("🎚 Pulse Inputs: " + String(PulseInputs_Count));
+
+  if (PulseInputs_Count > 0)
+  {
+    PulseInput *pulseInput;
+    for (int i = 0; i < PulseInputs_Count; i++)
+    {
+      pulseInput = PulseInputs[i];
+
+      Serial.print("..." + String(pulseInput->Label));
+
+      if (pulseInput->Pin != NONE)
+      {
+        Serial.print(", <- pin " + String(pulseInput->Pin));
+
+        pinMode(pulseInput->Pin, INPUT_PULLDOWN);
+      }
+
+      Serial.println();
+    }
+
+    AttachPulseInputInterrupts();
+  }
+}
+
 void setupAnalogInputs()
 {
 #ifdef DEBUG_MARKS
@@ -537,6 +573,8 @@ void setupAnalogInputs()
       Serial.print(", <- pin " + String(input->Pin));
 
       pinMode(input->Pin, INPUT);
+
+      // analogSetPinAttenuation(input->Pin, input->AnalogAttenuation);
     }
 
     if (input->VirtualPinInputs.size() > 0)
@@ -544,6 +582,14 @@ void setupAnalogInputs()
       for (int j = 0; j < input->VirtualPinInputs.size(); j++)
       {
         Serial.print(", <- Virtual Pin from [" + String(input->VirtualPinInputs[j]->Label) + "]");
+      }
+    }
+
+    if (input->VirtualPulseInputs.size() > 0)
+    {
+      for (int j = 0; j < input->VirtualPulseInputs.size(); j++)
+      {
+        Serial.print(", <- Virtual Pulse Input from [" + String(input->VirtualPulseInputs[j]->Label) + "]");
       }
     }
 
@@ -1282,6 +1328,7 @@ void setup()
   Display.display();
 
   setupDigitalInputs();
+  setupPulseInputs();
   setupAnalogInputs();
   setupHatInputs();
 
@@ -1905,6 +1952,57 @@ void MainLoop()
   MainBenchmark.Snapshot("Loop.DigitalInputs", showBenchmark);
 #endif
 
+// Pulse Inputs
+#ifdef DEBUG_MARKS
+  Debug::Mark(2195, __LINE__, __FILE__, __func__, "Pulse Inputs");
+#endif
+
+  // Processed purely to calculate values to be used later in analog inputs
+
+  PulseInput *pulseInput;
+  for (int i = 0; i < PulseInputs_Count; i++)
+  {
+    pulseInput = PulseInputs[i];
+
+    if (pulseInput->Count > 0)
+    {
+      portENTER_CRITICAL(&pulseMux);
+      uint32_t high_us = pulseInput->HighPulseUs;
+      uint32_t period_us = pulseInput->TotalPeriodUs;
+      uint32_t count = pulseInput->Count;
+      pulseInput->Count = 0;
+      pulseInput->HighPulseUs = 0;
+      pulseInput->TotalPeriodUs = 0;
+      portEXIT_CRITICAL(&pulseMux);
+
+      // sanity bounds: ignore spikes
+      //if (period_us >= 200 && period_us <= 10000)
+      //{
+        // Use high_us directly to map zones (preferred)
+        uint16_t value = (uint16_t)constrain((high_us / count), 0, 65535);
+        pulseInput->ValueState.AnalogValue = value;
+
+        // optional: compute duty or convert to Hz
+        // float duty = (float)high_us / (float)period_us * 100.0f;
+        // float freq = 1e6f / (float)period_us;
+
+#ifdef INPUT_SERIAL_DEBUG_PLUS
+        Serial.printf("Pulse   input %2d [%-35s]: High: %4d us | Count: %4d | Period: %4d us | value: %6d\n",
+                      i,
+                      pulseInput->Label,
+                      high_us,
+                      count,
+                      period_us,
+                      value);
+#endif
+      //}
+    }
+  }
+
+#ifdef INCLUDE_BENCHMARKS
+  MainBenchmark.Snapshot("Loop.PulseInputs", showBenchmark);
+#endif
+
 // Analog Inputs
 #ifdef DEBUG_MARKS
   Debug::Mark(200, __LINE__, __FILE__, __func__, "Analog Inputs");
@@ -1949,49 +2047,50 @@ void MainLoop()
       {
         int16_t virtualState = 0;
 
-        Input *virtualinput = input->VirtualPinInputs[j];
+        Input *virtualInput = input->VirtualPinInputs[j];
 
         if (input->VirtualPinMode == VirtualPinModes::RequireValueToBePressed)
         {
           // TODO: Warnings on startup - virtual input dependant on TriggerOn/OffValue controls but if they haven't set them then warn! If both not set then warn!
-          if (virtualinput->ValueState.Value == PRESSED)
-            virtualState = virtualinput->ValueState.AnalogValue;
+          if (virtualInput->ValueState.Value == PRESSED)
+            virtualState = virtualInput->ValueState.AnalogValue;
         }
         else if (input->VirtualPinMode == VirtualPinModes::RequireValueToBePressedAndHaveBeenPartlyReleased)
         {
-          if (virtualinput->ValueState.Value == PRESSED) {
+          if (virtualInput->ValueState.Value == PRESSED)
+          {
             // If AnalogValue drops below latch value and then goes above it again,
             // then make sure the latch is enabled (we go above again so if it goes below
             // and stays below, theres no false trigger if the button is just on its way to turning off)
-            if (virtualinput->ValueState.SubState == 0 && virtualinput->ValueState.AnalogValue < virtualinput->TriggerPartlyReleasedValue)
-              virtualinput->ValueState.SubState = 1;
-            else if (virtualinput->ValueState.SubState == 1 && virtualinput->ValueState.AnalogValue > virtualinput->TriggerPartlyReleasedValue)
-              virtualinput->ValueState.SubState = 2;
+            if (virtualInput->ValueState.SubState == 0 && virtualInput->ValueState.AnalogValue < virtualInput->TriggerPartlyReleasedValue)
+              virtualInput->ValueState.SubState = 1;
+            else if (virtualInput->ValueState.SubState == 1 && virtualInput->ValueState.AnalogValue > virtualInput->TriggerPartlyReleasedValue)
+              virtualInput->ValueState.SubState = 2;
 
-            if (virtualinput->ValueState.SubState == 2)
-              virtualState = virtualinput->ValueState.AnalogValue;
+            if (virtualInput->ValueState.SubState == 2)
+              virtualState = virtualInput->ValueState.AnalogValue;
           }
           else
-            virtualinput->ValueState.SubState = false;     // Reset latch if not pressed
+            virtualInput->ValueState.SubState = false; // Reset latch if not pressed
         }
         else
         {
-          virtualState = virtualinput->ValueState.AnalogValue;
+          virtualState = virtualInput->ValueState.AnalogValue;
         }
 
-        int16_t testA = 0;
-        int16_t testB = 0;
+        // int16_t testA = 0;
+        // int16_t testB = 0;
 
         // Only process if if actually has a value
         //  if (virtualState > 0)
         // {
         // Remap virtual state range to active input range
         // If it gets used below instead of the analogState, it should already be in the analogStates range, including high/low end clipping, and fit inside its constrained values below just fine
-        int16_t constrainedVirtualState = constrain(virtualState, virtualinput->MinAnalogValue, virtualinput->MaxAnalogValue);
-        int16_t rangedVirtualState = map(constrainedVirtualState, virtualinput->MinAnalogValue, virtualinput->MaxAnalogValue, input->MinAnalogValue, input->MaxAnalogValue); // Scale range to match Bluetooth range. Ranged state min/max theoretically 0->4095
+        int16_t constrainedVirtualState = constrain(virtualState, virtualInput->MinAnalogValue, virtualInput->MaxAnalogValue);
+        int16_t rangedVirtualState = map(constrainedVirtualState, virtualInput->MinAnalogValue, virtualInput->MaxAnalogValue, input->MinAnalogValue, input->MaxAnalogValue); // Scale range to match Bluetooth range. Ranged state min/max theoretically 0->4095
 
-        testA = constrainedVirtualState;
-        testB = rangedVirtualState;
+        // testA = constrainedVirtualState;
+        // testB = rangedVirtualState;
 
         // And finally, override read in value if the virtual value turns out to be bigger
         if (rangedVirtualState > analogState)
@@ -2000,16 +2099,55 @@ void MainLoop()
 #ifdef INPUT_SERIAL_DEBUG_PLUS
         snprintf(buffer, sizeof(buffer),
                  "    Virtual input <- %4d + Virtual Trigger: %d, Constrained to [%4d] %4d [%4d], Ranged to [%4d] %4d [%4d], Final: %4d - [%s]",
-                 virtualinput->ValueState.AnalogValue,
-                 virtualinput->ValueState.Value,
-                 virtualinput->MinAnalogValue,
-                 testA,
-                 virtualinput->MaxAnalogValue,
+                 virtualInput->ValueState.AnalogValue,
+                 virtualInput->ValueState.Value,
+                 virtualInput->MinAnalogValue,
+                 constrainedVirtualState,
+                 virtualInput->MaxAnalogValue,
                  input->MinAnalogValue,
-                 testB,
+                 rangedVirtualState,
                  input->MaxAnalogValue,
                  analogState,
-                 virtualinput->Label);
+                 virtualInput->Label);
+
+        Serial.println(buffer);
+#endif
+        // }
+
+        // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
+      }
+
+      // Pulse ranges are treated slightly differently
+      // To fit in easily with other processing, we only provide an analog value if the pulsed value
+      // sits inside the analog input's range, else its set to 0
+      for (int j = 0; j < input->VirtualPulseInputs.size(); j++)
+      {
+        int16_t virtualState = 0;
+
+        PulseInput *virtualPulseInput = input->VirtualPulseInputs[j];
+        // Frequency may be e.g.
+        // < 100 No touch / idle
+        // < 300 Zone 1 (e.g., Green)
+        // < 500 Zone 2 (e.g., Red)
+        // < 700 Zone 3 (e.g., Yellow)
+        // < 900 Zone 4 (e.g., Blue)
+        // else Zone 5 (e.g., Orange)
+
+        uint16_t pulseValue = virtualPulseInput->ValueState.AnalogValue;
+
+        if (pulseValue >= input->MinAnalogValue && pulseValue <= input->MaxAnalogValue)
+          analogState = pulseValue;
+
+        analogState = virtualPulseInput->ValueState.AnalogValue;
+
+#ifdef INPUT_SERIAL_DEBUG_PLUS
+        snprintf(buffer, sizeof(buffer),
+                 "    Pulse Virtual input <- %4d, Ranged [%4d] [%4d], Final: %4d - [%s]",
+                 virtualPulseInput->ValueState.AnalogValue,
+                 input->MinAnalogValue,
+                 input->MaxAnalogValue,
+                 analogState,
+                 virtualPulseInput->Label);
 
         Serial.println(buffer);
 #endif
@@ -2043,6 +2181,9 @@ void MainLoop()
     {
       if (input->ValueState.Value == NOT_PRESSED && analogState > input->TriggerOnValue)
       {
+        // if !(input->TriggerOffValue > input->TriggerOnValue && analogState > input->TriggerOffValue)
+        // { } around the below
+
         input->ValueState.Value = PRESSED;
         // #ifdef EXTRA_SERIAL_DEBUG_PLUS
         Serial.println("Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
