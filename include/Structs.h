@@ -80,7 +80,7 @@ typedef struct PulseInput
   volatile uint32_t LastFallTime; // <-- new
   volatile uint32_t HighPulseUs;
   volatile uint32_t TotalPeriodUs;
-  // volatile int Count;
+  int Count;
   volatile bool FreshData;
 
   // volatile bool Ignored;

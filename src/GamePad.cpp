@@ -536,36 +536,41 @@ static bool IRAM_ATTR on_rmt_rx_done(rmt_channel_handle_t rx_chan,
   PulseInput *pulseInput = static_cast<PulseInput *>(user_data);
   const rmt_symbol_word_t *symbols = edata->received_symbols;
   size_t num_symbols = edata->num_symbols;
-
+  pulseInput->Count++;
   for (size_t j = 0; j < num_symbols; j++)
   {
     rmt_symbol_word_t item = symbols[j];
 
-    if (item.duration0 == 0 && item.duration1 == 0)
-      continue;
+    // Software Glitch Filter: Discard symbol if either pulse half-cycle is < 10 µs (10 ticks at 1 MHz)
+    // if ((item.duration0 > 0 && item.duration0 < 10) ||
+    //     (item.duration1 > 0 && item.duration1 < 10))
+    if (item.duration0 > 0 ||
+        item.duration1 > 0)
+    {
 
-    uint32_t highPulseUs = 0;
-    uint32_t lowPulseUs = 0;
+      uint32_t highPulseUs = 0;
+      uint32_t lowPulseUs = 0;
 
-    if (item.level0 == 1)
-      highPulseUs = item.duration0;
-    else
-      lowPulseUs = item.duration0;
+      if (item.level0 == 1)
+        highPulseUs = item.duration0;
+      else
+        lowPulseUs = item.duration0;
 
-    if (item.level1 == 1)
-      highPulseUs = item.duration1;
-    else
-      lowPulseUs = item.duration1;
+      if (item.level1 == 1)
+        highPulseUs = item.duration1;
+      else
+        lowPulseUs = item.duration1;
 
-    pulseInput->HighPulseUs = highPulseUs;
-    pulseInput->TotalPeriodUs = highPulseUs + lowPulseUs;
-    pulseInput->FreshData = true;
+      pulseInput->HighPulseUs = highPulseUs;
+      pulseInput->TotalPeriodUs = highPulseUs + lowPulseUs;
+      pulseInput->FreshData = true;
+    }
   }
 
-  // Re-arm receiver with 10 µs (10,000 ns) glitch filter threshold
+  // Re-arm receiver with hardware glitch filter clamped to the ESP32-S3 max limit (3,000 ns)
   rmt_receive_config_t rx_cfg = {
-      .signal_range_min_ns = 10000, // Ignore pulses shorter than 10 µs
-      .signal_range_max_ns = 0,     // 0 = no maximum pulse limit
+      .signal_range_min_ns = 10, // Safe hardware limit (< 3187 ns)
+      .signal_range_max_ns = 0,    // 0 = no maximum pulse limit
   };
 
   rmt_receive(rx_chan, pulseInput->raw_symbols, sizeof(pulseInput->raw_symbols), &rx_cfg);
@@ -642,7 +647,7 @@ void setupPulseInputs()
 
     // 4. Arm Receiver with 10 µs Glitch Filter (10,000 ns)
     rmt_receive_config_t rx_cfg = {
-        .signal_range_min_ns = 10000, // Pulses shorter than 10,000 ns (10 µs) are discarded
+        .signal_range_min_ns = 10, // Max length supported is around ~3187 ns
         .signal_range_max_ns = 0,
     };
     rmt_receive(rx_channel, pulseInput->raw_symbols, sizeof(pulseInput->raw_symbols), &rx_cfg);
@@ -2289,14 +2294,17 @@ void MainLoop()
   {
     PulseInput *pulseInput = PulseInputs[i];
 
+    Serial.printf("Pulse Input %d: [%s] High: %u us, Period: %u us, Count: %d, FreshData: %d\n",
+                  i,
+                  pulseInput->Label,
+                  pulseInput->HighPulseUs,
+                  pulseInput->TotalPeriodUs,
+                  pulseInput->Count,
+                  pulseInput->FreshData);
+
     if (pulseInput->FreshData)
     {
       pulseInput->FreshData = false;
-
-      Serial.printf("[%s] High: %u us, Period: %u us\n",
-                    pulseInput->Label,
-                    pulseInput->HighPulseUs,
-                    pulseInput->TotalPeriodUs);
     }
   }
 
