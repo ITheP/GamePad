@@ -51,14 +51,14 @@ void Battery::CalculateState()
   if (ClampedBatterySensorReading > BAT_MAX)
   {
 #if defined(EXTRA_SERIAL_DEBUG)
-    Serial.printf("🔋 ⚠️ Battery sensor reading was above the max value! Max: %d, Reading: %d\n", BAT_MAX, CurrentBatterySensorReading);
+    Serial.printf("🔋 ⚠️ Battery sensor reading was above the max value! Max: %d, Reading: %d\n", BAT_MAX, ClampedBatterySensorReading);
 #endif
     ClampedBatterySensorReading = BAT_MAX;
   }
   else if (ClampedBatterySensorReading < BAT_MIN)
   {
 #if defined(EXTRA_SERIAL_DEBUG)
-    Serial.printf("🔋 ⚠️ Battery sensor reading was below the min! Min: %d, Reading: %d\n", BAT_MIN, CurrentBatterySensorReading);
+    Serial.printf("🔋 ⚠️ Battery sensor reading was below the min! Min: %d, Reading: %d\n", BAT_MIN, ClampedBatterySensorReading);
 #endif
     ClampedBatterySensorReading = BAT_MIN;
   }

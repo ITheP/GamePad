@@ -12,7 +12,7 @@
 #include "Utils.h"
 #include "GamePad.h"
 #include "Battery.h"
-#include "Network.h"
+#include "Networking.h"
 #include "Web.h"
 #include "Debug.h"
 #include <Profiles.h>
@@ -235,8 +235,8 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
       sprintf(buffer, "WiFi: %s", CurrentProfile->WiFi_Name.c_str());
       PrintDisplayLineCentered(buffer);
 
-      auto it = Network::AccessPointList.find(CurrentProfile->WiFi_Name);
-      if (it != Network::AccessPointList.end())
+      auto it = Networking::AccessPointList.find(CurrentProfile->WiFi_Name);
+      if (it != Networking::AccessPointList.end())
       {
         // Mapping exists
         AccessPoint *ap = it->second;

@@ -12,7 +12,7 @@
 #include "Utils.h"
 #include "GamePad.h"
 #include "Battery.h"
-#include "Network.h"
+#include "Networking.h"
 #include "Web.h"
 #include "Debug.h"
 #include <Profiles.h>
@@ -67,14 +67,14 @@ void UpdateConfigAccessPointList(int listMovement = 0)
     ConfigAccessPointList.clear();
 
     // Just in case this is called when no list is available
-    if (Network::AccessPointList.size() == 0)
+    if (Networking::AccessPointList.size() == 0)
         return;
 
     // Rebuild our list here
     AccessPoint *lastUISelectdAccessPoint = nullptr;
     AccessPoint *savedAccessPoint = nullptr;
 
-    for (auto &entry : Network::AccessPointList)
+    for (auto &entry : Networking::AccessPointList)
     {
         const String &ssid = entry.first; // key
         AccessPoint *ap = entry.second;   // value

@@ -19,6 +19,8 @@
 #include "esp_private/panic_internal.h"
 #include "esp_ota_ops.h"
 #include <esp_debug_helpers.h>
+#include "esp_cpu.h"
+#include "esp_memory_utils.h"
 
 // When we generate our own capture of crash data, we try and re-create what the system generates
 // Example core dump...
@@ -114,6 +116,50 @@ static void PanicPrintReg(const char *label, uint32_t value)
 }
 
 // Main walker
+// extern "C" void IRAM_ATTR PrintBackTrace(const XtExcFrame *frame)
+// {
+//     if (!frame) {
+//         panic_print_str("Backtrace: no frame\n");
+//         return;
+//     }
+
+//     panic_print_str("Backtrace:");
+
+//     // Seed from exception frame, NOT from esp_backtrace_get_start
+//     esp_backtrace_frame_t bt_frame = {0};
+//     bt_frame.exc_frame = (void *)frame;
+//     bt_frame.pc = frame->pc;
+//     bt_frame.sp = frame->a1;
+//     bt_frame.next_pc = frame->a0;
+
+//     if (!esp_stack_ptr_is_sane(bt_frame.sp) ||
+//         !esp_ptr_executable((void *)esp_cpu_process_stack_pc(bt_frame.pc)))
+//     {
+//         panic_print_str(" <no backtrace>\n");
+//         return;
+//     }
+
+//     // Print first entry (faulting PC) - use esp_cpu_process_stack_pc to strip windowed ABI bits
+//     BackTracePrintEntry(esp_cpu_process_stack_pc(bt_frame.pc), bt_frame.sp);
+
+//     for (int depth = 1; depth < 32; depth++)
+//     {
+//         if (!esp_backtrace_get_next_frame(&bt_frame))
+//             break;
+
+//         BackTracePrintEntry(esp_cpu_process_stack_pc(bt_frame.pc), bt_frame.sp);
+//     }
+
+//     panic_print_char('\n');
+// }
+
+// Helper macro to strip Xtensa windowed ABI bits (top 2 bits) in ESP-IDF v5
+#if CONFIG_IDF_TARGET_ARCH_XTENSA
+  #define PROCESS_STACK_PC(pc) ((uintptr_t)(pc) & 0x3FFFFFFF)
+#else
+  #define PROCESS_STACK_PC(pc) ((uintptr_t)(pc))
+#endif
+
 extern "C" void IRAM_ATTR PrintBackTrace(const XtExcFrame *frame)
 {
     if (!frame) {
@@ -123,61 +169,102 @@ extern "C" void IRAM_ATTR PrintBackTrace(const XtExcFrame *frame)
 
     panic_print_str("Backtrace:");
 
-    // Seed from exception frame, NOT from esp_backtrace_get_start
-    esp_backtrace_frame_t bt_frame = {0};
+    // Seed from exception frame
+    esp_backtrace_frame_t bt_frame = {};
     bt_frame.exc_frame = (void *)frame;
     bt_frame.pc = frame->pc;
     bt_frame.sp = frame->a1;
     bt_frame.next_pc = frame->a0;
 
-    if (!esp_stack_ptr_is_sane(bt_frame.sp) ||
-        !esp_ptr_executable((void *)esp_cpu_process_stack_pc(bt_frame.pc)))
+    uintptr_t initial_pc = PROCESS_STACK_PC(bt_frame.pc);
+
+    // esp_ptr_in_dram replaces deprecated esp_stack_ptr_is_sane
+    if (!esp_ptr_in_dram((void *)bt_frame.sp) ||
+        !esp_ptr_executable((void *)initial_pc))
     {
         panic_print_str(" <no backtrace>\n");
         return;
     }
 
-    // Print first entry (faulting PC) - use esp_cpu_process_stack_pc to strip windowed ABI bits
-    BackTracePrintEntry(esp_cpu_process_stack_pc(bt_frame.pc), bt_frame.sp);
+    // Print first entry (faulting PC)
+    BackTracePrintEntry(initial_pc, bt_frame.sp);
 
     for (int depth = 1; depth < 32; depth++)
     {
         if (!esp_backtrace_get_next_frame(&bt_frame))
             break;
 
-        BackTracePrintEntry(esp_cpu_process_stack_pc(bt_frame.pc), bt_frame.sp);
+        uintptr_t clean_pc = PROCESS_STACK_PC(bt_frame.pc);
+        BackTracePrintEntry(clean_pc, bt_frame.sp);
     }
 
     panic_print_char('\n');
 }
 
+// extern "C" void IRAM_ATTR SaveBackTraceToPanicRecord(PanicRecord *rec, const XtExcFrame *frame)
+// {
+//     // Clear the backtrace buffer
+//     for (int i = 0; i < 32; i++) {
+//         rec->BackTrace[i] = 0;
+//     }
+
+//     // Seed from exception frame, NOT from esp_backtrace_get_start
+//     esp_backtrace_frame_t bt_frame = {0};
+//     bt_frame.exc_frame = (void *)frame;
+//     bt_frame.pc = frame->pc;
+//     bt_frame.sp = frame->a1;
+//     bt_frame.next_pc = frame->a0;
+
+//     if (!esp_stack_ptr_is_sane(bt_frame.sp) ||
+//         !esp_ptr_executable((void *)esp_cpu_process_stack_pc(bt_frame.pc)))
+//         return;
+
+//     // Store processed PC (strip windowed ABI bits)
+//     rec->BackTrace[0] = esp_cpu_process_stack_pc(bt_frame.pc);
+
+//     for (int depth = 1; depth < 32; depth++)
+//     {
+//         if (!esp_backtrace_get_next_frame(&bt_frame))
+//             break;
+
+//         rec->BackTrace[depth] = esp_cpu_process_stack_pc(bt_frame.pc);
+//     }
+// }
+
 extern "C" void IRAM_ATTR SaveBackTraceToPanicRecord(PanicRecord *rec, const XtExcFrame *frame)
 {
-    // Clear the backtrace buffer
-    for (int i = 0; i < 32; i++) {
-        rec->BackTrace[i] = 0;
-    }
+    if (!rec) return;
 
-    // Seed from exception frame, NOT from esp_backtrace_get_start
-    esp_backtrace_frame_t bt_frame = {0};
+    // Clear the backtrace buffer
+    memset(rec->BackTrace, 0, sizeof(rec->BackTrace));
+
+    if (!frame) return;
+
+    // Seed from exception frame
+    esp_backtrace_frame_t bt_frame = {};
     bt_frame.exc_frame = (void *)frame;
     bt_frame.pc = frame->pc;
     bt_frame.sp = frame->a1;
     bt_frame.next_pc = frame->a0;
 
-    if (!esp_stack_ptr_is_sane(bt_frame.sp) ||
-        !esp_ptr_executable((void *)esp_cpu_process_stack_pc(bt_frame.pc)))
+    uintptr_t initial_pc = PROCESS_STACK_PC(bt_frame.pc);
+
+    // esp_ptr_in_dram replaces deprecated esp_stack_ptr_is_sane
+    if (!esp_ptr_in_dram((void *)bt_frame.sp) ||
+        !esp_ptr_executable((void *)initial_pc))
+    {
         return;
+    }
 
     // Store processed PC (strip windowed ABI bits)
-    rec->BackTrace[0] = esp_cpu_process_stack_pc(bt_frame.pc);
+    rec->BackTrace[0] = initial_pc;
 
     for (int depth = 1; depth < 32; depth++)
     {
         if (!esp_backtrace_get_next_frame(&bt_frame))
             break;
 
-        rec->BackTrace[depth] = esp_cpu_process_stack_pc(bt_frame.pc);
+        rec->BackTrace[depth] = PROCESS_STACK_PC(bt_frame.pc);
     }
 }
 
@@ -188,10 +275,12 @@ extern "C" void IRAM_ATTR SaveBackTraceToPanicRecord(PanicRecord *rec, const XtE
 // assuming using esp32-s3 toolchain here, and esp_panic_handler is what we are after
 
 // Pointer to original panic handler, so we can it from our override
-extern "C" void __real_esp_panic_handler(void *info);
+//extern "C" void __real_esp_panic_handler(void *info);
+extern "C" void __real___wrap_esp_panic_handler(void *info);
 
 // extern "C" void IRAM_ATTR esp_panic_handler(void *info)
-extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
+//extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
+extern "C" void IRAM_ATTR __wrap___wrap_esp_panic_handler(void *info)
 {
     // Following is done very carefully, running from IRAM and remembering that
     // standard functions won't be available - the heap and everything else might be screwed (hence the crash we are handling)
@@ -321,7 +410,8 @@ extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
 
     // Call the original handler
     // Theoretically should reboot for us too
-    __real_esp_panic_handler(info);
+    __real___wrap_esp_panic_handler(info);
+    //__real_esp_panic_handler(info);
 
     // Decide what to do next
     while (true)

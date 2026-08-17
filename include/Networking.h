@@ -18,7 +18,7 @@ struct AccessPoint {
   const char *WiFiStatus;
 };
 
-class Network
+class Networking
 {
 public:
     static void HandleWiFi(int second);

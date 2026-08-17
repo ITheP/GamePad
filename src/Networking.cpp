@@ -3,7 +3,7 @@
 #include <string>
 #include <algorithm>
 #include <map>
-#include "Network.h"
+#include "Networking.h"
 #include "GamePad.h"
 #include "Config.h"
 #include "Defines.h"
@@ -37,10 +37,10 @@ char WiFi_SignalLevel_Low[] = "Low Signal";
 char WiFi_SignalLevel_Trace[] = "Trace Signal";
 
 // Dynamic list of APs
-std::vector<AccessPoint *> Network::AllAccessPointList;
-std::map<String, AccessPoint *> Network::AccessPointList;
-int Network::AccessPointListUpdated = false;
-int Network::WiFiDisabled = true;
+std::vector<AccessPoint *> Networking::AllAccessPointList;
+std::map<String, AccessPoint *> Networking::AccessPointList;
+int Networking::AccessPointListUpdated = false;
+int Networking::WiFiDisabled = true;
 
 const char *AuthModeToStr(wifi_auth_mode_t auth)
 {
@@ -71,7 +71,7 @@ const char *AuthModeToStr(wifi_auth_mode_t auth)
 
 // Note: Arduino only supports scanning with the results returned
 // when the scan is complete, so we can't get partial results as it's happening
-void Network::Config_StartScan()
+void Networking::Config_StartScan()
 {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial_INFO;
@@ -81,7 +81,7 @@ void Network::Config_StartScan()
     WiFi.scanNetworks(true, true); // async=true, hidden=true
 }
 
-void Network::Config_UpdateScanResults()
+void Networking::Config_UpdateScanResults()
 {
     int scanStatus = WiFi.scanComplete();
 
@@ -215,7 +215,7 @@ void Network::Config_UpdateScanResults()
     }
 }
 
-void Network::Config_InitWifi()
+void Networking::Config_InitWifi()
 {
 #ifdef EXTRA_SERIAL_DEBUG
     Serial_INFO;
@@ -236,39 +236,39 @@ void Network::Config_InitWifi()
 }
 
 // Wi-Fi credentials
-const char *Network::ssid;
-const char *Network::password;
+const char *Networking::ssid;
+const char *Networking::password;
 
-int Network::WiFiConnecting = 0;
-wl_status_t Network::WiFiConnectionState;
-wl_status_t Network::PreviousWiFiConnectionState = WL_SCAN_COMPLETED; // Initialize to something we know it won't be to force a UI update straight away;
+int Networking::WiFiConnecting = 0;
+wl_status_t Networking::WiFiConnectionState;
+wl_status_t Networking::PreviousWiFiConnectionState = WL_SCAN_COMPLETED; // Initialize to something we know it won't be to force a UI update straight away;
 
-unsigned char Network::LastWiFiCharacter;
-unsigned char Network::LastWiFiStatusCharacter;
-int Network::WiFiStatusIterations;
+unsigned char Networking::LastWiFiCharacter;
+unsigned char Networking::LastWiFiStatusCharacter;
+int Networking::WiFiStatusIterations;
 
 // WiFi test state
-Network::WiFiTestResult Network::LastTestResult = Network::TEST_NOT_STARTED;
-bool Network::TestInProgress = false;
-unsigned long Network::TestStartTime = 0;
+Networking::WiFiTestResult Networking::LastTestResult = Networking::TEST_NOT_STARTED;
+bool Networking::TestInProgress = false;
+unsigned long Networking::TestStartTime = 0;
 
-unsigned char Network::WiFiCharacter;
-const char *Network::WiFiStatus = WiFi_UnknownStatus;
-int8_t Network::WiFiStrength;
+unsigned char Networking::WiFiCharacter;
+const char *Networking::WiFiStatus = WiFi_UnknownStatus;
+int8_t Networking::WiFiStrength;
 
-unsigned char Network::WiFiStatusCharacter;
+unsigned char Networking::WiFiStatusCharacter;
 
 // We have a final character that might override the WiFiCharacter (e.g. something animated) but we want to retain what
 // the current WiFiCharacter is so that we can re-render it when status isn't changing.
 // Mainly relevant when in a connecting state.
-unsigned char Network::FinalWiFiCharacter;
+unsigned char Networking::FinalWiFiCharacter;
 
 // Rate limiting for WiFi reconnection attempts to prevent rapid-fire reconnects
 // which can destabilize BLE+WiFi coexistence
 static unsigned long lastReconnectAttempt = 0;
 const unsigned long RECONNECT_INTERVAL_MS = 5000; // Minimum 5 seconds between reconnect attempts
 
-void Network::HandleWiFi(int second)
+void Networking::HandleWiFi(int second)
 {
 #ifdef DEBUG_MARKS
   Debug::Mark(1, __LINE__, __FILE__, __func__);
@@ -495,7 +495,7 @@ void Network::HandleWiFi(int second)
 
 //char WiFiAnimatedSearch[] = { Icon_WiFi_LostSignal, Icon_WiFi_LowSignal, Icon_WiFi_MiddleSignal, Icon_WiFi_TopSignal };
 
-void Network::RenderIcons()
+void Networking::RenderIcons()
 {
     if (FinalWiFiCharacter != LastWiFiCharacter)
     {
@@ -508,7 +508,7 @@ void Network::RenderIcons()
 }
 
 // WiFi Connection Testing Functions
-Network::WiFiTestResult Network::TestWiFiConnection(const String &testSSID, const String &testPassword)
+Networking::WiFiTestResult Networking::TestWiFiConnection(const String &testSSID, const String &testPassword)
 {
     // Cancel any existing test first
     if (TestInProgress || TestStartTime > 0)
@@ -540,7 +540,7 @@ Network::WiFiTestResult Network::TestWiFiConnection(const String &testSSID, cons
 }
 
 // Check the status of the current WiFi test and return results
-Network::WiFiTestResult Network::CheckTestResults()
+Networking::WiFiTestResult Networking::CheckTestResults()
 {
     // If no test is in progress, return the last result
     if (!TestInProgress)
@@ -607,17 +607,17 @@ Network::WiFiTestResult Network::CheckTestResults()
     return TEST_CONNECTING;
 }
 
-bool Network::IsWiFiTestInProgress()
+bool Networking::IsWiFiTestInProgress()
 {
     return TestInProgress || (TestStartTime > 0 && (millis() - TestStartTime) <= TEST_TIMEOUT_MS);
 }
 
-Network::WiFiTestResult Network::GetLastTestResult()
+Networking::WiFiTestResult Networking::GetLastTestResult()
 {
     return LastTestResult;
 }
 
-void Network::CancelWiFiTest()
+void Networking::CancelWiFiTest()
 {
     if (TestInProgress || TestStartTime > 0)
     {
@@ -633,7 +633,7 @@ void Network::CancelWiFiTest()
     }
 }
 
-String Network::DescribeTestResults(String ssid, String password, WiFiTestResult testResults)
+String Networking::DescribeTestResults(String ssid, String password, WiFiTestResult testResults)
 {
     String resultText;
 
@@ -641,25 +641,25 @@ String Network::DescribeTestResults(String ssid, String password, WiFiTestResult
 
     if (ssid.length() == 0)
         resultText = "Access Point not set";
-    else if (testResults == Network::TEST_NOT_STARTED)
+    else if (testResults == Networking::TEST_NOT_STARTED)
         resultText = "Pending Test!";
-    else if (testResults == Network::TEST_SUCCESS)
+    else if (testResults == Networking::TEST_SUCCESS)
         resultText = "Success!";
-    else if (testResults == Network::TEST_SSID_NOT_FOUND)
+    else if (testResults == Networking::TEST_SSID_NOT_FOUND)
         resultText = "SSID Not Found";
-    else if (testResults == Network::TEST_CONNECTING)
+    else if (testResults == Networking::TEST_CONNECTING)
         resultText = "Testing...";
     else if (password.length() == 0)
     {
         switch (testResults)
         {
-        case Network::TEST_INVALID_PASSWORD:
+        case Networking::TEST_INVALID_PASSWORD:
             resultText = "Password missing";
             break;
-        case Network::TEST_TIMEOUT:
+        case Networking::TEST_TIMEOUT:
             resultText = "Timeout, missing password?";
             break;
-        case Network::TEST_FAILED:
+        case Networking::TEST_FAILED:
             resultText = "Couldn't connect, missing password?";
             break;
         default:
@@ -670,16 +670,16 @@ String Network::DescribeTestResults(String ssid, String password, WiFiTestResult
     {
         switch (testResults)
         {
-        case Network::TEST_INVALID_PASSWORD:
+        case Networking::TEST_INVALID_PASSWORD:
             resultText = "Invalid Password";
             break;
-        case Network::TEST_SSID_NOT_FOUND:
+        case Networking::TEST_SSID_NOT_FOUND:
             resultText = "SSID Not Found";
             break;
-        case Network::TEST_TIMEOUT:
+        case Networking::TEST_TIMEOUT:
             resultText = "Timeout";
             break;
-        case Network::TEST_FAILED:
+        case Networking::TEST_FAILED:
             resultText = "Couldn't connect";
             break;
         default:

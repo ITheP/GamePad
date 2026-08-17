@@ -13,8 +13,8 @@
 #include <Screen.h>
 #include "Menus.h"
 
-#include "driver/rmt.h"
-#include "driver/gpio.h"
+//#include "driver/rmt.h"
+//#include "driver/gpio.h"
 
 char ControllerDeviceNameType[] = "Guitar";
 char ControllerType[] = "Guitar Controller";
@@ -286,12 +286,6 @@ Input AnalogInputs_Virtual_TriggeredOrange =
 // Pulse inputs are treated like analog inputs in that
 // their frequency (which may vary) is taken as the equivalent to
 // an analog signal
-// WARNING - only certain pins can be used for RMT RX
-// ✔ GPIO 4–15
-// ✔ GPIO 18–19
-// ✔ GPIO 21–23
-// ✔ GPIO 25–27
-// ✔ GPIO 32–33
 PulseInput PulseInput_Slider =
     {
         .Pin = ANALOG_Capacitor_PIN,
@@ -469,7 +463,7 @@ Input AnalogInputs_Whammy =
         .MaxAnalogValue = 4000,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
-        .BluetoothSetOperation = &BleGamepad::setSlider1,
+        .BluetoothSetOperation = &GamepadDevice::setSlider1,
         .RenderOperation = RenderInput_AnalogBar_Vert,
         .XPos = uiWhammyX + 2,
         .YPos = uiWhammyY + 2,
@@ -544,8 +538,8 @@ Input DigitalInput_Green = // Green button on guitar neck
         .Label = "Green",
         .BluetoothInput = BUTTON_1,
         .DefaultValue = HIGH,
-        .BluetoothPressOperation = &BleGamepad::press,
-        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothPressOperation = &GamepadDevice::press,
+        .BluetoothReleaseOperation = &GamepadDevice::release,
         .BluetoothSetOperation = NONE,
         .RenderOperation = RenderInput_Rectangle,
         .XPos = uiGuitar_xPos + 76,
@@ -570,8 +564,8 @@ Input DigitalInput_Red = // Red button on guitar neck
         .Label = "Red",
         .BluetoothInput = BUTTON_2,
         .DefaultValue = HIGH,
-        .BluetoothPressOperation = &BleGamepad::press,
-        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothPressOperation = &GamepadDevice::press,
+        .BluetoothReleaseOperation = &GamepadDevice::release,
         .BluetoothSetOperation = NONE,
         .RenderOperation = RenderInput_Rectangle,
         .XPos = uiGuitar_xPos + 69,
@@ -596,8 +590,8 @@ Input DigitalInput_Yellow = // Yellow button on guitar neck
         .Label = "Yellow",
         .BluetoothInput = BUTTON_4,
         .DefaultValue = HIGH,
-        .BluetoothPressOperation = &BleGamepad::press,
-        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothPressOperation = &GamepadDevice::press,
+        .BluetoothReleaseOperation = &GamepadDevice::release,
         .BluetoothSetOperation = NONE,
         .RenderOperation = RenderInput_Rectangle,
         .XPos = uiGuitar_xPos + 62,
@@ -622,8 +616,8 @@ Input DigitalInput_Blue = // Blue button on guitar neck
         .Label = "Blue",
         .BluetoothInput = BUTTON_3,
         .DefaultValue = HIGH,
-        .BluetoothPressOperation = &BleGamepad::press,
-        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothPressOperation = &GamepadDevice::press,
+        .BluetoothReleaseOperation = &GamepadDevice::release,
         .BluetoothSetOperation = NONE,
         .RenderOperation = RenderInput_Rectangle,
         .XPos = uiGuitar_xPos + 55,
@@ -648,8 +642,8 @@ Input DigitalInput_Orange = // Orange button on guitar neck
         .Label = "Orange",
         .BluetoothInput = BUTTON_5,
         .DefaultValue = HIGH,
-        .BluetoothPressOperation = &BleGamepad::press,
-        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothPressOperation = &GamepadDevice::press,
+        .BluetoothReleaseOperation = &GamepadDevice::release,
         .BluetoothSetOperation = NONE,
         .RenderOperation = RenderInput_Rectangle,
         .XPos = uiGuitar_xPos + 48,
@@ -674,8 +668,8 @@ Input DigitalInput_Start_LongPress = // Select button on main body
         .Label = "Start Long Press",
         .BluetoothInput = NONE,
         .DefaultValue = HIGH,
-        .BluetoothPressOperation = &BleGamepad::press,
-        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothPressOperation = &GamepadDevice::press,
+        .BluetoothReleaseOperation = &GamepadDevice::release,
         .BluetoothSetOperation = NONE,
         .CustomOperationPressed = Menus::ToggleMenuMode,
         .CustomOperationReleased = NONE,
@@ -701,8 +695,8 @@ Input DigitalInput_Start = // Start button on main body
         .Label = "Start",
         .BluetoothInput = BUTTON_7,
         .DefaultValue = HIGH,
-        .BluetoothPressOperation = &BleGamepad::press,
-        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothPressOperation = &GamepadDevice::press,
+        .BluetoothReleaseOperation = &GamepadDevice::release,
         .BluetoothSetOperation = NONE,
         .RenderOperation = RenderInput_Icon,
         .XPos = uiGuitar_xPos + 56,
@@ -737,8 +731,8 @@ Input DigitalInput_Select = // Select button on main body
         .Label = "Select",
         .BluetoothInput = BUTTON_8,
         .DefaultValue = HIGH,
-        .BluetoothPressOperation = &BleGamepad::press,
-        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothPressOperation = &GamepadDevice::press,
+        .BluetoothReleaseOperation = &GamepadDevice::release,
         .BluetoothSetOperation = NONE,
         .RenderOperation = RenderInput_DoubleIcon,
         .XPos = uiGuitar_xPos + 55,
@@ -759,8 +753,8 @@ Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled 
         .Label = "Tilt",
         .BluetoothInput = BUTTON_9,
         .DefaultValue = HIGH,
-        .BluetoothPressOperation = &BleGamepad::press,
-        .BluetoothReleaseOperation = &BleGamepad::release,
+        .BluetoothPressOperation = &GamepadDevice::press,
+        .BluetoothReleaseOperation = &GamepadDevice::release,
         .BluetoothSetOperation = NONE,
         .RenderOperation = RenderInput_Icon,
         .XPos = uiGuitar_xPos + 91,

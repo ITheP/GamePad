@@ -12,7 +12,7 @@
 #include "Utils.h"
 #include "GamePad.h"
 #include "Battery.h"
-#include "Network.h"
+#include "Networking.h"
 #include "Web.h"
 #include "Debug.h"
 #include <Profiles.h>
@@ -32,13 +32,13 @@ static String HotspotIP;
 static String CurrentPassword = ""; // Track last tested password to know when to test again
 static String CurrentSSID = "";     // Track last tested SSID to know when to test again
 static bool credentialsChanged = false;
-static Network::WiFiTestResult WiFiTestResult = Network::TEST_NOT_STARTED;
+static Networking::WiFiTestResult WiFiTestResult = Networking::TEST_NOT_STARTED;
 
 void MenuFunctions::Config_Init_Hotspot()
 {
   Menus::InitMenuItemDisplay(true);
 
-  WiFiTestResult = Network::TEST_NOT_STARTED;
+  WiFiTestResult = Networking::TEST_NOT_STARTED;
 
   HotspotName = String(ControllerType);
 
@@ -100,14 +100,14 @@ void MenuFunctions::Config_Update_Hotspot()
     credentialsChanged = false;
 
     // Cancel any in-progress test
-    if (Network::IsWiFiTestInProgress())
-      Network::CancelWiFiTest();
+    if (Networking::IsWiFiTestInProgress())
+      Networking::CancelWiFiTest();
 
     // Start a new WiFi test if SSID and password are available
     if (CurrentSSID.length() > 0)
     {
       // Start a new WiFi test
-      Network::TestWiFiConnection(CurrentSSID, CurrentPassword);
+      Networking::TestWiFiConnection(CurrentSSID, CurrentPassword);
 
 #ifdef EXTRA_SERIAL_DEBUG
       Serial_INFO;
@@ -168,9 +168,9 @@ void MenuFunctions::Config_Draw_Hotspot()
     PrintDisplayLineCentered(buffer);
   }
 
-  WiFiTestResult = Network::CheckTestResults();
+  WiFiTestResult = Networking::CheckTestResults();
 
-  String resultText = Network::DescribeTestResults(CurrentSSID, CurrentPassword, WiFiTestResult);
+  String resultText = Networking::DescribeTestResults(CurrentSSID, CurrentPassword, WiFiTestResult);
 
   sprintf(buffer, "Status: %s", resultText.c_str());
   PrintDisplayLineCentered(buffer);
@@ -189,9 +189,9 @@ void MenuFunctions::Config_Draw_Hotspot()
 void MenuFunctions::Config_Exit_Hotspot()
 {
   // Cancel any in-progress WiFi test when exiting the menu
-  if (Network::IsWiFiTestInProgress())
+  if (Networking::IsWiFiTestInProgress())
   {
-    Network::CancelWiFiTest();
+    Networking::CancelWiFiTest();
   }
 
   Web::WiFiDisabled();
@@ -199,5 +199,5 @@ void MenuFunctions::Config_Exit_Hotspot()
   WiFi.disconnect(true);
 
   // Just in case
-  Network::Config_InitWifi();
+  Networking::Config_InitWifi();
 }

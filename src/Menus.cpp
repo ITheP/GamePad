@@ -12,7 +12,7 @@
 #include "Utils.h"
 #include <GamePad.h>
 #include <Battery.h>
-#include <Network.h>
+#include <Networking.h>
 #include <Idle.h>
 #include <Debug.h>
 

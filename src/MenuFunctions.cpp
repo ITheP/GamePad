@@ -13,7 +13,7 @@
 #include "Version.h"
 #include "GamePad.h"
 #include "Battery.h"
-#include "Network.h"
+#include "Networking.h"
 #include "Web.h"
 #include "Debug.h"
 #include "Profiles.h"
@@ -48,7 +48,7 @@ void MenuFunctions::Config_Setup()
 #endif
 
   // Even if not required, we kick off WiFi scanning for config mode
-  Network::Config_InitWifi();
+  Networking::Config_InitWifi();
   Profiles::LoadAll();
   Profiles::SetCurrentProfileFromId(MenuFunctions::SelectedProfileId);
 }
@@ -97,18 +97,18 @@ const char *LastWiFiStatus = NONE;
 
 void MenuFunctions::InitWiFi()
 {
-  Menus::InitMenuItemDisplay(Network::WiFiStatus, ScrollCheck);
-  LastWiFiStatus = Network::WiFiStatus;
+  Menus::InitMenuItemDisplay(Networking::WiFiStatus, ScrollCheck);
+  LastWiFiStatus = Networking::WiFiStatus;
 
   //Debug::CrashDeviceOnPurpose();
 }
 
 void MenuFunctions::UpdateWiFi()
 {
-  if (SecondRollover && LastWiFiStatus != Network::WiFiStatus)
+  if (SecondRollover && LastWiFiStatus != Networking::WiFiStatus)
   {
-    Menus::UpdateMenuText(Network::WiFiStatus, ScrollCheck);
-    LastWiFiStatus = Network::WiFiStatus;
+    Menus::UpdateMenuText(Networking::WiFiStatus, ScrollCheck);
+    LastWiFiStatus = Networking::WiFiStatus;
   }
 }
 

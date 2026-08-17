@@ -23,7 +23,7 @@
 #include "Utils.h"
 #include "Version.h"
 #include "Debug.h"
-#include "Network.h"
+#include "Networking.h"
 #include "MenuFunctions.h"
 #include "Security.h"
 
@@ -294,7 +294,7 @@ esp_err_t Web::Send_AccessPointList(httpd_req_t *req)
     std::ostringstream json;
     json << "{\"accessPoints\": [";
 
-    auto aps = Network::AccessPointList;
+    auto aps = Networking::AccessPointList;
     int count = 0;
 
     for (auto &entry : aps)
@@ -321,8 +321,8 @@ esp_err_t Web::Send_WiFiStatus(httpd_req_t *req)
     char json[128];
     snprintf(json, sizeof(json),
              "{\"Status\":\"%s\", \"RSSI\":%d}",
-             Network::WiFiStatus,
-             Network::WiFiStrength);
+             Networking::WiFiStatus,
+             Networking::WiFiStrength);
 
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, json, strlen(json));
@@ -331,7 +331,7 @@ esp_err_t Web::Send_WiFiStatus(httpd_req_t *req)
 
 esp_err_t Web::Send_WiFiTestStatus(httpd_req_t *req)
 {
-    Network::WiFiTestResult wifiTestResult = Network::CheckTestResults();
+    Networking::WiFiTestResult wifiTestResult = Networking::CheckTestResults();
     String resultText;
     String currentPassword = CurrentProfile->WiFi_Password;
     String currentSSID = CurrentProfile->WiFi_Name;
@@ -344,25 +344,25 @@ esp_err_t Web::Send_WiFiTestStatus(httpd_req_t *req)
     {
         switch (wifiTestResult)
         {
-        case Network::TEST_NOT_STARTED:
+        case Networking::TEST_NOT_STARTED:
             resultText = "Test has not been started yet";
             break;
-        case Network::TEST_SUCCESS:
+        case Networking::TEST_SUCCESS:
             resultText = "WiFi connected successfully";
             break;
-        case Network::TEST_CONNECTING:
+        case Networking::TEST_CONNECTING:
             resultText = "Testing in progress...";
             break;
-        case Network::TEST_INVALID_PASSWORD:
+        case Networking::TEST_INVALID_PASSWORD:
             resultText = "Invalid Password";
             break;
-        case Network::TEST_SSID_NOT_FOUND:
+        case Networking::TEST_SSID_NOT_FOUND:
             resultText = "SSID Not Found";
             break;
-        case Network::TEST_TIMEOUT:
+        case Networking::TEST_TIMEOUT:
             resultText = "Test timed out - may be due to an incorrect password";
             break;
-        case Network::TEST_FAILED:
+        case Networking::TEST_FAILED:
             resultText = "Couldn't connect";
             break;
         default:

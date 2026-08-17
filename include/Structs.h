@@ -4,37 +4,49 @@
 #include <vector>
 #include "Config.h"
 #include "Defines.h"
-#include <BleGamepad.h>
+// #include <BleGamepad.h>
+#include <BleCompositeHID.h>
+#include <GamepadDevice.h>
 #include <FastLED.h>
 #include "LED.h"
 #include "stats.h"
 
-typedef void (BleGamepad::*BleGamepadFunctionPointer)(uint8_t);
-typedef void (BleGamepad::*BleGamepadFunctionPointerInt)(int16_t);
+#include "driver/rmt_types.h"
+// #include "driver/rmt_rx.h"
+// #include "driver/rmt_common.h"
 
-typedef struct IntPair {
+// typedef void (BleGamepad::*BleGamepadFunctionPointer)(uint8_t);
+// typedef void (BleGamepad::*BleGamepadFunctionPointerInt)(int16_t);
+// TODO: Rename to GamepadFunctionPointer
+using GamepadFunctionPointer = void (GamepadDevice::*)(uint8_t);
+using GamepadFunctionPointerInt = void (GamepadDevice::*)(int16_t);
+
+typedef struct IntPair
+{
   int A;
   int B;
 } IntPair;
 
-typedef struct IconRun {
+typedef struct IconRun
+{
   unsigned char StartIcon;
   int Count;
   int XPos;
   int YPos;
 } IconRun;
 
-typedef struct State {
-  int StateJustChanged;                   // Used for things like LED effects that only want to change a value when a state change happens
+typedef struct State
+{
+  int StateJustChanged; // Used for things like LED effects that only want to change a value when a state change happens
   unsigned long StateChangedWhen;
-  unsigned long StateChangedWhenStart;    // Extra tag that just records when a positive (pressed) state change happened, so after a release we can calculate how long it took
-  int StateJustChangedLED;                // Sticks around till LED processing is done, then set to false again
+  unsigned long StateChangedWhenStart; // Extra tag that just records when a positive (pressed) state change happened, so after a release we can calculate how long it took
+  int StateJustChangedLED;             // Sticks around till LED processing is done, then set to false again
   int16_t Value;
   int16_t PreviousValue;
-  int16_t AnalogValue;                    // Separate Analog values means we can also set digital Values based on analog inputs while keeping track of the analog
+  int16_t AnalogValue; // Separate Analog values means we can also set digital Values based on analog inputs while keeping track of the analog
   int16_t PreviousAnalogValue;
-  int16_t VirtualAnalogvalue;             // May match the AnalogValue but may also
-  int16_t SubState;                          // General purpose latch we can e.g. set under certain conditions
+  int16_t VirtualAnalogvalue; // May match the AnalogValue but may also
+  int16_t SubState;           // General purpose latch we can e.g. set under certain conditions
 } State;
 
 // enum class VirtualAnalogCopyTypes : uint8_t {
@@ -42,11 +54,12 @@ typedef struct State {
 //   CopyWhenTriggered = 1
 // };
 
-enum class VirtualPinModes : uint8_t {
+enum class VirtualPinModes : uint8_t
+{
   // For Digital Inputs it grabs value from ValueState.Value and Analog Inputs grabs value from ValueState.AnalogValue
-  Default = 0,                               
+  Default = 0,
   // For analog inputs requires ValueState.Value == PRESSED to use ValueState.AnalogValue, else uses minimum value (not pressed)
-  RequireValueToBePressed = 1,               
+  RequireValueToBePressed = 1,
   // For analog inputs requires ValueState.Value == PRESSED to use ValueState.AnalogValue, else uses minimum value (not pressed).
   // Also requires that input has been released to a certain point before this engages.
   // Originally purposed for guitar controller analog neck button -> whammy bar emulation but so it wouldn't kick in if you wanted to fully
@@ -57,63 +70,72 @@ enum class VirtualPinModes : uint8_t {
 // Pulse input
 // Not used directly, but rather as a base for other inputs to trigger from
 // Effectively acts as an analog source (converting pulses to frequency)
-typedef struct PulseInput {
+typedef struct PulseInput
+{
   uint8_t Pin;
 
-  const char* Label;
- 
+  const char *Label;
+
   volatile uint32_t RiseTime;
-  volatile uint32_t LastFallTime;   // <-- new
+  volatile uint32_t LastFallTime; // <-- new
   volatile uint32_t HighPulseUs;
   volatile uint32_t TotalPeriodUs;
-  //volatile int Count;
+  // volatile int Count;
   volatile bool FreshData;
- 
- // volatile bool Ignored;
+
+  // volatile bool Ignored;
   State ValueState;
- } PulseInput;
+
+  // ESP-IDF hardware RMT monitoring
+  rmt_channel_handle_t rx_channel;
+  rmt_symbol_word_t raw_symbols[64];
+} PulseInput;
 
 // General input (Digital and Analog - e.g. buttons)
-typedef struct Input {
+typedef struct Input
+{
   uint8_t Pin;
   // adc_attenuation_t AnalogAttenuation;          // Defaults to default ADC_0db - approx 0-1.1v
   //                                               // 0–1.5V signal, use ADC_2_5db
   //                                               // 0–2.2V signal, use ADC_6db
   //                                               // 0–3.3V signal, use ADC_11db
-   // Currently only works with AnalogTriggeredInputs
-  std::vector<Input*> VirtualPinInputs;            // Rather than getting state from reading a pin, gets it from another input
-                                                   // Means we can e.g. have 1 input acting as a button and also triggering an analog separate input
-  std::vector<PulseInput*> VirtualPulseInputs;     // Pulse inputs - equivalent of above
+  // Currently only works with AnalogTriggeredInputs
+  std::vector<Input *> VirtualPinInputs;        // Rather than getting state from reading a pin, gets it from another input
+                                                // Means we can e.g. have 1 input acting as a button and also triggering an analog separate input
+  std::vector<PulseInput *> VirtualPulseInputs; // Pulse inputs - equivalent of above
   VirtualPinModes VirtualPinMode;
 
-  const char* Label;
+  const char *Label;
   int BluetoothInput;
   int16_t DefaultValue;
   int16_t DefaultAnalogValue;
 
-  int16_t MinAnalogValue;                       // Min value for analog input
-  int16_t MaxAnalogValue;                       // Max value for analog input
-                                                // e.g. any variable resistor used in physical might not range from theoretical min->max values,
-                                                // or you might want to also have dead zones
-                                                // Device max measuring range is 0->4095, you can watch the serial monitor with
-                                                // EXTRA_SERIAL_DEBUG_PLUS enabled to see physical values generated by device
-  int16_t TriggerOnValue;                       // For analog button - the value at which the button is considered on/pressed
-  int16_t TriggerOffValue;                      // For analog button - the value at which the  button is considered off/released                                    
-                                                // E.g. Trigger at 2000 and release at 4000 so pressure variance doesn't cause a rapid on/off around the trigger point
-  int16_t TriggerPartlyReleasedValue;           // E.g. Partial dissengagement post full press before virtual analog emulation engages
+  int16_t MinAnalogValue;             // Min value for analog input
+  int16_t MaxAnalogValue;             // Max value for analog input
+                                      // e.g. any variable resistor used in physical might not range from theoretical min->max values,
+                                      // or you might want to also have dead zones
+                                      // Device max measuring range is 0->4095, you can watch the serial monitor with
+                                      // EXTRA_SERIAL_DEBUG_PLUS enabled to see physical values generated by device
+  int16_t TriggerOnValue;             // For analog button - the value at which the button is considered on/pressed
+  int16_t TriggerOffValue;            // For analog button - the value at which the  button is considered off/released
+                                      // E.g. Trigger at 2000 and release at 4000 so pressure variance doesn't cause a rapid on/off around the trigger point
+  int16_t TriggerPartlyReleasedValue; // E.g. Partial dissengagement post full press before virtual analog emulation engages
 
-  //int16_t VirtualDigitalPin;                    // When used, sets PRESSED/RELEASED here based on trigger points, for use as a virtual digital pin on digital inputs
-  //VirtualAnalogCopyTypes VirtualAnalogCopyType; // How to copy over values into virtual values
-  //int16_t VirtualAnalogValue;                   // For any other controls using this Input as a VirtualPin, value is set here. Input may manipulate this value as it see's fit
+  // int16_t VirtualDigitalPin;                    // When used, sets PRESSED/RELEASED here based on trigger points, for use as a virtual digital pin on digital inputs
+  // VirtualAnalogCopyTypes VirtualAnalogCopyType; // How to copy over values into virtual values
+  // int16_t VirtualAnalogValue;                   // For any other controls using this Input as a VirtualPin, value is set here. Input may manipulate this value as it see's fit
 
-  BleGamepadFunctionPointer BluetoothPressOperation;
-  BleGamepadFunctionPointer BluetoothReleaseOperation; 
-  BleGamepadFunctionPointerInt BluetoothSetOperation;
-  ControllerReport (*CustomOperationPressed)(); // Custom/specific operation, code may be within controller .cpp
-  ControllerReport (*CustomOperationReleased)();// Custom/specific operation, code may be within controller .cpp
+  // BleGamepadFunctionPointer BluetoothPressOperation;
+  // BleGamepadFunctionPointer BluetoothReleaseOperation;
+  // BleGamepadFunctionPointerInt BluetoothSetOperation;
+  GamepadFunctionPointer BluetoothPressOperation;
+  GamepadFunctionPointer BluetoothReleaseOperation;
+  GamepadFunctionPointerInt BluetoothSetOperation;
+  ControllerReport (*CustomOperationPressed)();  // Custom/specific operation, code may be within controller .cpp
+  ControllerReport (*CustomOperationReleased)(); // Custom/specific operation, code may be within controller .cpp
 
-  void (*RenderOperation)(struct Input*);       // How input is rendered to the screen - usually on state change (pressed, released)
- 
+  void (*RenderOperation)(struct Input *); // How input is rendered to the screen - usually on state change (pressed, released)
+
   int XPos;
   int YPos;
   int RenderWidth;
@@ -122,51 +144,52 @@ typedef struct Input {
   unsigned char TrueIcon;
   unsigned char FalseIcon;
 
-  Stats *Statistics;                            // Stats for this input, if required
-                                                // Below LED's are ALWAYS used/set, non existence defaults to {0,0,0,false} which will turn things off
-  LED OnboardLED;                               // Onboard LED is merged into other Onboard LED colours to create a `final combined colour`. Max of each R,G,B component generally gets used.
-  ExternalLEDConfig* LEDConfig;
+  Stats *Statistics; // Stats for this input, if required
+                     // Below LED's are ALWAYS used/set, non existence defaults to {0,0,0,false} which will turn things off
+  LED OnboardLED;    // Onboard LED is merged into other Onboard LED colours to create a `final combined colour`. Max of each R,G,B component generally gets used.
+  ExternalLEDConfig *LEDConfig;
 
-  int ProfileId;                                // Set > 0 to enable this Input for Profile Id override inclusion on startup
-  State ValueState;                             // Master set of data that stores actual state of input (PRESSED, NOT_PRESSED) and/or analog value, and also tracks when state changes happen etc.
-  unsigned long LongPressTiming;                // Delayed operation timing in milliseconds for alternative press operation
-  Input *LongPressChildInput;                   // Equivalent Input configuration that kicks in if a delayed operation is required and is triggered
+  int ProfileId;                 // Set > 0 to enable this Input for Profile Id override inclusion on startup
+  State ValueState;              // Master set of data that stores actual state of input (PRESSED, NOT_PRESSED) and/or analog value, and also tracks when state changes happen etc.
+  unsigned long LongPressTiming; // Delayed operation timing in milliseconds for alternative press operation
+  Input *LongPressChildInput;    // Equivalent Input configuration that kicks in if a delayed operation is required and is triggered
   // Set automatically by code
-  Input *LongPressParentInput;                  // Pointer back to the parent input that triggered the long press, so we can access the original input's timing
-  unsigned long ShortPressReleaseTime;          // If this was a short press, how long to auto-hold the button on for. Can simulate someone pressing for a moment to e.g. let LEDs light up for a time period.
+  Input *LongPressParentInput;         // Pointer back to the parent input that triggered the long press, so we can access the original input's timing
+  unsigned long ShortPressReleaseTime; // If this was a short press, how long to auto-hold the button on for. Can simulate someone pressing for a moment to e.g. let LEDs light up for a time period.
 
-  unsigned long AutoHold;                       // Timer used to automatically hold a button for a time period after release *used with ShortPressReleaseTime)
+  unsigned long AutoHold; // Timer used to automatically hold a button for a time period after release *used with ShortPressReleaseTime)
 
- } Input;
+} Input;
 
 // DPad input - Hat's have 4 inputs for Up/Down/Left/Right
-typedef struct HatInput {
+typedef struct HatInput
+{
   uint8_t Pins[4];
-  char* Label;
-  int BluetoothHat;                             // 0->3
+  char *Label;
+  int BluetoothHat; // 0->3
   int16_t DefaultValue;
 
-  void (*RenderOperation)(struct HatInput*);    // Single general operation - does the job
+  void (*RenderOperation)(struct HatInput *); // Single general operation - does the job
   int XPos;
   int YPos;
   int RenderWidth;
   int RenderHeight;
-  unsigned char StartIcon;                      // Represents first icon in list of mapped icons. Should be 9 - Neutral, Up, UpRight, Right, DownRight, Down, DownLeft, Left, UpLeft
+  unsigned char StartIcon; // Represents first icon in list of mapped icons. Should be 9 - Neutral, Up, UpRight, Right, DownRight, Down, DownLeft, Left, UpLeft
 
-  ControllerReport (*ExtraOperation[9])();      // Extra operations that can run if neutral/up/up right/right/down right/down/down left/left/up left
-  void (*CustomOperation)(struct HatInput*);    // Controller specific operation, code within controller .cpp
+  ControllerReport (*ExtraOperation[9])();    // Extra operations that can run if neutral/up/up right/right/down right/down/down left/left/up left
+  void (*CustomOperation)(struct HatInput *); // Controller specific operation, code within controller .cpp
 
   Stats *Statistics[9];
 
   LED OnboardLED[9];
 
   // ExternalLEDNumbers are separate to LEDConfigs - multiple LEDConfigs might point back to the same ExternalLED (e.g. single one that shows different colour for each hat position)
-  ExternalLEDConfig* LEDConfigs[9];
+  ExternalLEDConfig *LEDConfigs[9];
 
   // Following don't need initialising
   long IndividualStateChangedWhen[4];
   uint8_t PreviousValuePin;
   uint8_t IndividualStates[5];
-  
+
   State ValueState;
 } HatInput;

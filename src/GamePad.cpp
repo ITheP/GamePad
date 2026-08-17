@@ -6,7 +6,9 @@
 #define NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
 #include <Adafruit_SSD1306.h>
 #include <RREFont.h>
-#include <BleGamepad.h>
+// #include <bleGamepad.h>
+#include <BleCompositeHID.h>
+#include <GamepadDevice.h>
 #include <FS.h>
 #include <LittleFS.h>
 // #include <esp_private/panic_internal.h>
@@ -24,7 +26,7 @@
 #include "Benchmark.h"
 #include "Battery.h"
 #include "GamePad.h"
-#include "Network.h"
+#include "Networking.h"
 #include "Secrets.h"
 #include "Screen.h"
 #include "UI.h"
@@ -34,7 +36,12 @@
 #include "Debug.h"
 #include "Web.h"
 
-#include "driver/rmt.h"
+#include "driver/rmt_types.h"
+#include "driver/rmt_rx.h"
+#include "driver/rmt_common.h"
+#include "esp_netif.h"
+
+// #include "driver/rmt.h"
 #include "driver/gpio.h"
 
 // Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
@@ -101,7 +108,10 @@ int Logo_RunCount = sizeof(Logo) / sizeof(Logo[0]);
 // -----------------------------------------------------
 // Gamepad
 
-BleGamepad bleGamepad;
+// BleGamepad* bleGamepad = nullptr;
+BleCompositeHID *compositeHID = nullptr;
+GamepadDevice *gamepadDevice = nullptr;
+
 bool BTConnectionState;
 bool PreviousBTConnectionState;
 
@@ -382,11 +392,11 @@ void setupWiFi()
   Serial_INFO;
   Serial.println("🛜 Setting up WiFi...");
 
-  if (Network::WiFiDisabled)
+  if (Networking::WiFiDisabled)
   {
     Serial_WARN;
     Serial.print("🛜 ⛔ WiFi Disabled - ");
-    Serial.println(Network::WiFiStatus);
+    Serial.println(Networking::WiFiStatus);
 
     Serial.println("🌐 ⚠️ Web server requires a network connection, so has also been disabled");
     return;
@@ -519,89 +529,223 @@ void setupDigitalInputs()
   }
 }
 
+static bool IRAM_ATTR on_rmt_rx_done(rmt_channel_handle_t rx_chan,
+                                     const rmt_rx_done_event_data_t *edata,
+                                     void *user_data)
+{
+  PulseInput *pulseInput = static_cast<PulseInput *>(user_data);
+  const rmt_symbol_word_t *symbols = edata->received_symbols;
+  size_t num_symbols = edata->num_symbols;
+
+  for (size_t j = 0; j < num_symbols; j++)
+  {
+    rmt_symbol_word_t item = symbols[j];
+
+    if (item.duration0 == 0 && item.duration1 == 0)
+      continue;
+
+    uint32_t highPulseUs = 0;
+    uint32_t lowPulseUs = 0;
+
+    if (item.level0 == 1)
+      highPulseUs = item.duration0;
+    else
+      lowPulseUs = item.duration0;
+
+    if (item.level1 == 1)
+      highPulseUs = item.duration1;
+    else
+      lowPulseUs = item.duration1;
+
+    pulseInput->HighPulseUs = highPulseUs;
+    pulseInput->TotalPeriodUs = highPulseUs + lowPulseUs;
+    pulseInput->FreshData = true;
+  }
+
+  // Re-arm receiver with 10 µs (10,000 ns) glitch filter threshold
+  rmt_receive_config_t rx_cfg = {
+      .signal_range_min_ns = 10000, // Ignore pulses shorter than 10 µs
+      .signal_range_max_ns = 0,     // 0 = no maximum pulse limit
+  };
+
+  rmt_receive(rx_chan, pulseInput->raw_symbols, sizeof(pulseInput->raw_symbols), &rx_cfg);
+
+  return false;
+}
+
 void setupPulseInputs()
 {
 #ifdef DEBUG_MARKS
   Debug::Mark(1, __LINE__, __FILE__, __func__);
 #endif
 
-  // Pulse Inputs
   Serial.println();
   Serial_INFO;
   Serial.println("🎚 Pulse Inputs on RMT: " + String(PulseInputs_Count));
 
-  // ESP32 has 8 RMT channels total:
-  // Channels 0–3 RX (Receive) only
-  // Channels 4–7 TX (Transmit) only
-  // We want to use RX channels, so we need to make sure we use channel 4-7
-  // TODO: Check correct number error if > 4
+  int count = PulseInputs_Count;
+  if (count > 4)
   {
-    int count = PulseInputs_Count;
-    if (PulseInputs_Count > 4)
+    Serial_ERROR;
+    Serial.println("Warning: ESP32-S3 supports up to 4 RMT RX channels. Only first 4 PulseInput definitions will be used.");
+    count = 4;
+  }
+
+  // Shared callback structure
+  rmt_rx_event_callbacks_t cbs = {
+      .on_recv_done = on_rmt_rx_done,
+  };
+
+  for (int i = 0; i < count; i++)
+  {
+    PulseInput *pulseInput = PulseInputs[i];
+
+    Serial.print("..." + String(pulseInput->Label));
+
+    pinMode(pulseInput->Pin, INPUT_PULLUP);
+
+    // 1. Configure RMT RX Channel
+    rmt_rx_channel_config_t rx_chan_config = {
+        .gpio_num = (gpio_num_t)pulseInput->Pin,
+        .clk_src = RMT_CLK_SRC_DEFAULT,
+        .resolution_hz = 1000000, // 1 MHz resolution = 1 µs tick size
+        .mem_block_symbols = 64,
+        .flags = {
+            .invert_in = false,
+            .with_dma = false,
+        },
+    };
+
+    rmt_channel_handle_t rx_channel = NULL;
+    esp_err_t err = rmt_new_rx_channel(&rx_chan_config, &rx_channel);
+    if (err != ESP_OK)
     {
-      Serial_ERROR;
-      Serial.println("Warning: ESP32-S3 only supports up to 4 RMT RX channels. Only first 4 PulseInput definitions will be used.");
-      count = 4;
+      Serial.printf(" RMT rx channel creation failed: %s\n", esp_err_to_name(err));
+      continue;
     }
 
-    PulseInput *pulseInput;
-    for (int i = 0; i < count; i++)
+    // 2. Register Event Callbacks
+    err = rmt_rx_register_event_callbacks(rx_channel, &cbs, pulseInput);
+    if (err != ESP_OK)
     {
-      pulseInput = PulseInputs[i];
-
-      Serial.print("..." + String(pulseInput->Label));
-
-      pinMode(pulseInput->Pin, INPUT_PULLUP);
-      rmt_channel_t rmt_channel = (rmt_channel_t)(i); // Channel 4, 5, 6, 7
-
-      // 2. Uninstall any existing driver state on this channel
-      rmt_driver_uninstall(rmt_channel);
-
-      rmt_config_t config = {};
-      config.rmt_mode = RMT_MODE_RX;
-      config.channel = rmt_channel;
-      config.gpio_num = (gpio_num_t)pulseInput->Pin;
-      config.clk_div = 80;      // 1 µs resolution (80 MHz / 80 = 1 MHz)
-      config.mem_block_num = 1; // MUST be 1 on ESP32-S3 RX channels
-
-      config.rx_config.filter_en = true;
-      config.rx_config.filter_ticks_thresh = 10; // ignore <10 µs glitches
-      config.rx_config.idle_threshold = 1000;    // 20 ms max pulse
-
-      // ESP_ERROR_CHECK(rmt_config(&config));
-      // ESP_ERROR_CHECK(rmt_driver_install(config.channel, 1000, 0));
-      // ESP_ERROR_CHECK(rmt_rx_start(config.channel, true));
-
-      Serial.printf(" started on pin %d, RMT channel %d, clk_div %d, filter_ticks_thresh %d, idle_threshold %d",
-                    pulseInput->Pin,
-                    config.channel,
-                    config.clk_div,
-                    config.rx_config.filter_ticks_thresh,
-                    config.rx_config.idle_threshold);
-      Serial.println();
-      
-      esp_err_t err = rmt_config(&config);
-      if (err != ESP_OK)
-      {
-        Serial.printf("RMT config failed on channel %d: %s\n", i, esp_err_to_name(err));
-      }
-
-      // Install driver with a 2048-byte ring buffer (Must be > 256 bytes)
-      err = rmt_driver_install(config.channel, 2048, 0);
-      if (err != ESP_OK)
-      {
-        Serial.printf("RMT driver install failed on channel %d: %s\n", i, esp_err_to_name(err));
-      }
-
-      // Start receiver
-      err = rmt_rx_start(config.channel, true);
-      if (err != ESP_OK)
-      {
-        Serial.printf("RMT rx_start failed on channel %d: %s\n", i, esp_err_to_name(err));
-      }
+      Serial.printf(" Callback registration failed: %s\n", esp_err_to_name(err));
     }
+
+    // 3. Enable Channel
+    err = rmt_enable(rx_channel);
+    if (err != ESP_OK)
+    {
+      Serial.printf(" RMT enable failed: %s\n", esp_err_to_name(err));
+    }
+
+    pulseInput->rx_channel = rx_channel;
+
+    // 4. Arm Receiver with 10 µs Glitch Filter (10,000 ns)
+    rmt_receive_config_t rx_cfg = {
+        .signal_range_min_ns = 10000, // Pulses shorter than 10,000 ns (10 µs) are discarded
+        .signal_range_max_ns = 0,
+    };
+    rmt_receive(rx_channel, pulseInput->raw_symbols, sizeof(pulseInput->raw_symbols), &rx_cfg);
+
+    Serial.printf(" started on pin %d with 1us resolution\n", pulseInput->Pin);
   }
 }
+
+// void setupPulseInputs()
+// {
+// #ifdef DEBUG_MARKS
+//   Debug::Mark(1, __LINE__, __FILE__, __func__);
+// #endif
+
+//   // Pulse Inputs
+//   Serial.println();
+//   Serial_INFO;
+//   Serial.println("🎚 Pulse Inputs on RMT: " + String(PulseInputs_Count));
+
+//   // ESP32 has 8 RMT channels total:
+//   // Channels 0–3 RX (Receive) only
+//   // Channels 4–7 TX (Transmit) only
+//   // We want to use RX channels, so we need to make sure we use channel 4-7
+//   // TODO: Check correct number error if > 4
+//   {
+//     int count = PulseInputs_Count;
+//     if (PulseInputs_Count > 4)
+//     {
+//       Serial_ERROR;
+//       Serial.println("Warning: ESP32-S3 only supports up to 4 RMT RX channels. Only first 4 PulseInput definitions will be used.");
+//       count = 4;
+//     }
+
+//     PulseInput *pulseInput;
+//     for (int i = 0; i < count; i++)
+//     {
+//       pulseInput = PulseInputs[i];
+
+//       Serial.print("..." + String(pulseInput->Label));
+
+//       pinMode(pulseInput->Pin, INPUT_PULLUP);
+//       rmt_channel_t rmt_channel = (rmt_channel_t)(i + 6); // Channel 4, 5, 6, 7
+
+//       // Uninstall any existing driver state on this channel
+//       rmt_driver_uninstall(rmt_channel);
+
+//       rmt_config_t config = {};
+
+//       // TEST
+//       memset(&config, 0, sizeof(rmt_config_t)); // Clear all struct memory
+
+//       config.rmt_mode = RMT_MODE_RX;
+//       config.channel = rmt_channel;
+//       config.gpio_num = (gpio_num_t)pulseInput->Pin;
+//       config.clk_div = 80;      // 1 µs resolution (80 MHz / 80 = 1 MHz)
+//       config.mem_block_num = 1; // MUST be 1 on ESP32-S3 RX channels
+
+//       config.rx_config.filter_en = true;
+//       config.rx_config.filter_ticks_thresh = 10; // ignore <10 µs glitches
+//       config.rx_config.idle_threshold = 1000;    // 20 ms max pulse
+
+//       // ESP_ERROR_CHECK(rmt_config(&config));
+//       // ESP_ERROR_CHECK(rmt_driver_install(config.channel, 1000, 0));
+//       // ESP_ERROR_CHECK(rmt_rx_start(config.channel, true));
+
+//       Serial.printf(" started on pin %d, RMT channel %d, clk_div %d, filter_ticks_thresh %d, idle_threshold %d",
+//                     pulseInput->Pin,
+//                     config.channel,
+//                     config.clk_div,
+//                     config.rx_config.filter_ticks_thresh,
+//                     config.rx_config.idle_threshold);
+//       Serial.println();
+
+//       esp_err_t err = rmt_config(&config);
+//       if (err != ESP_OK)
+//       {
+//         Serial.printf("RMT config failed on channel %d: %s\n", i, esp_err_to_name(err));
+//       }
+
+//       // if (2048 <= (RMT_MEM_ITEM_NUM * 1)) {
+//       //             ESP_LOGE(RMT_TAG, "---RX buffer to small: %d", rx_buf_size);
+//       //             return ESP_ERR_INVALID_ARG;
+//       //         }
+
+//       // Install driver with a 2048-byte ring buffer (Must be > 256 bytes)
+//       err = rmt_driver_install(config.channel, 2048, 0);
+//       if (err != ESP_OK)
+//       {
+//         Serial.printf("RMT driver install failed on channel %d: %s\n", i, esp_err_to_name(err));
+//       }
+
+//       // Start receiver
+//       err = rmt_rx_start(config.channel, true);
+//       if (err != ESP_OK)
+//       {
+//         Serial.printf("RMT rx_start failed on channel %d: %s\n", i, esp_err_to_name(err));
+//       }
+
+//       Serial.println("done");
+//       while(1);
+//     }
+//   }
+// }
 
 // void setupPulseInputs()
 // {
@@ -1005,18 +1149,18 @@ void setupProfile()
   if (CurrentProfile->WiFi_Name.length() == 0)
   {
     Serial.println("👤 🛜 ⛔ No WiFi specified, WiFi functionality disabled");
-    Network::WiFiDisabled = true;
-    Network::WiFiStatus = const_cast<const char *>("WiFi Disabled (Not Configured)");
-    Network::WiFiCharacter = Icon_WiFi_Disabled;
+    Networking::WiFiDisabled = true;
+    Networking::WiFiStatus = const_cast<const char *>("WiFi Disabled (Not Configured)");
+    Networking::WiFiCharacter = Icon_WiFi_Disabled;
   }
   else
-    Network::WiFiDisabled = false;
+    Networking::WiFiDisabled = false;
 
   if (CurrentProfile->WiFi_Password.length() == 0)
     Serial.println("👤 🛜 ⚠️ No WiFi password specified. This might be ok.");
 
-  Network::ssid = CurrentProfile->WiFi_Name.c_str();
-  Network::password = CurrentProfile->WiFi_Password.c_str();
+  Networking::ssid = CurrentProfile->WiFi_Name.c_str();
+  Networking::password = CurrentProfile->WiFi_Password.c_str();
 }
 
 void setupBluetooth()
@@ -1158,6 +1302,104 @@ void setupDeviceIdentifiers()
   sprintf(SerialNumber, "%llu%d", ESPChipId, ESPChipIdOffset);
 }
 
+// void setupController()
+// {
+// #ifdef DEBUG_MARKS
+//   Debug::Mark(1, __LINE__, __FILE__, __func__);
+// #endif
+
+//   Serial.println();
+
+//   //bleGamepad = BleGamepad(FullDeviceName, ControllerType, 100);
+//   bleGamepad = new BleGamepad(FullDeviceName, ControllerType, 100);
+
+//   Serial_INFO;
+//   Serial.println("🔗 Final Bluetooth configuration...");
+//   Serial.println("... Name: " + String(FullDeviceName));
+//   Serial.println("... Type: " + String(ControllerType));
+//   BleGamepadConfiguration bleGamepadConfig;
+
+//   bleGamepadConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
+//   Serial.println("... Controller Type: Gamepad");
+
+//   bleGamepadConfig.setVid(VID);
+//   Serial.println("... VID: " + String(VID)); // Cosmetic
+
+//   bleGamepadConfig.setPid(PID);
+//   Serial.println("... PID: " + String(PID)); // Cosmetic
+
+//   bleGamepadConfig.setModelNumber(ModelNumber);
+//   Serial.println("... Model Number: " + String(ModelNumber)); // Cosmetic
+
+//   bleGamepadConfig.setSerialNumber(SerialNumber);
+//   Serial.println("... Serial Number: " + String(SerialNumber)); // Cosmetic
+
+//   Serial.println("... Core build: " + String(GetBuildVersion()));
+
+//   // TODO: Revision versions in config file
+//   bleGamepadConfig.setFirmwareRevision(FirmwareRevision);       // Version of this firmware
+//   Serial.println("... Firmware: v" + String(FirmwareRevision)); // Cosmetic
+
+//   bleGamepadConfig.setHardwareRevision(HardwareRevision);       // Version of circuit board etc.
+//   Serial.println("... Hardware: v" + String(HardwareRevision)); // Cosmetic
+
+//   bleGamepadConfig.setSoftwareRevision(SoftwareRevision);
+//   Serial.println("... Software: v" + String(SoftwareRevision)); // Cosmetic
+
+//   bleGamepadConfig.setHidReportId(1);
+
+//   // Start, Select, Menu, Home, Back, VolumeInc, VolumeDec, b
+//   // TODO: Actual digital count of bluetooth devices (loop and count)
+//   bleGamepadConfig.setButtonCount(DigitalInputs_Count);
+//   Serial.println("... Buttons/Digital Input Count: " + String(DigitalInputs_Count));
+
+//   // bleGamepadConfig.setButtonCount(AnalogInputs_Count);
+//   Serial.println("... Analog Input Count: " + String(AnalogInputs_Count));
+
+//   bleGamepadConfig.setWhichSpecialButtons(true, true, true, true, true, true, true, true);
+//   bleGamepadConfig.setHatSwitchCount(HatInputs_Count);
+//   Serial.println("... Hat Count: " + String(HatInputs_Count));
+
+// #ifdef Enable_Slider1
+//   bleGamepadConfig.setIncludeSlider1(true);
+//   Serial.println("... Slider 1 Enabled");
+// #endif
+
+// #ifdef Enable_Slider2
+//   bleGamepadConfig.setIncludeSlider2(true);
+//   Serial.println("... Slider 2 Enabled");
+// #endif
+
+//   // Other possibilities, might want to use some time
+//   // bleGamepadConfig.setIncludeXAxis(false);
+//   // bleGamepadConfig.setIncludeYAxis(false);
+//   // bleGamepadConfig.setIncludeRxAxis(false);
+//   // bleGamepadConfig.setIncludeRyAxis(false);
+//   // bleGamepadConfig.setIncludeRzAxis(false);
+
+//   bleGamepadConfig.setAutoReport(false);
+
+//   //   Display.fillRect(0, 0, 100, 100, C_BLACK);
+//   // RRE.printStr(20, 20, "A");
+//   // Display.display();
+//   // delay(250);
+
+// #ifdef DEBUG_MARKS
+//   Debug::Mark(2, __LINE__, __FILE__, __func__);
+// #endif
+
+//   bleGamepad->begin(&bleGamepadConfig); // Note - changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
+
+// #ifdef DEBUG_MARKS
+//   Debug::Mark(3, __LINE__, __FILE__, __func__);
+// #endif
+
+//   // Display.fillRect(0, 0, 100, 100, C_BLACK);
+//   // RRE.printStr(20, 20, "B");
+//   // Display.display();
+//   // delay(250);
+// }
+
 void setupController()
 {
 #ifdef DEBUG_MARKS
@@ -1166,93 +1408,91 @@ void setupController()
 
   Serial.println();
 
-  bleGamepad = BleGamepad(FullDeviceName, ControllerType, 100);
-
   Serial_INFO;
   Serial.println("🔗 Final Bluetooth configuration...");
   Serial.println("... Name: " + String(FullDeviceName));
   Serial.println("... Type: " + String(ControllerType));
-  BleGamepadConfiguration bleGamepadConfig;
 
-  bleGamepadConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
-  Serial.println("... Controller Type: Gamepad");
+  // 1. Instantiate Composite Host (Name, Manufacturer, Battery Level)
+  compositeHID = new BleCompositeHID(FullDeviceName, ControllerType, 100);
 
-  bleGamepadConfig.setVid(VID);
-  Serial.println("... VID: " + String(VID)); // Cosmetic
+  // 2. Set VID / PID and DIS Metadata directly on the Device Information Service
+  BLEHostConfiguration hostConfig;
 
-  bleGamepadConfig.setPid(PID);
-  Serial.println("... PID: " + String(PID)); // Cosmetic
+  hostConfig.setVid(VID);
+  Serial.println("... VID: " + String(VID));
 
-  bleGamepadConfig.setModelNumber(ModelNumber);
-  Serial.println("... Model Number: " + String(ModelNumber)); // Cosmetic
+  hostConfig.setPid(PID);
+  Serial.println("... PID: " + String(PID));
 
-  bleGamepadConfig.setSerialNumber(SerialNumber);
-  Serial.println("... Serial Number: " + String(SerialNumber)); // Cosmetic
+  hostConfig.setModelNumber(ModelNumber);
+  Serial.println("... Model Number: " + String(ModelNumber));
+
+  hostConfig.setSerialNumber(SerialNumber);
+  Serial.println("... Serial Number: " + String(SerialNumber));
+
+  hostConfig.setFirmwareRevision(FirmwareRevision);
+  Serial.println("... Firmware: v" + String(FirmwareRevision));
+
+  hostConfig.setHardwareRevision(HardwareRevision);
+  Serial.println("... Hardware: v" + String(HardwareRevision));
+
+  hostConfig.setSoftwareRevision(SoftwareRevision);
+  Serial.println("... Software: v" + String(SoftwareRevision));
 
   Serial.println("... Core build: " + String(GetBuildVersion()));
 
-  // TODO: Revision versions in config file
-  bleGamepadConfig.setFirmwareRevision(FirmwareRevision);       // Version of this firmware
-  Serial.println("... Firmware: v" + String(FirmwareRevision)); // Cosmetic
+  // 3. Configure Gamepad HID Report parameters
+  GamepadConfiguration gamepadConfig;
 
-  bleGamepadConfig.setHardwareRevision(HardwareRevision);       // Version of circuit board etc.
-  Serial.println("... Hardware: v" + String(HardwareRevision)); // Cosmetic
+  gamepadConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD);
+  Serial.println("... Controller Type: Gamepad");
 
-  bleGamepadConfig.setSoftwareRevision(SoftwareRevision);
-  Serial.println("... Software: v" + String(SoftwareRevision)); // Cosmetic
+  // Serial.println("... VID: " + String(VID));
+  // Serial.println("... PID: " + String(PID));
+  // Serial.println("... Model Number: " + String(ModelNumber));
+  // Serial.println("... Serial Number: " + String(SerialNumber));
+  // Serial.println("... Core build: " + String(GetBuildVersion()));
+  // Serial.println("... Firmware: v" + String(FirmwareRevision));
+  // Serial.println("... Hardware: v" + String(HardwareRevision));
+  // Serial.println("... Software: v" + String(SoftwareRevision));
 
-  bleGamepadConfig.setHidReportId(1);
-
-  // Start, Select, Menu, Home, Back, VolumeInc, VolumeDec, b
-  // TODO: Actual digital count of bluetooth devices (loop and count)
-  bleGamepadConfig.setButtonCount(DigitalInputs_Count);
+  gamepadConfig.setButtonCount(DigitalInputs_Count);
   Serial.println("... Buttons/Digital Input Count: " + String(DigitalInputs_Count));
-
-  // bleGamepadConfig.setButtonCount(AnalogInputs_Count);
   Serial.println("... Analog Input Count: " + String(AnalogInputs_Count));
 
-  bleGamepadConfig.setWhichSpecialButtons(true, true, true, true, true, true, true, true);
-  bleGamepadConfig.setHatSwitchCount(HatInputs_Count);
+  gamepadConfig.setWhichSpecialButtons(true, true, true, true, true, true, true, true);
+  gamepadConfig.setHatSwitchCount(HatInputs_Count);
   Serial.println("... Hat Count: " + String(HatInputs_Count));
 
 #ifdef Enable_Slider1
-  bleGamepadConfig.setIncludeSlider1(true);
+  gamepadConfig.setIncludeSlider1(true);
   Serial.println("... Slider 1 Enabled");
 #endif
 
 #ifdef Enable_Slider2
-  bleGamepadConfig.setIncludeSlider2(true);
+  gamepadConfig.setIncludeSlider2(true);
   Serial.println("... Slider 2 Enabled");
 #endif
 
-  // Other possibilities, might want to use some time
-  // bleGamepadConfig.setIncludeXAxis(false);
-  // bleGamepadConfig.setIncludeYAxis(false);
-  // bleGamepadConfig.setIncludeRxAxis(false);
-  // bleGamepadConfig.setIncludeRyAxis(false);
-  // bleGamepadConfig.setIncludeRzAxis(false);
-
-  bleGamepadConfig.setAutoReport(false);
-
-  //   Display.fillRect(0, 0, 100, 100, C_BLACK);
-  // RRE.printStr(20, 20, "A");
-  // Display.display();
-  // delay(250);
+  gamepadConfig.setAutoReport(false);
 
 #ifdef DEBUG_MARKS
   Debug::Mark(2, __LINE__, __FILE__, __func__);
 #endif
 
-  bleGamepad.begin(&bleGamepadConfig); // Note - changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
+  // 4. Create Gamepad Device instance with its configuration
+  gamepadDevice = new GamepadDevice(gamepadConfig);
+
+  // 5. Attach Gamepad Device to Host
+  compositeHID->addDevice(gamepadDevice);
+
+  // 6. Start BLE service passing hostConfig
+  compositeHID->begin(hostConfig);
 
 #ifdef DEBUG_MARKS
   Debug::Mark(3, __LINE__, __FILE__, __func__);
 #endif
-
-  // Display.fillRect(0, 0, 100, 100, C_BLACK);
-  // RRE.printStr(20, 20, "B");
-  // Display.display();
-  // delay(250);
 }
 
 void SetupLittleFS()
@@ -1477,7 +1717,7 @@ void setup()
 
 #ifdef WEBSERVER
   // Make sure this is done AFTER the above, as normal web server setup includes references to things like current profile
-  if (!Network::WiFiDisabled)
+  if (!Networking::WiFiDisabled)
     setupWebServer(false);
 #endif
 
@@ -1640,7 +1880,7 @@ void ConfigLoop()
     Display.display();
   }
 
-  Network::Config_UpdateScanResults();
+  Networking::Config_UpdateScanResults();
 }
 
 void MainLoop()
@@ -1746,7 +1986,7 @@ void MainLoop()
     else if (Battery::PreviousBatteryLevel != currentBatteryLevel)
     {
       Battery::PreviousBatteryLevel = currentBatteryLevel;
-      bleGamepad.setBatteryLevel(currentBatteryLevel);
+      compositeHID->setBatteryLevel(currentBatteryLevel);
       sendReport = true;
 
       // Redraw standard battery icon if required
@@ -1999,8 +2239,8 @@ void MainLoop()
             if (input->BluetoothInput != 0)
             {
 
-              // bleGamepad.press(input->BluetoothInput);
-              (bleGamepad.*(input->BluetoothPressOperation))(input->BluetoothInput);
+              // bleGamepad->press(input->BluetoothInput);
+              (gamepadDevice->*(input->BluetoothPressOperation))(input->BluetoothInput);
 
               sendReport = true;
             }
@@ -2022,8 +2262,8 @@ void MainLoop()
           {
             if (input->BluetoothInput != 0)
             {
-              // bleGamepad.release(input->BluetoothInput);
-              (bleGamepad.*(input->BluetoothReleaseOperation))(input->BluetoothInput);
+              // bleGamepad->release(input->BluetoothInput);
+              (gamepadDevice->*(input->BluetoothReleaseOperation))(input->BluetoothInput);
 
               sendReport = true;
             }
@@ -2044,136 +2284,154 @@ void MainLoop()
   Debug::Mark(2195, __LINE__, __FILE__, __func__, "Pulse Inputs");
 #endif
 
-  // Processed purely to calculate values to be used later in analog inputs
-
   PulseInput *pulseInput;
   for (int i = 0; i < PulseInputs_Count; i++)
   {
-    pulseInput = PulseInputs[i];
-
-    rmt_channel_t channel = (rmt_channel_t)(RMT_CHANNEL_4 + i);
-
-    RingbufHandle_t rb = NULL;
-    if (rmt_get_ringbuf_handle(channel, &rb) == ESP_OK && rb != NULL)
-    {
-      size_t length = 0;
-
-      rmt_item32_t *items = (rmt_item32_t *)xRingbufferReceive(rb, &length, 0);
-
-      //   if (item && length >= sizeof(rmt_item32_t))
-      //   {
-      //     // Each item contains HIGH then LOW durations
-      //     uint32_t highPulseUs = item->duration0;
-      //     uint32_t lowPulseUs = item->duration1;
-      //     uint32_t periodUs = highPulseUs + lowPulseUs;
-
-      //     pulseInput->HighPulseUs = highPulseUs;
-      //     pulseInput->TotalPeriodUs = periodUs;
-      //     pulseInput->FreshData = true;
-
-      //     vRingbufferReturnItem(rb, item);
-      //   }
-      // }
-
-      if (items != NULL && length >= sizeof(rmt_item32_t))
-      {
-        int num_items = length / sizeof(rmt_item32_t);
-
-        // Loop through all items returned in this transaction
-        for (int j = 0; j < num_items; j++)
-        {
-          rmt_item32_t item = items[j];
-
-          // Skip RMT end-of-packet markers (zero duration)
-          if (item.duration0 == 0 && item.duration1 == 0)
-            continue;
-
-          uint32_t highPulseUs = 0;
-          uint32_t lowPulseUs = 0;
-
-          // Check level0 and level1 bits to identify HIGH vs LOW
-          if (item.level0 == 1)
-          {
-            highPulseUs = item.duration0;
-          }
-          else
-          {
-            lowPulseUs = item.duration0;
-          }
-
-          if (item.level1 == 1)
-          {
-            highPulseUs = item.duration1;
-          }
-          else
-          {
-            lowPulseUs = item.duration1;
-          }
-
-          // Store measurements
-          pulseInput->HighPulseUs = highPulseUs;
-          pulseInput->TotalPeriodUs = highPulseUs + lowPulseUs;
-          pulseInput->FreshData = true;
-        }
-
-        // Return buffer memory back to FreeRTOS
-        vRingbufferReturnItem(rb, (void *)items);
-      }
-    }
+    PulseInput *pulseInput = PulseInputs[i];
 
     if (pulseInput->FreshData)
     {
       pulseInput->FreshData = false;
 
-      Serial.printf("High: %u us, Period: %u us\n",
+      Serial.printf("[%s] High: %u us, Period: %u us\n",
+                    pulseInput->Label,
                     pulseInput->HighPulseUs,
                     pulseInput->TotalPeriodUs);
     }
+  }
 
-    //     if (pulseInput->Count > 0)
+  {
+    // Processed purely to calculate values to be used later in analog inputs
+
+    // PulseInput *pulseInput;
+    // for (int i = 0; i < PulseInputs_Count; i++)
+    // {
+    //   pulseInput = PulseInputs[i];
+
+    //   rmt_channel_t channel = (rmt_channel_t)(RMT_CHANNEL_4 + i);
+
+    //   RingbufHandle_t rb = NULL;
+    //   if (rmt_get_ringbuf_handle(channel, &rb) == ESP_OK && rb != NULL)
+    //   {
+    //     size_t length = 0;
+
+    //     rmt_item32_t *items = (rmt_item32_t *)xRingbufferReceive(rb, &length, 0);
+
+    //     //   if (item && length >= sizeof(rmt_item32_t))
+    //     //   {
+    //     //     // Each item contains HIGH then LOW durations
+    //     //     uint32_t highPulseUs = item->duration0;
+    //     //     uint32_t lowPulseUs = item->duration1;
+    //     //     uint32_t periodUs = highPulseUs + lowPulseUs;
+
+    //     //     pulseInput->HighPulseUs = highPulseUs;
+    //     //     pulseInput->TotalPeriodUs = periodUs;
+    //     //     pulseInput->FreshData = true;
+
+    //     //     vRingbufferReturnItem(rb, item);
+    //     //   }
+    //     // }
+
+    //     if (items != NULL && length >= sizeof(rmt_item32_t))
     //     {
-    //       portENTER_CRITICAL(&pulseMux);
-    //       uint32_t high_us = pulseInput->HighPulseUs;
-    //       uint32_t period_us = pulseInput->TotalPeriodUs;
-    //       uint32_t count = pulseInput->Count;
-    //       pulseInput->Count = 0;
-    //       pulseInput->HighPulseUs = 0;
-    //       pulseInput->TotalPeriodUs = 0;
-    //       portEXIT_CRITICAL(&pulseMux);
+    //       int num_items = length / sizeof(rmt_item32_t);
 
-    //       // sanity bounds: ignore spikes
-    //       //if (period_us >= 200 && period_us <= 10000)
-    //       //{
-    //         // Use high_us directly to map zones (preferred)
-    //         uint16_t value = (uint16_t)constrain((high_us / count), 0, 65535);
-    //         pulseInput->ValueState.AnalogValue = value;
+    //       // Loop through all items returned in this transaction
+    //       for (int j = 0; j < num_items; j++)
+    //       {
+    //         rmt_item32_t item = items[j];
 
-    //         // optional: compute duty or convert to Hz
-    //         // float duty = (float)high_us / (float)period_us * 100.0f;
-    //         // float freq = 1e6f / (float)period_us;
+    //         // Skip RMT end-of-packet markers (zero duration)
+    //         if (item.duration0 == 0 && item.duration1 == 0)
+    //           continue;
 
-    // #ifdef INPUT_SERIAL_DEBUG_PLUS
-    //         Serial.printf("Pulse   input %2d [%-35s]: High: %4d us | Count: %4d | Period: %8d us | value: %6d\n",
-    //                       i,
-    //                       pulseInput->Label,
-    //                       high_us,
-    //                       count,
-    //                       period_us,
-    //                       value);
-    // #endif
-    //       //}
+    //         uint32_t highPulseUs = 0;
+    //         uint32_t lowPulseUs = 0;
+
+    //         // Check level0 and level1 bits to identify HIGH vs LOW
+    //         if (item.level0 == 1)
+    //         {
+    //           highPulseUs = item.duration0;
+    //         }
+    //         else
+    //         {
+    //           lowPulseUs = item.duration0;
+    //         }
+
+    //         if (item.level1 == 1)
+    //         {
+    //           highPulseUs = item.duration1;
+    //         }
+    //         else
+    //         {
+    //           lowPulseUs = item.duration1;
+    //         }
+
+    //         // Store measurements
+    //         pulseInput->HighPulseUs = highPulseUs;
+    //         pulseInput->TotalPeriodUs = highPulseUs + lowPulseUs;
+    //         pulseInput->FreshData = true;
+    //       }
+
+    //       // Return buffer memory back to FreeRTOS
+    //       vRingbufferReturnItem(rb, (void *)items);
     //     }
-    //     else
-    //     {
-    //       #ifdef INPUT_SERIAL_DEBUG_PLUS
-    //         Serial.printf("pulse   input %2d [%-35s]: High: %4d us | Count: %4d | Period: %4d us\n",
-    //                       i,
-    //                       pulseInput->Label,
-    //                       pulseInput->HighPulseUs,
-    //                       pulseInput->Count,
-    //                       pulseInput->TotalPeriodUs);
-    // #endif
-    //     }
+    //   }
+
+    //   if (pulseInput->FreshData)
+    //   {
+    //     pulseInput->FreshData = false;
+
+    //     Serial.printf("High: %u us, Period: %u us\n",
+    //                   pulseInput->HighPulseUs,
+    //                   pulseInput->TotalPeriodUs);
+    //   }
+
+    //   //     if (pulseInput->Count > 0)
+    //   //     {
+    //   //       portENTER_CRITICAL(&pulseMux);
+    //   //       uint32_t high_us = pulseInput->HighPulseUs;
+    //   //       uint32_t period_us = pulseInput->TotalPeriodUs;
+    //   //       uint32_t count = pulseInput->Count;
+    //   //       pulseInput->Count = 0;
+    //   //       pulseInput->HighPulseUs = 0;
+    //   //       pulseInput->TotalPeriodUs = 0;
+    //   //       portEXIT_CRITICAL(&pulseMux);
+
+    //   //       // sanity bounds: ignore spikes
+    //   //       //if (period_us >= 200 && period_us <= 10000)
+    //   //       //{
+    //   //         // Use high_us directly to map zones (preferred)
+    //   //         uint16_t value = (uint16_t)constrain((high_us / count), 0, 65535);
+    //   //         pulseInput->ValueState.AnalogValue = value;
+
+    //   //         // optional: compute duty or convert to Hz
+    //   //         // float duty = (float)high_us / (float)period_us * 100.0f;
+    //   //         // float freq = 1e6f / (float)period_us;
+
+    //   // #ifdef INPUT_SERIAL_DEBUG_PLUS
+    //   //         Serial.printf("Pulse   input %2d [%-35s]: High: %4d us | Count: %4d | Period: %8d us | value: %6d\n",
+    //   //                       i,
+    //   //                       pulseInput->Label,
+    //   //                       high_us,
+    //   //                       count,
+    //   //                       period_us,
+    //   //                       value);
+    //   // #endif
+    //   //       //}
+    //   //     }
+    //   //     else
+    //   //     {
+    //   //       #ifdef INPUT_SERIAL_DEBUG_PLUS
+    //   //         Serial.printf("pulse   input %2d [%-35s]: High: %4d us | Count: %4d | Period: %4d us\n",
+    //   //                       i,
+    //   //                       pulseInput->Label,
+    //   //                       pulseInput->HighPulseUs,
+    //   //                       pulseInput->Count,
+    //   //                       pulseInput->TotalPeriodUs);
+    //   // #endif
+    //   //     }
+    // }
   }
 
 #ifdef INCLUDE_BENCHMARKS
@@ -2459,7 +2717,7 @@ void MainLoop()
 
       // Push to bluetooth if relevant to this input
       if (input->BluetoothSetOperation != NONE)
-        (bleGamepad.*(input->BluetoothSetOperation))(rangedState);
+        (gamepadDevice->*(input->BluetoothSetOperation))(rangedState);
 
       // RenderOperation may be specific to if this input is analog or a triggered variant, plus any Virtual Pin dependences on this input.
       // When virtual, recommend you leave relevant rendering to the dependant control
@@ -2475,7 +2733,7 @@ void MainLoop()
   MainBenchmark.Snapshot("Loop.AnalogInputs", showBenchmark);
 #endif
 
-  // Hat inputs
+// Hat inputs
 #ifdef DEBUG_MARKS
   Debug::Mark(300, __LINE__, __FILE__, __func__, "Hat Inputs");
 #endif
@@ -2599,7 +2857,7 @@ void MainLoop()
     Debug::Mark(350, __LINE__, __FILE__, __func__, "Hat Changed");
 #endif
 
-    bleGamepad.setHats(HatValues[0], HatValues[1], HatValues[2], HatValues[3]);
+    gamepadDevice->setHats(HatValues[0], HatValues[1], HatValues[2], HatValues[3]);
     sendReport = true;
   }
 
@@ -2629,7 +2887,7 @@ void MainLoop()
 
   float timeSinceLastAnyControlChanged = Now - LastTimeAnyButtonPressed;
 
-  // Call idle LED effects etc. if controllers not had anything pressed for a while
+// Call idle LED effects etc. if controllers not had anything pressed for a while
 #if defined(USE_ONBOARD_LED) || defined(USE_ONBOARD_LED_STATUS_ONLY)
   if (timeSinceLastAnyControlChanged >= IDLE_LED_TIMEOUT)
   {
@@ -2715,7 +2973,7 @@ void MainLoop()
 #endif
 
   // Bluetooth
-  BTConnectionState = bleGamepad.isConnected();
+  BTConnectionState = compositeHID->isConnected();
 
   if (BTConnectionState == true)
   {
@@ -2724,7 +2982,7 @@ void MainLoop()
 #endif
     if (sendReport)
     {
-      bleGamepad.sendReport();
+      gamepadDevice->sendGamepadReport();
 
 #ifdef EXTRA_SERIAL_DEBUG_PLUS
       Serial.println(String(Frame) + ": BT Report Sent");
@@ -2786,7 +3044,7 @@ void MainLoop()
 
 #ifdef WIFI
   if (SecondRollover)
-    Network::HandleWiFi(Second);
+    Networking::HandleWiFi(Second);
 #endif
 
 #ifdef INCLUDE_BENCHMARKS

@@ -12,7 +12,7 @@
 #include "Utils.h"
 #include "GamePad.h"
 #include "Battery.h"
-#include "Network.h"
+#include "Networking.h"
 #include "Web.h"
 #include "Debug.h"
 #include <Profiles.h>
@@ -42,7 +42,7 @@ static char previousCharAtCursor = 0;                          // The previous c
 // WiFi test state variables
 static String lastTestedPassword = ""; // Track last tested password to know when to test again
 static String lastTestedSSID = "";     // Track last tested SSID to know when to test again
-static Network::WiFiTestResult wifiTestResult = Network::TEST_NOT_STARTED;
+static Networking::WiFiTestResult wifiTestResult = Networking::TEST_NOT_STARTED;
 
 inline int charToIndex(char c)
 {
@@ -92,7 +92,7 @@ void MenuFunctions::Config_Init_WiFi_Password()
   // Reset WiFi test state
   lastTestedPassword = "";
   lastTestedSSID = "";
-  wifiTestResult = Network::TEST_NOT_STARTED;
+  wifiTestResult = Networking::TEST_NOT_STARTED;
 
   Config_Draw_WiFi_Password(false);
 }
@@ -242,17 +242,17 @@ void MenuFunctions::Config_Update_WiFi_Password()
   String currentSSID = CurrentProfile->WiFi_Name;
   bool ssidChanged = (currentSSID != lastTestedSSID);
   bool passwordChanged = (currentPassword != lastTestedPassword);
-  bool testInProgress = Network::IsWiFiTestInProgress();
+  bool testInProgress = Networking::IsWiFiTestInProgress();
 
   // If either SSID or password changed while test in progress, cancel and restart
   if ((ssidChanged || passwordChanged) && testInProgress)
-    Network::CancelWiFiTest();
+    Networking::CancelWiFiTest();
 
   // Start a new WiFi test if SSID and password are available and either has changed
   if (currentSSID.length() > 0 && (ssidChanged || passwordChanged))
   {
     // Start a new WiFi test
-    Network::TestWiFiConnection(currentSSID, currentPassword);
+    Networking::TestWiFiConnection(currentSSID, currentPassword);
     lastTestedPassword = currentPassword;
     lastTestedSSID = currentSSID;
 
@@ -373,9 +373,9 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
     // Clear the result area
     Display.fillRect(0, resultY - 2, SCREEN_WIDTH, 50, C_BLACK);
 
-    wifiTestResult = Network::CheckTestResults();
+    wifiTestResult = Networking::CheckTestResults();
 
-    String resultText = Network::DescribeTestResults(currentSSID, currentPassword, wifiTestResult);
+    String resultText = Networking::DescribeTestResults(currentSSID, currentPassword, wifiTestResult);
 
     sprintf(buffer, "Status: %s", resultText);
     PrintDisplayLineCentered(buffer);
@@ -385,11 +385,11 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
 void MenuFunctions::Config_Exit_WiFi_Password()
 {
   // Cancel any in-progress WiFi test when exiting the menu
-  if (Network::IsWiFiTestInProgress())
+  if (Networking::IsWiFiTestInProgress())
   {
-    Network::CancelWiFiTest();
+    Networking::CancelWiFiTest();
   }
 
   // Just in case
-  Network::Config_InitWifi();
+  Networking::Config_InitWifi();
 }
