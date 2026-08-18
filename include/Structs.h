@@ -11,13 +11,6 @@
 #include "LED.h"
 #include "stats.h"
 
-//#include "driver/rmt_types.h"
-// #include "driver/rmt_rx.h"
-// #include "driver/rmt_common.h"
-
-// typedef void (BleGamepad::*BleGamepadFunctionPointer)(uint8_t);
-// typedef void (BleGamepad::*BleGamepadFunctionPointerInt)(int16_t);
-// TODO: Rename to GamepadFunctionPointer
 using GamepadFunctionPointer = void (GamepadDevice::*)(uint8_t);
 using GamepadFunctionPointerInt = void (GamepadDevice::*)(int16_t);
 
