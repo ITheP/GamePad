@@ -147,7 +147,6 @@ int AllStats_Count = sizeof(AllStats) / sizeof(AllStats[0]);
 Input AnalogInputs_Virtual_TriggeredGreen =
     {
         .Pin = BUTTON_Green_PIN,
-        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
         .Label = "Virtual Trig. Green + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
@@ -178,7 +177,6 @@ Input AnalogInputs_Virtual_TriggeredGreen =
 Input AnalogInputs_Virtual_TriggeredRed =
     {
         .Pin = BUTTON_Red_PIN,
-        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
         .Label = "Virtual Trig. Red + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
@@ -205,7 +203,6 @@ Input AnalogInputs_Virtual_TriggeredRed =
 Input AnalogInputs_Virtual_TriggeredYellow =
     {
         .Pin = BUTTON_Yellow_PIN,
-        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
         .Label = "Virtual Trig. Yellow + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
@@ -232,7 +229,6 @@ Input AnalogInputs_Virtual_TriggeredYellow =
 Input AnalogInputs_Virtual_TriggeredBlue =
     {
         .Pin = BUTTON_Blue_PIN,
-        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
         .Label = "Virtual Trig. Blue + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
@@ -398,53 +394,130 @@ Input AnalogInputs_Virtual_SliderGreen =
     {
         .Pin = NONE, // ANALOG_Capacitor_PIN,
         .VirtualPulseInputs = { &PulseInput_Slider },
-        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
-        .Label = "Virtual Banded Trig. Green",
+        .Label = "Virtual Slider Green",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
-        .MinAnalogValue = 0,
-        .MaxAnalogValue = 4096,
-        .TriggerOnValue = 7,           // Slider trigger frequency is > 100 < 300, so we set the trigger on/off either side of that
-        .TriggerOffValue = 19,
+        .MinAnalogValue = 8,           // Set the Min/Max around the Pulse range (13) for this input
+        .MaxAnalogValue = 18,
+        .TriggerOnValue = 7,           // Set the Trigger On/Off value to the bottom end (Min))
+        .TriggerOffValue = 7,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
         .RenderOperation = NONE,
     
-        .LEDConfig = new ExternalLEDConfig {
-            .LEDNumber = (int)LEDStrip::Green_Neck,
-            .PrimaryColour = { CRGB(96, 96, 96), true },
-            .SecondaryColour = { CRGB(0, 255, 0), true },
-            .Effect = &AnalogEffects::ConstrainedSimpleSet,
-            .RunEffectConstantly = true,
-         },
+        // .LEDConfig = new ExternalLEDConfig {
+        //     .LEDNumber = (int)LEDStrip::Green_Neck,
+        //     .PrimaryColour = { CRGB(96, 96, 96), true },
+        //     .SecondaryColour = { CRGB(0, 255, 0), true },
+        //     .Effect = &AnalogEffects::ConstrainedSimpleSet,
+        //     .RunEffectConstantly = false,
+        //  },
         };
 
-Input AnalogInputs_Virtual_BandedTriggeredRed =
+Input AnalogInputs_Virtual_SliderRed =
     {
         .Pin = NONE, // ANALOG_Capacitor_PIN,
-        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
-        .Label = "Virtual Banded Trig. Red",
+        .VirtualPulseInputs = { &PulseInput_Slider },
+        .Label = "Virtual Slider Red",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
-        .MinAnalogValue = 0,
-        .MaxAnalogValue = 4096,
-        .TriggerOnValue = 300,          // Slider trigger frequency is > 300 < 500, so we set the trigger on/off either side of that
-        .TriggerOffValue = 499,
+        .MinAnalogValue = 28,           // Set the Min/Max around the Pulse range (33) for this input
+        .MaxAnalogValue = 38,
+        .TriggerOnValue = 28,           // Set the Trigger On/Off value to the bottom end (Min))
+        .TriggerOffValue = 28,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
         .RenderOperation = NONE,
 
-        .LEDConfig = new ExternalLEDConfig {
-            .LEDNumber = (int)LEDStrip::Red_Neck,
-            .PrimaryColour = { CRGB(96, 96, 96), true },
-            .SecondaryColour = { CRGB(255, 0, 0), true },
-            .Effect = &AnalogEffects::ConstrainedSimpleSet,
-            .RunEffectConstantly = true,
-         },
+        // .LEDConfig = new ExternalLEDConfig {
+        //     .LEDNumber = (int)LEDStrip::Red_Neck,
+        //     .PrimaryColour = { CRGB(96, 96, 96), true },
+        //     .SecondaryColour = { CRGB(255, 0, 0), true },
+        //     .Effect = &AnalogEffects::ConstrainedSimpleSet,
+        //     .RunEffectConstantly = false,
+        //  },
+    };
+
+Input AnalogInputs_Virtual_SliderYellow =
+    {
+        .Pin = NONE, // ANALOG_Capacitor_PIN,
+        .VirtualPulseInputs = { &PulseInput_Slider },
+        .Label = "Virtual Slider Yellow",
+        .BluetoothInput = NONE,
+        .DefaultValue = NOT_PRESSED,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 54,           // Set the Min/Max around the Pulse range (59) for this input. Nothing selected on Pulse reads as 50.
+        .MaxAnalogValue = 64,
+        .TriggerOnValue = 54,           // Set the Trigger On/Off value to the bottom end (Min))
+        .TriggerOffValue = 54,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = NONE,
+
+        // .LEDConfig = new ExternalLEDConfig {
+        // .LEDNumber = (int)LEDStrip::Yellow_Neck,
+        // .PrimaryColour = { CRGB(96, 96, 96), true },
+        // .SecondaryColour = { CRGB(255, 255, 0), true },
+        // .Effect = &AnalogEffects::ConstrainedSimpleSet,
+        // .RunEffectConstantly = false,
+        // },
+    };
+
+Input AnalogInputs_Virtual_SliderBlue =
+    {
+        .Pin = NONE, // ANALOG_Capacitor_PIN,
+        .VirtualPulseInputs = { &PulseInput_Slider },
+        .Label = "Virtual Slider Blue",
+        .BluetoothInput = NONE,
+        .DefaultValue = NOT_PRESSED,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 70,           // Set the Min/Max around the Pulse range (75) for this input.
+        .MaxAnalogValue = 80,
+        .TriggerOnValue = 70,           // Set the Trigger On/Off value to the bottom end (Min))
+        .TriggerOffValue = 70,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = NONE,
+
+        // .LEDConfig = new ExternalLEDConfig {
+        //     .LEDNumber = (int)LEDStrip::Blue_Neck,
+        //     .PrimaryColour = { CRGB(96, 96, 96), true },
+        //     .SecondaryColour = { CRGB(0, 0, 255), true },
+        //     .Effect = &AnalogEffects::ConstrainedSimpleSet,
+        //     .RunEffectConstantly = false,
+        //  },
+    };
+
+Input AnalogInputs_Virtual_SliderOrange =
+    {
+        .Pin = NONE, // ANALOG_Capacitor_PIN,
+        .VirtualPulseInputs = { &PulseInput_Slider },
+        .Label = "Virtual Slider Orange",
+        .BluetoothInput = NONE,
+        .DefaultValue = NOT_PRESSED,
+        .DefaultAnalogValue = -1,
+        .MinAnalogValue = 79,           // Set the Min/Max around the Pulse range (84) for this input.
+        .MaxAnalogValue = 89,
+        .TriggerOnValue = 79,           // Set the Trigger On/Off value to the bottom end (Min))
+        .TriggerOffValue = 79,
+        .BluetoothPressOperation = NONE,
+        .BluetoothReleaseOperation = NONE,
+        .BluetoothSetOperation = NONE,
+        .RenderOperation = NONE,
+
+        // .LEDConfig = new ExternalLEDConfig {
+        //     .LEDNumber = (int)LEDStrip::Orange_Neck,
+        //     .PrimaryColour = { CRGB(96, 96, 96), true },
+        //     .SecondaryColour = { CRGB(255, 64, 0), true },
+        //     .Effect = &AnalogEffects::ConstrainedSimpleSet,
+        //     .RunEffectConstantly = false,
+        //  },
     };
 
 
@@ -521,7 +594,10 @@ Input *AnalogInputs[] = {
     &AnalogInputs_Virtual_TriggeredBlue,
     &AnalogInputs_Virtual_TriggeredOrange,
     &AnalogInputs_Virtual_SliderGreen,
-   // &AnalogInputs_Virtual_BandedTriggeredRed
+    &AnalogInputs_Virtual_SliderRed,
+    &AnalogInputs_Virtual_SliderYellow,
+    &AnalogInputs_Virtual_SliderBlue,
+    &AnalogInputs_Virtual_SliderOrange
 };
 
 
@@ -534,7 +610,7 @@ PulseInput *PulseInputs[] = {
 Input DigitalInput_Green = // Green button on guitar neck
     {
         .Pin = NONE, // BUTTON_Green_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen, &AnalogInputs_Virtual_SliderGreen},
         .Label = "Green",
         .BluetoothInput = BUTTON_1,
         .DefaultValue = HIGH,
@@ -560,7 +636,7 @@ Input DigitalInput_Green = // Green button on guitar neck
 Input DigitalInput_Red = // Red button on guitar neck
     {
         .Pin = NONE, // BUTTON_Red_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredRed},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredRed, &AnalogInputs_Virtual_SliderRed},
         .Label = "Red",
         .BluetoothInput = BUTTON_2,
         .DefaultValue = HIGH,
@@ -586,7 +662,7 @@ Input DigitalInput_Red = // Red button on guitar neck
 Input DigitalInput_Yellow = // Yellow button on guitar neck
     {
         .Pin = NONE, // BUTTON_Yellow_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredYellow},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredYellow, &AnalogInputs_Virtual_SliderYellow},
         .Label = "Yellow",
         .BluetoothInput = BUTTON_4,
         .DefaultValue = HIGH,
@@ -612,7 +688,7 @@ Input DigitalInput_Yellow = // Yellow button on guitar neck
 Input DigitalInput_Blue = // Blue button on guitar neck
     {
         .Pin = NONE, // BUTTON_Blue_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredBlue},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredBlue, &AnalogInputs_Virtual_SliderBlue},
         .Label = "Blue",
         .BluetoothInput = BUTTON_3,
         .DefaultValue = HIGH,
@@ -638,7 +714,7 @@ Input DigitalInput_Blue = // Blue button on guitar neck
 Input DigitalInput_Orange = // Orange button on guitar neck
     {
         .Pin = NONE, // BUTTON_Orange_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredOrange},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredOrange, &AnalogInputs_Virtual_SliderOrange},
         .Label = "Orange",
         .BluetoothInput = BUTTON_5,
         .DefaultValue = HIGH,

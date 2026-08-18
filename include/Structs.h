@@ -63,6 +63,7 @@ enum class VirtualPinModes : uint8_t
 // Pulse input
 // Not used directly, but rather as a base for other inputs to trigger from
 // Effectively acts as an analog source (converting pulses to frequency)
+// Implementation supports 6 PulseInput's max
 typedef struct PulseInput
 {
   uint8_t Pin;
@@ -70,14 +71,14 @@ typedef struct PulseInput
   const char *Label;
 
   volatile uint32_t LastTimestamp;
-  volatile uint32_t Frequency;
+  //volatile uint32_t Frequency;
   volatile uint32_t DutyCycle;
 
   volatile uint32_t RiseTime;
-  volatile uint32_t LastFallTime; // <-- new
+  volatile uint32_t LastFallTime;
   volatile uint32_t HighPulseUs;
   volatile uint32_t TotalPeriodUs;
-  int Count;
+  volatile int Count;
   volatile bool FreshData;
 
   // volatile bool Ignored;

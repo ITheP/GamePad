@@ -36,16 +36,10 @@
 #include "Debug.h"
 #include "Web.h"
 
-// #include "driver/rmt_types.h"
-// #include "driver/rmt_rx.h"
-// #include "driver/rmt_common.h"
-// #include "driver/rmt.h"
+// TODO: IfDef on pulse inputs being defined, else ignore
+#include "GamePad_PulseInputs.h"
+
 #include "esp_netif.h"
-
-#include "driver/mcpwm_cap.h"
-
-// #include "driver/rmt.h"
-// #include "driver/gpio.h"
 
 // Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
 #include "DeviceConfig.h"
@@ -530,135 +524,6 @@ void setupDigitalInputs()
 
     Serial.println();
   }
-}
-
-// Store handles for up to 4 capture channels
-mcpwm_cap_timer_handle_t mcpwm_cap_timer = NULL;
-mcpwm_cap_channel_handle_t *mcpwm_cap_channels = NULL;
-
-// static CaptureMetrics channel_metrics[4];
-
-static bool mcpwm_capture_callback(mcpwm_cap_channel_handle_t cap_chan, const mcpwm_capture_event_data_t *edata, void *user_data)
-{
-    PulseInput *pulseInput = static_cast<PulseInput *>(user_data);
-
-    // No point in processing loads of these needlessly
-  // if (pulseInput->Count > 100)
-  //   return false;
-
-    pulseInput->Count++;
-
-if (edata->cap_edge == MCPWM_CAP_EDGE_POS)
-    {
-        uint32_t currentTime = edata->cap_value;
-
-        // If we have a previous rising edge, calculate the total period
-        if (pulseInput->RiseTime != 0)
-        {
-            pulseInput->TotalPeriodUs = currentTime - pulseInput->RiseTime;
-
-            // Prevent division by zero and filter out noise
-            if (pulseInput->TotalPeriodUs > 0 && pulseInput->HighPulseUs > 0 && pulseInput->HighPulseUs <= pulseInput->TotalPeriodUs)
-            {
-                // Calculate Duty Cycle (0 to 100)
-                pulseInput->DutyCycle = (pulseInput->HighPulseUs * 100) / pulseInput->TotalPeriodUs;
-                pulseInput->FreshData = true;
-            }
-        }
-        
-        pulseInput->RiseTime = currentTime;
-        pulseInput->LastTimestamp = currentTime;
-    }
-    else if (edata->cap_edge == MCPWM_CAP_EDGE_NEG)
-    {
-        pulseInput->LastFallTime = edata->cap_value;
-
-        // Falling edge: Calculate how long the signal stayed HIGH during this cycle
-        if (pulseInput->RiseTime != 0)
-        {
-            pulseInput->HighPulseUs = edata->cap_value - pulseInput->RiseTime;
-        }
-    }
-
-    return false; 
-}
-
-void setupPulseInputs()
-{
-#ifdef DEBUG_MARKS
-  Debug::Mark(1, __LINE__, __FILE__, __func__);
-#endif
-
-  Serial.println();
-  Serial_INFO;
-  Serial.println("🎚 Pulse Inputs on MCPWM Capture: " + String(PulseInputs_Count));
-
-  int count = PulseInputs_Count;
-  
-  // Enforce the absolute ESP32-S3 hardware limit of 6 capture channels across both units
-  if (count > 6)
-  {
-    Serial_ERROR;
-    Serial.println("Warning: ESP32-S3 hardware MCPWM capture max is 6 channels. Limiting to 6.");
-    count = 6;
-  }
-
-  // Dynamically allocate the exact number of channel handles needed
-  if (mcpwm_cap_channels != NULL) {
-    free(mcpwm_cap_channels);
-  }
-  mcpwm_cap_channels = (mcpwm_cap_channel_handle_t *)calloc(count, sizeof(mcpwm_cap_channel_handle_t));
-  if (mcpwm_cap_channels == NULL) {
-    Serial_ERROR;
-    Serial.println("Failed to allocate memory for MCPWM capture channels!");
-    return;
-  }
-
-  // 1. Create a shared high-resolution hardware capture timer (1 MHz -> 1 tick = 1 µs)
-  mcpwm_capture_timer_config_t cap_timer_config = {};
-  cap_timer_config.group_id = 0;
-  cap_timer_config.clk_src = MCPWM_CAPTURE_CLK_SRC_DEFAULT;
-  cap_timer_config.resolution_hz = 1000000; // 1 MHz tick rate
-
-  ESP_ERROR_CHECK(mcpwm_new_capture_timer(&cap_timer_config, &mcpwm_cap_timer));
-
-  // 2. Configure individual input channels for each pulse pin up to 'count'
-  for (int i = 0; i < count; i++)
-  {
-    PulseInput *pulseInput = PulseInputs[i];
-    Serial.print("..." + String(pulseInput->Label));
-
-    pinMode(pulseInput->Pin, INPUT_PULLUP);
-
-    mcpwm_capture_channel_config_t cap_chan_config = {};
-    cap_chan_config.gpio_num = (gpio_num_t)pulseInput->Pin;
-    cap_chan_config.prescale = 1;
-    // Capture both positive and negative edges to map full pulse widths
-    cap_chan_config.flags.pos_edge = true;
-    cap_chan_config.flags.neg_edge = true;
-    cap_chan_config.flags.pull_up = true;
-
-    ESP_ERROR_CHECK(mcpwm_new_capture_channel(mcpwm_cap_timer, &cap_chan_config, &mcpwm_cap_channels[i]));
-
-    // Register the hardware interrupt callback for this channel
-    mcpwm_capture_event_callbacks_t cbs = {
-        .on_cap = mcpwm_capture_callback,
-    };
-
-    // Pass pulseInput directly into user_data
-    ESP_ERROR_CHECK(mcpwm_capture_channel_register_event_callbacks(mcpwm_cap_channels[i], &cbs, (void *)pulseInput));
-
-    // Enable the capture channel
-    ESP_ERROR_CHECK(mcpwm_capture_channel_enable(mcpwm_cap_channels[i]));
-
-    Serial.printf(" started on pin %d via MCPWM hardware capture\n", pulseInput->Pin);
-  }
-
-  // 3. Start the shared hardware capture timer
-  ESP_ERROR_CHECK(mcpwm_capture_timer_enable(mcpwm_cap_timer));
-  ESP_ERROR_CHECK(mcpwm_capture_timer_start(mcpwm_cap_timer));
-
-  Serial.println("MCPWM capture initialized successfully");
 }
 
 void setupAnalogInputs()
@@ -2159,7 +2024,9 @@ void MainLoop()
   MainBenchmark.Snapshot("Loop.DigitalInputs", showBenchmark);
 #endif
 
-// Pulse Inputs
+  // Pulse Inputs
+  // Processed purely to calculate values to be used later as virtual analog inputs
+
 #ifdef DEBUG_MARKS
   Debug::Mark(2195, __LINE__, __FILE__, __func__, "Pulse Inputs");
 #endif
@@ -2169,156 +2036,27 @@ void MainLoop()
   {
     PulseInput *pulseInput = PulseInputs[i];
 
-    Serial.printf("Pulse Input %d: [%s] LastTimestamp: %u us, Frequency: %u Hz, Duty Cycle: %u, High: %u us, Period: %u us, Count: %d, FreshData: %d, Pin: %d\n",
-                  i,
-                  pulseInput->Label,
-                  pulseInput->LastTimestamp,
-                  pulseInput->Frequency,
-                  pulseInput->DutyCycle,
-                  pulseInput->HighPulseUs,
-                  pulseInput->TotalPeriodUs,
-                  pulseInput->Count,
-                  pulseInput->FreshData,
-                  pulseInput->Pin);
-    pulseInput->Count = 0;
-    if (pulseInput->FreshData)
+    if (pulseInput->DutyCycle != pulseInput->ValueState.AnalogValue)
     {
-      pulseInput->FreshData = false;
+      pulseInput->ValueState.PreviousAnalogValue = pulseInput->ValueState.AnalogValue;
+      pulseInput->ValueState.AnalogValue = pulseInput->DutyCycle;
+      input->ValueState.StateChangedWhen = micros();
+      input->ValueState.StateJustChanged = true;
+      input->ValueState.StateJustChangedLED = true;
     }
-  }
 
-  {
-    // Processed purely to calculate values to be used later in analog inputs
+    pulseInput->Count = 0;
+    pulseInput->FreshData = false;
 
-    // PulseInput *pulseInput;
-    // for (int i = 0; i < PulseInputs_Count; i++)
-    // {
-    //   pulseInput = PulseInputs[i];
+#ifdef INPUT_SERIAL_DEBUG_PLUS
+    snprintf(buffer, sizeof(buffer),
+             "Pulse input   %2d [%-35s]: AnalogValue: %4d",
+             i,
+             pulseInput->Label,
+             pulseInput->ValueState.AnalogValue);
 
-    //   rmt_channel_t channel = (rmt_channel_t)(RMT_CHANNEL_4 + i);
-
-    //   RingbufHandle_t rb = NULL;
-    //   if (rmt_get_ringbuf_handle(channel, &rb) == ESP_OK && rb != NULL)
-    //   {
-    //     size_t length = 0;
-
-    //     rmt_item32_t *items = (rmt_item32_t *)xRingbufferReceive(rb, &length, 0);
-
-    //     //   if (item && length >= sizeof(rmt_item32_t))
-    //     //   {
-    //     //     // Each item contains HIGH then LOW durations
-    //     //     uint32_t highPulseUs = item->duration0;
-    //     //     uint32_t lowPulseUs = item->duration1;
-    //     //     uint32_t periodUs = highPulseUs + lowPulseUs;
-
-    //     //     pulseInput->HighPulseUs = highPulseUs;
-    //     //     pulseInput->TotalPeriodUs = periodUs;
-    //     //     pulseInput->FreshData = true;
-
-    //     //     vRingbufferReturnItem(rb, item);
-    //     //   }
-    //     // }
-
-    //     if (items != NULL && length >= sizeof(rmt_item32_t))
-    //     {
-    //       int num_items = length / sizeof(rmt_item32_t);
-
-    //       // Loop through all items returned in this transaction
-    //       for (int j = 0; j < num_items; j++)
-    //       {
-    //         rmt_item32_t item = items[j];
-
-    //         // Skip RMT end-of-packet markers (zero duration)
-    //         if (item.duration0 == 0 && item.duration1 == 0)
-    //           continue;
-
-    //         uint32_t highPulseUs = 0;
-    //         uint32_t lowPulseUs = 0;
-
-    //         // Check level0 and level1 bits to identify HIGH vs LOW
-    //         if (item.level0 == 1)
-    //         {
-    //           highPulseUs = item.duration0;
-    //         }
-    //         else
-    //         {
-    //           lowPulseUs = item.duration0;
-    //         }
-
-    //         if (item.level1 == 1)
-    //         {
-    //           highPulseUs = item.duration1;
-    //         }
-    //         else
-    //         {
-    //           lowPulseUs = item.duration1;
-    //         }
-
-    //         // Store measurements
-    //         pulseInput->HighPulseUs = highPulseUs;
-    //         pulseInput->TotalPeriodUs = highPulseUs + lowPulseUs;
-    //         pulseInput->FreshData = true;
-    //       }
-
-    //       // Return buffer memory back to FreeRTOS
-    //       vRingbufferReturnItem(rb, (void *)items);
-    //     }
-    //   }
-
-    //   if (pulseInput->FreshData)
-    //   {
-    //     pulseInput->FreshData = false;
-
-    //     Serial.printf("High: %u us, Period: %u us\n",
-    //                   pulseInput->HighPulseUs,
-    //                   pulseInput->TotalPeriodUs);
-    //   }
-
-    //   //     if (pulseInput->Count > 0)
-    //   //     {
-    //   //       portENTER_CRITICAL(&pulseMux);
-    //   //       uint32_t high_us = pulseInput->HighPulseUs;
-    //   //       uint32_t period_us = pulseInput->TotalPeriodUs;
-    //   //       uint32_t count = pulseInput->Count;
-    //   //       pulseInput->Count = 0;
-    //   //       pulseInput->HighPulseUs = 0;
-    //   //       pulseInput->TotalPeriodUs = 0;
-    //   //       portEXIT_CRITICAL(&pulseMux);
-
-    //   //       // sanity bounds: ignore spikes
-    //   //       //if (period_us >= 200 && period_us <= 10000)
-    //   //       //{
-    //   //         // Use high_us directly to map zones (preferred)
-    //   //         uint16_t value = (uint16_t)constrain((high_us / count), 0, 65535);
-    //   //         pulseInput->ValueState.AnalogValue = value;
-
-    //   //         // optional: compute duty or convert to Hz
-    //   //         // float duty = (float)high_us / (float)period_us * 100.0f;
-    //   //         // float freq = 1e6f / (float)period_us;
-
-    //   // #ifdef INPUT_SERIAL_DEBUG_PLUS
-    //   //         Serial.printf("Pulse   input %2d [%-35s]: High: %4d us | Count: %4d | Period: %8d us | value: %6d\n",
-    //   //                       i,
-    //   //                       pulseInput->Label,
-    //   //                       high_us,
-    //   //                       count,
-    //   //                       period_us,
-    //   //                       value);
-    //   // #endif
-    //   //       //}
-    //   //     }
-    //   //     else
-    //   //     {
-    //   //       #ifdef INPUT_SERIAL_DEBUG_PLUS
-    //   //         Serial.printf("pulse   input %2d [%-35s]: High: %4d us | Count: %4d | Period: %4d us\n",
-    //   //                       i,
-    //   //                       pulseInput->Label,
-    //   //                       pulseInput->HighPulseUs,
-    //   //                       pulseInput->Count,
-    //   //                       pulseInput->TotalPeriodUs);
-    //   // #endif
-    //   //     }
-    // }
+    Serial.println(buffer);
+#endif
   }
 
 #ifdef INCLUDE_BENCHMARKS
@@ -2360,12 +2098,13 @@ void MainLoop()
     Serial.println(buffer);
 #endif
 
-    if (input->VirtualPinInputs.size() > 0)
+    int virtualPinInputCount = input->VirtualPinInputs.size();
+    if (virtualPinInputCount > 0)
     {
       // Work out how to copy over the virtual analog value
       // Note the Input USING the virtual value calculates this, not the Virtual Input itself - that way 1 Virtual Input could be used in different ways across multiple inputs using it
 
-      for (int j = 0; j < input->VirtualPinInputs.size(); j++)
+      for (int j = 0; j < virtualPinInputCount; j++)
       {
         int16_t virtualState = 0;
 
@@ -2438,45 +2177,39 @@ void MainLoop()
 
         // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
       }
+    }
+    // Pulse ranges are treated slightly differently
+    // To fit in easily with other processing, we only provide an analog value if the pulsed value
+    // sits inside the analog input's range, else its set to 0
+    int virtualPulseInputCount = input->VirtualPulseInputs.size();
 
-      // Pulse ranges are treated slightly differently
-      // To fit in easily with other processing, we only provide an analog value if the pulsed value
-      // sits inside the analog input's range, else its set to 0
-      for (int j = 0; j < input->VirtualPulseInputs.size(); j++)
-      {
-        int16_t virtualState = 0;
+    for (int j = 0; j < virtualPulseInputCount; j++)
+    {
+      int16_t virtualState = 0;
 
-        PulseInput *virtualPulseInput = input->VirtualPulseInputs[j];
-        // Frequency may be e.g.
-        // < 100 No touch / idle
-        // < 300 Zone 1 (e.g., Green)
-        // < 500 Zone 2 (e.g., Red)
-        // < 700 Zone 3 (e.g., Yellow)
-        // < 900 Zone 4 (e.g., Blue)
-        // else Zone 5 (e.g., Orange)
+      PulseInput *virtualPulseInput = input->VirtualPulseInputs[j];
 
-        uint16_t pulseValue = virtualPulseInput->ValueState.AnalogValue;
+      uint16_t pulseValue = virtualPulseInput->ValueState.AnalogValue;
 
-        if (pulseValue >= input->MinAnalogValue && pulseValue <= input->MaxAnalogValue)
-          analogState = pulseValue;
+      if (pulseValue >= input->MinAnalogValue && pulseValue <= input->MaxAnalogValue)
+        analogState = pulseValue;
 
-        analogState = virtualPulseInput->ValueState.AnalogValue;
+      // analogState = virtualPulseInput->ValueState.AnalogValue;
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
-        snprintf(buffer, sizeof(buffer),
-                 "    Pulse Virtual input <- %4d, Ranged [%4d] [%4d], Final: %4d - [%s]",
-                 virtualPulseInput->ValueState.AnalogValue,
-                 input->MinAnalogValue,
-                 input->MaxAnalogValue,
-                 analogState,
-                 virtualPulseInput->Label);
+      snprintf(buffer, sizeof(buffer),
+               "    Pulse Virtual input <- %4d, Ranged [%4d] [%4d], Final: %4d - [%s]",
+               virtualPulseInput->ValueState.AnalogValue,
+               input->MinAnalogValue,
+               input->MaxAnalogValue,
+               analogState,
+               virtualPulseInput->Label);
 
-        Serial.println(buffer);
+      Serial.println(buffer);
 #endif
-        // }
+      // }
 
-        // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
-      }
+      // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
 
       // At this point, the largest analogState found (post processing possible pin + all virtual pins with whatever individual ranges they may have)
     }
