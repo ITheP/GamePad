@@ -140,6 +140,7 @@ void MenuFunctions::UpdateBluetooth()
 // WebServer menu item
 // Does slightly more than show WebServer state - will show IP address to connect to web server
 int LastWebServerMode = -999;
+static IPAddress NoIp = IPAddress(0, 0, 0, 0);
 
 void MenuFunctions::DrawWebServer()
 {
@@ -154,10 +155,10 @@ void MenuFunctions::DrawWebServer()
   IPAddress local = WiFi.localIP();
   IPAddress accessPoint = WiFi.softAPIP();
 
-  if (mode == WIFI_STA && local != 0)
+  if (mode == WIFI_STA && local != NoIp)
     snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "IP %s", local.toString());
-  else if (mode == WIFI_AP && accessPoint != 0)
-    snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "Access Point ", local.toString());
+  else if (mode == WIFI_AP && accessPoint != NoIp)
+    snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "Access Point ", accessPoint.toString());
   else if (mode == WIFI_AP_STA)
     snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "IP %s - Access Point %s - ", local.toString(), local.toString());
   else

@@ -36,13 +36,16 @@
 #include "Debug.h"
 #include "Web.h"
 
-#include "driver/rmt_types.h"
-#include "driver/rmt_rx.h"
-#include "driver/rmt_common.h"
+// #include "driver/rmt_types.h"
+// #include "driver/rmt_rx.h"
+// #include "driver/rmt_common.h"
+// #include "driver/rmt.h"
 #include "esp_netif.h"
 
+#include "driver/mcpwm_cap.h"
+
 // #include "driver/rmt.h"
-#include "driver/gpio.h"
+// #include "driver/gpio.h"
 
 // Individual controller configuration and pin mappings come from specific controller specified in DeviceConfig.h
 #include "DeviceConfig.h"
@@ -529,53 +532,52 @@ void setupDigitalInputs()
   }
 }
 
-static bool IRAM_ATTR on_rmt_rx_done(rmt_channel_handle_t rx_chan,
-                                     const rmt_rx_done_event_data_t *edata,
-                                     void *user_data)
+// Store handles for up to 4 capture channels
+mcpwm_cap_timer_handle_t mcpwm_cap_timer = NULL;
+mcpwm_cap_channel_handle_t mcpwm_cap_channels[4] = {NULL, NULL, NULL, NULL};
+
+// static CaptureMetrics channel_metrics[4];
+
+static bool mcpwm_capture_callback(mcpwm_cap_channel_handle_t cap_chan, const mcpwm_capture_event_data_t *edata, void *user_data)
 {
-  PulseInput *pulseInput = static_cast<PulseInput *>(user_data);
-  const rmt_symbol_word_t *symbols = edata->received_symbols;
-  size_t num_symbols = edata->num_symbols;
-  pulseInput->Count++;
-  for (size_t j = 0; j < num_symbols; j++)
-  {
-    rmt_symbol_word_t item = symbols[j];
+    PulseInput *pulseInput = static_cast<PulseInput *>(user_data);
+    pulseInput->Count++;
 
-    // Software Glitch Filter: Discard symbol if either pulse half-cycle is < 10 µs (10 ticks at 1 MHz)
-    // if ((item.duration0 > 0 && item.duration0 < 10) ||
-    //     (item.duration1 > 0 && item.duration1 < 10))
-    if (item.duration0 > 0 ||
-        item.duration1 > 0)
+    static uint32_t last_rising_time = 0;
+    static uint32_t high_duration = 0;
+
+    if (edata->cap_edge == MCPWM_CAP_EDGE_POS)
     {
+        uint32_t current_time = edata->cap_value;
 
-      uint32_t highPulseUs = 0;
-      uint32_t lowPulseUs = 0;
+        // If we have a previous rising edge, we can calculate the total period
+        if (last_rising_time != 0)
+        {
+            uint32_t total_period = current_time - last_rising_time;
 
-      if (item.level0 == 1)
-        highPulseUs = item.duration0;
-      else
-        lowPulseUs = item.duration0;
-
-      if (item.level1 == 1)
-        highPulseUs = item.duration1;
-      else
-        lowPulseUs = item.duration1;
-
-      pulseInput->HighPulseUs = highPulseUs;
-      pulseInput->TotalPeriodUs = highPulseUs + lowPulseUs;
-      pulseInput->FreshData = true;
+            // Prevent division by zero and filter out noise
+            if (total_period > 0 && high_duration > 0 && high_duration <= total_period)
+            {
+                // Calculate Duty Cycle (0 to 100, or scaled up for precision)
+                uint32_t duty_cycle = (high_duration * 100) / total_period;
+                
+                // Store it in your Frequency variable or a new DutyCycle variable
+                pulseInput->DutyCycle = duty_cycle; 
+            }
+        }
+        
+        last_rising_time = current_time;
     }
-  }
+    else if (edata->cap_edge == MCPWM_CAP_EDGE_NEG)
+    {
+        // Falling edge: Calculate how long the signal stayed HIGH during this cycle
+        if (last_rising_time != 0)
+        {
+            high_duration = edata->cap_value - last_rising_time;
+        }
+    }
 
-  // Re-arm receiver with hardware glitch filter clamped to the ESP32-S3 max limit (3,000 ns)
-  rmt_receive_config_t rx_cfg = {
-      .signal_range_min_ns = 10, // Safe hardware limit (< 3187 ns)
-      .signal_range_max_ns = 0,    // 0 = no maximum pulse limit
-  };
-
-  rmt_receive(rx_chan, pulseInput->raw_symbols, sizeof(pulseInput->raw_symbols), &rx_cfg);
-
-  return false;
+    return false; 
 }
 
 void setupPulseInputs()
@@ -586,76 +588,198 @@ void setupPulseInputs()
 
   Serial.println();
   Serial_INFO;
-  Serial.println("🎚 Pulse Inputs on RMT: " + String(PulseInputs_Count));
+  Serial.println("🎚 Pulse Inputs on MCPWM Capture: " + String(PulseInputs_Count));
 
   int count = PulseInputs_Count;
   if (count > 4)
   {
     Serial_ERROR;
-    Serial.println("Warning: ESP32-S3 supports up to 4 RMT RX channels. Only first 4 PulseInput definitions will be used.");
+    Serial.println("Warning: ESP32-S3 MCPWM capture limits apply. Limiting to 4 channels.");
     count = 4;
   }
 
-  // Shared callback structure
-  rmt_rx_event_callbacks_t cbs = {
-      .on_recv_done = on_rmt_rx_done,
-  };
+  // 1. Create a shared high-resolution hardware capture timer (1 MHz -> 1 tick = 1 µs)
+  mcpwm_capture_timer_config_t cap_timer_config = {};
+  cap_timer_config.group_id = 0;
+  cap_timer_config.clk_src = MCPWM_CAPTURE_CLK_SRC_DEFAULT;
+  cap_timer_config.resolution_hz = 1000000; // 1 MHz tick rate
 
+  ESP_ERROR_CHECK(mcpwm_new_capture_timer(&cap_timer_config, &mcpwm_cap_timer));
+
+  // 2. Configure individual input channels for each pulse pin
   for (int i = 0; i < count; i++)
   {
     PulseInput *pulseInput = PulseInputs[i];
-
     Serial.print("..." + String(pulseInput->Label));
 
     pinMode(pulseInput->Pin, INPUT_PULLUP);
 
-    // 1. Configure RMT RX Channel
-    rmt_rx_channel_config_t rx_chan_config = {
-        .gpio_num = (gpio_num_t)pulseInput->Pin,
-        .clk_src = RMT_CLK_SRC_DEFAULT,
-        .resolution_hz = 1000000, // 1 MHz resolution = 1 µs tick size
-        .mem_block_symbols = 64,
-        .flags = {
-            .invert_in = false,
-            .with_dma = false,
-        },
+    mcpwm_capture_channel_config_t cap_chan_config = {};
+    cap_chan_config.gpio_num = (gpio_num_t)pulseInput->Pin;
+    cap_chan_config.prescale = 1;
+    // Capture both positive and negative edges to map full pulse widths
+    cap_chan_config.flags.pos_edge = true;
+    cap_chan_config.flags.neg_edge = true;
+    cap_chan_config.flags.pull_up = true;
+
+    ESP_ERROR_CHECK(mcpwm_new_capture_channel(mcpwm_cap_timer, &cap_chan_config, &mcpwm_cap_channels[i]));
+
+    // Register the hardware interrupt callback for this channel
+    mcpwm_capture_event_callbacks_t cbs = {
+        .on_cap = mcpwm_capture_callback,
     };
 
-    rmt_channel_handle_t rx_channel = NULL;
-    esp_err_t err = rmt_new_rx_channel(&rx_chan_config, &rx_channel);
-    if (err != ESP_OK)
-    {
-      Serial.printf(" RMT rx channel creation failed: %s\n", esp_err_to_name(err));
-      continue;
-    }
+    // Pass the 'pulseInput' pointer directly into user_data
+    ESP_ERROR_CHECK(mcpwm_capture_channel_register_event_callbacks(mcpwm_cap_channels[i], &cbs, (void *)pulseInput));
 
-    // 2. Register Event Callbacks
-    err = rmt_rx_register_event_callbacks(rx_channel, &cbs, pulseInput);
-    if (err != ESP_OK)
-    {
-      Serial.printf(" Callback registration failed: %s\n", esp_err_to_name(err));
-    }
+    // Enable the capture channel
+    ESP_ERROR_CHECK(mcpwm_capture_channel_enable(mcpwm_cap_channels[i]));
 
-    // 3. Enable Channel
-    err = rmt_enable(rx_channel);
-    if (err != ESP_OK)
-    {
-      Serial.printf(" RMT enable failed: %s\n", esp_err_to_name(err));
-    }
-
-    pulseInput->rx_channel = rx_channel;
-
-    // 4. Arm Receiver with 10 µs Glitch Filter (10,000 ns)
-    rmt_receive_config_t rx_cfg = {
-        .signal_range_min_ns = 10, // Max length supported is around ~3187 ns
-        .signal_range_max_ns = 0,
-    };
-    rmt_receive(rx_channel, pulseInput->raw_symbols, sizeof(pulseInput->raw_symbols), &rx_cfg);
-
-    Serial.printf(" started on pin %d with 1us resolution\n", pulseInput->Pin);
+    Serial.printf(" started on pin %d via MCPWM hardware capture\n", pulseInput->Pin);
   }
+
+  // 3. Start the shared hardware capture timer
+  ESP_ERROR_CHECK(mcpwm_capture_timer_enable(mcpwm_cap_timer));
+  ESP_ERROR_CHECK(mcpwm_capture_timer_start(mcpwm_cap_timer));
+
+  Serial.println("MCPWM capture initialized successfully");
 }
 
+// static bool IRAM_ATTR on_rmt_rx_done(rmt_channel_handle_t rx_chan,
+//                                      const rmt_rx_done_event_data_t *edata,
+//                                      void *user_data)
+// {
+//   PulseInput *pulseInput = static_cast<PulseInput *>(user_data);
+//   const rmt_symbol_word_t *symbols = edata->received_symbols;
+
+//   size_t num_symbols = edata->num_symbols;
+//   pulseInput->Count++;
+//   for (size_t j = 0; j < num_symbols; j++)
+//   {
+//     rmt_symbol_word_t item = symbols[j];
+
+//   ets_printf("RMT Raw [%d] -> d0: %u (lvl: %d), d1: %u (lvl: %d)\n",
+//                    j,
+//                    symbols[j].duration0, symbols[j].level0,
+//                    symbols[j].duration1, symbols[j].level1);
+
+//     // Software Glitch Filter: Discard symbol if either pulse half-cycle is < 10 µs (10 ticks at 1 MHz)
+//     // if ((item.duration0 > 0 && item.duration0 < 10) ||
+//     //     (item.duration1 > 0 && item.duration1 < 10))
+//     if (item.duration0 > 0 ||
+//         item.duration1 > 0)
+//     {
+
+//       uint32_t highPulseUs = 0;
+//       uint32_t lowPulseUs = 0;
+
+//       if (item.level0 == 1)
+//         highPulseUs = item.duration0;
+//       else
+//         lowPulseUs = item.duration0;
+
+//       if (item.level1 == 1)
+//         highPulseUs = item.duration1;
+//       else
+//         lowPulseUs = item.duration1;
+
+//       pulseInput->HighPulseUs = highPulseUs;
+//       pulseInput->TotalPeriodUs = highPulseUs + lowPulseUs;
+//       pulseInput->FreshData = true;
+//     }
+//   }
+
+//   // Re-arm receiver with hardware glitch filter clamped to the ESP32-S3 max limit (3,000 ns)
+//   rmt_receive_config_t rx_cfg = {
+//       .signal_range_min_ns = 10, // Safe hardware limit (< 3187 ns)
+//       .signal_range_max_ns = 0,    // 0 = no maximum pulse limit
+//   };
+
+//   rmt_receive(rx_chan, pulseInput->raw_symbols, sizeof(pulseInput->raw_symbols), &rx_cfg);
+
+//   return false;
+// }
+
+// RMT version - DIDN'T WORK - timings dont work between RSF-3031 slider output and RMT reading it
+// void setupPulseInputs()
+// {
+// #ifdef DEBUG_MARKS
+//   Debug::Mark(1, __LINE__, __FILE__, __func__);
+// #endif
+
+//   Serial.println();
+//   Serial_INFO;
+//   Serial.println("🎚 Pulse Inputs on RMT: " + String(PulseInputs_Count));
+
+//   int count = PulseInputs_Count;
+//   if (count > 4)
+//   {
+//     Serial_ERROR;
+//     Serial.println("Warning: ESP32-S3 supports up to 4 RMT RX channels. Only first 4 PulseInput definitions will be used.");
+//     count = 4;
+//   }
+
+//   // Shared callback structure
+//   rmt_rx_event_callbacks_t cbs = {
+//       .on_recv_done = on_rmt_rx_done,
+//   };
+
+//   for (int i = 0; i < count; i++)
+//   {
+//     PulseInput *pulseInput = PulseInputs[i];
+
+//     Serial.print("..." + String(pulseInput->Label));
+
+//     pinMode(pulseInput->Pin, INPUT_PULLUP);
+
+//     // 1. Configure RMT RX Channel
+//     rmt_rx_channel_config_t rx_chan_config = {
+//         .gpio_num = (gpio_num_t)pulseInput->Pin,
+//         .clk_src = RMT_CLK_SRC_DEFAULT,
+//         .resolution_hz = 1000000, // 1 MHz resolution = 1 µs tick size
+//         .mem_block_symbols = 64,
+//         .flags = {
+//             .invert_in = false,
+//             .with_dma = false,
+//         },
+//     };
+
+//     rmt_channel_handle_t rx_channel = NULL;
+//     esp_err_t err = rmt_new_rx_channel(&rx_chan_config, &rx_channel);
+//     if (err != ESP_OK)
+//     {
+//       Serial.printf(" RMT rx channel creation failed: %s\n", esp_err_to_name(err));
+//       continue;
+//     }
+
+//     // 2. Register Event Callbacks
+//     err = rmt_rx_register_event_callbacks(rx_channel, &cbs, pulseInput);
+//     if (err != ESP_OK)
+//     {
+//       Serial.printf(" Callback registration failed: %s\n", esp_err_to_name(err));
+//     }
+
+//     // 3. Enable Channel
+//     err = rmt_enable(rx_channel);
+//     if (err != ESP_OK)
+//     {
+//       Serial.printf(" RMT enable failed: %s\n", esp_err_to_name(err));
+//     }
+
+//     pulseInput->rx_channel = rx_channel;
+
+//     // 4. Arm Receiver with 10 µs Glitch Filter (10,000 ns)
+//     rmt_receive_config_t rx_cfg = {
+//         .signal_range_min_ns = 10, // Max length supported is around ~3187 ns
+//         .signal_range_max_ns = 0,
+//     };
+//     rmt_receive(rx_channel, pulseInput->raw_symbols, sizeof(pulseInput->raw_symbols), &rx_cfg);
+
+//     Serial.printf(" started on pin %d with 1us resolution\n", pulseInput->Pin);
+//   }
+// }
+
+// Legacy set up - doesnt work with ESP-IDF v5
 // void setupPulseInputs()
 // {
 // #ifdef DEBUG_MARKS
@@ -668,10 +792,9 @@ void setupPulseInputs()
 //   Serial.println("🎚 Pulse Inputs on RMT: " + String(PulseInputs_Count));
 
 //   // ESP32 has 8 RMT channels total:
-//   // Channels 0–3 RX (Receive) only
-//   // Channels 4–7 TX (Transmit) only
+//   // Channels 0–3 TX (Transmit) only
+//   // Channels 4–7 RX (Receive) only
 //   // We want to use RX channels, so we need to make sure we use channel 4-7
-//   // TODO: Check correct number error if > 4
 //   {
 //     int count = PulseInputs_Count;
 //     if (PulseInputs_Count > 4)
@@ -689,7 +812,7 @@ void setupPulseInputs()
 //       Serial.print("..." + String(pulseInput->Label));
 
 //       pinMode(pulseInput->Pin, INPUT_PULLUP);
-//       rmt_channel_t rmt_channel = (rmt_channel_t)(i + 6); // Channel 4, 5, 6, 7
+//       rmt_channel_t rmt_channel = (rmt_channel_t)(i + 4); // Channel 4, 5, 6, 7
 
 //       // Uninstall any existing driver state on this channel
 //       rmt_driver_uninstall(rmt_channel);
@@ -708,10 +831,6 @@ void setupPulseInputs()
 //       config.rx_config.filter_en = true;
 //       config.rx_config.filter_ticks_thresh = 10; // ignore <10 µs glitches
 //       config.rx_config.idle_threshold = 1000;    // 20 ms max pulse
-
-//       // ESP_ERROR_CHECK(rmt_config(&config));
-//       // ESP_ERROR_CHECK(rmt_driver_install(config.channel, 1000, 0));
-//       // ESP_ERROR_CHECK(rmt_rx_start(config.channel, true));
 
 //       Serial.printf(" started on pin %d, RMT channel %d, clk_div %d, filter_ticks_thresh %d, idle_threshold %d",
 //                     pulseInput->Pin,
@@ -733,7 +852,7 @@ void setupPulseInputs()
 //       //         }
 
 //       // Install driver with a 2048-byte ring buffer (Must be > 256 bytes)
-//       err = rmt_driver_install(config.channel, 2048, 0);
+//       err = rmt_driver_install(config.channel, 4096, 0);
 //       if (err != ESP_OK)
 //       {
 //         Serial.printf("RMT driver install failed on channel %d: %s\n", i, esp_err_to_name(err));
@@ -2294,14 +2413,18 @@ void MainLoop()
   {
     PulseInput *pulseInput = PulseInputs[i];
 
-    Serial.printf("Pulse Input %d: [%s] High: %u us, Period: %u us, Count: %d, FreshData: %d\n",
+    Serial.printf("Pulse Input %d: [%s] LastTimestamp: %u us, Frequency: %u Hz, Duty Cycle: %u, High: %u us, Period: %u us, Count: %d, FreshData: %d, Pin: %d\n",
                   i,
                   pulseInput->Label,
+                  pulseInput->LastTimestamp,
+                  pulseInput->Frequency,
+                  pulseInput->DutyCycle,
                   pulseInput->HighPulseUs,
                   pulseInput->TotalPeriodUs,
                   pulseInput->Count,
-                  pulseInput->FreshData);
-
+                  pulseInput->FreshData,
+                  pulseInput->Pin);
+    pulseInput->Count = 0;
     if (pulseInput->FreshData)
     {
       pulseInput->FreshData = false;

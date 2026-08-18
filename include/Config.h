@@ -14,7 +14,7 @@
 //#define STRAIGHT_TO_CONFIG_MENU   // Skip straight to config menu on start up for easier testing
 //#define WHITE_SCREEN              // Display will show a solid white screen, handy when physically aligning panel in device
 //#define DEBUG_MARKS                 // Extra debug logging that survives crashes
-//#define FORCE_FPS_DISPLAY           // Debug variant of Show FPS in top right corner of screen (don't need to be in menus)
+#define FORCE_FPS_DISPLAY           // Debug variant of Show FPS in top right corner of screen (don't need to be in menus)
 //#define STRAIGHT_TO_IDLE_SCREEN     // Skip straight to idle screen on start up for easier testing of idle screen and effects
 
 #define SETUP_DELAY     250         // Delay between stages of initial start up

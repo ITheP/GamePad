@@ -11,7 +11,7 @@
 #include "LED.h"
 #include "stats.h"
 
-#include "driver/rmt_types.h"
+//#include "driver/rmt_types.h"
 // #include "driver/rmt_rx.h"
 // #include "driver/rmt_common.h"
 
@@ -76,6 +76,10 @@ typedef struct PulseInput
 
   const char *Label;
 
+  volatile uint32_t LastTimestamp;
+  volatile uint32_t Frequency;
+  volatile uint32_t DutyCycle;
+
   volatile uint32_t RiseTime;
   volatile uint32_t LastFallTime; // <-- new
   volatile uint32_t HighPulseUs;
@@ -87,8 +91,8 @@ typedef struct PulseInput
   State ValueState;
 
   // ESP-IDF hardware RMT monitoring
-  rmt_channel_handle_t rx_channel;
-  rmt_symbol_word_t raw_symbols[64];
+  //rmt_channel_handle_t rx_channel;
+  //rmt_symbol_word_t raw_symbols[64];
 } PulseInput;
 
 // General input (Digital and Analog - e.g. buttons)
