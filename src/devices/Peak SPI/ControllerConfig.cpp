@@ -156,10 +156,6 @@ Input AnalogInputs_Virtual_TriggeredGreen =
         .TriggerOnValue = 2140 + 60,
         .TriggerOffValue = 2140 + 60,
         .TriggerPartlyReleasedValue = 2500,
-        //NEW PROPERTY??? - when the wobble has been triggered then the off value is extended downward beyond the normal off value
-        //.TriggerPartlyReleasedOffValue = 2300,
-        // might already do this
-        // HMMMMMMMMMMMMMMMM
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
         .BluetoothSetOperation = NONE,
@@ -255,7 +251,6 @@ Input AnalogInputs_Virtual_TriggeredBlue =
 Input AnalogInputs_Virtual_TriggeredOrange =
     {
         .Pin = BUTTON_Orange_PIN,
-        //.AnalogAttenuation = ADC_11db,           // 0-3.3v range
         .Label = "Virtual Trig. Orange + A. Whammy",
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
@@ -279,254 +274,18 @@ Input AnalogInputs_Virtual_TriggeredOrange =
          },
     };
 
-// Pulse inputs are treated like analog inputs in that
-// their frequency (which may vary) is taken as the equivalent to
-// an analog signal
-PulseInput PulseInput_Slider =
-    {
-        .Pin = ANALOG_Capacitor_PIN,
-        .Label = "Pulse Capacitance Board",
-    };
-
-// // Interrupt handler(s) for above. Need to be located in IRAM_ATTR Ram
-// // Also need to calculate pulse width based on falling and rising edge
-// // Tests showed around 20k interupts a second coming from controller. We don't need
-// // all that so limit to about 200 values.
-// void IRAM_ATTR handleSliderEdge() {
-//     if (PulseInput_Slider.Count == 21)
-//         return;
-
-//     int lvl = gpio_get_level((gpio_num_t)PulseInput_Slider.Pin);
-//     uint32_t now = esp_timer_get_time();   // µs timestamp
-
-//     if (lvl) {  // Rising edge
-//         // Only compute previous cycle if both timestamps exist
-//         if (PulseInput_Slider.RiseTime != 0 &&
-//             PulseInput_Slider.LastFallTime != 0)
-//         {
-//             // High pulse of previous cycle: fall1 - rise1
-//             uint32_t highPulseUs =
-//                 PulseInput_Slider.LastFallTime - PulseInput_Slider.RiseTime;
-
-//             if (highPulseUs < 10000) {
-//                 // Period: rise2 - rise1
-//                 PulseInput_Slider.TotalPeriodUs += now - PulseInput_Slider.RiseTime;
-
-//                 // Accumulate high pulse
-//                 PulseInput_Slider.HighPulseUs += highPulseUs;
-
-//                 PulseInput_Slider.Count++;
-//             }
-//         }
-
-//         // Update rise time for the *next* cycle
-//         PulseInput_Slider.RiseTime = now;
-//     }
-//     else {  // Falling edge
-//         // Reject invalid cycles early
-//         uint32_t highPulseUs = now - PulseInput_Slider.RiseTime;
-
-//         if (highPulseUs < 10000) {
-//             // Only accept valid fall times
-//             PulseInput_Slider.LastFallTime = now;
-//         }
-//         // else: ignore this fall, do not update LastFallTime
-//     }
-// }
-
-// void AttachPulseInputInterrupts() {
-//     pinMode(PulseInput_Slider.Pin, INPUT_PULLDOWN);
-//     attachInterrupt(digitalPinToInterrupt(PulseInput_Slider.Pin), handleSliderEdge, CHANGE);
-// }
-
-//#define SLIDER_PIN 32
-// #define RMT_CHANNEL RMT_CHANNEL_0
-
-// void setupRMT() {
-//     rmt_config_t config;
-//     config.rmt_mode = RMT_MODE_RX;
-//     config.channel = RMT_CHANNEL;
-//     config.gpio_num = (gpio_num_t)PulseInput_Slider.Pin;
-//     config.clk_div = 80;  // 1 µs resolution (80 MHz / 80 = 1 MHz)
-//     config.mem_block_num = 1;
-
-//     config.rx_config.filter_en = true;
-//     config.rx_config.filter_ticks_thresh = 10;  // ignore <10 µs glitches
-//     config.rx_config.idle_threshold = 20000;    // 20 ms max pulse
-
-//     ESP_ERROR_CHECK(rmt_config(&config));
-//     ESP_ERROR_CHECK(rmt_driver_install(config.channel, 1000, 0));
-// }
-
-// void startRMT() {
-//     ESP_ERROR_CHECK(rmt_rx_start(RMT_CHANNEL, true));
-// }
-
-// void readPulse() {
-//     RingbufHandle_t rb = NULL;
-//     rmt_get_ringbuf_handle(RMT_CHANNEL, &rb);
-//     if (!rb) return;
-
-//     size_t length = 0;
-//     rmt_item32_t* item = (rmt_item32_t*)xRingbufferReceive(rb, &length, 0);
-
-//     if (item) {
-//         // Each item contains HIGH then LOW durations
-//         uint32_t highPulseUs = item->duration0;
-//         uint32_t lowPulseUs  = item->duration1;
-//         uint32_t periodUs    = highPulseUs + lowPulseUs;
-
-//         PulseInput_Slider.HighPulseUs = highPulseUs;
-//         PulseInput_Slider.TotalPeriodUs = periodUs;
-//         PulseInput_Slider.FreshData = true;
-
-//         vRingbufferReturnItem(rb, item);
-//     }
-// }
-
-// Virtual inputs for slider
-// Note that although 1 input may provide multiple banded triggers, we need to create a separate virtual input for
-// each banded trigger so that they can have their own LED's and effects
-// E.g. capacitance strip may output 0-512 for green, 513-1024 for red, etc.
-// Recommend banded values sit in the middle of the TriggerOnValue and TriggerOffValue ranges
-// to account for any small variance in signals
-Input AnalogInputs_Virtual_SliderGreen =
-    {
-        .Pin = NONE, // ANALOG_Capacitor_PIN,
-        .VirtualPulseInputs = { &PulseInput_Slider },
-        .Label = "Virtual Slider Green",
-        .BluetoothInput = NONE,
-        .DefaultValue = NOT_PRESSED,
-        .DefaultAnalogValue = -1,
-        .MinAnalogValue = 8,           // Set the Min/Max around the Pulse range (13) for this input
-        .MaxAnalogValue = 18,
-        .TriggerOnValue = 7,           // Set the Trigger On/Off value to the bottom end (Min))
-        .TriggerOffValue = 7,
-        .BluetoothPressOperation = NONE,
-        .BluetoothReleaseOperation = NONE,
-        .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE,
-    
-        // .LEDConfig = new ExternalLEDConfig {
-        //     .LEDNumber = (int)LEDStrip::Green_Neck,
-        //     .PrimaryColour = { CRGB(96, 96, 96), true },
-        //     .SecondaryColour = { CRGB(0, 255, 0), true },
-        //     .Effect = &AnalogEffects::ConstrainedSimpleSet,
-        //     .RunEffectConstantly = false,
-        //  },
-        };
-
-Input AnalogInputs_Virtual_SliderRed =
-    {
-        .Pin = NONE, // ANALOG_Capacitor_PIN,
-        .VirtualPulseInputs = { &PulseInput_Slider },
-        .Label = "Virtual Slider Red",
-        .BluetoothInput = NONE,
-        .DefaultValue = NOT_PRESSED,
-        .DefaultAnalogValue = -1,
-        .MinAnalogValue = 28,           // Set the Min/Max around the Pulse range (33) for this input
-        .MaxAnalogValue = 38,
-        .TriggerOnValue = 28,           // Set the Trigger On/Off value to the bottom end (Min))
-        .TriggerOffValue = 28,
-        .BluetoothPressOperation = NONE,
-        .BluetoothReleaseOperation = NONE,
-        .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE,
-
-        // .LEDConfig = new ExternalLEDConfig {
-        //     .LEDNumber = (int)LEDStrip::Red_Neck,
-        //     .PrimaryColour = { CRGB(96, 96, 96), true },
-        //     .SecondaryColour = { CRGB(255, 0, 0), true },
-        //     .Effect = &AnalogEffects::ConstrainedSimpleSet,
-        //     .RunEffectConstantly = false,
-        //  },
-    };
-
-Input AnalogInputs_Virtual_SliderYellow =
-    {
-        .Pin = NONE, // ANALOG_Capacitor_PIN,
-        .VirtualPulseInputs = { &PulseInput_Slider },
-        .Label = "Virtual Slider Yellow",
-        .BluetoothInput = NONE,
-        .DefaultValue = NOT_PRESSED,
-        .DefaultAnalogValue = -1,
-        .MinAnalogValue = 54,           // Set the Min/Max around the Pulse range (59) for this input. Nothing selected on Pulse reads as 50.
-        .MaxAnalogValue = 64,
-        .TriggerOnValue = 54,           // Set the Trigger On/Off value to the bottom end (Min))
-        .TriggerOffValue = 54,
-        .BluetoothPressOperation = NONE,
-        .BluetoothReleaseOperation = NONE,
-        .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE,
-
-        // .LEDConfig = new ExternalLEDConfig {
-        // .LEDNumber = (int)LEDStrip::Yellow_Neck,
-        // .PrimaryColour = { CRGB(96, 96, 96), true },
-        // .SecondaryColour = { CRGB(255, 255, 0), true },
-        // .Effect = &AnalogEffects::ConstrainedSimpleSet,
-        // .RunEffectConstantly = false,
-        // },
-    };
-
-Input AnalogInputs_Virtual_SliderBlue =
-    {
-        .Pin = NONE, // ANALOG_Capacitor_PIN,
-        .VirtualPulseInputs = { &PulseInput_Slider },
-        .Label = "Virtual Slider Blue",
-        .BluetoothInput = NONE,
-        .DefaultValue = NOT_PRESSED,
-        .DefaultAnalogValue = -1,
-        .MinAnalogValue = 70,           // Set the Min/Max around the Pulse range (75) for this input.
-        .MaxAnalogValue = 80,
-        .TriggerOnValue = 70,           // Set the Trigger On/Off value to the bottom end (Min))
-        .TriggerOffValue = 70,
-        .BluetoothPressOperation = NONE,
-        .BluetoothReleaseOperation = NONE,
-        .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE,
-
-        // .LEDConfig = new ExternalLEDConfig {
-        //     .LEDNumber = (int)LEDStrip::Blue_Neck,
-        //     .PrimaryColour = { CRGB(96, 96, 96), true },
-        //     .SecondaryColour = { CRGB(0, 0, 255), true },
-        //     .Effect = &AnalogEffects::ConstrainedSimpleSet,
-        //     .RunEffectConstantly = false,
-        //  },
-    };
-
-Input AnalogInputs_Virtual_SliderOrange =
-    {
-        .Pin = NONE, // ANALOG_Capacitor_PIN,
-        .VirtualPulseInputs = { &PulseInput_Slider },
-        .Label = "Virtual Slider Orange",
-        .BluetoothInput = NONE,
-        .DefaultValue = NOT_PRESSED,
-        .DefaultAnalogValue = -1,
-        .MinAnalogValue = 79,           // Set the Min/Max around the Pulse range (84) for this input.
-        .MaxAnalogValue = 89,
-        .TriggerOnValue = 79,           // Set the Trigger On/Off value to the bottom end (Min))
-        .TriggerOffValue = 79,
-        .BluetoothPressOperation = NONE,
-        .BluetoothReleaseOperation = NONE,
-        .BluetoothSetOperation = NONE,
-        .RenderOperation = NONE,
-
-        // .LEDConfig = new ExternalLEDConfig {
-        //     .LEDNumber = (int)LEDStrip::Orange_Neck,
-        //     .PrimaryColour = { CRGB(96, 96, 96), true },
-        //     .SecondaryColour = { CRGB(255, 64, 0), true },
-        //     .Effect = &AnalogEffects::ConstrainedSimpleSet,
-        //     .RunEffectConstantly = false,
-        //  },
-    };
-
-
 // Specific inputs we need references to
 // So the Whammy input can get its input EITHER from the actual pin, or drag in a value (if being provided) from the Virtual Pin.
 Input AnalogInputs_Whammy =
     {
         .Pin = ANALOG_Whammy_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen, &AnalogInputs_Virtual_TriggeredRed, &AnalogInputs_Virtual_TriggeredYellow, &AnalogInputs_Virtual_TriggeredBlue, &AnalogInputs_Virtual_TriggeredOrange},
+        .VirtualPinInputs = {
+            &AnalogInputs_Virtual_TriggeredGreen,
+            &AnalogInputs_Virtual_TriggeredRed,
+            &AnalogInputs_Virtual_TriggeredYellow,
+            &AnalogInputs_Virtual_TriggeredBlue,
+            &AnalogInputs_Virtual_TriggeredOrange
+        },
         //.VirtualPinMode = VirtualPinModes::RequireValueToBePressed, // Only take analog values from virtual pin when they are also in a pressed state
         .VirtualPinMode = VirtualPinModes::RequireValueToBePressedAndHaveBeenPartlyReleased, // Only take analog values from virtual pin when they are also in a pressed state
         .Label = "Whammy",
@@ -565,52 +324,39 @@ Input AnalogInputs_Whammy =
         // }
 };
 
-// Input AnalogInputs_VirtualWhammyTest =
-// {
-//         .VirtualPin = &AnalogInputs_Test_TriggeredWobble,
-//         .Label = "Virtual Whammy Test",
-//         .BluetoothInput = NONE,
-//         .DefaultValue = -1,
-//         .MinAnalogValue = 2800,
-//         .MaxAnalogValue = 2000,
-//         .BluetoothPressOperation = NONE,
-//         .BluetoothReleaseOperation = NONE,
-//         .BluetoothSetOperation = &BleGamepad::setSlider1,
-//         .AnalogRenderOperation = RenderInput_AnalogBar_Vert,
-//         .XPos = uiWhammyX + 2,
-//         .YPos = uiWhammyY + 2,
-//         .RenderWidth = uiWhammyW - 4,
-//         .RenderHeight = uiWhammyH - 4,
-//         .TrueIcon = NONE,
-//         .FalseIcon = NONE,
-//         .OnboardLED = {CRGB::Pink, true}
-// };
-
 Input *AnalogInputs[] = {
     &AnalogInputs_Whammy,
     &AnalogInputs_Virtual_TriggeredGreen,
     &AnalogInputs_Virtual_TriggeredRed,
     &AnalogInputs_Virtual_TriggeredYellow,
     &AnalogInputs_Virtual_TriggeredBlue,
-    &AnalogInputs_Virtual_TriggeredOrange,
-    &AnalogInputs_Virtual_SliderGreen,
-    &AnalogInputs_Virtual_SliderRed,
-    &AnalogInputs_Virtual_SliderYellow,
-    &AnalogInputs_Virtual_SliderBlue,
-    &AnalogInputs_Virtual_SliderOrange
+    &AnalogInputs_Virtual_TriggeredOrange
 };
 
+
+// Pulse inputs are treated like analog inputs in that
+// their frequency (which may vary) is taken as the equivalent to
+// an analog signal
+PulseInput PulseInput_Slider =
+    {
+        .Pin = ANALOG_Capacitor_PIN,
+        .Label = "Pulse Capacitance Board",
+    };
 
 PulseInput *PulseInputs[] = {
     &PulseInput_Slider
 };
+
 
 // Digital inputs
 
 Input DigitalInput_Green = // Green button on guitar neck
     {
         .Pin = NONE, // BUTTON_Green_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen, &AnalogInputs_Virtual_SliderGreen},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen},
+        .VirtualPulseInputs = {
+           { &PulseInput_Slider, 7, 18}
+         },
         .Label = "Green",
         .BluetoothInput = BUTTON_1,
         .DefaultValue = HIGH,
@@ -636,7 +382,10 @@ Input DigitalInput_Green = // Green button on guitar neck
 Input DigitalInput_Red = // Red button on guitar neck
     {
         .Pin = NONE, // BUTTON_Red_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredRed, &AnalogInputs_Virtual_SliderRed},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredRed},
+        .VirtualPulseInputs = {
+            { &PulseInput_Slider, 28, 38}
+        },
         .Label = "Red",
         .BluetoothInput = BUTTON_2,
         .DefaultValue = HIGH,
@@ -662,7 +411,10 @@ Input DigitalInput_Red = // Red button on guitar neck
 Input DigitalInput_Yellow = // Yellow button on guitar neck
     {
         .Pin = NONE, // BUTTON_Yellow_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredYellow, &AnalogInputs_Virtual_SliderYellow},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredYellow},
+        .VirtualPulseInputs = {
+            { &PulseInput_Slider, 54, 64}
+        },
         .Label = "Yellow",
         .BluetoothInput = BUTTON_4,
         .DefaultValue = HIGH,
@@ -688,7 +440,10 @@ Input DigitalInput_Yellow = // Yellow button on guitar neck
 Input DigitalInput_Blue = // Blue button on guitar neck
     {
         .Pin = NONE, // BUTTON_Blue_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredBlue, &AnalogInputs_Virtual_SliderBlue},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredBlue},
+        .VirtualPulseInputs = {
+            { &PulseInput_Slider, 70, 80}
+        },
         .Label = "Blue",
         .BluetoothInput = BUTTON_3,
         .DefaultValue = HIGH,
@@ -714,7 +469,10 @@ Input DigitalInput_Blue = // Blue button on guitar neck
 Input DigitalInput_Orange = // Orange button on guitar neck
     {
         .Pin = NONE, // BUTTON_Orange_PIN,
-        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredOrange, &AnalogInputs_Virtual_SliderOrange},
+        .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredOrange},
+        .VirtualPulseInputs = {
+            { &PulseInput_Slider, 79, 89}
+        },
         .Label = "Orange",
         .BluetoothInput = BUTTON_5,
         .DefaultValue = HIGH,

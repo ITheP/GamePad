@@ -13,47 +13,50 @@ mcpwm_cap_channel_handle_t *mcpwm_cap_channels = NULL;
 
 static bool mcpwm_capture_callback(mcpwm_cap_channel_handle_t cap_chan, const mcpwm_capture_event_data_t *edata, void *user_data)
 {
-    PulseInput *pulseInput = static_cast<PulseInput *>(user_data);
+  PulseInput *pulseInput = static_cast<PulseInput *>(user_data);
 
-    // No point in processing loads of these needlessly
-  // if (pulseInput->Count > 100)
-  //   return false;
+  // No point in processing loads of these needlessly
+  //if (pulseInput->Count > 100)
+  //    return false;
 
-    pulseInput->Count++;
+ // pulseInput->Count++;
 
-if (edata->cap_edge == MCPWM_CAP_EDGE_POS)
+  if (edata->cap_edge == MCPWM_CAP_EDGE_POS)
+  {
+    uint32_t currentTime = edata->cap_value;
+
+    // If we have a previous rising edge, calculate the total period
+    if (pulseInput->RiseTime != 0)
     {
-        uint32_t currentTime = edata->cap_value;
+      pulseInput->TotalPeriodUs = currentTime - pulseInput->RiseTime;
 
-        // If we have a previous rising edge, calculate the total period
-        if (pulseInput->RiseTime != 0)
-        {
-            pulseInput->TotalPeriodUs = currentTime - pulseInput->RiseTime;
-
-            // Prevent division by zero and filter out noise
-            if (pulseInput->TotalPeriodUs > 0 && pulseInput->HighPulseUs > 0 && pulseInput->HighPulseUs <= pulseInput->TotalPeriodUs)
-            {
-                // Calculate Duty Cycle (0 to 100)
-                pulseInput->DutyCycle = (pulseInput->HighPulseUs * 100) / pulseInput->TotalPeriodUs;
-                pulseInput->FreshData = true;
-            }
-        }
-        
-        pulseInput->RiseTime = currentTime;
-        pulseInput->LastTimestamp = currentTime;
-    }
-    else if (edata->cap_edge == MCPWM_CAP_EDGE_NEG)
-    {
-        pulseInput->LastFallTime = edata->cap_value;
-
-        // Falling edge: Calculate how long the signal stayed HIGH during this cycle
-        if (pulseInput->RiseTime != 0)
-        {
-            pulseInput->HighPulseUs = edata->cap_value - pulseInput->RiseTime;
-        }
+      // Prevent division by zero and filter out noise
+      if (pulseInput->TotalPeriodUs > 0 && pulseInput->HighPulseUs > 0 && pulseInput->HighPulseUs <= pulseInput->TotalPeriodUs)
+      {
+        // Calculate Duty Cycle (0 to 100)
+        pulseInput->DutyCycle = (pulseInput->HighPulseUs * 100) / pulseInput->TotalPeriodUs;
+        pulseInput->FreshData = true;
+      }
     }
 
-    return false; 
+    pulseInput->RiseTime = currentTime;
+    pulseInput->LastTimestamp = currentTime;
+  }
+  else if (edata->cap_edge == MCPWM_CAP_EDGE_NEG)
+  {
+    pulseInput->LastFallTime = edata->cap_value;
+
+    // Falling edge: Calculate how long the signal stayed HIGH during this cycle
+    if (pulseInput->RiseTime != 0)
+    {
+      pulseInput->HighPulseUs = edata->cap_value - pulseInput->RiseTime;
+    }
+  }
+
+  // if (pulseInput->Count == 90)
+  //  ets_printf("Duty cycle: %lu%%\n", pulseInput->DutyCycle);
+
+  return false;
 }
 
 void setupPulseInputs()
@@ -67,7 +70,7 @@ void setupPulseInputs()
   Serial.println("🎚 Pulse Inputs on MCPWM Capture: " + String(PulseInputs_Count));
 
   int count = PulseInputs_Count;
-  
+
   // Enforce the absolute ESP32-S3 hardware limit of 6 capture channels across both units
   if (count > 6)
   {
@@ -77,11 +80,13 @@ void setupPulseInputs()
   }
 
   // Dynamically allocate the exact number of channel handles needed
-  if (mcpwm_cap_channels != NULL) {
+  if (mcpwm_cap_channels != NULL)
+  {
     free(mcpwm_cap_channels);
   }
   mcpwm_cap_channels = (mcpwm_cap_channel_handle_t *)calloc(count, sizeof(mcpwm_cap_channel_handle_t));
-  if (mcpwm_cap_channels == NULL) {
+  if (mcpwm_cap_channels == NULL)
+  {
     Serial_ERROR;
     Serial.println("Failed to allocate memory for MCPWM capture channels!");
     return;

@@ -52,6 +52,8 @@ int ESPChipIdOffset;
 Input *ProfileOverrideInput = nullptr; // Input on device boot that caused usage of non default Profile Id
 // Profile *CurrentProfile;               // Current Profile (with any settings saved to device memory)
 
+static portMUX_TYPE mcpwm_mux = portMUX_INITIALIZER_UNLOCKED;
+
 void (*LoopOperation)(void);
 
 portMUX_TYPE pulseMux = portMUX_INITIALIZER_UNLOCKED;
@@ -499,6 +501,14 @@ void setupDigitalInputs()
       }
     }
 
+    if (input->VirtualPulseInputs.size() > 0)
+    {
+      for (int j = 0; j < input->VirtualPulseInputs.size(); j++)
+      {
+        Serial.print(", <- Virtual Pulse Input from [" + String(input->VirtualPulseInputs[j].PulseInputSource->Label) + "]");
+      }
+    }
+
     input->ValueState.Value = input->DefaultValue;
 
     // Make sure any long press inputs (child inputs) have their parent set to help identify they are a child.
@@ -565,7 +575,7 @@ void setupAnalogInputs()
     {
       for (int j = 0; j < input->VirtualPulseInputs.size(); j++)
       {
-        Serial.print(", <- Virtual Pulse Input from [" + String(input->VirtualPulseInputs[j]->Label) + "]");
+        Serial.print(", <- Virtual Pulse Input from [" + String(input->VirtualPulseInputs[j].PulseInputSource->Label) + "]");
       }
     }
 
@@ -1046,104 +1056,6 @@ void setupDeviceIdentifiers()
   // Init serial number
   sprintf(SerialNumber, "%llu%d", ESPChipId, ESPChipIdOffset);
 }
-
-// void setupController()
-// {
-// #ifdef DEBUG_MARKS
-//   Debug::Mark(1, __LINE__, __FILE__, __func__);
-// #endif
-
-//   Serial.println();
-
-//   //bleGamepad = BleGamepad(FullDeviceName, ControllerType, 100);
-//   bleGamepad = new BleGamepad(FullDeviceName, ControllerType, 100);
-
-//   Serial_INFO;
-//   Serial.println("🔗 Final Bluetooth configuration...");
-//   Serial.println("... Name: " + String(FullDeviceName));
-//   Serial.println("... Type: " + String(ControllerType));
-//   BleGamepadConfiguration bleGamepadConfig;
-
-//   bleGamepadConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
-//   Serial.println("... Controller Type: Gamepad");
-
-//   bleGamepadConfig.setVid(VID);
-//   Serial.println("... VID: " + String(VID)); // Cosmetic
-
-//   bleGamepadConfig.setPid(PID);
-//   Serial.println("... PID: " + String(PID)); // Cosmetic
-
-//   bleGamepadConfig.setModelNumber(ModelNumber);
-//   Serial.println("... Model Number: " + String(ModelNumber)); // Cosmetic
-
-//   bleGamepadConfig.setSerialNumber(SerialNumber);
-//   Serial.println("... Serial Number: " + String(SerialNumber)); // Cosmetic
-
-//   Serial.println("... Core build: " + String(GetBuildVersion()));
-
-//   // TODO: Revision versions in config file
-//   bleGamepadConfig.setFirmwareRevision(FirmwareRevision);       // Version of this firmware
-//   Serial.println("... Firmware: v" + String(FirmwareRevision)); // Cosmetic
-
-//   bleGamepadConfig.setHardwareRevision(HardwareRevision);       // Version of circuit board etc.
-//   Serial.println("... Hardware: v" + String(HardwareRevision)); // Cosmetic
-
-//   bleGamepadConfig.setSoftwareRevision(SoftwareRevision);
-//   Serial.println("... Software: v" + String(SoftwareRevision)); // Cosmetic
-
-//   bleGamepadConfig.setHidReportId(1);
-
-//   // Start, Select, Menu, Home, Back, VolumeInc, VolumeDec, b
-//   // TODO: Actual digital count of bluetooth devices (loop and count)
-//   bleGamepadConfig.setButtonCount(DigitalInputs_Count);
-//   Serial.println("... Buttons/Digital Input Count: " + String(DigitalInputs_Count));
-
-//   // bleGamepadConfig.setButtonCount(AnalogInputs_Count);
-//   Serial.println("... Analog Input Count: " + String(AnalogInputs_Count));
-
-//   bleGamepadConfig.setWhichSpecialButtons(true, true, true, true, true, true, true, true);
-//   bleGamepadConfig.setHatSwitchCount(HatInputs_Count);
-//   Serial.println("... Hat Count: " + String(HatInputs_Count));
-
-// #ifdef Enable_Slider1
-//   bleGamepadConfig.setIncludeSlider1(true);
-//   Serial.println("... Slider 1 Enabled");
-// #endif
-
-// #ifdef Enable_Slider2
-//   bleGamepadConfig.setIncludeSlider2(true);
-//   Serial.println("... Slider 2 Enabled");
-// #endif
-
-//   // Other possibilities, might want to use some time
-//   // bleGamepadConfig.setIncludeXAxis(false);
-//   // bleGamepadConfig.setIncludeYAxis(false);
-//   // bleGamepadConfig.setIncludeRxAxis(false);
-//   // bleGamepadConfig.setIncludeRyAxis(false);
-//   // bleGamepadConfig.setIncludeRzAxis(false);
-
-//   bleGamepadConfig.setAutoReport(false);
-
-//   //   Display.fillRect(0, 0, 100, 100, C_BLACK);
-//   // RRE.printStr(20, 20, "A");
-//   // Display.display();
-//   // delay(250);
-
-// #ifdef DEBUG_MARKS
-//   Debug::Mark(2, __LINE__, __FILE__, __func__);
-// #endif
-
-//   bleGamepad->begin(&bleGamepadConfig); // Note - changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
-
-// #ifdef DEBUG_MARKS
-//   Debug::Mark(3, __LINE__, __FILE__, __func__);
-// #endif
-
-//   // Display.fillRect(0, 0, 100, 100, C_BLACK);
-//   // RRE.printStr(20, 20, "B");
-//   // Display.display();
-//   // delay(250);
-// }
 
 void setupController()
 {
@@ -1640,7 +1552,7 @@ void MainLoop()
 #endif
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
-  delay(250);
+  //delay(250);
 
   Serial.print("\033[3J\033[2J\033[H");
   // Serial.print("\033[H");
@@ -1775,6 +1687,51 @@ void MainLoop()
   MainBenchmark.Snapshot("Loop.SubSecondRollover", showBenchmark);
 #endif
 
+  // Pulse Inputs
+  // Processed purely to calculate values to be used later as virtual digital inputs
+
+#ifdef DEBUG_MARKS
+  Debug::Mark(2195, __LINE__, __FILE__, __func__, "Pulse Inputs");
+#endif
+
+  PulseInput *pulseInput;
+  for (int i = 0; i < PulseInputs_Count; i++)
+  {
+    PulseInput *pulseInput = PulseInputs[i];
+
+    if (pulseInput->FreshData)
+    {
+
+      if (pulseInput->DutyCycle != pulseInput->ValueState.AnalogValue)
+      {
+        pulseInput->ValueState.PreviousAnalogValue = pulseInput->ValueState.AnalogValue;
+        pulseInput->ValueState.AnalogValue = pulseInput->DutyCycle;
+        pulseInput->ValueState.StateChangedWhen = micros();
+        pulseInput->ValueState.StateJustChanged = true;
+        pulseInput->ValueState.StateJustChangedLED = true;
+      }
+
+      portENTER_CRITICAL(&mcpwm_mux);
+      //pulseInput->Count = 0;
+      pulseInput->FreshData = false;
+      portEXIT_CRITICAL(&mcpwm_mux);
+    }
+
+#ifdef INPUT_SERIAL_DEBUG_PLUS
+    snprintf(buffer, sizeof(buffer),
+             "Pulse input   %2d [%-35s]: AnalogValue: %4d",
+             i,
+             pulseInput->Label,
+             pulseInput->ValueState.AnalogValue);
+
+    Serial.println(buffer);
+#endif
+  }
+
+#ifdef INCLUDE_BENCHMARKS
+  MainBenchmark.Snapshot("Loop.PulseInputs", showBenchmark);
+#endif
+
 // Digital inputs
 #ifdef DEBUG_MARKS
   Debug::Mark(100, __LINE__, __FILE__, __func__, "Digital Inputs");
@@ -1823,11 +1780,12 @@ void MainLoop()
 
       // Combine with virtual pin if required
       // TODO: This may be an array
-      if (input->VirtualPinInputs.size() > 0)
+      int virtualPinInputCount = input->VirtualPinInputs.size();
+      if (virtualPinInputCount > 0)
       {
         // Serial.print("Bluetooth input state: " + String(state) + " for " + String(input->Label) + " which has a current state of " + String(input->ValueState.Value) + ", initial state read of " + String(state));
 
-        for (int j = 0; j < input->VirtualPinInputs.size(); j++)
+        for (int j = 0; j < virtualPinInputCount; j++)
         {
           Input *virtualinput = input->VirtualPinInputs[j];
 
@@ -1844,7 +1802,42 @@ void MainLoop()
         }
       }
 
-      int skipCheck = false;
+      // Pulse ranges are treated slightly differently
+      // Checks range only to convert to a digital on/off - no actual analog stuff
+      int virtualPulseInputCount = input->VirtualPulseInputs.size();
+
+      for (int j = 0; j < virtualPulseInputCount; j++)
+      {
+        int16_t virtualState = 0;
+
+        PulseInputConfig *virtualPulseInput = &input->VirtualPulseInputs[j];
+
+        uint16_t pulseValue = virtualPulseInput->PulseInputSource->ValueState.AnalogValue;
+
+        if (pulseValue >= virtualPulseInput->LowerBound && pulseValue <= virtualPulseInput->UpperBound)
+          state = state && PRESSED;
+
+        // analogState = virtualPulseInput->ValueState.AnalogValue;
+
+#ifdef INPUT_SERIAL_DEBUG_PLUS
+        snprintf(buffer, sizeof(buffer),
+                 "    Pulse Virtual input <- %4d, Ranged [%4d] %d [%4d] - [%s]",
+                 pulseValue,
+                 virtualPulseInput->LowerBound,
+                 (pulseValue >= virtualPulseInput->LowerBound && pulseValue <= virtualPulseInput->UpperBound) ? PRESSED : NOT_PRESSED,
+                 virtualPulseInput->UpperBound,
+                 virtualPulseInput->PulseInputSource->Label);
+
+        Serial.println(buffer);
+#endif
+        // }
+
+        // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
+
+        // At this point, the largest analogState found (post processing possible pin + all virtual pins with whatever individual ranges they may have)
+      }
+
+      //int skipCheck = false;
 
       // Digital inputs are easy, EXCEPT when using time delays
       // e.g. you might have a Select button, however if that Select button is held down for more than 1 second, rather than
@@ -2024,45 +2017,6 @@ void MainLoop()
   MainBenchmark.Snapshot("Loop.DigitalInputs", showBenchmark);
 #endif
 
-  // Pulse Inputs
-  // Processed purely to calculate values to be used later as virtual analog inputs
-
-#ifdef DEBUG_MARKS
-  Debug::Mark(2195, __LINE__, __FILE__, __func__, "Pulse Inputs");
-#endif
-
-  PulseInput *pulseInput;
-  for (int i = 0; i < PulseInputs_Count; i++)
-  {
-    PulseInput *pulseInput = PulseInputs[i];
-
-    if (pulseInput->DutyCycle != pulseInput->ValueState.AnalogValue)
-    {
-      pulseInput->ValueState.PreviousAnalogValue = pulseInput->ValueState.AnalogValue;
-      pulseInput->ValueState.AnalogValue = pulseInput->DutyCycle;
-      input->ValueState.StateChangedWhen = micros();
-      input->ValueState.StateJustChanged = true;
-      input->ValueState.StateJustChangedLED = true;
-    }
-
-    pulseInput->Count = 0;
-    pulseInput->FreshData = false;
-
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-    snprintf(buffer, sizeof(buffer),
-             "Pulse input   %2d [%-35s]: AnalogValue: %4d",
-             i,
-             pulseInput->Label,
-             pulseInput->ValueState.AnalogValue);
-
-    Serial.println(buffer);
-#endif
-  }
-
-#ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.PulseInputs", showBenchmark);
-#endif
-
 // Analog Inputs
 #ifdef DEBUG_MARKS
   Debug::Mark(200, __LINE__, __FILE__, __func__, "Analog Inputs");
@@ -2178,41 +2132,43 @@ void MainLoop()
         // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
       }
     }
-    // Pulse ranges are treated slightly differently
-    // To fit in easily with other processing, we only provide an analog value if the pulsed value
-    // sits inside the analog input's range, else its set to 0
-    int virtualPulseInputCount = input->VirtualPulseInputs.size();
 
-    for (int j = 0; j < virtualPulseInputCount; j++)
-    {
-      int16_t virtualState = 0;
+    //     // Pulse ranges are treated slightly differently
+    //     // Checks range only to convert to a digital on/off - no actual analog stuff
+    //     int virtualPulseInputCount = input->VirtualPulseInputs.size();
 
-      PulseInput *virtualPulseInput = input->VirtualPulseInputs[j];
+    //     for (int j = 0; j < virtualPulseInputCount; j++)
+    //     {
+    //       int16_t virtualState = 0;
 
-      uint16_t pulseValue = virtualPulseInput->ValueState.AnalogValue;
+    //       PulseInput *virtualPulseInput = input->VirtualPulseInputs[j];
 
-      if (pulseValue >= input->MinAnalogValue && pulseValue <= input->MaxAnalogValue)
-        analogState = pulseValue;
+    //       uint16_t pulseValue = virtualPulseInput->ValueState.AnalogValue;
 
-      // analogState = virtualPulseInput->ValueState.AnalogValue;
+    //       if (input->)
+    //       if (pulseValue >= input->MinAnalogValue && pulseValue <= input->MaxAnalogValue)
+    //         analogState = pulseValue;
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-      snprintf(buffer, sizeof(buffer),
-               "    Pulse Virtual input <- %4d, Ranged [%4d] [%4d], Final: %4d - [%s]",
-               virtualPulseInput->ValueState.AnalogValue,
-               input->MinAnalogValue,
-               input->MaxAnalogValue,
-               analogState,
-               virtualPulseInput->Label);
+    //       // analogState = virtualPulseInput->ValueState.AnalogValue;
 
-      Serial.println(buffer);
-#endif
-      // }
+    // #ifdef INPUT_SERIAL_DEBUG_PLUS
+    //       snprintf(buffer, sizeof(buffer),
+    //                "    Pulse Virtual input <- %4d, Ranged [%4d] [%4d], Final: %4d - [%s]",
+    //                virtualPulseInput->ValueState.AnalogValue,
+    //                input->MinAnalogValue,
+    //                input->MaxAnalogValue,
+    //                analogState,
+    //                virtualPulseInput->Label);
 
-      // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
+    //       Serial.println(buffer);
+    // #endif
+    //       // }
 
-      // At this point, the largest analogState found (post processing possible pin + all virtual pins with whatever individual ranges they may have)
-    }
+    //       // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
+
+    //       // At this point, the largest analogState found (post processing possible pin + all virtual pins with whatever individual ranges they may have)
+    //     }
+
     // else
     //   Serial.print("");
 
@@ -2241,7 +2197,7 @@ void MainLoop()
 
         input->ValueState.Value = PRESSED;
         // #ifdef EXTRA_SERIAL_DEBUG_PLUS
-        Serial.println("Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
+        // Serial.println("Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
         // #endif
         input->ValueState.StateJustChanged = true;
         input->ValueState.StateJustChangedLED = true;
@@ -2250,7 +2206,7 @@ void MainLoop()
       {
         input->ValueState.Value = NOT_PRESSED;
         // #ifdef EXTRA_SERIAL_DEBUG_PLUS
-        Serial.println("Analog to Digital Trigger OFF: " + String(input->Label) + " - " + String(analogState));
+        // Serial.println("Analog to Digital Trigger OFF: " + String(input->Label) + " - " + String(analogState));
         // #endif
         input->ValueState.StateJustChanged = true;
         input->ValueState.StateJustChangedLED = true;
@@ -2771,6 +2727,7 @@ void MainLoop()
   Serial.println(); // Extra blank line helps cover up any previous output that might have been left on the serial monitor if an extra line got printed
 #endif
 
+// TODO: Include Virtual Inputs
 #ifdef INPUT_SERIAL_DEBUG
   // Serial.print("#Inputs: ");
   //  Print an overview of input states

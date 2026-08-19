@@ -78,16 +78,23 @@ typedef struct PulseInput
   volatile uint32_t LastFallTime;
   volatile uint32_t HighPulseUs;
   volatile uint32_t TotalPeriodUs;
-  volatile int Count;
+  //int Count;
   volatile bool FreshData;
 
   // volatile bool Ignored;
-  State ValueState;
+  volatile State ValueState;
 
   // ESP-IDF hardware RMT monitoring
   //rmt_channel_handle_t rx_channel;
   //rmt_symbol_word_t raw_symbols[64];
 } PulseInput;
+
+typedef struct PulseInputConfig
+{
+  PulseInput* PulseInputSource;
+  uint32_t LowerBound;
+  uint32_t UpperBound;
+} PulseInputConfig;
 
 // General input (Digital and Analog - e.g. buttons)
 typedef struct Input
@@ -100,7 +107,7 @@ typedef struct Input
   // Currently only works with AnalogTriggeredInputs
   std::vector<Input *> VirtualPinInputs;        // Rather than getting state from reading a pin, gets it from another input
                                                 // Means we can e.g. have 1 input acting as a button and also triggering an analog separate input
-  std::vector<PulseInput *> VirtualPulseInputs; // Pulse inputs - equivalent of above
+  std::vector<PulseInputConfig> VirtualPulseInputs; // Pulse inputs - equivalent of above
   VirtualPinModes VirtualPinMode;
 
   const char *Label;

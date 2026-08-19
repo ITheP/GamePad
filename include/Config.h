@@ -2,10 +2,10 @@
 
 #include <stdint.h>
 
-#define EXTRA_SERIAL_DEBUG          // Enable to print loads of extra information to serial
+//#define EXTRA_SERIAL_DEBUG          // Enable to print loads of extra information to serial
 //#define EXTRA_SERIAL_DEBUG_PLUS   // ...further detail including analog input values, but can flood serial output somewhat!
 //#define INPUT_SERIAL_DEBUG        // Basic per frame serial output overview of input states
-#define INPUT_SERIAL_DEBUG_PLUS     // Enables detailed serial output of input states, including digital, analog, virtual and battery states.
+//#define INPUT_SERIAL_DEBUG_PLUS     // Enables detailed serial output of input states, including digital, analog, virtual and battery states.
                                     // Includes sending ANSI codes to reset cursor position to provide a static display in a suitable terminal.
                                     // Also sticks a delay() in to give a chance to read the output better
                                     // Usually used to fine tune hardware
@@ -14,7 +14,7 @@
 //#define STRAIGHT_TO_CONFIG_MENU   // Skip straight to config menu on start up for easier testing
 //#define WHITE_SCREEN              // Display will show a solid white screen, handy when physically aligning panel in device
 //#define DEBUG_MARKS                 // Extra debug logging that survives crashes
-#define FORCE_FPS_DISPLAY           // Debug variant of Show FPS in top right corner of screen (don't need to be in menus)
+//#define FORCE_FPS_DISPLAY           // Debug variant of Show FPS in top right corner of screen (don't need to be in menus)
 //#define STRAIGHT_TO_IDLE_SCREEN     // Skip straight to idle screen on start up for easier testing of idle screen and effects
 
 #define SETUP_DELAY     250         // Delay between stages of initial start up
