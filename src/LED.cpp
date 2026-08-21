@@ -185,7 +185,7 @@ void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
       for (int i = 0; i < AnalogInputs_Count; i++)
       {
         Input *input = AnalogInputs[i];
-        int val = input->ValueState.Value;
+        int val = input->ValueState.AnalogValue;
         // Different to Digital Inputs - the analog is always set on an ongoing basis, not just when somethings pressed/unpressed
 
         // For an analog input, we set LED colour based on ranged value

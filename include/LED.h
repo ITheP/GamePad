@@ -37,7 +37,7 @@ typedef struct ExternalLEDConfig {
   
   typedef void (*EffectFunctionPointer)(void*, float);
   EffectFunctionPointer Effect;                             // Effect, either DigitalEffect::, HatEffect:: or AnalogEffect:: function pointer
- 
+                                                            // IMPORTANT - no effect defaults to something that assumes 0-4095 analog ranges when processing ValueState.AnalogValue
   int RunEffectConstantly;
   float Rate;                                               // Rate of effect, default to 0.0. - will vary in use depending on the Effect
   uint32_t Chance;                                          // For relevant effect, chance of something occurring where 0 = 0% and 0xFFFF = 100%

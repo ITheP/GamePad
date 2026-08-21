@@ -151,10 +151,10 @@ Input AnalogInputs_Virtual_TriggeredGreen =
         .BluetoothInput = NONE,
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
-        .MinAnalogValue = 2140,
-        .MaxAnalogValue = 2350,
-        .TriggerOnValue = 2140 + 60,
-        .TriggerOffValue = 2140 + 60,
+        .MinAnalogValue = 2250,
+        .MaxAnalogValue = 2290,
+        .TriggerOnValue = 12150 + 60,
+        .TriggerOffValue = 12150 + 60,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -166,7 +166,7 @@ Input AnalogInputs_Virtual_TriggeredGreen =
             .PrimaryColour = { CRGB(96, 96, 96), true },
             .SecondaryColour = { CRGB(0, 255, 0), true },
             .Effect = &AnalogEffects::ConstrainedSimpleSet,
-            .RunEffectConstantly = true,
+            //.RunEffectConstantly = true,
          },
         };
 
@@ -179,8 +179,8 @@ Input AnalogInputs_Virtual_TriggeredRed =
         .DefaultAnalogValue = -1,
         .MinAnalogValue = 2230,
         .MaxAnalogValue = 2420,
-        .TriggerOnValue = 2230 + 60,
-        .TriggerOffValue = 2230 + 60,
+        .TriggerOnValue = 12230 + 60,
+        .TriggerOffValue = 12230 + 60,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -205,8 +205,8 @@ Input AnalogInputs_Virtual_TriggeredYellow =
         .DefaultAnalogValue = -1,
         .MinAnalogValue = 2200,
         .MaxAnalogValue = 2400,
-        .TriggerOnValue = 2200 + 60,
-        .TriggerOffValue = 2200 + 60,
+        .TriggerOnValue = 12200 + 60,
+        .TriggerOffValue = 12200 + 60,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -218,7 +218,7 @@ Input AnalogInputs_Virtual_TriggeredYellow =
             .PrimaryColour = { CRGB(96, 96, 96), true },
             .SecondaryColour = { CRGB(255, 255, 0), true },
             .Effect = &AnalogEffects::ConstrainedSimpleSet,
-            .RunEffectConstantly = true,
+            //.RunEffectConstantly = true,
          },
     };
 
@@ -231,8 +231,8 @@ Input AnalogInputs_Virtual_TriggeredBlue =
         .DefaultAnalogValue = -1,
         .MinAnalogValue = 2190,
         .MaxAnalogValue = 2400,
-        .TriggerOnValue = 2190 + 60,
-        .TriggerOffValue = 2190 + 60,
+        .TriggerOnValue = 12190 + 60,
+        .TriggerOffValue = 12190 + 60,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -257,8 +257,8 @@ Input AnalogInputs_Virtual_TriggeredOrange =
         .DefaultAnalogValue = -1,
         .MinAnalogValue = 2290,
         .MaxAnalogValue = 2490,
-        .TriggerOnValue = 2290 + 60,
-        .TriggerOffValue = 2290 + 60,
+        .TriggerOnValue = 12290 + 60,
+        .TriggerOffValue = 12290 + 60,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -270,7 +270,7 @@ Input AnalogInputs_Virtual_TriggeredOrange =
             .PrimaryColour = { CRGB(96, 96, 96), true },
             .SecondaryColour = { CRGB(255, 64, 0), true },
             .Effect = &AnalogEffects::ConstrainedSimpleSet,
-            .RunEffectConstantly = true,
+           // .RunEffectConstantly = true,
          },
     };
 
@@ -279,13 +279,13 @@ Input AnalogInputs_Virtual_TriggeredOrange =
 Input AnalogInputs_Whammy =
     {
         .Pin = ANALOG_Whammy_PIN,
-        .VirtualPinInputs = {
-            &AnalogInputs_Virtual_TriggeredGreen,
-            &AnalogInputs_Virtual_TriggeredRed,
-            &AnalogInputs_Virtual_TriggeredYellow,
-            &AnalogInputs_Virtual_TriggeredBlue,
-            &AnalogInputs_Virtual_TriggeredOrange
-        },
+        // .VirtualPinInputs = {
+        //     &AnalogInputs_Virtual_TriggeredGreen,
+        //     &AnalogInputs_Virtual_TriggeredRed,
+        //     &AnalogInputs_Virtual_TriggeredYellow,
+        //     &AnalogInputs_Virtual_TriggeredBlue,
+        //     &AnalogInputs_Virtual_TriggeredOrange
+        // },
         //.VirtualPinMode = VirtualPinModes::RequireValueToBePressed, // Only take analog values from virtual pin when they are also in a pressed state
         .VirtualPinMode = VirtualPinModes::RequireValueToBePressedAndHaveBeenPartlyReleased, // Only take analog values from virtual pin when they are also in a pressed state
         .Label = "Whammy",
@@ -325,12 +325,12 @@ Input AnalogInputs_Whammy =
 };
 
 Input *AnalogInputs[] = {
-    &AnalogInputs_Whammy,
-    &AnalogInputs_Virtual_TriggeredGreen,
+   &AnalogInputs_Virtual_TriggeredGreen,
     &AnalogInputs_Virtual_TriggeredRed,
     &AnalogInputs_Virtual_TriggeredYellow,
     &AnalogInputs_Virtual_TriggeredBlue,
-    &AnalogInputs_Virtual_TriggeredOrange
+    &AnalogInputs_Virtual_TriggeredOrange,
+    // &AnalogInputs_Whammy
 };
 
 
