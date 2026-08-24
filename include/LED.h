@@ -53,4 +53,8 @@ typedef struct ExternalLEDConfig {
 } ExternalLEDConfig;
 
 void InitExternalLED(ExternalLEDConfig* config, CRGB* leds);
+void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate);
 void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate);
+
+// void Test();
+// void FastTest();

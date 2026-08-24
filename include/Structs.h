@@ -4,15 +4,17 @@
 #include <vector>
 #include "Config.h"
 #include "Defines.h"
-// #include <BleGamepad.h>
-#include <BleCompositeHID.h>
-#include <GamepadDevice.h>
+#include <BleGamepad.h>
+//#include <BleCompositeHID.h>
+//#include <GamepadDevice.h>
 #include <FastLED.h>
 #include "LED.h"
 #include "stats.h"
 
-using GamepadFunctionPointer = void (GamepadDevice::*)(uint8_t);
-using GamepadFunctionPointerInt = void (GamepadDevice::*)(int16_t);
+typedef void (BleGamepad::*BleGamepadFunctionPointer)(uint8_t);
+typedef void (BleGamepad::*BleGamepadFunctionPointerInt)(int16_t);
+// using GamepadFunctionPointer = void (GamepadDevice::*)(uint8_t);
+// using GamepadFunctionPointerInt = void (GamepadDevice::*)(int16_t);
 
 typedef struct IntPair
 {
@@ -114,7 +116,7 @@ typedef struct Input
   int BluetoothInput;
   int16_t DefaultValue;
   int16_t DefaultAnalogValue;
-
+  int16_t AverageOverAnalogCount;
   int16_t MinAnalogValue;             // Min value for analog input
   int16_t MaxAnalogValue;             // Max value for analog input
                                       // e.g. any variable resistor used in physical might not range from theoretical min->max values,
@@ -130,12 +132,12 @@ typedef struct Input
   // VirtualAnalogCopyTypes VirtualAnalogCopyType; // How to copy over values into virtual values
   // int16_t VirtualAnalogValue;                   // For any other controls using this Input as a VirtualPin, value is set here. Input may manipulate this value as it see's fit
 
-  // BleGamepadFunctionPointer BluetoothPressOperation;
-  // BleGamepadFunctionPointer BluetoothReleaseOperation;
-  // BleGamepadFunctionPointerInt BluetoothSetOperation;
-  GamepadFunctionPointer BluetoothPressOperation;
-  GamepadFunctionPointer BluetoothReleaseOperation;
-  GamepadFunctionPointerInt BluetoothSetOperation;
+  BleGamepadFunctionPointer BluetoothPressOperation;
+  BleGamepadFunctionPointer BluetoothReleaseOperation;
+  BleGamepadFunctionPointerInt BluetoothSetOperation;
+  // GamepadFunctionPointer BluetoothPressOperation;
+  // GamepadFunctionPointer BluetoothReleaseOperation;
+  // GamepadFunctionPointerInt BluetoothSetOperation;
   ControllerReport (*CustomOperationPressed)();  // Custom/specific operation, code may be within controller .cpp
   ControllerReport (*CustomOperationReleased)(); // Custom/specific operation, code may be within controller .cpp
 
@@ -156,6 +158,9 @@ typedef struct Input
 
   int ProfileId;                 // Set > 0 to enable this Input for Profile Id override inclusion on startup
   State ValueState;              // Master set of data that stores actual state of input (PRESSED, NOT_PRESSED) and/or analog value, and also tracks when state changes happen etc.
+  uint32_t AnalogCumulative;     // Used when averaging
+  uint16_t AnalogCount;
+  uint16_t AnalogRaw;            // Raw value (post any averaging etc.)
   unsigned long LongPressTiming; // Delayed operation timing in milliseconds for alternative press operation
   Input *LongPressChildInput;    // Equivalent Input configuration that kicks in if a delayed operation is required and is triggered
   // Set automatically by code

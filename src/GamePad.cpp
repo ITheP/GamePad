@@ -6,9 +6,9 @@
 #define NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
 #include <Adafruit_SSD1306.h>
 #include <RREFont.h>
-// #include <bleGamepad.h>
-#include <BleCompositeHID.h>
-#include <GamepadDevice.h>
+#include <bleGamepad.h>
+// #include <BleCompositeHID.h>
+// #include <GamepadDevice.h>
 #include <FS.h>
 #include <LittleFS.h>
 // #include <esp_private/panic_internal.h>
@@ -73,6 +73,7 @@ uint32_t rnd = random();
 // -----------------------------------------------------
 // LED stuff (include after controller definition)
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
+
 #include <FastLED.h>
 
 CRGB ExternalLeds[ExternalLED_Count];
@@ -85,13 +86,13 @@ int ExternalLedsEnabled[ExternalLED_Count];
 #include <Prefs.h>
 
 // Task for handling FastLED updates
-void UpdateExternalLEDs(void *parameter)
-{
-  float statusDecrease = (255.0 * EXTERNAL_LED_FADE_RATE * LED_UPDATE_RATE);
-  uint8_t externalDecrease = (uint8_t)(255.0 * EXTERNAL_LED_FADE_RATE * LED_UPDATE_RATE);
+// void UpdateExternalLEDs(void *parameter)
+// {
+//   float statusDecrease = (255.0 * EXTERNAL_LED_FADE_RATE * LED_UPDATE_RATE);
+//   uint8_t externalDecrease = (uint8_t)(255.0 * EXTERNAL_LED_FADE_RATE * LED_UPDATE_RATE);
 
-  UpdateExternalLEDsLoop(statusDecrease, externalDecrease);
-}
+//   UpdateExternalLEDsLoop(statusDecrease, externalDecrease);
+// }
 
 #endif
 
@@ -107,9 +108,9 @@ int Logo_RunCount = sizeof(Logo) / sizeof(Logo[0]);
 // -----------------------------------------------------
 // Gamepad
 
-// BleGamepad* bleGamepad = nullptr;
-BleCompositeHID *compositeHID = nullptr;
-GamepadDevice *gamepadDevice = nullptr;
+BleGamepad *bleGamepad = nullptr;
+// BleCompositeHID *compositeHID = nullptr;
+// GamepadDevice *gamepadDevice = nullptr;
 
 bool BTConnectionState;
 bool PreviousBTConnectionState;
@@ -310,6 +311,7 @@ void setupBattery()
   // measure 0->2.2v - theoretically voltage divider on e.g. 3.8v needs 1.9v
   // 0db is more accurate but only 1.1v in range
   analogSetPinAttenuation(BATTERY_MONITOR_PIN, ADC_6db);
+  // TODO: Can we use uint32_t voltage_mv = analogReadMilliVolts(BATTERY_MONITOR_PIN); ?
 
   // Make sure we have atleast one battery reading completed
   Battery::TakeReading();
@@ -671,7 +673,11 @@ void setupInitExternalLEDs()
     ExternalLEDConfig *config = MiscLEDEffects[i];
 
     if (config != nullptr)
+    {
+      Serial.print("MiscLEDEffects InitExternalLED: " + String(i) + ": ");
       InitExternalLED(config, ExternalLeds);
+      Serial.println();
+    }
   }
 
   // Idle LEDs
@@ -681,7 +687,11 @@ void setupInitExternalLEDs()
     ExternalLEDConfig *config = IdleLEDEffects[i];
 
     if (config != nullptr)
+    {
+      Serial.print("MiscLEDEffects InitExternalLED: " + String(i) + ": ");
       InitExternalLED(config, ExternalLeds);
+      Serial.println();
+    }
   }
 }
 #endif
@@ -712,14 +722,14 @@ void setupLEDs()
   // as Bluetooth/WiFi etc. run on core 0 and wan't to give them maximum performance there.
   // Gives us the option to play around a bit and choose where we want to run it in the future.
 
-  xTaskCreatePinnedToCore(
-      UpdateExternalLEDs,
-      "LEDUpdateTask",
-      16000, // Stack size
-      NULL,
-      1,
-      &UpdateExternalLEDsTask,
-      1); // Core
+  // xTaskCreatePinnedToCore(
+  //     UpdateExternalLEDs,
+  //     "LEDUpdateTask",
+  //     16000, // Stack size
+  //     NULL,
+  //     1,
+  //     &UpdateExternalLEDsTask,
+  //     1); // Core
 
   uint8_t hue = 0;
 
@@ -746,7 +756,9 @@ void setupLEDs()
 
   FastLED.addLeds<EXTERNAL_LED_TYPE, EXTERNAL_LED_PIN, EXTERNAL_LED_COLOR_ORDER>(ExternalLeds, ExternalLED_FastLEDCount); // ExternalLED_Count);
 
-  // Knightrider the external LED's
+  Serial.println("💡 " + String(ExternalLED_FastLEDCount) + " LEDs added, ExternalLED array length " + String(sizeof(ExternalLeds) / sizeof(CRGB)));
+
+  // Cycle through the external LED's as a pretty test
   hue = 0;
 
   // Flash LED's so no matter how many, they are shown within a small time frame.
@@ -1065,92 +1077,190 @@ void setupController()
 
   Serial.println();
 
+  // bleGamepad = BleGamepad(FullDeviceName, ControllerType, 100);
+  bleGamepad = new BleGamepad(FullDeviceName, ControllerType, 100);
+
   Serial_INFO;
   Serial.println("🔗 Final Bluetooth configuration...");
   Serial.println("... Name: " + String(FullDeviceName));
   Serial.println("... Type: " + String(ControllerType));
+  BleGamepadConfiguration bleGamepadConfig;
 
-  // 1. Instantiate Composite Host (Name, Manufacturer, Battery Level)
-  compositeHID = new BleCompositeHID(FullDeviceName, ControllerType, 100);
+  bleGamepadConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
+  Serial.println("... Controller Type: Gamepad");
 
-  // 2. Set VID / PID and DIS Metadata directly on the Device Information Service
-  BLEHostConfiguration hostConfig;
+  bleGamepadConfig.setVid(VID);
+  Serial.println("... VID: " + String(VID)); // Cosmetic
 
-  hostConfig.setVid(VID);
-  Serial.println("... VID: " + String(VID));
+  bleGamepadConfig.setPid(PID);
+  Serial.println("... PID: " + String(PID)); // Cosmetic
 
-  hostConfig.setPid(PID);
-  Serial.println("... PID: " + String(PID));
+  bleGamepadConfig.setModelNumber(ModelNumber);
+  Serial.println("... Model Number: " + String(ModelNumber)); // Cosmetic
 
-  hostConfig.setModelNumber(ModelNumber);
-  Serial.println("... Model Number: " + String(ModelNumber));
-
-  hostConfig.setSerialNumber(SerialNumber);
-  Serial.println("... Serial Number: " + String(SerialNumber));
-
-  hostConfig.setFirmwareRevision(FirmwareRevision);
-  Serial.println("... Firmware: v" + String(FirmwareRevision));
-
-  hostConfig.setHardwareRevision(HardwareRevision);
-  Serial.println("... Hardware: v" + String(HardwareRevision));
-
-  hostConfig.setSoftwareRevision(SoftwareRevision);
-  Serial.println("... Software: v" + String(SoftwareRevision));
+  bleGamepadConfig.setSerialNumber(SerialNumber);
+  Serial.println("... Serial Number: " + String(SerialNumber)); // Cosmetic
 
   Serial.println("... Core build: " + String(GetBuildVersion()));
 
-  // 3. Configure Gamepad HID Report parameters
-  GamepadConfiguration gamepadConfig;
+  // TODO: Revision versions in config file
+  bleGamepadConfig.setFirmwareRevision(FirmwareRevision);       // Version of this firmware
+  Serial.println("... Firmware: v" + String(FirmwareRevision)); // Cosmetic
 
-  gamepadConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD);
-  Serial.println("... Controller Type: Gamepad");
+  bleGamepadConfig.setHardwareRevision(HardwareRevision);       // Version of circuit board etc.
+  Serial.println("... Hardware: v" + String(HardwareRevision)); // Cosmetic
 
-  // Serial.println("... VID: " + String(VID));
-  // Serial.println("... PID: " + String(PID));
-  // Serial.println("... Model Number: " + String(ModelNumber));
-  // Serial.println("... Serial Number: " + String(SerialNumber));
-  // Serial.println("... Core build: " + String(GetBuildVersion()));
-  // Serial.println("... Firmware: v" + String(FirmwareRevision));
-  // Serial.println("... Hardware: v" + String(HardwareRevision));
-  // Serial.println("... Software: v" + String(SoftwareRevision));
+  bleGamepadConfig.setSoftwareRevision(SoftwareRevision);
+  Serial.println("... Software: v" + String(SoftwareRevision)); // Cosmetic
 
-  gamepadConfig.setButtonCount(DigitalInputs_Count);
+  bleGamepadConfig.setHidReportId(1);
+
+  // Start, Select, Menu, Home, Back, VolumeInc, VolumeDec, b
+  // TODO: Actual digital count of bluetooth devices (loop and count)
+  bleGamepadConfig.setButtonCount(DigitalInputs_Count);
   Serial.println("... Buttons/Digital Input Count: " + String(DigitalInputs_Count));
+
+  // bleGamepadConfig.setButtonCount(AnalogInputs_Count);
   Serial.println("... Analog Input Count: " + String(AnalogInputs_Count));
 
-  gamepadConfig.setWhichSpecialButtons(true, true, true, true, true, true, true, true);
-  gamepadConfig.setHatSwitchCount(HatInputs_Count);
+  bleGamepadConfig.setWhichSpecialButtons(true, true, true, true, true, true, true, true);
+  bleGamepadConfig.setHatSwitchCount(HatInputs_Count);
   Serial.println("... Hat Count: " + String(HatInputs_Count));
 
 #ifdef Enable_Slider1
-  gamepadConfig.setIncludeSlider1(true);
+  bleGamepadConfig.setIncludeSlider1(true);
   Serial.println("... Slider 1 Enabled");
 #endif
 
 #ifdef Enable_Slider2
-  gamepadConfig.setIncludeSlider2(true);
+  bleGamepadConfig.setIncludeSlider2(true);
   Serial.println("... Slider 2 Enabled");
 #endif
 
-  gamepadConfig.setAutoReport(false);
+  // Other possibilities, might want to use some time
+  // bleGamepadConfig.setIncludeXAxis(false);
+  // bleGamepadConfig.setIncludeYAxis(false);
+  // bleGamepadConfig.setIncludeRxAxis(false);
+  // bleGamepadConfig.setIncludeRyAxis(false);
+  // bleGamepadConfig.setIncludeRzAxis(false);
+
+  bleGamepadConfig.setAutoReport(false);
+
+  //   Display.fillRect(0, 0, 100, 100, C_BLACK);
+  // RRE.printStr(20, 20, "A");
+  // Display.display();
+  // delay(250);
 
 #ifdef DEBUG_MARKS
   Debug::Mark(2, __LINE__, __FILE__, __func__);
 #endif
 
-  // 4. Create Gamepad Device instance with its configuration
-  gamepadDevice = new GamepadDevice(gamepadConfig);
-
-  // 5. Attach Gamepad Device to Host
-  compositeHID->addDevice(gamepadDevice);
-
-  // 6. Start BLE service passing hostConfig
-  compositeHID->begin(hostConfig);
+  bleGamepad->begin(&bleGamepadConfig); // Note - changing bleGamepadConfig after the begin function has no effect, unless you call the begin function again
 
 #ifdef DEBUG_MARKS
   Debug::Mark(3, __LINE__, __FILE__, __func__);
 #endif
+
+  // Display.fillRect(0, 0, 100, 100, C_BLACK);
+  // RRE.printStr(20, 20, "B");
+  // Display.display();
+  // delay(250);
 }
+
+// void setupController()
+// {
+// #ifdef DEBUG_MARKS
+//   Debug::Mark(1, __LINE__, __FILE__, __func__);
+// #endif
+
+//   Serial.println();
+
+//   Serial_INFO;
+//   Serial.println("🔗 Final Bluetooth configuration...");
+//   Serial.println("... Name: " + String(FullDeviceName));
+//   Serial.println("... Type: " + String(ControllerType));
+
+//   // 1. Instantiate Composite Host (Name, Manufacturer, Battery Level)
+//   compositeHID = new BleCompositeHID(FullDeviceName, ControllerType, 100);
+
+//   // 2. Set VID / PID and DIS Metadata directly on the Device Information Service
+//   BLEHostConfiguration hostConfig;
+
+//   hostConfig.setVid(VID);
+//   Serial.println("... VID: " + String(VID));
+
+//   hostConfig.setPid(PID);
+//   Serial.println("... PID: " + String(PID));
+
+//   hostConfig.setModelNumber(ModelNumber);
+//   Serial.println("... Model Number: " + String(ModelNumber));
+
+//   hostConfig.setSerialNumber(SerialNumber);
+//   Serial.println("... Serial Number: " + String(SerialNumber));
+
+//   hostConfig.setFirmwareRevision(FirmwareRevision);
+//   Serial.println("... Firmware: v" + String(FirmwareRevision));
+
+//   hostConfig.setHardwareRevision(HardwareRevision);
+//   Serial.println("... Hardware: v" + String(HardwareRevision));
+
+//   hostConfig.setSoftwareRevision(SoftwareRevision);
+//   Serial.println("... Software: v" + String(SoftwareRevision));
+
+//   Serial.println("... Core build: " + String(GetBuildVersion()));
+
+//   // 3. Configure Gamepad HID Report parameters
+//   GamepadConfiguration gamepadConfig;
+
+//   gamepadConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD);
+//   Serial.println("... Controller Type: Gamepad");
+
+//   // Serial.println("... VID: " + String(VID));
+//   // Serial.println("... PID: " + String(PID));
+//   // Serial.println("... Model Number: " + String(ModelNumber));
+//   // Serial.println("... Serial Number: " + String(SerialNumber));
+//   // Serial.println("... Core build: " + String(GetBuildVersion()));
+//   // Serial.println("... Firmware: v" + String(FirmwareRevision));
+//   // Serial.println("... Hardware: v" + String(HardwareRevision));
+//   // Serial.println("... Software: v" + String(SoftwareRevision));
+
+//   gamepadConfig.setButtonCount(DigitalInputs_Count);
+//   Serial.println("... Buttons/Digital Input Count: " + String(DigitalInputs_Count));
+//   Serial.println("... Analog Input Count: " + String(AnalogInputs_Count));
+
+//   gamepadConfig.setWhichSpecialButtons(true, true, true, true, true, true, true, true);
+//   gamepadConfig.setHatSwitchCount(HatInputs_Count);
+//   Serial.println("... Hat Count: " + String(HatInputs_Count));
+
+// #ifdef Enable_Slider1
+//   gamepadConfig.setIncludeSlider1(true);
+//   Serial.println("... Slider 1 Enabled");
+// #endif
+
+// #ifdef Enable_Slider2
+//   gamepadConfig.setIncludeSlider2(true);
+//   Serial.println("... Slider 2 Enabled");
+// #endif
+
+//   gamepadConfig.setAutoReport(false);
+
+// #ifdef DEBUG_MARKS
+//   Debug::Mark(2, __LINE__, __FILE__, __func__);
+// #endif
+
+//   // 4. Create Gamepad Device instance with its configuration
+//   gamepadDevice = new GamepadDevice(gamepadConfig);
+
+//   // 5. Attach Gamepad Device to Host
+//   compositeHID->addDevice(gamepadDevice);
+
+//   // 6. Start BLE service passing hostConfig
+//   compositeHID->begin(hostConfig);
+
+// #ifdef DEBUG_MARKS
+//   Debug::Mark(3, __LINE__, __FILE__, __func__);
+// #endif
+// }
 
 void SetupLittleFS()
 {
@@ -1552,7 +1662,7 @@ void MainLoop()
 #endif
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
-  //delay(250);
+  // delay(250);
 
   Serial.print("\033[3J\033[2J\033[H");
   // Serial.print("\033[H");
@@ -1643,7 +1753,8 @@ void MainLoop()
     else if (Battery::PreviousBatteryLevel != currentBatteryLevel)
     {
       Battery::PreviousBatteryLevel = currentBatteryLevel;
-      compositeHID->setBatteryLevel(currentBatteryLevel);
+      bleGamepad->setBatteryLevel(currentBatteryLevel);
+      // compositeHID->setBatteryLevel(currentBatteryLevel);
       sendReport = true;
 
       // Redraw standard battery icon if required
@@ -1712,7 +1823,7 @@ void MainLoop()
       }
 
       portENTER_CRITICAL(&mcpwm_mux);
-      //pulseInput->Count = 0;
+      // pulseInput->Count = 0;
       pulseInput->FreshData = false;
       portEXIT_CRITICAL(&mcpwm_mux);
     }
@@ -1837,7 +1948,7 @@ void MainLoop()
         // At this point, the largest analogState found (post processing possible pin + all virtual pins with whatever individual ranges they may have)
       }
 
-      //int skipCheck = false;
+      // int skipCheck = false;
 
       // Digital inputs are easy, EXCEPT when using time delays
       // e.g. you might have a Select button, however if that Select button is held down for more than 1 second, rather than
@@ -1977,8 +2088,8 @@ void MainLoop()
             if (input->BluetoothInput != 0)
             {
 
-              // bleGamepad->press(input->BluetoothInput);
-              (gamepadDevice->*(input->BluetoothPressOperation))(input->BluetoothInput);
+              bleGamepad->press(input->BluetoothInput);
+              //(gamepadDevice->*(input->BluetoothPressOperation))(input->BluetoothInput);
 
               sendReport = true;
             }
@@ -2000,8 +2111,8 @@ void MainLoop()
           {
             if (input->BluetoothInput != 0)
             {
-              // bleGamepad->release(input->BluetoothInput);
-              (gamepadDevice->*(input->BluetoothReleaseOperation))(input->BluetoothInput);
+              bleGamepad->release(input->BluetoothInput);
+              //(gamepadDevice->*(input->BluetoothReleaseOperation))(input->BluetoothInput);
 
               sendReport = true;
             }
@@ -2034,12 +2145,34 @@ void MainLoop()
     analogState = 0;
 
     if (input->Pin != NONE)
-      analogState = analogRead(input->Pin);
+    {
+      // we do some
+      auto count = input->AverageOverAnalogCount;
+      if (count > 0)
+      {
+        input->AnalogCumulative += analogRead(input->Pin);
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-    // Serial.println("Analog input i=" + String(i) + " for " + String(input->Label) + " raw: " + String(analogState) + ", Pre.ValueState.AnalogValue: " + String(input->ValueState.AnalogValue));
+        if (++input->AnalogCount == count)
+        {
+          input->AnalogRaw = input->AnalogCumulative / count;
+          input->AnalogCount = 0;
+          input->AnalogCumulative = 0;
+        }
+
+        // No update means we just use the previous value. No biggie.
+      }
+      else
+        input->AnalogRaw = analogRead(input->Pin);
+
+      // // keep it steady at current value
+      analogState = input->AnalogRaw; // analogRead(input->Pin);
+    }
+
+    // #ifdef INPUT_SERIAL_DEBUG_PLUS
+    //  Serial.println("Analog input i=" + String(i) + " for " + String(input->Label) + " raw: " + String(analogState) + ", Pre.ValueState.AnalogValue: " + String(input->ValueState.AnalogValue));
+    //if (i == 0) {
     snprintf(buffer, sizeof(buffer),
-             "Analog  input %2d [%-35s]: raw: %4d, Pre.ValueState.AnalogValue: %4d - Min/Max: %4d/%-4d, Trigger On/OFf: %4d/%-4d",
+             "Analog  input %2d [%-35s]: raw: %5d, Pre.ValueState.AnalogValue: %4d - Min/Max: %4d/%-4d, Trigger On/OFf: %4d/%-4d, Cumulative: %6d, AnalogCount %4d/%4d",
              i,
              input->Label,
              analogState,
@@ -2047,10 +2180,14 @@ void MainLoop()
              input->MinAnalogValue,
              input->MaxAnalogValue,
              input->TriggerOnValue,
-             input->TriggerOffValue);
+             input->TriggerOffValue,
+             input->AnalogCumulative,
+             input->AnalogCount,
+             input->AverageOverAnalogCount);
 
     Serial.println(buffer);
-#endif
+    //}
+    // #endif
 
     int virtualPinInputCount = input->VirtualPinInputs.size();
     if (virtualPinInputCount > 0)
@@ -2197,7 +2334,7 @@ void MainLoop()
 
         input->ValueState.Value = PRESSED;
         // #ifdef EXTRA_SERIAL_DEBUG_PLUS
-        // Serial.println("Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
+        // Serial.println("AI: Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
         // #endif
         input->ValueState.StateJustChanged = true;
         input->ValueState.StateJustChangedLED = true;
@@ -2206,7 +2343,7 @@ void MainLoop()
       {
         input->ValueState.Value = NOT_PRESSED;
         // #ifdef EXTRA_SERIAL_DEBUG_PLUS
-        // Serial.println("Analog to Digital Trigger OFF: " + String(input->Label) + " - " + String(analogState));
+        // Serial.println("AI: Analog to Digital Trigger OFF: " + String(input->Label) + " - " + String(analogState));
         // #endif
         input->ValueState.StateJustChanged = true;
         input->ValueState.StateJustChangedLED = true;
@@ -2293,7 +2430,8 @@ void MainLoop()
 
       // Push to bluetooth if relevant to this input
       if (input->BluetoothSetOperation != NONE)
-        (gamepadDevice->*(input->BluetoothSetOperation))(rangedState);
+        (bleGamepad->*(input->BluetoothSetOperation))(rangedState);
+      //(gamepadDevice->*(input->BluetoothSetOperation))(rangedState);
 
       // RenderOperation may be specific to if this input is analog or a triggered variant, plus any Virtual Pin dependences on this input.
       // When virtual, recommend you leave relevant rendering to the dependant control
@@ -2433,7 +2571,8 @@ void MainLoop()
     Debug::Mark(350, __LINE__, __FILE__, __func__, "Hat Changed");
 #endif
 
-    gamepadDevice->setHats(HatValues[0], HatValues[1], HatValues[2], HatValues[3]);
+    bleGamepad->setHats(HatValues[0], HatValues[1], HatValues[2], HatValues[3]);
+    // gamepadDevice->setHats(HatValues[0], HatValues[1], HatValues[2], HatValues[3]);
     sendReport = true;
   }
 
@@ -2549,7 +2688,8 @@ void MainLoop()
 #endif
 
   // Bluetooth
-  BTConnectionState = compositeHID->isConnected();
+  BTConnectionState = bleGamepad->isConnected();
+  // BTConnectionState = compositeHID->isConnected();
 
   if (BTConnectionState == true)
   {
@@ -2558,7 +2698,8 @@ void MainLoop()
 #endif
     if (sendReport)
     {
-      gamepadDevice->sendGamepadReport();
+      bleGamepad->sendReport();
+      // gamepadDevice->sendGamepadReport();
 
 #ifdef EXTRA_SERIAL_DEBUG_PLUS
       Serial.println(String(Frame) + ": BT Report Sent");
@@ -2643,7 +2784,14 @@ void MainLoop()
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
   // Throttle updates, no point in updating too often
   if (LEDUpdateRollover)
-    UpdateLEDs = true;
+  //   UpdateLEDs = true;
+  // FastTest();
+  {
+    float statusDecrease = (255.0 * EXTERNAL_LED_FADE_RATE * LED_UPDATE_RATE);
+    uint8_t externalDecrease = (uint8_t)(255.0 * EXTERNAL_LED_FADE_RATE * LED_UPDATE_RATE);
+
+    UpdateExternalLEDs(statusDecrease, externalDecrease);
+  }
 #endif
 
 #ifdef INCLUDE_BENCHMARKS
