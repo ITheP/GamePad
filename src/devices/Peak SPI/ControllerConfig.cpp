@@ -292,7 +292,7 @@ Input AnalogInputs_Whammy =
         //     &AnalogInputs_Virtual_TriggeredOrange
         // },
         //.VirtualPinMode = VirtualPinModes::RequireValueToBePressed, // Only take analog values from virtual pin when they are also in a pressed state
-        .VirtualPinMode = VirtualPinModes::RequireValueToBePressedAndHaveBeenPartlyReleased, // Only take analog values from virtual pin when they are also in a pressed state
+        //.VirtualPinMode = VirtualPinModes::RequireValueToBePressedAndHaveBeenPartlyReleased, // Only take analog values from virtual pin when they are also in a pressed state
         .Label = "Whammy",
         .BluetoothInput = NONE,
         .DefaultAnalogValue = -1,
@@ -351,7 +351,6 @@ PulseInput PulseInput_Slider =
 PulseInput *PulseInputs[] = {
     &PulseInput_Slider
 };
-
 
 // Digital inputs
 

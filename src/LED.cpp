@@ -24,106 +24,6 @@ extern CRGB ExternalLeds[];
 extern int ExternalLedsEnabled[];
 extern int Second;
 
-// void Test()
-// {
-//   // Cycle through the external LED's as a pretty test
-//   uint8_t hue = 0;
-
-//   // Flash LED's so no matter how many, they are shown within a small time frame.
-//   // Example of 5 leds using a delay of 30ms look nice and didn't take too long (150ms)
-//   // Scale this to total number in use and keep within same time frame
-//   int pause = 5550 / ExternalLED_FastLEDCount;
-
-//   //   Serial.print("LEDS: ");
-//   // for (int i = 0; i < ExternalLED_FastLEDCount; i++)
-//   // {
-//   //   Serial.print(ExternalLeds[i].);
-//   //   Serial.print(" ");
-//   // }
-//   // Serial.println();
-
-//   for (int cycles = 0; cycles < 4; cycles++)
-//   {
-//     for (int i = 1; i < ExternalLED_FastLEDCount; i++)
-//     {
-//       ExternalLeds[i] = CHSV(hue, 255, 255);
-
-//       Serial.print("Before:");
-//       for (int j = 0; j < ExternalLED_FastLEDCount; j++)
-//       {
-//         Serial.print(" " + String(ExternalLeds[j].r) + "," + String(ExternalLeds[j].g) + "," + String(ExternalLeds[j].b));
-//       }
-
-//       FastLED.show();
-//       Serial.println();
-//       hue += 10;
-//       delay(pause);
-
-//       Serial.print("After :");
-//       for (int j = 0; j < ExternalLED_FastLEDCount; j++)
-//       {
-//         Serial.print(" " + String(ExternalLeds[j].r) + "," + String(ExternalLeds[j].g) + "," + String(ExternalLeds[j].b));
-//       }
-//       Serial.println();
-//       Serial.println();
-//       Serial.println();
-//       ExternalLeds[i] = CRGB::Black;
-//     }
-
-//     FastLED.show(); // Make sure final Black is accounted for
-//   }
-// }
-
-// void FastTest()
-// {
-//   // Cycle through the external LED's as a pretty test
-//   uint8_t hue = 0;
-
-//   // Flash LED's so no matter how many, they are shown within a small time frame.
-//   // Example of 5 leds using a delay of 30ms look nice and didn't take too long (150ms)
-//   // Scale this to total number in use and keep within same time frame
-//   int pause = 50 / ExternalLED_FastLEDCount;
-
-//   //   Serial.print("LEDS: ");
-//   // for (int i = 0; i < ExternalLED_FastLEDCount; i++)
-//   // {
-//   //   Serial.print(ExternalLeds[i].);
-//   //   Serial.print(" ");
-//   // }
-//   // Serial.println();
-
-//   for (int cycles = 0; cycles < 4; cycles++)
-//   {
-//     for (int i = 1; i < ExternalLED_FastLEDCount; i++)
-//     {
-//       ExternalLeds[i] = CHSV(hue, 255, 255);
-
-//       // Serial.print("Before:");
-//       // for (int j = 0; j < ExternalLED_FastLEDCount; j++)
-//       // {
-//       //   Serial.print(" " + String(ExternalLeds[j].r) + "," + String(ExternalLeds[j].g) + ","+ String(ExternalLeds[j].b));
-//       // }
-
-//       FastLED.show();
-//       // Serial.println();
-//       hue += 10;
-//       delay(pause);
-
-//       Serial.print("After :");
-//       //       for (int j = 0; j < ExternalLED_FastLEDCount; j++)
-//       //       {
-//       //         Serial.print(" " + String(ExternalLeds[j].r) + "," + String(ExternalLeds[j].g) + ","+ String(ExternalLeds[j].b));
-//       //       }
-//       // Serial.println();
-//       // Serial.println();
-//       // Serial.println();
-//       ExternalLeds[i] = CRGB::Black;
-//     }
-
-//     FastLED.show(); // Make sure final Black is accounted for
-//   }
-// }
-
 void InitExternalLED(ExternalLEDConfig *config, CRGB *leds)
 {
   // We effectively account for either 1 LED being specified (nice and simple) or an array of them being specified (for fancy connected effects)
@@ -217,6 +117,8 @@ void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate)
       {
         // if (ledConfig != nullptr)
         //{
+
+        Serial.println("############################################################################################");
         if (input->ValueState.Value == PRESSED)
         {
           // Pressed
@@ -244,7 +146,7 @@ void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate)
 
       if (ledConfig->Effect != nullptr && (ExternalLedsEnabled[ledConfig->LEDNumber] || ledConfig->RunEffectConstantly))
       {
-        if (ledConfig->Effect != nullptr)
+        //if (ledConfig->Effect != nullptr)
           ledConfig->Effect(input, Now);
       }
 
@@ -299,23 +201,23 @@ void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate)
 
     if (ledConfig != nullptr)
     {
-      // if (ledConfig->Effect == nullptr)
-      // {
-      // Default effect
-      int amount = map(val, 0, 4095, -20, 275);
-      amount = constrain(amount, 0, 255);
-      // ExternalLeds[ledConfig->LEDNumber] = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);
+      if (ledConfig->Effect == nullptr)
+      {
+        // Default effect
+        int amount = map(val, 0, 4095, -20, 275);
+        amount = constrain(amount, 0, 255);
+        // ExternalLeds[ledConfig->LEDNumber] = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);
 
-      ExternalLeds[ledConfig->LEDNumber] = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);
+        ExternalLeds[ledConfig->LEDNumber] = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);
 
-      ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Enabled;
-      // }
-      // else
-      // {
-      //   ledConfig->Effect(input, Now);
+        ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Enabled;
+      }
+      else
+      {
+        ledConfig->Effect(input, Now);
 
-      //   ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Enabled;
-      // }
+        ExternalLedsEnabled[ledConfig->LEDNumber] = ledConfig->PrimaryColour.Enabled;
+      }
     }
   }
 #endif
@@ -455,7 +357,7 @@ void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate)
   // }
   // Serial.println();
 
-  //Test();
+  // Test();
 
   UpdateLEDs = false;
 
@@ -506,17 +408,17 @@ void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate)
 #endif
 }
 
-// Constantly running LED loop - running under it's own task
-// so we can adjust the core it run's on if required
-void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
-{
-  for (;;)
-  {
-    // We don't want to do this as fast as possible, so we throttle it back
-    if (UpdateLEDs)
-      UpdateExternalLEDs(onboardFadeRate, externalFadeRate);
+// // Constantly running LED loop - running under it's own task
+// // so we can adjust the core it run's on if required
+// void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate)
+// {
+//   for (;;)
+//   {
+//     // We don't want to do this as fast as possible, so we throttle it back
+//     if (UpdateLEDs)
+//       UpdateExternalLEDs(onboardFadeRate, externalFadeRate);
 
-    // taskYIELD();
-    vTaskDelay(0);
-  }
-}
+//     // taskYIELD();
+//     vTaskDelay(0);
+//   }
+// }

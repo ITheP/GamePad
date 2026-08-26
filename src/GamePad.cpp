@@ -73,7 +73,6 @@ uint32_t rnd = random();
 // -----------------------------------------------------
 // LED stuff (include after controller definition)
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
-
 #include <FastLED.h>
 
 CRGB ExternalLeds[ExternalLED_Count];
@@ -84,6 +83,7 @@ int ExternalLedsEnabled[ExternalLED_Count];
 #include <MenuFunctions.h>
 #include <Idle.h>
 #include <Prefs.h>
+#include <driver/rmt.h>
 
 // Task for handling FastLED updates
 // void UpdateExternalLEDs(void *parameter)
@@ -739,6 +739,7 @@ void setupLEDs()
   Serial.println("💡 LED pins\nOnboard: pin " + String(ONBOARD_LED_PIN));
 
   FastLED.addLeds<NEOPIXEL, ONBOARD_LED_PIN>(StatusLed, 1);
+  //FastLED.addLeds<WS2812, ONBOARD_LED_PIN, GRB>(StatusLed, 1);
 
   for (hue = 0; hue < 255; hue++)
   {
@@ -1500,7 +1501,11 @@ void setup()
   FlipScreen(&DigitalInput_FlipScreen);
 #endif
 
+
+  //setupPulseInputs();
   DrawMainScreen();
+
+//delay(600000);
 
   Serial.println();
   Serial_OK;
@@ -1805,6 +1810,8 @@ void MainLoop()
   Debug::Mark(2195, __LINE__, __FILE__, __func__, "Pulse Inputs");
 #endif
 
+  updatePulseInputs();
+
   PulseInput *pulseInput;
   for (int i = 0; i < PulseInputs_Count; i++)
   {
@@ -1822,18 +1829,33 @@ void MainLoop()
         pulseInput->ValueState.StateJustChangedLED = true;
       }
 
-      portENTER_CRITICAL(&mcpwm_mux);
+      //portENTER_CRITICAL(&mcpwm_mux);
       // pulseInput->Count = 0;
       pulseInput->FreshData = false;
-      portEXIT_CRITICAL(&mcpwm_mux);
+      //portEXIT_CRITICAL(&mcpwm_mux);
     }
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
+uint32_t status = 0;
+esp_err_t err = rmt_get_status(pulseInput->RMTChannel, &status);
+Serial.printf("RMT_CH%d  get_status=%d  status=0x%08X\n", (int)pulseInput->RMTChannel, err, status);
+
     snprintf(buffer, sizeof(buffer),
-             "Pulse input   %2d [%-35s]: AnalogValue: %4d",
+             "Pulse input   %2d [%-35s] Channel %d: DutyCycle: %4d, AnalogValue: %4d, Count: %d - %d %d %d %d %d %d %d %d",
              i,
              pulseInput->Label,
-             pulseInput->ValueState.AnalogValue);
+             (int)pulseInput->RMTChannel,
+             pulseInput->DutyCycle,
+             pulseInput->ValueState.AnalogValue,
+             pulseInput->Count,
+            pulseInput->A,
+          pulseInput->B,
+        pulseInput->C,
+      pulseInput->D,
+    pulseInput->E,
+    pulseInput->F,
+    pulseInput->G,
+    pulseInput->H);
 
     Serial.println(buffer);
 #endif
@@ -2168,9 +2190,9 @@ void MainLoop()
       analogState = input->AnalogRaw; // analogRead(input->Pin);
     }
 
-    // #ifdef INPUT_SERIAL_DEBUG_PLUS
-    //  Serial.println("Analog input i=" + String(i) + " for " + String(input->Label) + " raw: " + String(analogState) + ", Pre.ValueState.AnalogValue: " + String(input->ValueState.AnalogValue));
-    //if (i == 0) {
+     #ifdef INPUT_SERIAL_DEBUG_PLUS
+    ////  Serial.println("Analog input i=" + String(i) + " for " + String(input->Label) + " raw: " + String(analogState) + ", Pre.ValueState.AnalogValue: " + String(input->ValueState.AnalogValue));
+    ////if (i == 0) {
     snprintf(buffer, sizeof(buffer),
              "Analog  input %2d [%-35s]: raw: %5d, Pre.ValueState.AnalogValue: %4d - Min/Max: %4d/%-4d, Trigger On/OFf: %4d/%-4d, Cumulative: %6d, AnalogCount %4d/%4d",
              i,
@@ -2185,9 +2207,9 @@ void MainLoop()
              input->AnalogCount,
              input->AverageOverAnalogCount);
 
-    Serial.println(buffer);
-    //}
-    // #endif
+     Serial.println(buffer);
+    ////}
+     #endif
 
     int virtualPinInputCount = input->VirtualPinInputs.size();
     if (virtualPinInputCount > 0)
@@ -2396,31 +2418,31 @@ void MainLoop()
 
       input->ValueState.StateJustChanged = false;
 
-      //         // Check if this input tracks trigger on/off values
-      //         if (input->TriggerOnValue > 0)
-      //         {
-      //           if (analogState >= input->TriggerOnValue && input->ValueState.Value == NOT_PRESSED)
-      //           {
-      //             input->ValueState.Value = PRESSED;
-      // #ifdef EXTRA_SERIAL_DEBUG_PLUS
-      //             Serial.println("Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
-      // #endif
+              // Check if this input tracks trigger on/off values
+              if (input->TriggerOnValue > 0)
+              {
+                if (analogState >= input->TriggerOnValue && input->ValueState.Value == NOT_PRESSED)
+                {
+                  input->ValueState.Value = PRESSED;
+      #ifdef EXTRA_SERIAL_DEBUG_PLUS
+                  Serial.println("Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
+      #endif
 
-      //             input->ValueState.StateJustChanged = true;
-      //             input->ValueState.StateJustChangedLED = true;
-      //           }
-      //           else if (analogState <= input->TriggerOffValue && input->ValueState.Value == PRESSED)
-      //           {
-      //             input->ValueState.Value = NOT_PRESSED;
+                  input->ValueState.StateJustChanged = true;
+                  input->ValueState.StateJustChangedLED = true;
+                }
+                else if (analogState <= input->TriggerOffValue && input->ValueState.Value == PRESSED)
+                {
+                  input->ValueState.Value = NOT_PRESSED;
 
-      // #ifdef EXTRA_SERIAL_DEBUG_PLUS
-      //             Serial.println("Analog to Digital Trigger OFF: " + String(input->Label) + " - " + String(analogState));
-      // #endif
+      #ifdef EXTRA_SERIAL_DEBUG_PLUS
+                  Serial.println("Analog to Digital Trigger OFF: " + String(input->Label) + " - " + String(analogState));
+      #endif
 
-      //             input->ValueState.StateJustChanged = true;
-      //             input->ValueState.StateJustChangedLED = true;
-      //           }
-      //         }
+                  input->ValueState.StateJustChanged = true;
+                  input->ValueState.StateJustChangedLED = true;
+                }
+              }
 
       // Final analog handling
 

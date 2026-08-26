@@ -10,6 +10,7 @@
 #include <FastLED.h>
 #include "LED.h"
 #include "stats.h"
+#include <hal/rmt_types.h>
 
 typedef void (BleGamepad::*BleGamepadFunctionPointer)(uint8_t);
 typedef void (BleGamepad::*BleGamepadFunctionPointerInt)(int16_t);
@@ -80,11 +81,21 @@ typedef struct PulseInput
   volatile uint32_t LastFallTime;
   volatile uint32_t HighPulseUs;
   volatile uint32_t TotalPeriodUs;
-  //int Count;
+  int Count;
   volatile bool FreshData;
 
   // volatile bool Ignored;
   volatile State ValueState;
+
+  rmt_channel_t RMTChannel;
+  int A;
+  int B;
+  int C;
+  int D;
+  int E;
+  int F;
+  int G;
+  int H;
 
   // ESP-IDF hardware RMT monitoring
   //rmt_channel_handle_t rx_channel;
