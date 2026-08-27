@@ -739,7 +739,7 @@ void setupLEDs()
   Serial.println("💡 LED pins\nOnboard: pin " + String(ONBOARD_LED_PIN));
 
   FastLED.addLeds<NEOPIXEL, ONBOARD_LED_PIN>(StatusLed, 1);
-  //FastLED.addLeds<WS2812, ONBOARD_LED_PIN, GRB>(StatusLed, 1);
+  // FastLED.addLeds<WS2812, ONBOARD_LED_PIN, GRB>(StatusLed, 1);
 
   for (hue = 0; hue < 255; hue++)
   {
@@ -1501,11 +1501,10 @@ void setup()
   FlipScreen(&DigitalInput_FlipScreen);
 #endif
 
-
-  //setupPulseInputs();
+  // setupPulseInputs();
   DrawMainScreen();
 
-//delay(600000);
+  // delay(600000);
 
   Serial.println();
   Serial_OK;
@@ -1810,16 +1809,30 @@ void MainLoop()
   Debug::Mark(2195, __LINE__, __FILE__, __func__, "Pulse Inputs");
 #endif
 
-  updatePulseInputs();
+  // updatePulseInputs();
+  //  Currently just works with 1 pulse input
+  int count = PulseInputs_Count;
+  if (count > 1)
+    count = 1;
 
-  PulseInput *pulseInput;
-  for (int i = 0; i < PulseInputs_Count; i++)
+  for (int i = 0; i < count; i++)
   {
     PulseInput *pulseInput = PulseInputs[i];
 
-    if (pulseInput->FreshData)
-    {
+    uint32_t period = s_captured_period;
+    uint32_t high = s_captured_high;
+  uint32_t dutyCycle = 0;
+  float dutyCyclef = 0;
 
+    if (period > 0)
+    {
+      pulseInput->PeriodTicks = period;
+      pulseInput->HighTicks = high;
+      pulseInput->Frequency = 1000000 / period; // assuming 1MHz tick rate
+
+      // Calculate Duty Cycle as a percentage (0.0 to 100.0)
+      dutyCycle = (high / period) * 100;
+      dutyCyclef = ((float)high / (float)period) * 100.0f;
       if (pulseInput->DutyCycle != pulseInput->ValueState.AnalogValue)
       {
         pulseInput->ValueState.PreviousAnalogValue = pulseInput->ValueState.AnalogValue;
@@ -1828,34 +1841,25 @@ void MainLoop()
         pulseInput->ValueState.StateJustChanged = true;
         pulseInput->ValueState.StateJustChangedLED = true;
       }
-
-      //portENTER_CRITICAL(&mcpwm_mux);
-      // pulseInput->Count = 0;
-      pulseInput->FreshData = false;
-      //portEXIT_CRITICAL(&mcpwm_mux);
     }
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
-uint32_t status = 0;
-esp_err_t err = rmt_get_status(pulseInput->RMTChannel, &status);
-Serial.printf("RMT_CH%d  get_status=%d  status=0x%08X\n", (int)pulseInput->RMTChannel, err, status);
-
     snprintf(buffer, sizeof(buffer),
-             "Pulse input   %2d [%-35s] Channel %d: DutyCycle: %4d, AnalogValue: %4d, Count: %d - %d %d %d %d %d %d %d %d",
-             i,
+             "%d %d %d %d %f %d Pulse input   %2d [%-35s]: DutyCycle: %4d, AnalogValue: %4d, Count: %d - %d %d %d %d %d %d %d %d",
+             s_captured_period, s_captured_high, s_last_timestamp, dutyCycle, dutyCyclef, TestBob, i,
              pulseInput->Label,
-             (int)pulseInput->RMTChannel,
+             //(int)pulseInput->RMTChannel,
              pulseInput->DutyCycle,
              pulseInput->ValueState.AnalogValue,
              pulseInput->Count,
-            pulseInput->A,
-          pulseInput->B,
-        pulseInput->C,
-      pulseInput->D,
-    pulseInput->E,
-    pulseInput->F,
-    pulseInput->G,
-    pulseInput->H);
+             pulseInput->A,
+             pulseInput->B,
+             pulseInput->C,
+             pulseInput->D,
+             pulseInput->E,
+             pulseInput->F,
+             pulseInput->G,
+             pulseInput->H);
 
     Serial.println(buffer);
 #endif
@@ -2190,7 +2194,7 @@ Serial.printf("RMT_CH%d  get_status=%d  status=0x%08X\n", (int)pulseInput->RMTCh
       analogState = input->AnalogRaw; // analogRead(input->Pin);
     }
 
-     #ifdef INPUT_SERIAL_DEBUG_PLUS
+#ifdef INPUT_SERIAL_DEBUG_PLUS
     ////  Serial.println("Analog input i=" + String(i) + " for " + String(input->Label) + " raw: " + String(analogState) + ", Pre.ValueState.AnalogValue: " + String(input->ValueState.AnalogValue));
     ////if (i == 0) {
     snprintf(buffer, sizeof(buffer),
@@ -2207,9 +2211,9 @@ Serial.printf("RMT_CH%d  get_status=%d  status=0x%08X\n", (int)pulseInput->RMTCh
              input->AnalogCount,
              input->AverageOverAnalogCount);
 
-     Serial.println(buffer);
+    Serial.println(buffer);
     ////}
-     #endif
+#endif
 
     int virtualPinInputCount = input->VirtualPinInputs.size();
     if (virtualPinInputCount > 0)
@@ -2418,31 +2422,31 @@ Serial.printf("RMT_CH%d  get_status=%d  status=0x%08X\n", (int)pulseInput->RMTCh
 
       input->ValueState.StateJustChanged = false;
 
-              // Check if this input tracks trigger on/off values
-              if (input->TriggerOnValue > 0)
-              {
-                if (analogState >= input->TriggerOnValue && input->ValueState.Value == NOT_PRESSED)
-                {
-                  input->ValueState.Value = PRESSED;
-      #ifdef EXTRA_SERIAL_DEBUG_PLUS
-                  Serial.println("Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
-      #endif
+      // Check if this input tracks trigger on/off values
+      if (input->TriggerOnValue > 0)
+      {
+        if (analogState >= input->TriggerOnValue && input->ValueState.Value == NOT_PRESSED)
+        {
+          input->ValueState.Value = PRESSED;
+#ifdef EXTRA_SERIAL_DEBUG_PLUS
+          Serial.println("Analog to Digital Trigger ON: " + String(input->Label) + " - " + String(analogState));
+#endif
 
-                  input->ValueState.StateJustChanged = true;
-                  input->ValueState.StateJustChangedLED = true;
-                }
-                else if (analogState <= input->TriggerOffValue && input->ValueState.Value == PRESSED)
-                {
-                  input->ValueState.Value = NOT_PRESSED;
+          input->ValueState.StateJustChanged = true;
+          input->ValueState.StateJustChangedLED = true;
+        }
+        else if (analogState <= input->TriggerOffValue && input->ValueState.Value == PRESSED)
+        {
+          input->ValueState.Value = NOT_PRESSED;
 
-      #ifdef EXTRA_SERIAL_DEBUG_PLUS
-                  Serial.println("Analog to Digital Trigger OFF: " + String(input->Label) + " - " + String(analogState));
-      #endif
+#ifdef EXTRA_SERIAL_DEBUG_PLUS
+          Serial.println("Analog to Digital Trigger OFF: " + String(input->Label) + " - " + String(analogState));
+#endif
 
-                  input->ValueState.StateJustChanged = true;
-                  input->ValueState.StateJustChangedLED = true;
-                }
-              }
+          input->ValueState.StateJustChanged = true;
+          input->ValueState.StateJustChangedLED = true;
+        }
+      }
 
       // Final analog handling
 

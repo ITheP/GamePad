@@ -5,12 +5,13 @@
 #include "Config.h"
 #include "Defines.h"
 #include <BleGamepad.h>
-//#include <BleCompositeHID.h>
-//#include <GamepadDevice.h>
+// #include <BleCompositeHID.h>
+// #include <GamepadDevice.h>
 #include <FastLED.h>
 #include "LED.h"
 #include "stats.h"
 #include <hal/rmt_types.h>
+#include <driver/mcpwm.h>
 
 typedef void (BleGamepad::*BleGamepadFunctionPointer)(uint8_t);
 typedef void (BleGamepad::*BleGamepadFunctionPointerInt)(int16_t);
@@ -74,8 +75,8 @@ typedef struct PulseInput
   const char *Label;
 
   volatile uint32_t LastTimestamp;
-  //volatile uint32_t Frequency;
-  volatile uint32_t DutyCycle;
+  // volatile uint32_t Frequency;
+  // volatile uint32_t DutyCycle;
 
   volatile uint32_t RiseTime;
   volatile uint32_t LastFallTime;
@@ -87,7 +88,13 @@ typedef struct PulseInput
   // volatile bool Ignored;
   volatile State ValueState;
 
-  rmt_channel_t RMTChannel;
+  // rmt_channel_t RMTChannel;
+
+  // volatile uint32_t LastCaptureValue;
+  // volatile uint32_t PeriodTicks;
+  // volatile uint32_t HighTicks;
+  // volatile bool     LastWasHigh;
+
   int A;
   int B;
   int C;
@@ -97,14 +104,27 @@ typedef struct PulseInput
   int G;
   int H;
 
+  volatile uint32_t LastCaptureValue;
+  volatile uint32_t PeriodTicks;
+  volatile uint32_t HighTicks;
+  volatile bool LastWasHigh;
+  mcpwm_unit_t MCPWM_Unit;
+  mcpwm_capture_signal_t MCPWM_CaptureSignal;
+  volatile uint32_t LastRisingEdge;
+  volatile uint32_t LastFallingEdge;
+  volatile bool HasValidPeriod;
+  // Add these for duty cycle calculation
+  volatile uint32_t DutyCycle;
+  volatile uint32_t Frequency;
+
   // ESP-IDF hardware RMT monitoring
-  //rmt_channel_handle_t rx_channel;
-  //rmt_symbol_word_t raw_symbols[64];
+  // rmt_channel_handle_t rx_channel;
+  // rmt_symbol_word_t raw_symbols[64];
 } PulseInput;
 
 typedef struct PulseInputConfig
 {
-  PulseInput* PulseInputSource;
+  PulseInput *PulseInputSource;
   uint32_t LowerBound;
   uint32_t UpperBound;
 } PulseInputConfig;
@@ -118,8 +138,8 @@ typedef struct Input
   //                                               // 0–2.2V signal, use ADC_6db
   //                                               // 0–3.3V signal, use ADC_11db
   // Currently only works with AnalogTriggeredInputs
-  std::vector<Input *> VirtualPinInputs;        // Rather than getting state from reading a pin, gets it from another input
-                                                // Means we can e.g. have 1 input acting as a button and also triggering an analog separate input
+  std::vector<Input *> VirtualPinInputs;            // Rather than getting state from reading a pin, gets it from another input
+                                                    // Means we can e.g. have 1 input acting as a button and also triggering an analog separate input
   std::vector<PulseInputConfig> VirtualPulseInputs; // Pulse inputs - equivalent of above
   VirtualPinModes VirtualPinMode;
 
@@ -167,9 +187,9 @@ typedef struct Input
   LED OnboardLED;    // Onboard LED is merged into other Onboard LED colours to create a `final combined colour`. Max of each R,G,B component generally gets used.
   ExternalLEDConfig *LEDConfig;
 
-  int ProfileId;                 // Set > 0 to enable this Input for Profile Id override inclusion on startup
-  State ValueState;              // Master set of data that stores actual state of input (PRESSED, NOT_PRESSED) and/or analog value, and also tracks when state changes happen etc.
-  uint32_t AnalogCumulative;     // Used when averaging
+  int ProfileId;             // Set > 0 to enable this Input for Profile Id override inclusion on startup
+  State ValueState;          // Master set of data that stores actual state of input (PRESSED, NOT_PRESSED) and/or analog value, and also tracks when state changes happen etc.
+  uint32_t AnalogCumulative; // Used when averaging
   uint16_t AnalogCount;
   uint16_t AnalogRaw;            // Raw value (post any averaging etc.)
   unsigned long LongPressTiming; // Delayed operation timing in milliseconds for alternative press operation
