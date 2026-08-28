@@ -118,7 +118,7 @@ void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate)
         // if (ledConfig != nullptr)
         //{
 
-        Serial.println("############################################################################################");
+        //Serial.println("############################################################################################");
         if (input->ValueState.Value == PRESSED)
         {
           // Pressed

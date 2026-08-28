@@ -74,52 +74,14 @@ typedef struct PulseInput
 
   const char *Label;
 
+  int MCPWMIndex;
+
   volatile uint32_t LastTimestamp;
-  // volatile uint32_t Frequency;
-  // volatile uint32_t DutyCycle;
-
-  volatile uint32_t RiseTime;
-  volatile uint32_t LastFallTime;
-  volatile uint32_t HighPulseUs;
-  volatile uint32_t TotalPeriodUs;
-  int Count;
-  volatile bool FreshData;
-
-  // volatile bool Ignored;
   volatile State ValueState;
-
-  // rmt_channel_t RMTChannel;
-
-  // volatile uint32_t LastCaptureValue;
-  // volatile uint32_t PeriodTicks;
-  // volatile uint32_t HighTicks;
-  // volatile bool     LastWasHigh;
-
-  int A;
-  int B;
-  int C;
-  int D;
-  int E;
-  int F;
-  int G;
-  int H;
-
-  volatile uint32_t LastCaptureValue;
-  volatile uint32_t PeriodTicks;
-  volatile uint32_t HighTicks;
-  volatile bool LastWasHigh;
-  mcpwm_unit_t MCPWM_Unit;
-  mcpwm_capture_signal_t MCPWM_CaptureSignal;
-  volatile uint32_t LastRisingEdge;
-  volatile uint32_t LastFallingEdge;
-  volatile bool HasValidPeriod;
-  // Add these for duty cycle calculation
   volatile uint32_t DutyCycle;
-  volatile uint32_t Frequency;
 
-  // ESP-IDF hardware RMT monitoring
-  // rmt_channel_handle_t rx_channel;
-  // rmt_symbol_word_t raw_symbols[64];
+  float CumulativeDutyCycle;
+  uint32_t CumulativeCount;
 } PulseInput;
 
 typedef struct PulseInputConfig

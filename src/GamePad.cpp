@@ -1809,57 +1809,65 @@ void MainLoop()
   Debug::Mark(2195, __LINE__, __FILE__, __func__, "Pulse Inputs");
 #endif
 
-  // updatePulseInputs();
   //  Currently just works with 1 pulse input
-  int count = PulseInputs_Count;
-  if (count > 1)
-    count = 1;
+  // int count = PulseInputs_Count;
+  // if (count > 1)
+  //   count = 1;
 
-  for (int i = 0; i < count; i++)
+  for (int i = 0; i < PulseInputs_Count; i++)
   {
     PulseInput *pulseInput = PulseInputs[i];
 
-    uint32_t period = s_captured_period;
-    uint32_t high = s_captured_high;
-  uint32_t dutyCycle = 0;
-  float dutyCyclef = 0;
-
-    if (period > 0)
-    {
-      pulseInput->PeriodTicks = period;
-      pulseInput->HighTicks = high;
-      pulseInput->Frequency = 1000000 / period; // assuming 1MHz tick rate
-
-      // Calculate Duty Cycle as a percentage (0.0 to 100.0)
-      dutyCycle = (high / period) * 100;
-      dutyCyclef = ((float)high / (float)period) * 100.0f;
-      if (pulseInput->DutyCycle != pulseInput->ValueState.AnalogValue)
-      {
-        pulseInput->ValueState.PreviousAnalogValue = pulseInput->ValueState.AnalogValue;
-        pulseInput->ValueState.AnalogValue = pulseInput->DutyCycle;
-        pulseInput->ValueState.StateChangedWhen = micros();
-        pulseInput->ValueState.StateJustChanged = true;
-        pulseInput->ValueState.StateJustChangedLED = true;
-      }
+    // Use MCPWMIndex to look up the correct capture data
+    if (pulseInput->MCPWMIndex < 0 || pulseInput->MCPWMIndex >= PulseInputs_Count) {
+        continue; // Skip invalid indices
     }
+
+    PulseCaptureData_t *data = &g_pulse_capture_data[pulseInput->MCPWMIndex];
+    
+   // Get capture data from the array
+    uint32_t period = data->captured_period;
+    uint32_t high = data->captured_high;
+    float dutyCycle = 0;
+
+    if (period > 0 && data->has_valid_period)
+    {
+        // Calculate Duty Cycle as a percentage (0.0 to 100.0)
+        dutyCycle = ((float)high / (float)period) * 100.0f;
+
+        // Bit of averaging over 8 calculations
+        pulseInput->CumulativeDutyCycle += dutyCycle;
+        if (++pulseInput->CumulativeCount == 8) {
+          pulseInput->DutyCycle = (uint32_t)(pulseInput->CumulativeDutyCycle) >> 3; // >>3==/8 // * 0.2);
+          pulseInput->CumulativeDutyCycle = 0;
+          pulseInput->CumulativeCount = 0;
+        }
+        
+        //pulseInput->DutyCycle = (uint32_t)dutyCycle;
+
+        // Check if value changed
+        if (pulseInput->DutyCycle != pulseInput->ValueState.AnalogValue)
+        {
+            pulseInput->ValueState.PreviousAnalogValue = pulseInput->ValueState.AnalogValue;
+            pulseInput->ValueState.AnalogValue = pulseInput->DutyCycle;
+            pulseInput->ValueState.StateChangedWhen = micros();
+            pulseInput->ValueState.StateJustChanged = true;
+            pulseInput->ValueState.StateJustChangedLED = true;
+        }
+    }
+    // else
+    // {
+    //     pulseInput->HasValidPeriod = false;  // ?? NOT NEEDED
+    //     pulseInput->Frequency = 0; // ?? NOT NEEDED
+    // }
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
     snprintf(buffer, sizeof(buffer),
-             "%d %d %d %d %f %d Pulse input   %2d [%-35s]: DutyCycle: %4d, AnalogValue: %4d, Count: %d - %d %d %d %d %d %d %d %d",
-             s_captured_period, s_captured_high, s_last_timestamp, dutyCycle, dutyCyclef, TestBob, i,
+             "Pulse input   %2d [%-35s]: DutyCycle: %4d, AnalogValue: %4d",
+             i,
              pulseInput->Label,
-             //(int)pulseInput->RMTChannel,
              pulseInput->DutyCycle,
-             pulseInput->ValueState.AnalogValue,
-             pulseInput->Count,
-             pulseInput->A,
-             pulseInput->B,
-             pulseInput->C,
-             pulseInput->D,
-             pulseInput->E,
-             pulseInput->F,
-             pulseInput->G,
-             pulseInput->H);
+             pulseInput->ValueState.AnalogValue);
 
     Serial.println(buffer);
 #endif

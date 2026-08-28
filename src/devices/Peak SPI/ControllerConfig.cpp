@@ -335,7 +335,7 @@ Input *AnalogInputs[] = {
    &AnalogInputs_Virtual_TriggeredYellow,
    &AnalogInputs_Virtual_TriggeredBlue,
    &AnalogInputs_Virtual_TriggeredOrange,
-    // &AnalogInputs_Whammy
+   &AnalogInputs_Whammy
 };
 
 
@@ -359,7 +359,7 @@ Input DigitalInput_Green = // Green button on guitar neck
         .Pin = NONE, // BUTTON_Green_PIN,
         .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen},
         .VirtualPulseInputs = {
-           { &PulseInput_Slider, 7, 18}
+           { &PulseInput_Slider, 3, 23}
          },
         .Label = "Green",
         .BluetoothInput = BUTTON_1,
@@ -475,7 +475,7 @@ Input DigitalInput_Orange = // Orange button on guitar neck
         .Pin = NONE, // BUTTON_Orange_PIN,
         .VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredOrange},
         .VirtualPulseInputs = {
-            { &PulseInput_Slider, 79, 89}
+            { &PulseInput_Slider, 79, 110}
         },
         .Label = "Orange",
         .BluetoothInput = BUTTON_5,
