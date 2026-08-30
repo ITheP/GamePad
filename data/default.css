@@ -222,13 +222,27 @@ button:hover {
     justify-content: flex-end;
 }
 
-/* Gauge meters - CSS only solution */
+.dashboard {
+  background: black;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+  padding: 20px;
+}
+
+.dashboard .battery-state {
+    font-size: x-large;
+    margin-bottom: 15px;
+}
+
 .gauge-container {
   display: flex;
   gap: 40px;
   justify-content: center;
   flex-wrap: wrap;
-  margin: 20px 0;
+  /* margin: 20px 0; */
+  padding: 20px;
 }
 
 .gauge-wrapper {

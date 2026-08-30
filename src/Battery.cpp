@@ -19,6 +19,7 @@ int Battery::BatteryLevelReadingsCount = 0;
 int Battery::PowerSensorReading = 0;
 float Battery::ClampedVoltage = 0.0;
 float Battery::RawVoltage = 0.0;
+float Battery::RawPinReading = 0.0;   // Fractional as we averaging over several readings
 
 #if defined(USE_EXTERNAL_LED) && defined(ExternalLED_StatusLED)
 // Forward declaration - will be defined in device config
@@ -37,44 +38,50 @@ void Battery::CalculateState()
     return;
   }
 
+  RawPinReading = CumulativeBatterySensorReadings / BatteryLevelReadingsCount;
   // We will clamp this reading lower down to effectively ignore any readings that are too high or too low, so we can easily have a 0% -> 100% reading without going outside this range in the UI
-  ClampedBatterySensorReading = CumulativeBatterySensorReadings / BatteryLevelReadingsCount;
-
+  // We don't care for ultimate accuracy - in device we are generally mapping to a small range of pixels in the UI, or a single decimal point accuracy for voltage
   CumulativeBatterySensorReadings = 0; // Ready for next round of readings
   BatteryLevelReadingsCount = 0;       // Set up to start readings again
 
-  // Not clamped yet, still raw
-  float adcVoltage = (ClampedBatterySensorReading / ADC_RESOLUTION) * ADC_REF;
-  RawVoltage = adcVoltage * BAT_DIVIDER_RATIO;
+  RawVoltage = fmap(RawPinReading, BATTERY_MIN, BATTERY_MAX, BATTERY_MINV, BATTERY_MAXV);
+  
+  ClampedBatterySensorReading = RawPinReading;
+  // Manual clamp for easy wrapping of serial information
 
-  // Clamp things down
-  if (ClampedBatterySensorReading > BAT_MAX)
+  if (ClampedBatterySensorReading > BATTERY_MAX)
   {
 #if defined(EXTRA_SERIAL_DEBUG)
     Serial.printf("🔋 ⚠️ Battery sensor reading was above the max value! Max: %d, Reading: %d\n", BAT_MAX, ClampedBatterySensorReading);
 #endif
-    ClampedBatterySensorReading = BAT_MAX;
+    ClampedBatterySensorReading = BATTERY_MAX;
   }
-  else if (ClampedBatterySensorReading < BAT_MIN)
+  else if (ClampedBatterySensorReading < BATTERY_MIN)
   {
 #if defined(EXTRA_SERIAL_DEBUG)
     Serial.printf("🔋 ⚠️ Battery sensor reading was below the min! Min: %d, Reading: %d\n", BAT_MIN, ClampedBatterySensorReading);
 #endif
-    ClampedBatterySensorReading = BAT_MIN;
+    ClampedBatterySensorReading = BATTERY_MIN;
   }
 
-  ClampedBatteryPercentage = (ClampedBatterySensorReading - BAT_MIN) * 100.0 / (BAT_MAX - BAT_MIN);
-  ClampedVoltage = fmap(ClampedBatteryPercentage, 0.0, 100.0, BAT_MINV, BAT_MAXV);
+  // ClampedBatteryPercentage = (ClampedBatterySensorReading - BAT_MIN) * 100.0 / (BAT_MAX - BAT_MIN);
+  // ClampedVoltage = fmap(ClampedBatteryPercentage, 0.0, 100.0, BAT_MINV, BAT_MAXV);
+  ClampedBatteryPercentage = fmap(ClampedBatterySensorReading, BATTERY_MIN, BATTERY_MAX, 0.0, 100.0);
+  ClampedVoltage = fmap(ClampedBatterySensorReading, BATTERY_MIN, BATTERY_MAX, BATTERY_MINV, BATTERY_MAXV);
 
   // Work out if we are powered by battery, usb, or charging the battery
   // Note there is no `charging` state we can actually query, so we estimate based on
-  // battery level and if we are powered by USB or not. May get it wrong.
-  // Assumption is we are 100% battery + USB power = charging
-  // Monitoring during testing generally showed it to be 4095 with occasional slight drop down 10-20, but was very rare.
-  PowerSensorReading = analogRead(POWER_MONITOR_PIN);
-  float powerVoltage = (PowerSensorReading / ADC_RESOLUTION) * ADC_REF; // * PWR_DIVIDER_RATIO;
+  // battery level and if we are powered by USB or not.
+  // Assumption is
+  // ...100% battery + USB power = usb powered
+  // ...other battery + USB power = charging
+  // ...else battery powered
 
-  if (powerVoltage > PWR_PRESENT_THRESHOLD)
+  // Monitoring of power pin during testing generally showed it to be 4095 with occasional slight drop down 10-20, but was very rare.
+  PowerSensorReading = analogRead(POWER_MONITOR_PIN);
+  //float powerVoltage = (PowerSensorReading / ADC_RESOLUTION) * ADC_REF; // * PWR_DIVIDER_RATIO;
+
+  if (PowerSensorReading > PWR_PRESENT_THRESHOLD)
   {
     if (ClampedBatteryPercentage == 100)
       State = POWER_USB; // Powered by USB, but battery is full, so not charging
@@ -87,8 +94,6 @@ void Battery::CalculateState()
 #ifdef EXTRA_SERIAL_DEBUG_PLUS
   Serial.println("Battery Sensor Limited: " + String(CurrentBatterySensorReading) + ", Battery %: " + String(CurrentBatteryPercentage) + ", Approx Battery Voltage: " + String(Voltage));
 #endif
-
-  //return CurrentBatteryPercentage;
 }
 
 #define BatteryEmptyXPos ((SCREEN_WIDTH - 48) >> 1)

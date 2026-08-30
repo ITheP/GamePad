@@ -156,14 +156,36 @@ extern IconRun ControllerGfx[];
 #define POWER_MONITOR_PIN       PIN_05_D02_A2   // Power Voltage
 #define BATTERY_MONITOR_PIN     PIN_06_D03_A3   // Battery Voltage - Olimax voltage divider has 470k ohm to +ve and to gnd
 
-#define ADC_RESOLUTION 4095.0
-#define ADC_REF        2.2         // 3.3
+//#define ADC_RESOLUTION 4095.0
+//#define ADC_REF        2.2         // 3.3
 // Correct ratios from schematic
-#define BAT_DIVIDER_RATIO  4.1333
+// 4.1333
+// Didn't give accurate results!
+// From manual readings
+// 3.536
+// Ended up ignoring ratio's as it didn't really matter for our purposes, don't need super accuracy
+//#define BAT_DIVIDER_RATIO 3.536
 //#define PWR_DIVIDER_RATIO  5.6808
 // 5V through divider gives ~880mV at ADC
 // Anything above 0.4v means external power present
-#define PWR_PRESENT_THRESHOLD 0.4
+//#define PWR_PRESENT_THRESHOLD 0.4
+
+// Battery level's on
+// Taken from Olimex ESP32-S3-DevKit-Lipo Development Board with built in battery monitoring + USB charging
+// Predicted Pin reading @ 3.7v = 2324
+// Volt Meter: 3.565 while charging (USB plugged in) - reading at pin was 1995
+// Volt Meter: 3.504 not charging - reading at pin was 1846
+// Predicted Pin reading @ 3.3v = 1345.3
+// Note that when battery is charging we see a higher voltage (charge voltage rather than actual battery voltage) on the battery in
+
+// Min/Max raw readings from battery monitoring pin
+#define BATTERY_MIN 1345.3
+#define BATTERY_MAX 2324.0
+// Min/Max voltage of in place battery
+#define BATTERY_MINV 3.3
+#define BATTERY_MAXV 3.7
+// Power monitoring pin, anything above this we assume power is supplied (realistically reads 0 for no power and 3980-4096 when power is there)
+#define PWR_PRESENT_THRESHOLD 1024
 
 // Guitar Neck Buttons [Red 11 block]
 // +3.3v                                        // [+v] +3.3v LED Power <Red Wire>

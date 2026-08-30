@@ -28,7 +28,8 @@ function startAutoRefresh() {
         batteryLevel: document.getElementById('uiBatteryLevel'),
         batteryVoltage: document.getElementById('uiBatteryVoltage'),
         wifiSignal: document.getElementById('uiWiFiSignal'),
-        wifiSignalLabel: document.getElementById('uiWiFiSignalLabel')
+        wifiSignalLabel: document.getElementById('uiWiFiSignalLabel'),
+        powerState: document.getElementById('uiPowerState')
     };
 
     // Load initial device info and battery info
@@ -38,6 +39,7 @@ function startAutoRefresh() {
 
     if (typeof IntervalManager !== "undefined") {
         IntervalManager.add(() => {
+            clearResponse();
             updateBatteryInformation();
             updateWiFiInformation();
         }, 10000);
@@ -48,20 +50,20 @@ function startAutoRefresh() {
     }
 
     // Test's (remember to disable updates above which will probably trigger after the tests run and overwrite them)
-    // let batteryVoltage = randomisedValue(3.3, 4.2, 0.15);
+    // let batteryVoltage = randomisedValue(3.3, 3.7, 0.15);
     // let batteryLevel = randomisedValue(0, 100, 0.15);
     // let wifiSignal = randomisedValue(-90, -30, 0.15);
-    // setGauge(ui.batteryVoltage, 3.3, 4.2, batteryVoltage, "v", "⚡", "Test");
+    // setGauge(ui.batteryVoltage, 3.3, 3.7, batteryVoltage, "v", "⚡", "Test");
     // setGauge(ui.batteryLevel, 0, 100, batteryLevel, "%", "🔋", "Test");
     // setGauge(ui.wifiSignal, -30, -90, wifiSignal, "dBm", "🗼", "☠️");
 }
 
 function showResponseError(message = 'Please check controller is powered on and successfully connected to your WiFi network') {
-    ui.response.innerHTML = '<span style="color: red;"><strong>Error</strong> - ' + message + '</span>';
+    ui.response.innerHTML += '<span style="color: red;"><strong>Error</strong> - ' + message + '</span><br/>';
 }
 
 function showResponse(message) {
-    ui.response.innerHTML = '<span style="color: green;">' + message + '</span>';
+    ui.response.innerHTML += '<span style="color: green;">' + message + '</span><br/>';
 }
 
 function clearResponse() {
@@ -122,30 +124,64 @@ function setGauge(gauge, min, max, value, unit, icon, empty) {
 }
 
 function updateBatteryInformation() {
+    // Example response:
+    //     {
+    //   "BatteryPercentage": 69,
+    //   "BatteryVoltage": 3.58,
+    //   "BatteryRawVoltage": 3.58,
+    //   "BatteryMinVoltage": 3.3,
+    //   "BatteryMaxVoltage": 3.7,
+    //   "PowerPinReading": 3945,
+    //   "IsPoweredByBattery": false,
+    //   "IsCharging": true,
+    //   "IsPoweredByUSB": true
+    // }
+
     fetch('/json/battery_info')
         .then(response => {
             if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             return response.json();
         })
         .then(data => {
+            let batteryPercentage = data.BatteryPercentage;
             let batteryVoltage = data.BatteryVoltage;
-            let batteryLevel = data.BatteryLevel;
+            let batteryRawVoltage = data.BatteryRawVoltage;
+            let batteryMinVoltage = data.batteryMinVoltage;
+            let batteryMaxVoltage = data.batteryMaxVoltage;
+            let isPoweredByBattery = data.IsPoweredByBattery;
+            let isCharging = data.IsCharging;
+            let isPoweredByUSB = data.IsPoweredByUSB;
 
-            let RawVoltage = data.RawVoltage;
-            let IsCharging = data.IsCharging;
-            let IsPoweredByUSB = data.IsPoweredByUSB;
+            console.log(
+                "Battery Info: " +
+                "Percentage=" + batteryPercentage + "%, " +
+                "Voltage=" + batteryVoltage + "V, " +
+                "RawVoltage=" + batteryRawVoltage + ", " +
+                "MinVoltage=" + batteryMinVoltage + ", " +
+                "MaxVoltage=" + batteryMaxVoltage + ", " +
+                "IsCharging=" + isCharging + ", " +
+                "IsPoweredByBattery=" + isPoweredByBattery + ", " +
+                "IsPoweredByUSB=" + isPoweredByUSB
+            );
 
-            console.log(`Battery Info: Voltage=${batteryVoltage}V, Level=${batteryLevel}%, RawVoltage=${RawVoltage}, IsCharging=${IsCharging}, IsPoweredByUSB=${IsPoweredByUSB}`);
+            if (isCharging)
+                ui.powerState.textContent = "⚡ Charging";
+            else if (isPoweredByUSB)
+                ui.powerState.textContent = "🔌 USB Powered";
+            else
+                ui.powerState.textContent = "🔋 Battery Power";
 
-            setGauge(ui.batteryVoltage, 3.3, 4.2, batteryVoltage, "v", "⚡", "Empty");
-            setGauge(ui.batteryLevel, 0, 100, batteryLevel, "%", "🔋", "Empty");
+            setGauge(ui.batteryPercentage, 0, 100, batteryPercentage, "%", "🔋", "Empty");
+            setGauge(ui.batteryVoltage, batteryMinVoltage, batteryMaxVoltage, batteryVoltage, "v", "⚡", "Empty");
         })
         .catch(error => {
             console.error('Error fetching battery information: ', error);
             showResponseError("Unable to get battery information.");
 
-            setGauge(ui.batteryVoltage, 3.3, 4.2, 0, "v", "⚡", "❓");
-            setGauge(ui.batteryLevel, 0, 100, 0, "%", "🔋", "❓");
+            setGauge(ui.batteryPercentage, 0, 100, 0, "%", "🔋", "❓");
+            setGauge(ui.batteryVoltage, 3.3, 3.7, 0, "v", "⚡", "❓");
+
+            ui.powerState.textContent = "Unknown ❓";
         });
 }
 
@@ -168,6 +204,7 @@ function updateWiFiInformation() {
         .catch(error => {
             console.error('Error fetching WiFi Signal Level: ', error);
             showResponseError("Unable to get WiFi Signal Level.");
+
             ui.wifiSignalLabel.textContent = "WiFi Signal";
             setGauge(ui.wifiSignal, -30, -90, -30, "dBm", "🗼", "☠️");
         });

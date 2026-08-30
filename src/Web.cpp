@@ -246,14 +246,22 @@ esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
     char json[256];
     
     Battery::CalculateState();
+
+    // Note that we assume USB powered if is charging as must be plugged in to charge!
     bool isCharging = (Battery::State == POWER_Charging);
     bool isPoweredByUSB = (Battery::State == POWER_USB || isCharging);
 
+    // Maxes out around 200 characters
     snprintf(json, sizeof(json),
-             "{\"BatteryLevel\":%d, \"BatteryVoltage\":%.2f, \"RawVoltage\":%.2f, \"IsCharging\":%s, \"IsPoweredByUSB\":%s}",
+             "{\"BatteryPercentage\":%d, \"BatteryVoltage\":%.2f, \"BatteryRawVoltage\":%.2f, \"BatteryMinVoltage\":%.2f, \"BatteryMaxVoltage\":%2.f, \"BatteryPinReading\":%.2f, \"PowerPinReading\":%d, \"IsPoweredByBattery\":%s, \"IsCharging\":%s, \"IsPoweredByUSB\":%s}",
              Battery::ClampedBatteryPercentage,
              Battery::ClampedVoltage,
              Battery::RawVoltage,
+             BATTERY_MINV,
+             BATTERY_MAX,
+             Battery::RawPinReading,
+             Battery::PowerSensorReading,
+             isCharging ? "false" : "true",
              isCharging ? "true" : "false",
              isPoweredByUSB ? "true" : "false");
 
