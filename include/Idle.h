@@ -25,5 +25,8 @@ void InitIdleEffect();
 void RenderIdleEffect();
 void StopIdleEffect();
 
+void RenderIdleEffect_Bounce();
+void RenderIdleEffect_Gravity();
+
 void InitDisplayBuffer();
 uint8_t getPixelFast(int16_t x, int16_t y);

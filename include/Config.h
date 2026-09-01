@@ -7,15 +7,16 @@
 //#define INPUT_SERIAL_DEBUG        // Basic per frame serial output overview of input states
 //#define INPUT_SERIAL_DEBUG_PLUS     // Enables detailed serial output of input states, including digital, analog, virtual and battery states.
                                     // Includes sending ANSI codes to reset cursor position to provide a static display in a suitable terminal.
-                                    // Also sticks a delay() in to give a chance to read the output better
+                                    // If you want a delay, e.g. 250ms makes things a bit more readable...
+#define INPUT_SERIAL_DEBUG_PLUS_THROTTLE 0      
                                     // Usually used to fine tune hardware
 //#define INCLUDE_BENCHMARKS        // Includes some basic performance statistics of running device over serial
 //#define INCLUDE_BENCHMARKS_LED    // Basic performance stats for LED processing
 //#define STRAIGHT_TO_CONFIG_MENU   // Skip straight to config menu on start up for easier testing
 //#define WHITE_SCREEN              // Display will show a solid white screen, handy when physically aligning panel in device
-//#define DEBUG_MARKS                 // Extra debug logging that survives crashes
-//#define FORCE_FPS_DISPLAY           // Debug variant of Show FPS in top right corner of screen (don't need to be in menus)
-//#define STRAIGHT_TO_IDLE_SCREEN     // Skip straight to idle screen on start up for easier testing of idle screen and effects
+//#define DEBUG_MARKS               // Extra debug logging that survives crashes
+//#define FORCE_FPS_DISPLAY         // Debug variant of Show FPS in top right corner of screen (doesn't need to be selected from menus)
+//#define STRAIGHT_TO_IDLE_SCREEN   // Skip straight to idle screen on start up for easier testing of idle screen and effects
 
 #define SETUP_DELAY     250         // Delay between stages of initial start up
                                     // Could be pretty much instant, but having a delay gives a chance to display
@@ -28,6 +29,7 @@
 // XBox 360 X-Plorer Guitar Hero Controller (model 95065)
 // HID/XInput variant of BLE Gamepad https://github.com/Mystfit/ESP32-BLE-CompositeHID
 // USB\VID_1430&PID_4748 and Compatible Id of USB\MS_COMP_XUSB10 (to tell the driver that it's a wired xbox 360 controller).
+// However - believe that values only identify over wire - when wireless/bluetooth then wired values aren't picked up.
 #define VID 1430
 #define PID 4748
 

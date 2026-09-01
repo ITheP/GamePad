@@ -681,14 +681,12 @@ void setupInitExternalLEDs()
   }
 
   // Idle LEDs
-  Serial.println("💡 Idle LED Effects: " + String(IdleLEDEffects_Count));
   for (int i = 0; i < IdleLEDEffects_Count; i++)
   {
     ExternalLEDConfig *config = IdleLEDEffects[i];
 
     if (config != nullptr)
     {
-      Serial.print("MiscLEDEffects InitExternalLED: " + String(i) + ": ");
       InitExternalLED(config, ExternalLeds);
       Serial.println();
     }
@@ -707,7 +705,7 @@ void setupLEDs()
   Serial.println("💡 Setting up LEDs...");
 
 #ifdef USE_EXTERNAL_LED
-  void setupInitExternalLEDs();
+  setupInitExternalLEDs();
 #endif
 
   // Flash a little LED icon up to show we are playing with LED's
@@ -1666,7 +1664,7 @@ void MainLoop()
 #endif
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
-  // delay(250);
+   delay(INPUT_SERIAL_DEBUG_PLUS_THROTTLE);
 
   Serial.print("\033[3J\033[2J\033[H");
   // Serial.print("\033[H");
@@ -2389,7 +2387,7 @@ void MainLoop()
     }
 
     // We only register a change if it is above a certain level of change (kind of like smoothing it but without smoothing it)
-    float threshold = .01 * 4095; // 1% change required
+    float threshold = .015 * 4095; // 1.5% change required
     int previousAnalogValue = input->ValueState.AnalogValue;
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
@@ -2412,27 +2410,39 @@ void MainLoop()
     int16_t minAnalogValue = input->MinAnalogValue;
     int16_t maxAnalogValue = input->MaxAnalogValue;
     int16_t constrainedState = constrain(analogState, minAnalogValue, maxAnalogValue);
-
+      //Serial.printf("Previous: %d, Current: %d, Min=%d Max=%d", previousAnalogValue, analogState, minAnalogValue, maxAnalogValue);
     if (
         // If we have changed my more than 3% or we have bottomed out/topped out of the range, then we process
-        analogState < (previousAnalogValue - threshold) || analogState > (previousAnalogValue + threshold) ||
+        // analogState < (previousAnalogValue - threshold) || analogState > (previousAnalogValue + threshold) ||
+        // (constrainedState != previousAnalogValue && (constrainedState == minAnalogValue || constrainedState == maxAnalogValue)
+        //  // If we are at an extreme end of the range, we want to make sure it registers even if within the threshold (i.e. to min or max possible)
+        //  ))
+
+        constrainedState < (previousAnalogValue - threshold) || constrainedState > (previousAnalogValue + threshold) ||
         (constrainedState != previousAnalogValue && (constrainedState == minAnalogValue || constrainedState == maxAnalogValue)
          // If we are at an extreme end of the range, we want to make sure it registers even if within the threshold (i.e. to min or max possible)
          ))
     {
       // if (analogState != input->ValueState.AnalogValue)
       // {
+     //Serial.printf(" TRIGGERED %d, %d, %d, %d, [%s]\n", previousAnalogValue, analogState, minAnalogValue, maxAnalogValue, input->Label);
+
       input->ValueState.AnalogValue = constrainedState;
       input->ValueState.PreviousValue = previousAnalogValue;
       input->ValueState.StateChangedWhen = micros(); // ToDo: More accurate setting here, as there have been delays
 
-      someControlStateJustChanged = true;
-
+      //Serial.println(input->Label);
       input->ValueState.StateJustChanged = false;
 
       // Check if this input tracks trigger on/off values
       if (input->TriggerOnValue > 0)
       {
+        // We only flag the someControlStateJustChanged here if the analog value is >= the TriggerOnValue && >= TriggerOffValue (whatever is lower)
+        // else we might be flagging the states changed when we haven't hit a trigger point yet - which can effect things like the idle effect
+        // and if we are over sensitive around no input/wrist position of an analog control, can lead to false cancellations of the idle state
+        if (constrainedState >= input->TriggerOnValue || constrainedState >= input->TriggerOffValue)
+          someControlStateJustChanged = true;
+          
         if (analogState >= input->TriggerOnValue && input->ValueState.Value == NOT_PRESSED)
         {
           input->ValueState.Value = PRESSED;
@@ -2455,6 +2465,11 @@ void MainLoop()
           input->ValueState.StateJustChangedLED = true;
         }
       }
+      else
+      {
+        // No Trigger values so just flag something's changed
+        someControlStateJustChanged = true;
+      }
 
       // Final analog handling
 
@@ -2474,6 +2489,7 @@ void MainLoop()
 
       sendReport = true;
     }
+    //Serial.println();
     //}
   }
 
@@ -2638,8 +2654,16 @@ void MainLoop()
 
 // Call idle LED effects etc. if controllers not had anything pressed for a while
 #if defined(USE_ONBOARD_LED) || defined(USE_ONBOARD_LED_STATUS_ONLY)
+
   if (timeSinceLastAnyControlChanged >= IDLE_LED_TIMEOUT)
   {
+    
+      //Serial.printf("LED Idle ON  %.3f >= %.3f [%s] %d", (float)timeSinceLastAnyControlChanged, (float)IDLE_LED_TIMEOUT, input->Label, someControlStateJustChanged);
+      // for (int i = 0; i < ExternalLED_Count; i++) {
+      //   Serial.print(" ");
+      //   Serial.print(ExternalLedsEnabled[i]);
+      // }
+        
 #ifdef DEBUG_MARKS
     Debug::Mark(400, __LINE__, __FILE__, __func__, "LED Idle");
 #endif
@@ -2657,6 +2681,8 @@ void MainLoop()
   }
   else
   {
+    //Serial.printf("LED Idle OFF %.3f < %.3f [%s] %d\n", (float)timeSinceLastAnyControlChanged, (float)IDLE_LED_TIMEOUT, input->Label, someControlStateJustChanged);
+
     if (ControllerIdle_LED)
     {
       ControllerIdleJustUnset_LED = true;

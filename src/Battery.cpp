@@ -64,8 +64,6 @@ void Battery::CalculateState()
     ClampedBatterySensorReading = BATTERY_MIN;
   }
 
-  // ClampedBatteryPercentage = (ClampedBatterySensorReading - BAT_MIN) * 100.0 / (BAT_MAX - BAT_MIN);
-  // ClampedVoltage = fmap(ClampedBatteryPercentage, 0.0, 100.0, BAT_MINV, BAT_MAXV);
   ClampedBatteryPercentage = fmap(ClampedBatterySensorReading, BATTERY_MIN, BATTERY_MAX, 0.0, 100.0);
   ClampedVoltage = fmap(ClampedBatterySensorReading, BATTERY_MIN, BATTERY_MAX, BATTERY_MINV, BATTERY_MAXV);
 

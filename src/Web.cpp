@@ -29,6 +29,8 @@
 
 #ifdef WEBSERVER
 
+#define HTTPD_CLOSE_CONNECTIONS
+
 String ContentType_Html = "text/html; charset=utf-8";
 String ContentType_JS = "application/javascript; charset=utf-8";
 String ContentType_CSS = "text/css; charset=utf-8";
@@ -201,6 +203,10 @@ esp_err_t Web::SendPage_Debug(httpd_req_t *req)
     Prefs::WebDebug(&html);
 
     std::string response = html.str();
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
     httpd_resp_set_type(req, "text/html; charset=utf-8");
     httpd_resp_send(req, response.c_str(), response.length());
     return ESP_OK;
@@ -230,6 +236,10 @@ esp_err_t Web::SendComponent_StatsTable(httpd_req_t *req)
     table << "</table>";
 
     std::string response = table.str();
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
     httpd_resp_set_type(req, "text/html; charset=utf-8");
     httpd_resp_send(req, response.c_str(), response.length());
     return ESP_OK;
@@ -244,7 +254,7 @@ esp_err_t Web::Send_DeviceInfo(httpd_req_t *req)
 esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
 {
     char json[256];
-    
+
     Battery::CalculateState();
 
     // Note that we assume USB powered if is charging as must be plugged in to charge!
@@ -265,6 +275,10 @@ esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
              isCharging ? "true" : "false",
              isPoweredByUSB ? "true" : "false");
 
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, json, strlen(json));
     return ESP_OK;
@@ -292,6 +306,10 @@ esp_err_t Web::Send_Stats(httpd_req_t *req)
     json << "]}";
 
     std::string response = json.str();
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, response.c_str(), response.length());
     return ESP_OK;
@@ -319,6 +337,10 @@ esp_err_t Web::Send_AccessPointList(httpd_req_t *req)
     json << "], \"count\": " << count << "}";
 
     std::string response = json.str();
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, response.c_str(), response.length());
     return ESP_OK;
@@ -332,6 +354,10 @@ esp_err_t Web::Send_WiFiStatus(httpd_req_t *req)
              Networking::WiFiStatus,
              Networking::WiFiStrength);
 
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, json, strlen(json));
     return ESP_OK;
@@ -381,6 +407,10 @@ esp_err_t Web::Send_WiFiTestStatus(httpd_req_t *req)
     char json[256];
     snprintf(json, sizeof(json), "{\"Status\":\"%s\"}", resultText.c_str());
 
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, json, strlen(json));
     return ESP_OK;
@@ -402,6 +432,10 @@ esp_err_t Web::Send_HotspotInfo(httpd_req_t *req)
         snprintf(json, sizeof(json), "{\"WiFiSSID\":\"\",\"WiFiPassword\":\"\"}");
     }
 
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, json, strlen(json));
     return ESP_OK;
@@ -441,18 +475,30 @@ esp_err_t Web::POST_UpdateWiFiDetails(httpd_req_t *req)
 
     if (ssid.length() == 0)
     {
+#ifdef HTTPD_CLOSE_CONNECTIONS
+        // Force the client to close the connection after this response - free's up limited connections
+        httpd_resp_set_hdr(req, "Connection", "close");
+#endif
         httpd_resp_send(req, "{\"error\":\"SSID not set\"}", 28);
         return ESP_OK;
     }
 
     if (ssid.length() > 32)
     {
+#ifdef HTTPD_CLOSE_CONNECTIONS
+        // Force the client to close the connection after this response - free's up limited connections
+        httpd_resp_set_hdr(req, "Connection", "close");
+#endif
         httpd_resp_send(req, "{\"error\":\"ssid longer than max allowed (32 chars)\"}", 56);
         return ESP_OK;
     }
 
     if (password.length() > 63)
     {
+#ifdef HTTPD_CLOSE_CONNECTIONS
+        // Force the client to close the connection after this response - free's up limited connections
+        httpd_resp_set_hdr(req, "Connection", "close");
+#endif
         httpd_resp_send(req, "{\"error\":\"password longer than max allowed (63 chars)\"}", 59);
         return ESP_OK;
     }
@@ -467,6 +513,10 @@ esp_err_t Web::POST_UpdateWiFiDetails(httpd_req_t *req)
     CurrentProfile->WiFi_Password = password;
     CurrentProfile->Save();
 
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, "{\"status\":\"ok\"}", 16);
     return ESP_OK;
@@ -596,10 +646,15 @@ void Web::InitWebServer()
     // HTTP Web Server
     httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
     http_config.server_port = 80;
-    http_config.max_open_sockets = 4;
+    http_config.max_open_sockets = 7; // default is already 7 (3 reserved internally)
     http_config.max_uri_handlers = 16;
     http_config.stack_size = 8192;
     http_config.uri_match_fn = httpd_uri_match_wildcard;
+
+    // Very useful against stuck / half-open sockets
+    http_config.lru_purge_enable = true;
+    http_config.recv_wait_timeout = 5;         // seconds
+    http_config.send_wait_timeout = 5;
 
     if (httpd_start(&WebServerHTTP, &http_config) != ESP_OK)
     {
@@ -920,6 +975,11 @@ void Web::SendPageWithMergeFields(const char *path, const std::map<String, Strin
     }
 
     std::string response = output.str();
+
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
     httpd_resp_set_type(req, "text/html; charset=utf-8");
     httpd_resp_send(req, response.c_str(), response.length());
 

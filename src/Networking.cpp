@@ -418,7 +418,14 @@ void Networking::HandleWiFi(int second)
                     // WiFi.mode (WIFI_APSTA); //WIFI_STA);
                     // esp_wifi_set_ps(WIFI_PS_NONE);
 
+                    // WEB SERVER TEST - try make it more responsive
                     WiFi.begin(ssid, password);
+
+                    // Below is recommended for better wifi (stops issues) but device crashes with error...
+                    // E (11393) wifi:Error! Should enable WiFi modem sleep when both WiFi and Bluetooth are enabled!!!!!!
+                    // ...if it is set
+                    // WiFi.setSleep(false);
+
                     WiFiConnecting = true;
                     WiFiStatus = WiFi_Connecting;
                 }

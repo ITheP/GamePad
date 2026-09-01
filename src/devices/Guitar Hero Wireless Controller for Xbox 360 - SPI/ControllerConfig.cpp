@@ -144,6 +144,7 @@ int AllStats_Count = sizeof(AllStats) / sizeof(AllStats[0]);
 // When TriggerOffValue > TriggerOnValue then it is also considered off if the value is above the TriggerOffValue - which lets
 // us account for banded areas. In this case, the TriggerOnValue is also counted as the lower boundary to turn off at.
 
+// Analog sensors we used are a little rough so we make sure theres some averaging going (.AverageOverAnalogCount)
 Input AnalogInputs_Virtual_TriggeredGreen =
     {
         .Pin = BUTTON_Green_PIN,
@@ -152,10 +153,10 @@ Input AnalogInputs_Virtual_TriggeredGreen =
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
         .AverageOverAnalogCount = 8,
-        .MinAnalogValue = 2120,
+        .MinAnalogValue = 2160,
         .MaxAnalogValue = 2380,
-        .TriggerOnValue = 2120 + 60,
-        .TriggerOffValue = 2120 + 30,
+        .TriggerOnValue = 2160 + 60,
+        .TriggerOffValue = 2160 + 30,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -206,10 +207,10 @@ Input AnalogInputs_Virtual_TriggeredYellow =
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
         .AverageOverAnalogCount = 8,
-        .MinAnalogValue = 2180,
+        .MinAnalogValue = 2190,
         .MaxAnalogValue = 2435,
-        .TriggerOnValue = 2180 + 60,
-        .TriggerOffValue = 2180 + 30,
+        .TriggerOnValue = 2190 + 60,
+        .TriggerOffValue = 2190 + 30,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -260,10 +261,10 @@ Input AnalogInputs_Virtual_TriggeredOrange =
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
         .AverageOverAnalogCount = 8,
-        .MinAnalogValue = 2280,
+        .MinAnalogValue = 2290,
         .MaxAnalogValue = 2560,
-        .TriggerOnValue = 2280 + 60,
-        .TriggerOffValue = 2280 + 30,
+        .TriggerOnValue = 2290 + 60,
+        .TriggerOffValue = 2290 + 30,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,

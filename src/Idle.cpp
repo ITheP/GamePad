@@ -13,11 +13,11 @@ int IdleParticleCount = IDLE_MAX_PARTICLE_COUNT;
 // x, y, width of random area, height of random area
 // Couple of variants for simple particle limit alternatives
 IdleSpawnPoint IdleSpawnPoints[] = {
-    {1, 20, 10, 30, IDLE_MAX_PARTICLE_COUNT},       // Left of guitar...
-    {13, 28, 9, 9, 32},                             // Special case within the guitar body :)
+    {1, 20, 10, 30, IDLE_MAX_PARTICLE_COUNT}, // Left of guitar...
+    {13, 28, 9, 9, 32},                       // Special case within the guitar body :)
     {13, 28, 9, 9, 16},
-    {60, 15, 50, 10, IDLE_MAX_PARTICLE_COUNT},          // Top right of guitar...
-    {60, 48, 50, 10, IDLE_MAX_PARTICLE_COUNT}};     // Top right of guitar...
+    {60, 15, 50, 10, IDLE_MAX_PARTICLE_COUNT},  // Top right of guitar...
+    {60, 48, 50, 10, IDLE_MAX_PARTICLE_COUNT}}; // Top right of guitar...
 
 int IdleSpawnPointCount = sizeof(IdleSpawnPoints) / sizeof(IdleSpawnPoints[0]);
 
@@ -28,6 +28,16 @@ unsigned long nextSpawnTime = 0;
 unsigned long spawnRate = 500;
 int spawnDirection = 1;
 // Benchmark IdleBenchmark("Idle");
+
+typedef void (*RenderIdleFunction)();
+RenderIdleFunction idleRenderFunctions[] = {
+    RenderIdleEffect_Bounce, // Your original bounce effect
+    RenderIdleEffect_Gravity // Your new gravity effect
+};
+
+const int RenderIdleEffectCount = sizeof(idleRenderFunctions) / sizeof(idleRenderFunctions[0]);
+
+RenderIdleFunction CurrentRenderFunction = nullptr;
 
 // Random +/- 0.15 to 0.3
 static float randVel()
@@ -45,7 +55,7 @@ static float randPosVel()
 void InitIdleEffect()
 {
 #ifdef DEBUG_MARKS
-  Debug::Mark(1, __LINE__, __FILE__, __func__);
+    Debug::Mark(1, __LINE__, __FILE__, __func__);
 #endif
 
     // InitDisplayBuffer();
@@ -93,6 +103,21 @@ void InitIdleEffect()
     currentParticleCount = 1;
     nextSpawnTime = millis() + spawnRate;
     spawnDirection = 1;
+
+    // Pick an effect to run
+    int functionIndex = rand() % RenderIdleEffectCount;
+    CurrentRenderFunction = idleRenderFunctions[functionIndex];
+}
+
+void RenderIdleEffect()
+{
+#ifdef DEBUG_MARKS
+    Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
+    if (CurrentRenderFunction != nullptr) {
+        CurrentRenderFunction();
+    }
 }
 
 // Over engineered bouncing pixel effect.
@@ -103,11 +128,10 @@ void InitIdleEffect()
 // Not optimal fastest possible code but 256 particles tested at < 1ms overhead
 // Note that also imperfections can occur with live animations also on screen affecting
 // the environment the pixels are in
-
-void RenderIdleEffect()
+void RenderIdleEffect_Bounce()
 {
 #ifdef DEBUG_MARKS
-  Debug::Mark(1, __LINE__, __FILE__, __func__);
+    Debug::Mark(1, __LINE__, __FILE__, __func__);
 #endif
 
     // IdleBenchmark.Start("Idle Start");
@@ -174,7 +198,7 @@ void RenderIdleEffect()
                     currentParticleCount--;
 
                     // Make sure
-                    //Display.writePixel(particles[currentParticleCount].lastX, particles[currentParticleCount].lastY, C_BLACK);
+                    // Display.writePixel(particles[currentParticleCount].lastX, particles[currentParticleCount].lastY, C_BLACK);
 
                     // If there are no particles left, restart everything from scratch!
                     if (currentParticleCount == 0)
@@ -182,7 +206,7 @@ void RenderIdleEffect()
                         InitIdleEffect();
                         return;
                     }
-                    
+
                     continue; // Skip drawing this particle since we're removing it
                 }
             }
@@ -255,6 +279,181 @@ void RenderIdleEffect()
     }
 
     // IdleBenchmark.Snapshot("Idle Stop");
+}
+
+// Similar to bounce effect but with gravity!
+// Add this constant near the top with other globals
+const float GRAVITY = 0.02f; // Small enough to keep velocities manageable
+// Max velocity cap to ensure we never move more than 1 pixel
+const float MAX_VELOCITY = 0.95f; // Slightly under 1.0 for safety
+
+void RenderIdleEffect_Gravity()
+{
+#ifdef DEBUG_MARKS
+    Debug::Mark(1, __LINE__, __FILE__, __func__);
+#endif
+
+    for (int i = 0; i < currentParticleCount; i++)
+    {
+        IdleParticle &p = particles[i];
+
+        // Erase previous pixel
+        Display.writePixel(p.lastX, p.lastY, C_BLACK);
+
+        // Apply gravity to vertical velocity
+        p.vy += GRAVITY;
+
+        // Clamp velocities to prevent moving more than 1 pixel per frame
+        if (p.vx > MAX_VELOCITY)
+            p.vx = MAX_VELOCITY;
+        if (p.vx < -MAX_VELOCITY)
+            p.vx = -MAX_VELOCITY;
+        if (p.vy > MAX_VELOCITY)
+            p.vy = MAX_VELOCITY;
+        if (p.vy < -MAX_VELOCITY)
+            p.vy = -MAX_VELOCITY;
+
+        float tryXf = p.x + p.vx;
+        float tryYf = p.y + p.vy;
+
+        int xi_try = (int)tryXf;
+        int yi_try = (int)tryYf;
+
+        float newVx = p.vx;
+        float newVy = p.vy;
+
+        // Horizontal collision
+        if (xi_try < 0 || xi_try >= SCREEN_WIDTH ||
+            Display.getPixel(xi_try, p.lastY) == C_WHITE)
+        {
+            if (millis() > nextSpawnTime)
+            {
+                if (spawnDirection == 1)
+                {
+                    if (currentParticleCount < IdleParticleCount)
+                    {
+                        IdleParticle &newP = particles[currentParticleCount];
+
+                        newP.x = p.x;
+                        newP.y = p.y;
+                        newP.lastX = p.lastX;
+                        newP.lastY = p.lastY;
+
+                        nextSpawnTime = millis() + spawnRate;
+                        currentParticleCount++;
+                    }
+                    else
+                    {
+                        spawnDirection = -1;
+                    }
+                }
+
+                if (spawnDirection == -1 && i == currentParticleCount - 1)
+                {
+                    currentParticleCount--;
+
+                    if (currentParticleCount == 0)
+                    {
+                        InitIdleEffect();
+                        return;
+                    }
+
+                    continue;
+                }
+            }
+
+            newVx = -newVx;
+
+            if (tryXf < 1.0f)
+                tryXf += 1.0f;
+            else if (tryXf >= SCREEN_WIDTH - 1.0f)
+                tryXf -= 1.0f;
+
+            tryXf += newVx;
+            xi_try = (int)tryXf;
+        }
+
+        // Vertical bounce (including top of screen)
+        if (yi_try < 0 || yi_try >= SCREEN_HEIGHT ||
+            Display.getPixel(p.lastX, yi_try) == C_WHITE)
+        {
+            // Check if going off bottom of screen - wrap to top
+            if (yi_try >= SCREEN_HEIGHT)
+            {
+                // Reset to top with random horizontal position
+                int newX;
+                int attempts = 0;
+                do
+                {
+                    newX = rand() % SCREEN_WIDTH;
+                    attempts++;
+                } while (Display.getPixel(newX, 0) == C_WHITE && attempts < 100);
+
+                // Reset position to top
+                p.x = (float)newX;
+                p.y = 0.0f;
+                p.lastX = (int)p.x;
+                p.lastY = 0;
+
+                // Give it a random downward velocity
+                p.vy = 0.1f + (rand() * (1.0f / RAND_MAX)) * 0.2f;
+                p.vx = randVel() * 0.5f;
+
+                Display.writePixel((int)p.x, (int)p.y, C_WHITE);
+                continue;
+            }
+            else
+            {
+                // Normal bounce (top of screen or white pixel)
+                newVy = -newVy;
+
+                // Force a 1‑pixel rebound
+                if (tryYf < 1.0f)
+                    tryYf += 1.0f;
+                else if (tryYf >= SCREEN_HEIGHT - 1.0f)
+                    tryYf -= 1.0f;
+
+                tryYf += newVy;
+                yi_try = (int)tryYf;
+            }
+        }
+
+        int xi_final = xi_try;
+        int yi_final = yi_try;
+
+        // Final new position checks
+        if (Display.getPixel(xi_final, yi_final) == C_WHITE)
+        {
+            // Clash - something white was there already
+            if (newVx > 0)
+                newVx = -0.1f - (rand() * (1.0f / RAND_MAX)) * 0.2f;
+            else
+                newVx = 0.1f + (rand() * (1.0f / RAND_MAX)) * 0.2f;
+
+            if (newVy > 0)
+                newVy = -0.1f - (rand() * (1.0f / RAND_MAX)) * 0.2f;
+            else
+                newVy = 0.1f + (rand() * (1.0f / RAND_MAX)) * 0.2f;
+
+            tryXf = p.x;
+            tryYf = p.y;
+
+            xi_final = p.lastX;
+            yi_final = p.lastY;
+        }
+
+        // Commit final values
+        p.vx = newVx;
+        p.vy = newVy;
+
+        p.x = tryXf;
+        p.y = tryYf;
+
+        Display.writePixel(xi_final, yi_final, C_WHITE);
+
+        p.lastX = xi_final;
+        p.lastY = yi_final;
+    }
 }
 
 void StopIdleEffect()

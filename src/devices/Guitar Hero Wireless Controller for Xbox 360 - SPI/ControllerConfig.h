@@ -28,10 +28,12 @@
 
 #define CLEAR_STATS_ON_FLIP // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
 
-// Go into idle LED effects mode after 10 seconds
-#define IDLE_LED_TIMEOUT 10.0
-#define IDLE_SCREEN_TIMEOUT 30.0
-#define IDLE_EFFECT_RESTART 60.0
+// Idle effect timings and settings
+#define IDLE_LED_TIMEOUT 10.0     // Seconds before LED's go into Idle mode
+#define IDLE_SCREEN_TIMEOUT 30.0  // Seconds before Screen goes into Idle mode
+#define IDLE_EFFECT_RESTART 60.0  // Seconds before screen restarts it's idle effect (keeps it more interesting)
+#define IDLE_LED_RUN_EXCLUSIVELY  // Idle effect LED's run on their own - all other LED effects stop.
+                                  // You may want both to be processed at the same time (especially if the Idle effects are only set to process on a subset of LED's)
 
 // =====
 // LED's
@@ -54,7 +56,7 @@ enum class LEDStrip {
     COUNT   // Should auto-populate as part of the enum as last item
 };
 
-#define LED_BRIGHTNESS 255 // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
+#define LED_BRIGHTNESS 200 // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
 
 #define ONBOARD_LED_FADE_RATE (1.0 / 0.2) // 0.15 is the total amount of seconds a complete 255->0 fade will be over
 
