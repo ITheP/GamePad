@@ -93,6 +93,8 @@
                 <option value="SprinkleSwoosh">Sprinkle Swoosh</option>
                 <option value="GlobalSprinkleSwoosh">Global Sprinkle Swoosh</option>
                 <option value="Rain">Rain</option>
+                <option value="UnOrbit">UnOrbit</option>
+                <option value="Swarm">Swarm</option>
             </select>
             <span>Particles: <span class="particle-count" id="particleCount">0</span></span>
         </div>
@@ -106,8 +108,10 @@
         const IDLE_MAX_PARTICLE_COUNT = 64;
         const MAX_VELOCITY = 0.95;
         const GRAVITY = 0.03;
-        const SWOSH_SPEED = 0.02; // Speed of the sine/cosine oscillation
-        const RAIN_SPLASH_FACTOR = 0.25; // Velocity reduction on bounce (1/4)
+        const SWOSH_SPEED = 0.02;
+        const RAIN_SPLASH_FACTOR = 0.25;
+        const UNORBIT_FORCE = 0.02;
+        const SWARM_FOLLOW_FORCE = 0.16; // Force that makes particles follow the leader
 
         // --- Canvas Setup ---
         const canvas = document.getElementById('canvas');
@@ -245,6 +249,8 @@
                 this.vy = 0;
                 this.lastX = 0;
                 this.lastY = 0;
+                this.outward = true;
+                this.isLeader = false;
             }
         }
 
@@ -264,11 +270,15 @@
         let nextSpawnTime = 0;
         const spawnRate = 300;
         let spawnDirection = 1;
-        let swoshTimeV = 0; // Time counter for swosh effect
-        let swoshTimeH = 0; // Time counter for swosh effect
+        let swoshTimeV = 0;
+        let swoshTimeH = 0;
 
         let rnd1 = 0;
         let rnd2 = 0;
+
+        // Center of screen for UnOrbit effect
+        const CENTER_X = SCREEN_WIDTH / 2.0;
+        const CENTER_Y = SCREEN_HEIGHT / 2.0;
 
         // --- Utility Functions ---
         function rand() {
@@ -830,6 +840,7 @@
                 p.lastY = yi_final;
             }
         }
+
         function RenderIdleEffect_Rain() {
             for (let i = 0; i < currentParticleCount; i++) {
                 const p = particles[i];
@@ -864,9 +875,9 @@
                             if (currentParticleCount < IdleParticleCount) {
                                 const newP = particles[currentParticleCount];
                                 newP.x = p.x;
-                                newP.y = 0; //p.y;  // VARIANT
+                                newP.y = 0;
                                 newP.lastX = p.lastX;
-                                newP.lastY = 0; //p.lastY;   // VARIANT
+                                newP.lastY = 0;
                                 newP.vx = randVel();
                                 newP.vy = randVel();
                                 nextSpawnTime = Date.now() + spawnRate;
@@ -919,9 +930,8 @@
                         continue;
                     } else {
                         // Normal bounce (top or white pixel)
-                        //newVy = -newVy;
-                        newVy = -(newVy * 0.3) - 0.25;   // VARIANT
-                        newVx = randVel() * 2;           // VARIANT excitable horizontal jumps
+                        newVy = -(newVy * 0.3) - 0.25;
+                        newVx = randVel() * 2;
 
                         if (tryYf < 1.0) tryYf += 1.0;
                         else if (tryYf >= SCREEN_HEIGHT - 1.0) tryYf -= 1.0;
@@ -958,6 +968,364 @@
             }
         }
 
+        function RenderIdleEffect_UnOrbit() {
+            const MAX_DIST = Math.sqrt(CENTER_X * CENTER_X + CENTER_Y * CENTER_Y);
+            
+            for (let i = 0; i < currentParticleCount; i++) {
+                const p = particles[i];
+
+                // Erase previous pixel
+                Display.writePixel(p.lastX, p.lastY, 0);
+
+                // Calculate distance from center
+                const dx = p.x - CENTER_X;
+                const dy = p.y - CENTER_Y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                // Normalize direction (radial direction from center)
+                let dirX = 0, dirY = 0;
+                if (dist > 0.001) {
+                    dirX = dx / dist;
+                    dirY = dy / dist;
+                }
+
+                // Determine if we should push outward or inward
+                const distPercent = dist / MAX_DIST;
+                
+                let force = 0;
+                if (distPercent > 0.65) {
+                    force = -UNORBIT_FORCE * 1.5;
+                    p.outward = false;
+                } else if (distPercent < 0.05) {
+                    force = UNORBIT_FORCE * 1.5;
+                    p.outward = true;
+                } else {
+                    force = p.outward ? UNORBIT_FORCE * 0.3 : -UNORBIT_FORCE * 0.3;
+                }
+
+                // Apply radial force
+                p.vx += dirX * force;
+                p.vy += dirY * force;
+
+                // Add tangential velocity for orbiting
+                const tangentX = -dirY;
+                const tangentY = dirX;
+                const orbitSpeed = 0.015 * (1 + distPercent);
+                p.vx += tangentX * orbitSpeed;
+                p.vy += tangentY * orbitSpeed;
+
+                // Small random perturbation
+                p.vx += (rand() - 0.5) * 0.01;
+                p.vy += (rand() - 0.5) * 0.01;
+
+                // Clamp velocities
+                if (p.vx > MAX_VELOCITY) p.vx = MAX_VELOCITY;
+                if (p.vx < -MAX_VELOCITY) p.vx = -MAX_VELOCITY;
+                if (p.vy > MAX_VELOCITY) p.vy = MAX_VELOCITY;
+                if (p.vy < -MAX_VELOCITY) p.vy = -MAX_VELOCITY;
+
+                let tryXf = p.x + p.vx;
+                let tryYf = p.y + p.vy;
+
+                let xi_try = Math.floor(tryXf);
+                let yi_try = Math.floor(tryYf);
+
+                let newVx = p.vx;
+                let newVy = p.vy;
+
+                // Horizontal collision
+                if (xi_try < 0 || xi_try >= SCREEN_WIDTH ||
+                    Display.getPixel(xi_try, p.lastY) === 1) {
+
+                    if (Date.now() > nextSpawnTime) {
+                        if (spawnDirection === 1) {
+                            if (currentParticleCount < IdleParticleCount) {
+                                const newP = particles[currentParticleCount];
+                                const angle = rand() * Math.PI * 2;
+                                const radius = 3 + rand() * 5;
+                                newP.x = CENTER_X + Math.cos(angle) * radius;
+                                newP.y = CENTER_Y + Math.sin(angle) * radius;
+                                newP.lastX = Math.floor(newP.x);
+                                newP.lastY = Math.floor(newP.y);
+                                newP.vx = randVel() * 0.5;
+                                newP.vy = randVel() * 0.5;
+                                newP.outward = true;
+                                nextSpawnTime = Date.now() + spawnRate;
+                                currentParticleCount++;
+                            } else {
+                                spawnDirection = -1;
+                            }
+                        }
+
+                        if (spawnDirection === -1 && i === currentParticleCount - 1) {
+                            currentParticleCount--;
+                            if (currentParticleCount === 0) {
+                                InitIdleEffect();
+                                return;
+                            }
+                            continue;
+                        }
+                    }
+
+                    newVx = -newVx;
+
+                    if (tryXf < 1.0) tryXf += 1.0;
+                    else if (tryXf >= SCREEN_WIDTH - 1.0) tryXf -= 1.0;
+
+                    tryXf += newVx;
+                    xi_try = Math.floor(tryXf);
+                    
+                    p.outward = !p.outward;
+                }
+
+                // Vertical collision
+                if (yi_try < 0 || yi_try >= SCREEN_HEIGHT ||
+                    Display.getPixel(p.lastX, yi_try) === 1) {
+                    newVy = -newVy;
+
+                    if (tryYf < 1.0) tryYf += 1.0;
+                    else if (tryYf >= SCREEN_HEIGHT - 1.0) tryYf -= 1.0;
+
+                    tryYf += newVy;
+                    yi_try = Math.floor(tryYf);
+                    
+                    p.outward = !p.outward;
+                }
+
+                let xi_final = xi_try;
+                let yi_final = yi_try;
+
+                // Final position check
+                if (Display.getPixel(xi_final, yi_final) === 1) {
+                    if (Display.getPixel(xi_final, p.lastY) === 0) {
+                        yi_final = p.lastY;
+                        newVy = 0;
+                    } else if (Display.getPixel(p.lastX, yi_final) === 0) {
+                        xi_final = p.lastX;
+                        newVx = 0;
+                    } else {
+                        newVx = -newVx * 0.5;
+                        newVy = -newVy * 0.5;
+                        xi_final = p.lastX;
+                        yi_final = p.lastY;
+                        p.outward = !p.outward;
+                    }
+                }
+
+                p.vx = newVx;
+                p.vy = newVy;
+                p.x = tryXf;
+                p.y = tryYf;
+
+                if (Display.getPixel(xi_final, yi_final) === 0) {
+                    Display.writePixel(xi_final, yi_final, 1);
+                } else {
+                    xi_final = p.lastX;
+                    yi_final = p.lastY;
+                    Display.writePixel(xi_final, yi_final, 1);
+                }
+                
+                p.lastX = xi_final;
+                p.lastY = yi_final;
+            }
+        }
+
+function RenderIdleEffect_Swarm() {
+    // Find the leader (first particle)
+    let leader = null;
+    if (currentParticleCount > 0) {
+        leader = particles[0];
+    }
+
+    for (let i = 0; i < currentParticleCount; i++) {
+        const p = particles[i];
+
+        // Erase previous pixel - ALWAYS erase (like other effects)
+        // This is safe because we ensure particles are only on black pixels
+        Display.writePixel(p.lastX, p.lastY, 0);
+
+        // If this is the leader, use UnOrbit behavior
+        if (i === 0 && leader) {
+            // Apply UnOrbit behavior to leader
+            const MAX_DIST = Math.sqrt(CENTER_X * CENTER_X + CENTER_Y * CENTER_Y);
+            
+            const dx = p.x - CENTER_X;
+            const dy = p.y - CENTER_Y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            let dirX = 0, dirY = 0;
+            if (dist > 0.001) {
+                dirX = dx / dist;
+                dirY = dy / dist;
+            }
+
+            const distPercent = dist / MAX_DIST;
+            
+            let force = 0;
+            if (distPercent > 0.65) {
+                force = -UNORBIT_FORCE * 1.5;
+                p.outward = false;
+            } else if (distPercent < 0.35) {
+                force = UNORBIT_FORCE * 1.5;
+                p.outward = true;
+            } else {
+                force = p.outward ? UNORBIT_FORCE * 0.3 : -UNORBIT_FORCE * 0.3;
+            }
+
+            p.vx += dirX * force;
+            p.vy += dirY * force;
+
+            const tangentX = -dirY;
+            const tangentY = dirX;
+            const orbitSpeed = 0.015 * (1 + distPercent);
+            p.vx += tangentX * orbitSpeed;
+            p.vy += tangentY * orbitSpeed;
+        } else {
+            // Follow the leader
+            if (leader) {
+                const dx = leader.x - p.x;
+                const dy = leader.y - p.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 0.5) {
+                    const dirX = dx / dist;
+                    const dirY = dy / dist;
+                    
+                    const followStrength = Math.min(SWARM_FOLLOW_FORCE, dist * 0.01);
+                    p.vx += dirX * followStrength;
+                    p.vy += dirY * followStrength;
+                    
+                    p.vx += (rand() - 0.5) * 0.003;
+                    p.vy += (rand() - 0.5) * 0.003;
+                    
+                    if (dist < 1.0) {
+                        p.vx -= dirX * 0.01;
+                        p.vy -= dirY * 0.01;
+                    }
+                }
+            }
+        }
+
+        // Clamp velocities
+        if (p.vx > MAX_VELOCITY) p.vx = MAX_VELOCITY;
+        if (p.vx < -MAX_VELOCITY) p.vx = -MAX_VELOCITY;
+        if (p.vy > MAX_VELOCITY) p.vy = MAX_VELOCITY;
+        if (p.vy < -MAX_VELOCITY) p.vy = -MAX_VELOCITY;
+
+        let tryXf = p.x + p.vx;
+        let tryYf = p.y + p.vy;
+
+        let xi_try = Math.floor(tryXf);
+        let yi_try = Math.floor(tryYf);
+
+        let newVx = p.vx;
+        let newVy = p.vy;
+
+        // Horizontal collision - SAME AS OTHER EFFECTS
+        if (xi_try < 0 || xi_try >= SCREEN_WIDTH ||
+            Display.getPixel(xi_try, p.lastY) === 1) {
+
+            if (Date.now() > nextSpawnTime) {
+                if (spawnDirection === 1) {
+                    if (currentParticleCount < IdleParticleCount) {
+                        const newP = particles[currentParticleCount];
+                        if (leader) {
+                            const angle = rand() * Math.PI * 2;
+                            const radius = 1 + rand() * 1.5;
+                            newP.x = leader.x + Math.cos(angle) * radius;
+                            newP.y = leader.y + Math.sin(angle) * radius;
+                        } else {
+                            newP.x = CENTER_X + (rand() - 0.5) * 10;
+                            newP.y = CENTER_Y + (rand() - 0.5) * 10;
+                        }
+                        // Ensure new particle starts on a black pixel
+                        if (Display.getPixel(Math.floor(newP.x), Math.floor(newP.y)) === 1) {
+                            // Find nearest black pixel
+                            for (let dy = -2; dy <= 2; dy++) {
+                                for (let dx = -2; dx <= 2; dx++) {
+                                    const nx = Math.floor(newP.x) + dx;
+                                    const ny = Math.floor(newP.y) + dy;
+                                    if (nx >= 0 && nx < SCREEN_WIDTH && ny >= 0 && ny < SCREEN_HEIGHT &&
+                                        Display.getPixel(nx, ny) === 0) {
+                                        newP.x = nx;
+                                        newP.y = ny;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        newP.lastX = Math.floor(newP.x);
+                        newP.lastY = Math.floor(newP.y);
+                        newP.vx = randVel() * 0.3;
+                        newP.vy = randVel() * 0.3;
+                        newP.outward = true;
+                        nextSpawnTime = Date.now() + spawnRate;
+                        currentParticleCount++;
+                    } else {
+                        spawnDirection = -1;
+                    }
+                }
+
+                if (spawnDirection === -1 && i === currentParticleCount - 1) {
+                    currentParticleCount--;
+                    if (currentParticleCount === 0) {
+                        InitIdleEffect();
+                        return;
+                    }
+                    continue;
+                }
+            }
+
+            newVx = -newVx;
+
+            if (tryXf < 1.0) tryXf += 1.0;
+            else if (tryXf >= SCREEN_WIDTH - 1.0) tryXf -= 1.0;
+
+            tryXf += newVx;
+            xi_try = Math.floor(tryXf);
+        }
+
+        // Vertical collision - SAME AS OTHER EFFECTS
+        if (yi_try < 0 || yi_try >= SCREEN_HEIGHT ||
+            Display.getPixel(p.lastX, yi_try) === 1) {
+            newVy = -newVy;
+
+            if (tryYf < 1.0) tryYf += 1.0;
+            else if (tryYf >= SCREEN_HEIGHT - 1.0) tryYf -= 1.0;
+
+            tryYf += newVy;
+            yi_try = Math.floor(tryYf);
+        }
+
+        let xi_final = xi_try;
+        let yi_final = yi_try;
+
+        // Final position check - SAME AS OTHER EFFECTS
+        if (Display.getPixel(xi_final, yi_final) === 1) {
+            if (newVx > 0) newVx = -randPosVel();
+            else newVx = randPosVel();
+            if (newVy > 0) newVy = -randPosVel();
+            else newVy = randPosVel();
+
+            tryXf = p.x;
+            tryYf = p.y;
+            xi_final = p.lastX;
+            yi_final = p.lastY;
+        }
+
+        // Commit final values - SAME AS OTHER EFFECTS
+        p.vx = newVx;
+        p.vy = newVy;
+        p.x = tryXf;
+        p.y = tryYf;
+
+        // Draw - SAME AS OTHER EFFECTS
+        Display.writePixel(xi_final, yi_final, 1);
+        p.lastX = xi_final;
+        p.lastY = yi_final;
+    }
+}
+
         // --- Initialization ---
         function InitIdleEffect() {
             // Reset swosh time
@@ -981,7 +1349,7 @@
             const quarterCount = Math.floor(sp.maxParticles / 4);
             IdleParticleCount = quarterCount + Math.floor(rand() * (quarterCount * 3));
 
-            // Initialize first particle
+            // Initialize first particle (leader)
             let p = particles[0];
 
             // Find initial black pixel
@@ -997,17 +1365,23 @@
             p.vy = randVel();
             p.lastX = Math.floor(p.x);
             p.lastY = Math.floor(p.y);
+            p.outward = true;
+            p.isLeader = true;
 
-            // Initialize remaining particles
+            // Initialize remaining particles (followers)
             for (let i = 1; i < IdleParticleCount; i++) {
                 p = particles[i];
-                // Set them to the same position initially (will spawn from first particle)
-                p.x = particles[0].x;
-                p.y = particles[0].y;
-                p.vx = randVel();
-                p.vy = randVel();
+                // Spawn followers near the leader with some randomness
+                const angle = rand() * Math.PI * 2;
+                const radius = 2 + rand() * 4;
+                p.x = particles[0].x + Math.cos(angle) * radius;
+                p.y = particles[0].y + Math.sin(angle) * radius;
+                p.vx = randVel() * 0.3;
+                p.vy = randVel() * 0.3;
                 p.lastX = Math.floor(p.x);
                 p.lastY = Math.floor(p.y);
+                p.outward = true;
+                p.isLeader = false;
             }
 
             currentParticleCount = 1;
@@ -1034,6 +1408,10 @@
                 RenderIdleEffect_GlobalSprinkleSwoosh();
             } else if (currentEffect === 'Rain') {
                 RenderIdleEffect_Rain();
+            } else if (currentEffect === 'UnOrbit') {
+                RenderIdleEffect_UnOrbit();
+            } else if (currentEffect === 'Swarm') {
+                RenderIdleEffect_Swarm();
             }
 
             Display.render();
