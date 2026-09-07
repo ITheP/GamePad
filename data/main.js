@@ -25,7 +25,7 @@ function startAutoRefresh() {
     ui = {
         content: document.getElementById('content'),
         response: document.getElementById('uiResponse'),
-        batteryLevel: document.getElementById('uiBatteryLevel'),
+        batteryPercentage: document.getElementById('uiBatteryPercentage'),
         batteryVoltage: document.getElementById('uiBatteryVoltage'),
         wifiSignal: document.getElementById('uiWiFiSignal'),
         wifiSignalLabel: document.getElementById('uiWiFiSignalLabel'),
@@ -51,10 +51,10 @@ function startAutoRefresh() {
 
     // Test's (remember to disable updates above which will probably trigger after the tests run and overwrite them)
     // let batteryVoltage = randomisedValue(3.3, 3.7, 0.15);
-    // let batteryLevel = randomisedValue(0, 100, 0.15);
+    // let batteryPercentage = randomisedValue(0, 100, 0.15);
     // let wifiSignal = randomisedValue(-90, -30, 0.15);
     // setGauge(ui.batteryVoltage, 3.3, 3.7, batteryVoltage, "v", "⚡", "Test");
-    // setGauge(ui.batteryLevel, 0, 100, batteryLevel, "%", "🔋", "Test");
+    // setGauge(ui.batteryPercentage, 0, 100, batteryPercentage, "%", "🔋", "Test");
     // setGauge(ui.wifiSignal, -30, -90, wifiSignal, "dBm", "🗼", "☠️");
 }
 
@@ -146,8 +146,10 @@ function updateBatteryInformation() {
             let batteryPercentage = data.BatteryPercentage;
             let batteryVoltage = data.BatteryVoltage;
             let batteryRawVoltage = data.BatteryRawVoltage;
-            let batteryMinVoltage = data.batteryMinVoltage;
-            let batteryMaxVoltage = data.batteryMaxVoltage;
+            let batteryMinVoltage = data.BatteryMinVoltage;
+            let batteryMaxVoltage = data.BatteryMaxVoltage;
+            let batteryPinReading = data.BatteryPinReading;
+            let powerPinReading = data.PowerPinReading;
             let isPoweredByBattery = data.IsPoweredByBattery;
             let isCharging = data.IsCharging;
             let isPoweredByUSB = data.IsPoweredByUSB;
@@ -158,6 +160,9 @@ function updateBatteryInformation() {
                 "Voltage=" + batteryVoltage + "V, " +
                 "RawVoltage=" + batteryRawVoltage + ", " +
                 "MinVoltage=" + batteryMinVoltage + ", " +
+                "MaxVoltage=" + batteryMaxVoltage + ", " +
+                "BatteryPinReading=" + batteryPinReading + ", " +
+                "PowerPinReading=" + powerPinReading + ", " +
                 "MaxVoltage=" + batteryMaxVoltage + ", " +
                 "IsCharging=" + isCharging + ", " +
                 "IsPoweredByBattery=" + isPoweredByBattery + ", " +

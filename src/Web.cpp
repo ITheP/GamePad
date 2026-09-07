@@ -263,12 +263,12 @@ esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
 
     // Maxes out around 200 characters
     snprintf(json, sizeof(json),
-             "{\"BatteryPercentage\":%d, \"BatteryVoltage\":%.2f, \"BatteryRawVoltage\":%.2f, \"BatteryMinVoltage\":%.2f, \"BatteryMaxVoltage\":%2.f, \"BatteryPinReading\":%.2f, \"PowerPinReading\":%d, \"IsPoweredByBattery\":%s, \"IsCharging\":%s, \"IsPoweredByUSB\":%s}",
+             "{\"BatteryPercentage\":%d, \"BatteryVoltage\":%.2f, \"BatteryRawVoltage\":%.2f, \"BatteryMinVoltage\":%.2f, \"BatteryMaxVoltage\":%.2f, \"BatteryPinReading\":%.2f, \"PowerPinReading\":%d, \"IsPoweredByBattery\":%s, \"IsCharging\":%s, \"IsPoweredByUSB\":%s}",
              Battery::ClampedBatteryPercentage,
              Battery::ClampedVoltage,
              Battery::RawVoltage,
              BATTERY_MINV,
-             BATTERY_MAX,
+             BATTERY_MAXV,
              Battery::RawPinReading,
              Battery::PowerSensorReading,
              isCharging ? "false" : "true",

@@ -19,6 +19,8 @@ struct IdleParticle {
     float vy;
     int lastX;
     int lastY;
+    int bounces;
+    bool outward;
 };
 
 void InitIdleEffect();
@@ -27,6 +29,12 @@ void StopIdleEffect();
 
 void RenderIdleEffect_Bounce();
 void RenderIdleEffect_Gravity();
+void RenderIdleEffect_GlobalSwoosh();
+void RenderIdleEffect_SprinkleSwoosh();
+void RenderIdleEffect_GlobalSprinkleSwoosh();
+void RenderIdleEffect_Rain();
+void RenderIdleEffect_UnOrbit();
+void RenderIdleEffect_Swarm();
 
 void InitDisplayBuffer();
 uint8_t getPixelFast(int16_t x, int16_t y);
