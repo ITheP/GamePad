@@ -2009,7 +2009,7 @@ void MainLoop()
           }
           else if (timeDifference >= input->LongPressTiming)
           {
-            // Serial.println("LONG PRESSED TIMING TRIGGER " + String(timeDifference) + " vs " + String(input->LongPressTiming));
+            //Serial.println("LONG PRESSED TIMING TRIGGER " + String(timeDifference) + " vs " + String(input->LongPressTiming));
 
             // Past long press time, pass child on to main routine
             input = input->LongPressChildInput;
@@ -2022,6 +2022,10 @@ void MainLoop()
             // to length of time held to total length of time before becomes long press input
             input->RenderOperation(input);
             float percentage = static_cast<float>(timeDifference) / static_cast<float>(input->LongPressTiming);
+            // we tweak the percentage slightly so we scale
+            // 0-100 as 0 for 10% of the time then 10%-100% maps to 0-100
+            percentage = fmaxf(0.0f, (percentage - 0.25f) * 1.25f);
+
             RenderInput_BlankingArea(input, percentage);
           }
         }
@@ -2048,7 +2052,7 @@ void MainLoop()
               input->ValueState.Value = NOT_PRESSED; // Will force a press when we process the input below
               state = PRESSED;                       // Force a pretend pressing for this cycle for this input
               // Next loop will pick up it is not pressed any more and do the release
-              // Serial.println("LONG PRESS - SHORT PRESSED");
+             //  Serial.println("LONG PRESS - SHORT PRESSED");
 
               input->AutoHold = timeCheck + input->ShortPressReleaseTime;
             }
@@ -2064,10 +2068,14 @@ void MainLoop()
         }
       }
 
-      // Process when state has changed
+      // if (i == 5) {
+      //   Serial.println("Digital State [" + String(input->Label) + "] Value: " + String(state) + ", " + String(input->ValueState.Value) + " (" + LONG_PRESS_MONITORING + ")");
+      // }
+
+        // Process when state has changed
       if (state != input->ValueState.Value && input->ValueState.Value != LONG_PRESS_MONITORING)
       {
-        // Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
+       // Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
         input->ValueState.PreviousValue = !state;
         input->ValueState.Value = state;
         input->ValueState.StateChangedWhen = timeCheck;

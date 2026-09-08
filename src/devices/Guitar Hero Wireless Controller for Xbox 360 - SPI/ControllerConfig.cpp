@@ -364,7 +364,7 @@ Input DigitalInput_Green = // Green button on guitar neck
          },
         .Label = "Green",
         .BluetoothInput = BUTTON_1,
-        .DefaultValue = HIGH,
+        .DefaultValue = NOT_PRESSED,
         .BluetoothPressOperation = &BleGamepad::press,
         .BluetoothReleaseOperation = &BleGamepad::release,
         .BluetoothSetOperation = NONE,
@@ -393,7 +393,7 @@ Input DigitalInput_Red = // Red button on guitar neck
         },
         .Label = "Red",
         .BluetoothInput = BUTTON_2,
-        .DefaultValue = HIGH,
+        .DefaultValue = NOT_PRESSED,
         .BluetoothPressOperation = &BleGamepad::press,
         .BluetoothReleaseOperation = &BleGamepad::release,
         .BluetoothSetOperation = NONE,
@@ -422,7 +422,7 @@ Input DigitalInput_Yellow = // Yellow button on guitar neck
         },
         .Label = "Yellow",
         .BluetoothInput = BUTTON_4,
-        .DefaultValue = HIGH,
+        .DefaultValue = NOT_PRESSED,
         .BluetoothPressOperation = &BleGamepad::press,
         .BluetoothReleaseOperation = &BleGamepad::release,
         .BluetoothSetOperation = NONE,
@@ -451,7 +451,7 @@ Input DigitalInput_Blue = // Blue button on guitar neck
         },
         .Label = "Blue",
         .BluetoothInput = BUTTON_3,
-        .DefaultValue = HIGH,
+        .DefaultValue = NOT_PRESSED,
         .BluetoothPressOperation = &BleGamepad::press,
         .BluetoothReleaseOperation = &BleGamepad::release,
         .BluetoothSetOperation = NONE,
@@ -480,7 +480,7 @@ Input DigitalInput_Orange = // Orange button on guitar neck
         },
         .Label = "Orange",
         .BluetoothInput = BUTTON_5,
-        .DefaultValue = HIGH,
+        .DefaultValue = NOT_PRESSED,
         .BluetoothPressOperation = &BleGamepad::press,
         .BluetoothReleaseOperation = &BleGamepad::release,
         .BluetoothSetOperation = NONE,
@@ -501,12 +501,12 @@ Input DigitalInput_Orange = // Orange button on guitar neck
         .ProfileId = 5}; // Onboard LED Slightly off colour again, so additional red looks different
 
 // TEST - same as select but with some LED
-Input DigitalInput_Start_LongPress = // Select button on main body
+Input DigitalInput_Start_LongPress = // Start button on main body
     {
         .Pin = BUTTON_Start_PIN,
         .Label = "Start Long Press",
         .BluetoothInput = NONE,
-        .DefaultValue = HIGH,
+        .DefaultValue = NOT_PRESSED,
         .BluetoothPressOperation = &BleGamepad::press,
         .BluetoothReleaseOperation = &BleGamepad::release,
         .BluetoothSetOperation = NONE,
@@ -533,7 +533,7 @@ Input DigitalInput_Start = // Start button on main body
         .Pin = BUTTON_Start_PIN,
         .Label = "Start",
         .BluetoothInput = BUTTON_7,
-        .DefaultValue = HIGH,
+        .DefaultValue = NOT_PRESSED,
         .BluetoothPressOperation = &BleGamepad::press,
         .BluetoothReleaseOperation = &BleGamepad::release,
         .BluetoothSetOperation = NONE,
@@ -569,7 +569,7 @@ Input DigitalInput_Select = // Select button on main body
         .Pin = BUTTON_Select_PIN,
         .Label = "Select",
         .BluetoothInput = BUTTON_8,
-        .DefaultValue = HIGH,
+        .DefaultValue = NOT_PRESSED,
         .BluetoothPressOperation = &BleGamepad::press,
         .BluetoothReleaseOperation = &BleGamepad::release,
         .BluetoothSetOperation = NONE,
@@ -591,7 +591,7 @@ Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled 
         .Pin = BUTTON_Tilt_PIN,
         .Label = "Tilt",
         .BluetoothInput = BUTTON_9,
-        .DefaultValue = HIGH,
+        .DefaultValue = NOT_PRESSED,
         .BluetoothPressOperation = &BleGamepad::press,
         .BluetoothReleaseOperation = &BleGamepad::release,
         .BluetoothSetOperation = NONE,
@@ -656,7 +656,7 @@ Input *DigitalInputs[] = {
     //{ PIN_A5, "Back", BACK_BUTTON, -1, &BleGamepad::pressSpecialButton, &BleGamepad::releaseSpecialButton, 0, RenderInput_Text, 89, 55, 16, 5, 0, 0 }
 
     // Long press inputs
-  //  &DigitalInput_Start_LongPress
+    &DigitalInput_Start_LongPress
 
 };
 
