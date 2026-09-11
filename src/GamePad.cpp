@@ -317,6 +317,73 @@ void setupBattery()
   Battery::TakeReading();
 }
 
+#ifdef LIVE_BATTERY
+void enforceBatteryChargeState()
+{
+  
+delay(2000);
+
+  // In a live environment, we never continue if battery is too low.
+  // It's too critical and the device will fail to operate soon! Spend that time warning people.
+  // A test board might have no battery connected to produce a measurable voltage, meaning a permanent 0 battery level
+  // In this case undefine LIVE_BATTERY to skip power checks.
+  // TODO: This may change if/when decent power is in place (and charging gets us out of this loop). Note that display will need re-clearing and the logo re-drawing.
+
+  Battery::CalculateState();
+  int currentBatteryLevel = Battery::ClampedBatteryPercentage;
+
+  // ALTERATIONS
+  // If battery is charging, we go into the charge loop
+  // If battery is < 5%, we go into the charge loop
+  // ...otherwise we boot as normal
+  // In the loop - if charging then that will show a relevant charging graph
+  // if > 5% then cancontinue is true (may make this a bit more if charging to account for larger power readings)
+  // the loop should do another battery reading each time, and do another CalculateState()
+  
+  bool isCharging = (Battery::State == POWER_Charging);
+  Serial.printf("EnforceBatteryChargeState: Battery level %d%%, Empty%% %d%%, isCharging=%d\n", currentBatteryLevel, POWER_EmptyPercentage, isCharging);
+
+  if (currentBatteryLevel < POWER_EmptyPercentage || isCharging)
+  {
+    // Simulate SecondRollover and SecondFlipFlop
+    // + loop forever - they need to charge things up!
+    // This may change if/when decent power while play is working
+    int flipFlop = false;
+    bool canContinue = false;
+    bool continuePressed = false;
+
+    Serial.println("Hitting while loop");
+
+    while (1)
+    {
+      if (currentBatteryLevel >= POWER_EmptyPercentage)
+        canContinue = true;
+
+      Battery::CheckInputs();
+
+      // check if button held down to exit
+      if (canContinue && Battery::ContinueState() == PRESSED)
+      {
+        // Jump out of the while loop
+       // break;
+      }
+
+      Battery::DrawFullDisplay(true, flipFlop, canContinue, DigitalInput_Battery_Continue, false);
+      flipFlop = !flipFlop;
+      delay(1000); // Wait a second
+
+      // Read new battery reading
+      Battery::TakeReading();
+      Battery::CalculateState();
+      currentBatteryLevel = Battery::ClampedBatteryPercentage;
+      isCharging = (Battery::State == POWER_Charging);
+    }
+
+    Serial.println("Continue was hit");
+  }
+}
+#endif
+
 void setupUSB()
 {
 #ifdef DEBUG_MARKS
@@ -1339,29 +1406,8 @@ void setup()
   setupRenderLogo();
 
   setupBattery();
-
-  // In a live environment, we never continue if battery is too low.
-  // It's too critical and the device will fail to operate soon! Spend that time warning people.
-  // A test board might have no battery connected to produce a measurable voltage, meaning a permanent 0 battery level
-  // In this case undefine LIVE_BATTERY to skip power checks.
-  // TODO: This may change if/when decent power is in place (and charging gets us out of this loop). Note that display will need re-clearing and the logo re-drawing.
 #ifdef LIVE_BATTERY
-  Battery::CalculateState();
-  int currentBatteryLevel = Battery::CurrentBatteryPercentage;
-  if (currentBatteryLevel == 0)
-  {
-    // Simulate SecondRollover and SecondFlipFlop
-    // + loop forever - they need to charge things up!
-    // This may change if/when decent power while play is working
-
-    int flipFlop = false;
-    while (1)
-    {
-      Battery::DrawEmpty(true, flipFlop, false);
-      flipFlop = !flipFlop;
-      delay(1000); // Wait a second
-    }
-  }
+  enforceBatteryChargeState();
 #endif
 
   setupUSB();
@@ -1705,8 +1751,13 @@ void MainLoop()
 #ifdef LIVE_BATTERY
   if (Battery::PreviousBatteryLevel == 0)
   {
-    Battery::DrawEmpty(SecondRollover, SecondFlipFlop);
-    return; // Sorry - no more processing! Make em go and charge things up
+    //Battery::DrawFullDisplay(SecondRollover, SecondFlipFlop);
+    //return; // Sorry - no more processing! Make em go and charge things up
+
+    // Blocks continuation until battery suitably charged
+    // TODO: Blank all LED's
+    // TODO: Maybe LED's off if battery < certain level?
+    enforceBatteryChargeState();
   }
 #endif
 

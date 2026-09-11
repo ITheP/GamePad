@@ -18,7 +18,7 @@
 // and remembering standard USB 2.0 ports are typically rated for 500mA, and USB 3.0 ports 900 mA
 
 // General configuration - reminder some config options are in Config.h
-//#define LIVE_BATTERY            // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
+#define LIVE_BATTERY            // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
 #define USE_ONBOARD_LED           // Enable onboard Neopixel LED
 #define STATUS_LED_COMBINE_INPUTS // Status LED includes a generalised colour made up of Status colour + other LED's (in an approximately additive way)
 #define USE_EXTERNAL_LED          // Enable external LEDs - may want to check the ExternalLED_FastLEDCount below too
@@ -180,12 +180,46 @@ extern IconRun ControllerGfx[];
 // Predicted Pin reading @ 3.3v = 1345.3
 // Note that when battery is charging we see a higher voltage (charge voltage rather than actual battery voltage) on the battery in
 
+// OK here we go again trying some readings...
+// Device JUST about booting, led's flickering, crashing
+// Battery only (direct, device off) : 3.133 (no load)
+// Battery only + turned on          : 3.05
+//    BatteryPinReading:1572.00 @ 3.05v
+//                                   : 3.062
+//    BatteryPinReading:1613.00, PowerPinReading:18 @ 3.062
+// USB plugged in NO battery         : 3.124
+//    BatteryPinReading:1902.24, PowerPinReading:4095 @ 3.124
+// USB plugged in + battery          : 3.156 + rising (charging)
+//    BatteryPinReading:1434.24, PowerPinReading:3951 @ 3.156
+// USB Charger plugged in NO battery : 3.130
+//    BatteryPinReading:1886.24, PowerPinReading:4095 @ 3.130
+// USB Charger plugged in + battery  : 3.164 + rising (charging)
+//    BatteryPinReading:1425.24, PowerPinReading:3983 @ 3.164 (charging)
+
+// Observations...
+// Power = 4095 when USB plugged in and no battery
+// Power = 3951 when USB plugged in and battery connected (charging)
+//       < 4095 > power minimum = power via cable, not charging
+// Power = 0 when no USB plugged in
+// Turning USB on when power super low causing reboot when on battery in main screen
+
 // Min/Max raw readings from battery monitoring pin
 #define BATTERY_MIN 1345.3
 #define BATTERY_MAX 2324.0
 // Min/Max voltage of in place battery
 #define BATTERY_MINV 3.3
 #define BATTERY_MAXV 3.7
+
+// Min/Max raw readings from battery monitoring pin WHEN USB connected and charging (higher voltage than actual battery voltage)
+#define BATTERY_CHARGING_MIN 1846.0
+#define BATTERY_CHARGING_MAX 2324.0
+#define BATTERY_CHARGING_MINV 3.504
+#define BATTERY_CHARGING_MAXV 3.565
+
+// Power pin with no battery connected
+#define PWR_PRESENT 1234.0
+#define PWR_PRESENTV 3.5
+
 // Power monitoring pin, anything above this we assume power is supplied (realistically reads 0 for no power and 3980-4096 when power is there)
 #define PWR_PRESENT_THRESHOLD 1024
 
@@ -286,6 +320,9 @@ extern Input DigitalInput_Config_Down;
 extern Input DigitalInput_Config_Select;
 extern Input DigitalInput_Config_Back;
 
+// Buttons used for battery boot
+extern Input DigitalInput_Battery_Continue;
+
 // DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
 extern Input *DigitalInputs[];
 
@@ -380,6 +417,9 @@ extern char SoftwareRevision[];
 #define DIGITALINPUT_CONFIG_DOWN_LABEL "Strum Down"
 #define DIGITALINPUT_CONFIG_SELECT_LABEL "Green Button"
 #define DIGITALINPUT_CONFIG_BACK_LABEL "Red Button"
+
+// Battery boot up extra text
+#define DIGITALINPUT_BATTERY_CONTINUE_LABEL "Green Button"
 
 // Message that appears in Config help menu
 // Will include controller specific instructions

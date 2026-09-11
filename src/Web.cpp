@@ -266,11 +266,11 @@ esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
              "{\"BatteryPercentage\":%d, \"BatteryVoltage\":%.2f, \"BatteryRawVoltage\":%.2f, \"BatteryMinVoltage\":%.2f, \"BatteryMaxVoltage\":%.2f, \"BatteryPinReading\":%.2f, \"PowerPinReading\":%d, \"IsPoweredByBattery\":%s, \"IsCharging\":%s, \"IsPoweredByUSB\":%s}",
              Battery::ClampedBatteryPercentage,
              Battery::ClampedVoltage,
-             Battery::RawVoltage,
+             Battery::RawBatteryVoltage,
              BATTERY_MINV,
              BATTERY_MAXV,
              Battery::RawPinReading,
-             Battery::PowerSensorReading,
+             Battery::RawPowerSensorReading,
              isCharging ? "false" : "true",
              isCharging ? "true" : "false",
              isPoweredByUSB ? "true" : "false");

@@ -773,25 +773,38 @@ ExternalLEDConfig *IdleLEDEffects[] = {
 // Very specific, low level handling
 // before device has booted (generally used to configure WiFi)
 
+// Control to trigger the boot config menu
 // Assumes this pin is defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
 uint8_t BootPin_StartInConfiguration = BUTTON_Select_PIN;
 
+// Configuration controls while in boot config menu
 // Assumes these pins are defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
 Input DigitalInput_Config_Up = {.Pin = HAT1_Up_PIN, .Label = DIGITALINPUT_CONFIG_UP_LABEL};
 Input DigitalInput_Config_Down = {.Pin = HAT1_Down_PIN, .Label = DIGITALINPUT_CONFIG_DOWN_LABEL};
 Input DigitalInput_Config_Select = {.VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen}, .Label = DIGITALINPUT_CONFIG_SELECT_LABEL};
 Input DigitalInput_Config_Back = {.VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredRed}, .Label = DIGITALINPUT_CONFIG_BACK_LABEL};
 
+Input *DigitalInputs_ConfigMenu[] = {
+    &DigitalInput_Config_Up,
+    &DigitalInput_Config_Down,
+    &DigitalInput_Config_Select,
+    &DigitalInput_Config_Back
+};
+
+// Battery controls if put into battery boot state
+// Assumes these pins are defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
+Input DigitalInput_Battery_Continue = {.VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen}, .Label = DIGITALINPUT_BATTERY_CONTINUE_LABEL};
+
+Input *DigitalInputs_BatteryBoot[] = {
+    &DigitalInput_Battery_Continue
+};
+
 // Input DigitalInput_Config_MenuUp = { .Pin = HAT1_Up_PIN, .Label = "Strum Up", .CustomOperationPressed = &Menus::Config_UpPressed, .CustomOperationReleased = &Menus::Config_UpReleased };
 // Input DigitalInput_Config_MenuDown = { .Pin = HAT1_Down_PIN, .Label = "Strum Down", .CustomOperationPressed = &Menus::Config_DownPressed, .CustomOperationReleased = &Menus::Config_DownReleased };
 // Input DigitalInput_Config_Select = { .Pin = BUTTON_Green_PIN, .Label = "Green Button", .CustomOperationPressed = &Menus::Config_SelectPressed, .CustomOperationReleased = &Menus::Config_SelectReleased };
 // Input DigitalInput_Config_Back = { .Pin = BUTTON_Red_PIN, .Label = "Red Button", .CustomOperationPressed = &Menus::Config_BackPressed, .CustomOperationReleased = &Menus::Config_BackReleased };
 
-Input *DigitalInputs_ConfigMenu[] = {
-    &DigitalInput_Config_Up,
-    &DigitalInput_Config_Down,
-    &DigitalInput_Config_Select,
-    &DigitalInput_Config_Back};
+
 
 
 // -----------------------------------------------------
