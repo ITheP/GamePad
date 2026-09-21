@@ -253,26 +253,36 @@ esp_err_t Web::Send_DeviceInfo(httpd_req_t *req)
 
 esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
 {
-    char json[256];
+    char json[384];
 
     Battery::CalculateState();
 
     // Note that we assume USB powered if is charging as must be plugged in to charge!
-    bool isCharging = (Battery::State == POWER_Charging);
-    bool isPoweredByUSB = (Battery::State == POWER_USB || isCharging);
+    bool isCharging = (Battery::State == PowerState::USB_Battery_Charging || Battery::State == PowerState::USB_Battery_Full);
+    bool onBattery = (Battery::State == PowerState::Battery || Battery::State == PowerState::Battery_Full);
+    bool isPoweredByUSB = (Battery::State == PowerState::USB || isCharging);
+    bool batteryFull = (Battery::State == PowerState::Battery_Full || Battery::State == PowerState::USB_Battery_Full);
 
-    // Maxes out around 200 characters
+    // Maxes out around 250 characters
     snprintf(json, sizeof(json),
-             "{\"BatteryPercentage\":%d, \"BatteryVoltage\":%.2f, \"BatteryRawVoltage\":%.2f, \"BatteryMinVoltage\":%.2f, \"BatteryMaxVoltage\":%.2f, \"BatteryPinReading\":%.2f, \"PowerPinReading\":%d, \"IsPoweredByBattery\":%s, \"IsCharging\":%s, \"IsPoweredByUSB\":%s}",
-             Battery::ClampedBatteryPercentage,
+             "{\"BatteryPercentage\":%d, \"BatteryFullPercentage\":%.2f, \"BatteryVoltage\":%.2f, \"BatteryFullVoltage\":%.2f, \"BatteryUnmappedVoltage\":%.2f,  \"BatteryMinVoltage\":%.2f, \"BatteryMaxVoltage\":%.2f,  \"ChargingMinVoltage\":%.2f, \"ChargingMaxVoltage\":%.2f, \"BatteryPinReading\":%.2f, \"PowerPinReading\":%d, \"IsPoweredByBattery\":%s, \"LowBatteryWarning\":%s, \"OnBattery\":%s, \"IsCharging\":%s, \"BatteryFull\":%s, \"IsPoweredByUSB\":%s}",
+             Battery::ClampedPercentage,
+             Battery::Percentage,
              Battery::ClampedVoltage,
-             Battery::RawBatteryVoltage,
-             BATTERY_MINV,
-             BATTERY_MAXV,
-             Battery::RawPinReading,
-             Battery::RawPowerSensorReading,
+             Battery::Voltage,
+             Battery::ActualVoltage,
+             BATTERY_MIN_V,
+             BATTERY_MAX_V,
+             CHARGING_MIN_V,
+             CHARGING_MAX_V,
+             Battery::Raw_Battery,
+             Battery::Raw_Power,
+             Battery::ClampedPercentage < POWER_Percentage_Low ? "true" : "false",
+             Battery::StateDescription,
+             onBattery ? "true" : "false",
              isCharging ? "false" : "true",
              isCharging ? "true" : "false",
+             batteryFull ? "true" : "false",
              isPoweredByUSB ? "true" : "false");
 
 #ifdef HTTPD_CLOSE_CONNECTIONS

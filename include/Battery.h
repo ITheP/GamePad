@@ -3,16 +3,33 @@
 #include "DeviceConfig.h"
 #include "Debug.h"
 
-//const float Vcc = 2.4;
+// const float Vcc = 2.4;
 
-//const float Bat_MaxVoltage = 4.2;       // Max voltage of our external battery. May physically go higher, but thats fine, this is the theoretical normal max.
-//const float Bat_MaxReadVoltage = 2.4;   // Our external voltage max value after accounting for voltage divider of incoming battery level. Also means the analogRead of this never maxes out and stays within a more accurate reading range on ESP32-S3
+// const float Bat_MaxVoltage = 4.2;       // Max voltage of our external battery. May physically go higher, but thats fine, this is the theoretical normal max.
+// const float Bat_MaxReadVoltage = 2.4;   // Our external voltage max value after accounting for voltage divider of incoming battery level. Also means the analogRead of this never maxes out and stays within a more accurate reading range on ESP32-S3
 
-#define POWER_Battery 0                 // Power coming from battery
-#define POWER_USB 1                     // Power coming from external source (USB or other)
-#define POWER_Charging 2                // Battery is being charged by external source (USB or other)
+enum class PowerState : uint8_t
+{
+    Battery = 0,              // Power coming from battery
+    Battery_Full = 1,         // Power coming from battery, battery is also full
+    USB_Battery_Charging = 2, // Power from USB, battery charging
+    USB_Battery_Full = 3,     // Power from USB, battery full
+    USB = 4,                  // Power coming from external source (USB or other)
+    Unknown = 5               // Battery is being charged by external source (USB or other)
+};
 
-#define POWER_EmptyPercentage 5         // Percentage at which we consider battery to be empty and need to charge
+// Array to map PowerState enum values to their string representation
+const char* const PowerStateNames[] = {
+    "Battery",                  // PowerState::Battery (0)
+    "Battery Full",             // PowerState::Battery_Full (1)
+    "USB + Battery Charging",   // PowerState::USB_Battery_Charging (2)
+    "USB + Battery Full",       // PowerState::USB_Battery_Full (3)
+    "USB",                      // PowerState::USB (4)
+    "Unknown"                   // PowerState::Unknown (5)
+};
+
+#define POWER_Percentage_Empty 0 // Percentage at which we consider battery to be empty and need to charge
+#define POWER_Percentage_Low 5   // Percentage at which we consider battery to be empty and need to charge
 
 // // Battery level's on an esp32-s3-wroom-1 dev board with DIY battery hook up
 // // Battery level information https://batteryint.com/blogs/news/18650-battery-voltage#:~:text=Minimum%20Voltage%20Threshold%3A%20When%20the%20battery%20is%20depleted%2C,avoid%20damaging%20the%20battery%27s%20internal%20structure%20and%20chemistry.
@@ -57,32 +74,46 @@
 
 // We round the values slightly above to account for inaccuracies and over sensitivity on edge cases
 
-class Battery {
+class Battery
+{
 public:
     static void TakeReading();
     static void CalculateState();
     static void DrawFullDisplay(int secondRollover, int secondFlipFlop, bool canContinue, Input continueInput, bool includeLED = true);
     static void CheckInputs();
+    static const char* GetPowerStateString(PowerState state);
+    static const char* StateDescription();
 
     inline static int ContinueState()
     {
         return DigitalInput_Battery_Continue.ValueState.Value;
     }
 
-    static int State;
+    static PowerState State;
 
-    static int PreviousBatteryLevel;
-    static int ClampedBatterySensorReading;
-    static int ClampedBatteryPercentage;
-    static int CumulativeBatterySensorReadings;
-    static int BatteryLevelReadingsCount;
-    static int RawPowerSensorReading;
-    static float ClampedVoltage;
-    static float RawBatteryVoltage;
-    static float RawPinReading;
+    static int Raw_CumulativeReadings;
+    static int Raw_CumulativeCount;
+    static int Raw_Power;
+
+    static float Raw_Battery;
+    static int PreviousPercentage;
+    // static int ClampedBatterySensorReading;
+    static int Percentage;
+    static int ClampedPercentage;
+    static float Voltage;               // Calculated voltage, accounting for remapping of range if also powered (connected to power changes battery reading range)
+    static float ClampedVoltage;        // Clamped to theoretical 0-100% battery range, good for UI's
+    static float ActualVoltage;         // Actual voltage - good for debugging
+    // static float ClampedVoltage;
+    // static float RawBatteryVoltage;
+
+    static float Minimum;               // Minimum pin reading used for calculations - good for debugging
+    static float Minimum_Voltage;       // Minimum voltage used for calculations - good for debugging
+    static float Maximum;               // Maximum pin reading used for calculations - good for debugging
+    static float Maximum_Voltage;       // Maximum voltage used for calculations - good for debugging
 };
 
-inline void Battery::TakeReading() {
-    CumulativeBatterySensorReadings += analogRead(BATTERY_MONITOR_PIN);
-    BatteryLevelReadingsCount++;
+inline void Battery::TakeReading()
+{
+    Raw_CumulativeReadings += analogRead(BATTERY_MONITOR_PIN);
+    Raw_CumulativeCount++;
 }

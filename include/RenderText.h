@@ -35,8 +35,9 @@ struct TextLine {
 // PrintDisplayLine() can render different font sizes
 extern RREFont RRE;
 extern RREFont RREDefault;
-extern RREFont RREIcon;
 extern RREFont RRESmall;
+extern RREFont RREIcon;
+extern RREFont RRELogo;
 
 extern RRE_Font rre_CustomIcons16;
 extern RRE_Font rre_5x8;

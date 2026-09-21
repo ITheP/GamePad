@@ -4,3 +4,4 @@
 
 void RenderIcon(unsigned char icon, int xPos, int yPos, int clearWidth, int clearHeight);
 void RenderIconRuns(IconRun runs[], int count);
+void RenderLogoRuns(IconRun runs[], int count);

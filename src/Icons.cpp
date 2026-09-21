@@ -33,3 +33,22 @@ void RenderIconRuns(IconRun runs[], int count)
     // Serial.println();
   }
 }
+
+// TODO: Specify font reference in IconRuns in a structure that encapsulates as much so we only need 1 function to do this
+void RenderLogoRuns(IconRun runs[], int count)
+{
+  for (int i = 0; i < count; i++)
+  {
+    IconRun run = runs[i];
+    int xPos = run.XPos;
+    int yPos = run.YPos;
+    unsigned char c = run.StartIcon;
+
+    for (int j = 0; j < run.Count; j++)
+    {
+      RRELogo.drawChar(xPos, yPos, c);
+      xPos += 16;
+      c++;
+    }
+  }
+}

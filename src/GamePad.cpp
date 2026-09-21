@@ -172,11 +172,11 @@ void setupShowBattery()
 {
   Battery::TakeReading();
   Battery::CalculateState();
-  int currentBatteryLevel = Battery::ClampedBatteryPercentage;
+  int currentBatteryLevel = Battery::ClampedPercentage;
 
   Display.fillRect(HALF_SCREEN_WIDTH, SCREEN_HEIGHT - RREHeight_fixed_8x16, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
   snprintf(buffer, sizeof(buffer), "%d%% %.1fv",
-           Battery::ClampedBatteryPercentage,
+           Battery::ClampedPercentage,
            Battery::ClampedVoltage);
 
   RREDefault.printStr(ALIGN_RIGHT, SCREEN_HEIGHT - RREHeight_fixed_8x16, buffer);
@@ -244,7 +244,7 @@ void RenderGlint(int frame)
 {
   // Step 1: Reset logo from any previous frame
   Display.clearDisplay();
-  RenderIconRuns(Logo, Logo_RunCount);
+  RenderLogoRuns(Logo, Logo_RunCount);
 
   // Step 2: Scan diagonal line
   gleamCount = 0;
@@ -288,7 +288,7 @@ void setupRenderLogo()
   Serial_INFO;
   Serial.println("🎨 Rendering logo...");
 
-  RenderIconRuns(Logo, Logo_RunCount);
+  RenderLogoRuns(Logo, Logo_RunCount);
   Display.display();
 
   // Fancy arse gleam/glint effect on start up - just to look cool
@@ -330,7 +330,7 @@ delay(2000);
   // TODO: This may change if/when decent power is in place (and charging gets us out of this loop). Note that display will need re-clearing and the logo re-drawing.
 
   Battery::CalculateState();
-  int currentBatteryLevel = Battery::ClampedBatteryPercentage;
+  int currentBatteryLevel = Battery::ClampedPercentage;
 
   // ALTERATIONS
   // If battery is charging, we go into the charge loop
@@ -375,7 +375,7 @@ delay(2000);
       // Read new battery reading
       Battery::TakeReading();
       Battery::CalculateState();
-      currentBatteryLevel = Battery::ClampedBatteryPercentage;
+      currentBatteryLevel = Battery::ClampedPercentage;
       isCharging = (Battery::State == POWER_Charging);
     }
 
@@ -1749,7 +1749,7 @@ void MainLoop()
   // We check previous battery level here as once its too low its too low. No point in re-processing other stuff, and recharging involves turning off device.
   // Only in a live environment - test board might have no battery connected to produce a measurable voltage, meaning a permanent 0 battery level
 #ifdef LIVE_BATTERY
-  if (Battery::PreviousBatteryLevel == 0)
+  if (Battery::PreviousPercentage == 0)
   {
     //Battery::DrawFullDisplay(SecondRollover, SecondFlipFlop);
     //return; // Sorry - no more processing! Make em go and charge things up
@@ -1774,7 +1774,7 @@ void MainLoop()
 
     // Battery stuff
     Battery::CalculateState();
-    int currentBatteryLevel = Battery::ClampedBatteryPercentage;
+    int currentBatteryLevel = Battery::ClampedPercentage;
 
     // TODO: NOTE current h/w, charging is separate to powering device so can't happen at the same time. However in the future.... :)
     bool charging = false;
@@ -1801,11 +1801,11 @@ void MainLoop()
       RenderIcon(LastBatteryIcon, uiBattery_xPos, uiBattery_yPos, 14, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
 
       // ...however next line will trigger full screen low battery handling
-      Battery::PreviousBatteryLevel = currentBatteryLevel;
+      Battery::PreviousPercentage = currentBatteryLevel;
     }
-    else if (Battery::PreviousBatteryLevel != currentBatteryLevel)
+    else if (Battery::PreviousPercentage != currentBatteryLevel)
     {
-      Battery::PreviousBatteryLevel = currentBatteryLevel;
+      Battery::PreviousPercentage = currentBatteryLevel;
       bleGamepad->setBatteryLevel(currentBatteryLevel);
       // compositeHID->setBatteryLevel(currentBatteryLevel);
       sendReport = true;

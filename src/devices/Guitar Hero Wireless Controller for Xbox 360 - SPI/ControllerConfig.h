@@ -172,56 +172,62 @@ extern IconRun ControllerGfx[];
 // Anything above 0.4v means external power present
 //#define PWR_PRESENT_THRESHOLD 0.4
 
-// Battery level's on
-// Taken from Olimex ESP32-S3-DevKit-Lipo Development Board with built in battery monitoring + USB charging
-// Predicted Pin reading @ 3.7v = 2324
-// Volt Meter: 3.565 while charging (USB plugged in) - reading at pin was 1995
-// Volt Meter: 3.504 not charging - reading at pin was 1846
-// Predicted Pin reading @ 3.3v = 1345.3
-// Note that when battery is charging we see a higher voltage (charge voltage rather than actual battery voltage) on the battery in
+// // Min/Max raw readings from battery monitoring pin
+// #define BATTERY_MINV 3.3
+// #define BATTERY_MIN 1731.0
 
-// OK here we go again trying some readings...
-// Device JUST about booting, led's flickering, crashing
-// Battery only (direct, device off) : 3.133 (no load)
-// Battery only + turned on          : 3.05
-//    BatteryPinReading:1572.00 @ 3.05v
-//                                   : 3.062
-//    BatteryPinReading:1613.00, PowerPinReading:18 @ 3.062
-// USB plugged in NO battery         : 3.124
-//    BatteryPinReading:1902.24, PowerPinReading:4095 @ 3.124
-// USB plugged in + battery          : 3.156 + rising (charging)
-//    BatteryPinReading:1434.24, PowerPinReading:3951 @ 3.156
-// USB Charger plugged in NO battery : 3.130
-//    BatteryPinReading:1886.24, PowerPinReading:4095 @ 3.130
-// USB Charger plugged in + battery  : 3.164 + rising (charging)
-//    BatteryPinReading:1425.24, PowerPinReading:3983 @ 3.164 (charging)
+// #define BATTERY_MAXV 4.0
+// #define BATTERY_MAX 2090.0
 
-// Observations...
-// Power = 4095 when USB plugged in and no battery
-// Power = 3951 when USB plugged in and battery connected (charging)
-//       < 4095 > power minimum = power via cable, not charging
-// Power = 0 when no USB plugged in
-// Turning USB on when power super low causing reboot when on battery in main screen
+// #define BATTERY_OVERCHARGEV 4.2
+// #define BATTERY_OVERCHARGE 2193.0
 
-// Min/Max raw readings from battery monitoring pin
-#define BATTERY_MIN 1345.3
-#define BATTERY_MAX 2324.0
-// Min/Max voltage of in place battery
-#define BATTERY_MINV 3.3
-#define BATTERY_MAXV 3.7
+// // Min/Max raw readings from battery monitoring pin WHEN USB
+// // connected and charging (higher voltage than actual battery voltage)
+// // Final %'s based on below can be translated into an equivalent
+// // theoretical battery voltage
+// #define BATTERY_CHARGING_MINV 3.37
+// #define BATTERY_CHARGING_MIN 1598.0
 
-// Min/Max raw readings from battery monitoring pin WHEN USB connected and charging (higher voltage than actual battery voltage)
-#define BATTERY_CHARGING_MIN 1846.0
-#define BATTERY_CHARGING_MAX 2324.0
-#define BATTERY_CHARGING_MINV 3.504
-#define BATTERY_CHARGING_MAXV 3.565
+// #define BATTERY_CHARGING_MAXV 4.00
+// #define BATTERY_CHARGING_MAX 1977.0
 
-// Power pin with no battery connected
-#define PWR_PRESENT 1234.0
-#define PWR_PRESENTV 3.5
+// #define BATTERY_CHARGING_OVERCHARGEV 4.20
+// #define BATTERY_CHARGING_OVERCHARGE 2097.0
 
-// Power monitoring pin, anything above this we assume power is supplied (realistically reads 0 for no power and 3980-4096 when power is there)
-#define PWR_PRESENT_THRESHOLD 1024
+// // Power pin with no battery connected
+// #define POWER_PLUS_CHARGING 512.0
+// #define POWER_ONLY 4095.0
+
+// // Power monitoring pin, anything above this we assume power is supplied (realistically reads 0 for no power and 3980-4096 when power is there)
+// #define PWR_PRESENT_THRESHOLD 1024
+
+// Empty battery equivalent - 0% full (can be less, but then considered undercharged)
+#define BATTERY_MIN 1731
+#define BATTERY_MIN_V 3.3
+// Full battery equivalent - 100% full (approx 80% physically charged, can be more, but then considered overcharged)
+#define BATTERY_FULL 2090
+#define BATTERY_FULL_V 4.0
+// Theoretical actual battery max - ~130% overcharged (physically fine, shortens life of battery)
+#define BATTERY_MAX 2193
+#define BATTERY_MAX_V 4.20
+
+// Magic number where when power pin reads 4095 we can tell if the battery is connected or not. < this number = no battery, just power
+#define BATTERY_CHECK 1920
+
+// Readings when power plugged in and on battery
+// 0%->100% results here map to 0%->100% equivalent of battery range
+// so theoretically when plugging in and out a USB cable, code changes range it calculates the % battery charge as an equivalent to as if it was just the battery
+#define CHARGING_MIN 1598
+#define CHARGING_MIN_V 3.37
+#define CHARGING_FULL 1977
+#define CHARGING_FULL_V 4.0
+#define CHARGING_MAX 2097
+#define CHARGING_MAX_V 4.20
+
+// Consider power to be present if power pin above this (allows for some noise on power pin when not powered)
+#define POWER_PRESENT 512
+#define POWER_MAX 4095
 
 // Guitar Neck Buttons [Red 11 block]
 // +3.3v                                        // [+v] +3.3v LED Power <Red Wire>

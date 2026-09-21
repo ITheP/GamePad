@@ -12,18 +12,46 @@
 #define Icon_Test5 0x94
 #define Icon_Test6 0x95
 
+// LOGOS - CustomLogos.16x16.h
 // Logo
 #define Icon_Logo_Start1 0xB0
 #define Icon_Logo_Start2 0xC0
 #define Icon_Logo_Start3 0xD0
 
+
+// ICONS - CustomIcons.16x16.h
+
 // Battery
 #define Icon_Battery 0x6D
 #define Icon_BatteryCharging 0x6E
 #define Icon_BatteryEmpty 0x6F
-#define Icon_BatteryBigEmpty1 0x7D
-#define Icon_BatteryBigEmpty2 0x7E
-#define Icon_BatteryBigEmpty3 0x7F
+#define Icon_BatteryNearlyEmpty 0x6D
+#define Icon_BatteryOvercharged 0x6E
+#define Icon_USBPower 0x6F
+
+#define Icon_BigBattery_Empty1 0xB0
+#define Icon_BigBattery_Empty2 0xB1
+#define Icon_BigBattery_Empty3 0xB2
+
+#define Icon_BigBattery_Blank1 0xB3
+#define Icon_BigBattery_Blank2 0xB4
+#define Icon_BigBattery_Blank3 0xB5
+
+#define Icon_BigBattery_Full1 0xC0
+#define Icon_BigBattery_Full2 0xC1
+#define Icon_BigBattery_Full3 0xC2
+
+#define Icon_BigBattery_FullPlus1 0xC3
+#define Icon_BigBattery_FullPlus2 0xC4
+#define Icon_BigBattery_FullPlus3 0xC5
+
+#define Icon_BigBattery_Off1 0xD0
+#define Icon_BigBattery_Off2 0xD1
+#define Icon_BigBattery_Off3 0xD2
+
+#define Icon_BigBattery_Charging1 0xD3
+#define Icon_BigBattery_Charging2 0xD4
+#define Icon_BigBattery_Charging3 0xD5
 
 // LED
 #define Icon_LEDOn 0X87

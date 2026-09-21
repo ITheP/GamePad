@@ -25,13 +25,24 @@ Open and re-save in IrfanView to fix.
 "@
 Write-Host $info
 
+# Check if the required parameters are passed (PBM file and Font Name)
+if ($args.Count -lt 2) {
+    Write-Error "Usage: $PSCommandPath <PBM_FILE_PATH> <FONT_NAME>"
+    exit 1
+}
+
+# Get parameters from the command line arguments
+$SrcFile = $args[0]
+$FontName = $args[1]
+
 # Define paths
-$tempFile = "CustomIcons.16x16.temp"
-$outputFile = "CustomIcons.16x16.h"
+$tempFile = "$($SrcFile).temp"
+$outputFile = [System.IO.Path]::ChangeExtension($SrcFile, ".h")
+
+Write-Host "Processing file: $SrcFile..."
 
 # Run the font generator
-Write-Host "Processing PBM file..."
-& .\rrefontgen.exe "CustomIcons.16x16.pbm" 16 16 "CustomIcons16" 0 2 0 | Out-File -Encoding ASCII $tempFile
+& .\rrefontgen.exe "$SrcFile" 16 16 "$FontName" 0 2 0 | Out-File -Encoding ASCII $tempFile
 
 $searchString = "----><--------><--------><--------><--------><--------><----"
 $replacement = "$searchString`r`n*/"
@@ -57,71 +68,3 @@ $modifiedContents | Set-Content $outputFile
 Remove-Item -Path $tempFile
 
 Write-Host "Processing CustomIcons complete! Modified file saved as '$outputFile'."
-
-
-# Define paths
-$tempFile = "Controllers.16x16.temp"
-$outputFile = "Controllers.16x16.h"
-
-# Run the font generator
-Write-Host "Processing PBM file..."
-& .\rrefontgen.exe "Controllers.16x16.pbm" 16 16 "Controllers16" 0 2 0 | Out-File -Encoding ASCII $tempFile
-
-$searchString = "----><--------><--------><--------><--------><--------><----"
-$replacement = "$searchString`r`n*/"
-
-# Read file contents
-$fileContents = Get-Content $tempFile
-
-# Initialize modified content with #pragma once and comment block start
-$modifiedContents = @("#pragma once", "/*")
-
-# Iterate through lines and add them until the marker is found
-foreach ($line in $fileContents) {
-    $modifiedContents += $line
-    if ($line -eq $searchString) {
-        $modifiedContents += "*/"
-    }
-}
-
-# Save the modified contents to the output file
-$modifiedContents | Set-Content $outputFile
-
-# Clean up
-Remove-Item -Path $tempFile
-
-Write-Host "Processing Controllers complete! Modified file saved as '$outputFile'."
-
-
-# Define paths
-$tempFile = "Logos.16x16.temp"
-$outputFile = "Logos.16x16.h"
-
-# Run the font generator
-Write-Host "Processing PBM file..."
-& .\rrefontgen.exe "Logos.16x16.pbm" 16 16 "Logos16" 0 2 0 | Out-File -Encoding ASCII $tempFile
-
-$searchString = "----><--------><--------><--------><--------><--------><----"
-$replacement = "$searchString`r`n*/"
-
-# Read file contents
-$fileContents = Get-Content $tempFile
-
-# Initialize modified content with #pragma once and comment block start
-$modifiedContents = @("#pragma once", "/*")
-
-# Iterate through lines and add them until the marker is found
-foreach ($line in $fileContents) {
-    $modifiedContents += $line
-    if ($line -eq $searchString) {
-        $modifiedContents += "*/"
-    }
-}
-
-# Save the modified contents to the output file
-$modifiedContents | Set-Content $outputFile
-
-# Clean up
-Remove-Item -Path $tempFile
-
-Write-Host "Processing Logos complete! Modified file saved as '$outputFile'."

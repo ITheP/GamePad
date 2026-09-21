@@ -4,13 +4,15 @@
 // #include <rre_7x12.h>
 #include <rre_fixed_8x16.h>
 #include "CustomIcons.16x16.h"
+#include "CustomLogos.16x16.h"
 #include <IconMappings.h>
 #include <Debug.h>
 
 RREFont RRE;
 RREFont RREDefault;
-RREFont RREIcon;
 RREFont RRESmall;
+RREFont RREIcon;
+RREFont RRELogo;
 
 int TextXPos = 0;
 int TextYPos = 0;
@@ -39,6 +41,11 @@ void setupRRE()
   RREIcon.setCR(0);
   RREIcon.setScale(1);
   RREIcon.setFont(&rre_CustomIcons16);
+
+  RRELogo.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
+  RRELogo.setCR(0);
+  RRELogo.setScale(1);
+  RRELogo.setFont(&rre_CustomLogos16);
 
   RRESmall.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
   RRESmall.setCR(0);
