@@ -17,6 +17,7 @@
 #include "Device.h"
 #include "Config.h"
 #include "Defines.h"
+#include "DisplayEffects.h"
 #include "IconMappings.h"
 #include "Screen.h"
 #include "Icons.h"
@@ -226,58 +227,56 @@ void setupDisplay()
 
 constexpr int LOGO_WIDTH = 128;
 constexpr int LOGO_HEIGHT = 64;
-constexpr int MAX_GLEAM_PIXELS = 128; // conservative upper bound
+// constexpr int MAX_GLEAM_PIXELS = 128; // conservative upper bound
+//
+//  struct Pixel
+//  {
+//    uint8_t x;
+//    uint8_t y;
+//  };
 
-struct Pixel
-{
-  uint8_t x;
-  uint8_t y;
-};
+// Pixel gleamPixels[MAX_GLEAM_PIXELS];
+// int gleamCount = 0;
 
-Pixel gleamPixels[MAX_GLEAM_PIXELS];
-int gleamCount = 0;
+// // Pretty looking glint effect that streaks across the screen
+// // Doesn't need to be that performant, shouldn't be much
+// // else going on when it runs
+// void RenderGlint(int frame, int height, int width)
+// {
+//   // // Step 1: Reset logo from any previous frame
+//   // Display.clearDisplay();
+//   // RenderLogoRuns(Logo, Logo_RunCount);
 
-// Pretty looking glint effect that streaks across the screen
-// Doesn't need to be that performant, shouldn't be much
-// else going on when it runs
-void RenderGlint(int frame)
-{
-  // Step 1: Reset logo from any previous frame
-  Display.clearDisplay();
-  RenderLogoRuns(Logo, Logo_RunCount);
+//   // Step 2: Scan diagonal line
+//   gleamCount = 0;
+//   int x = -height + frame;
 
-  // Step 2: Scan diagonal line
-  gleamCount = 0;
-  int x = -LOGO_HEIGHT + frame;
+//   for (int y = height; y > 0; --y)
+//   {
+//     if (x >= 0 && x < width)
+//     {
+//       if (Display.getPixel(x, y))
+//         gleamPixels[gleamCount++] = {(uint8_t)x, (uint8_t)y};
 
-  for (int y = LOGO_HEIGHT; y > 0; --y)
-  {
-    if (x >= 0 && x < LOGO_WIDTH)
-    {
-      if (Display.getPixel(x, y))
-        gleamPixels[gleamCount++] = {(uint8_t)x, (uint8_t)y};
+//       if (gleamCount >= MAX_GLEAM_PIXELS)
+//         break;
+//     }
+//     x++;
+//   }
 
-      if (gleamCount >= MAX_GLEAM_PIXELS)
-        break;
-    }
-    x++;
-  }
+//   // Step 3: Glow pass
+//   for (int i = 0; i < gleamCount; ++i)
+//   {
+//     uint8_t x = gleamPixels[i].x;
+//     uint8_t y = gleamPixels[i].y;
 
-  // Step 3: Glow pass
-  for (int i = 0; i < gleamCount; ++i)
-  {
-    uint8_t x = gleamPixels[i].x;
-    uint8_t y = gleamPixels[i].y;
-
-    Display.drawFastHLine(x - 1, y - 2, 3, C_WHITE);
-    Display.drawFastHLine(x - 2, y - 1, 5, C_WHITE);
-    Display.drawFastHLine(x - 3, y, 7, C_WHITE);
-    Display.drawFastHLine(x - 2, y + 1, 5, C_WHITE);
-    Display.drawFastHLine(x - 1, y + 2, 3, C_WHITE);
-  }
-
-  Display.display();
-}
+//     Display.drawFastHLine(x - 1, y - 2, 3, C_WHITE);
+//     Display.drawFastHLine(x - 2, y - 1, 5, C_WHITE);
+//     Display.drawFastHLine(x - 3, y, 7, C_WHITE);
+//     Display.drawFastHLine(x - 2, y + 1, 5, C_WHITE);
+//     Display.drawFastHLine(x - 1, y + 2, 3, C_WHITE);
+//   }
+// }
 
 void setupRenderLogo()
 {
@@ -288,12 +287,21 @@ void setupRenderLogo()
   Serial_INFO;
   Serial.println("🎨 Rendering logo...");
 
+  Display.clearDisplay();
   RenderLogoRuns(Logo, Logo_RunCount);
   Display.display();
 
   // Fancy arse gleam/glint effect on start up - just to look cool
   for (int frame = 0; frame < LOGO_WIDTH + LOGO_HEIGHT + 3; frame += 3)
-    RenderGlint(frame);
+  {
+    // Reset logo from any previous frame
+    Display.clearDisplay();
+    RenderLogoRuns(Logo, Logo_RunCount);
+
+    DisplayEffects::RenderGlint(frame, LOGO_HEIGHT, LOGO_WIDTH);
+
+    Display.display();
+  }
 }
 
 void setupBattery()
@@ -320,17 +328,17 @@ void setupBattery()
 #ifdef LIVE_BATTERY
 void enforceBatteryChargeState()
 {
-  
-delay(2000);
+
+  // delay(2000);
 
   // In a live environment, we never continue if battery is too low.
   // It's too critical and the device will fail to operate soon! Spend that time warning people.
   // A test board might have no battery connected to produce a measurable voltage, meaning a permanent 0 battery level
-  // In this case undefine LIVE_BATTERY to skip power checks.
-  // TODO: This may change if/when decent power is in place (and charging gets us out of this loop). Note that display will need re-clearing and the logo re-drawing.
-
+  // In this case undefine LIVE_BATTERY to skip power checks and lots of battery stuff
+  
+  Battery::TakeReading();
   Battery::CalculateState();
-  int currentBatteryLevel = Battery::ClampedPercentage;
+  // int currentBatteryLevel = Battery::ClampedPercentage;
 
   // ALTERATIONS
   // If battery is charging, we go into the charge loop
@@ -339,44 +347,61 @@ delay(2000);
   // In the loop - if charging then that will show a relevant charging graph
   // if > 5% then cancontinue is true (may make this a bit more if charging to account for larger power readings)
   // the loop should do another battery reading each time, and do another CalculateState()
-  
-  bool isCharging = (Battery::State == POWER_Charging);
-  Serial.printf("EnforceBatteryChargeState: Battery level %d%%, Empty%% %d%%, isCharging=%d\n", currentBatteryLevel, POWER_EmptyPercentage, isCharging);
 
-  if (currentBatteryLevel < POWER_EmptyPercentage || isCharging)
+  // bool isCharging = Battery::IsCharging;
+  // Serial.printf("EnforceBatteryChargeState: Battery level %d%%, Empty%% %d%%, isCharging=%d\n", Battery::ClampedPercentage, POWER_Percentage_Empty, Battery::IsCharging);
+
+
+  Serial.println(Battery::StateDescription());
+  if (POWER_Percentage_Low > Battery::ClampedPercentage)
+    Serial.println("First TRUE");
+  if (Battery::IsCharging)
+    Serial.println("BAT CHARGING");
+
+  // If power is too low or we are in a charging stage, boot to charge screen
+  if (POWER_Percentage_Low > Battery::ClampedPercentage || Battery::IsCharging)
+  // if (1==1)
   {
     // Simulate SecondRollover and SecondFlipFlop
     // + loop forever - they need to charge things up!
     // This may change if/when decent power while play is working
     int flipFlop = false;
     bool canContinue = false;
-    bool continuePressed = false;
+    // bool continuePressed = false;
 
     Serial.println("Hitting while loop");
 
+    // IMPORTANT
+    // Recommend the battery continue button ISN'T the same as
+    // one of the profile buttons, else it can get a bit funky
+
     while (1)
     {
-      if (currentBatteryLevel >= POWER_EmptyPercentage)
-        canContinue = true;
+      canContinue = (POWER_Percentage_Low < Battery::ClampedPercentage || Battery::IsCharging);
 
-      Battery::CheckInputs();
+      Battery::ProcessInputs();
 
       // check if button held down to exit
-      if (canContinue && Battery::ContinueState() == PRESSED)
+      if (canContinue && Battery::ContinueIsPressed())
       {
         // Jump out of the while loop
-       // break;
+        if (canContinue)
+          Serial.println("Can Continue");
+        if (Battery::ContinueIsPressed)
+          Serial.println("Continue is pressed");
+
+        // break;
       }
 
-      Battery::DrawFullDisplay(true, flipFlop, canContinue, DigitalInput_Battery_Continue, false);
+      Battery::ProcessFullDisplayState(true, flipFlop, canContinue, false);
       flipFlop = !flipFlop;
-      delay(1000); // Wait a second
+      // delay(1000); // Wait a second
 
       // Read new battery reading
       Battery::TakeReading();
       Battery::CalculateState();
-      currentBatteryLevel = Battery::ClampedPercentage;
-      isCharging = (Battery::State == POWER_Charging);
+      // currentBatteryLevel = Battery::ClampedPercentage;
+      // isCharging = Battery::IsCharging;
     }
 
     Serial.println("Continue was hit");
@@ -537,7 +562,7 @@ void setupWebServer(bool startInWiFiConfigurationMode)
 }
 #endif
 
-void setupDigitalInputs()
+void setupDigitalInputs(Input *digitalInputs[], int digitalInputs_Count)
 {
 #ifdef DEBUG_MARKS
   Debug::Mark(1, __LINE__, __FILE__, __func__);
@@ -546,12 +571,12 @@ void setupDigitalInputs()
 
   Serial.println();
   Serial_INFO;
-  Serial.println("🔘 Button/Digital Inputs: " + String(DigitalInputs_Count));
+  Serial.println("🔘 Button/Digital Inputs: " + String(digitalInputs_Count));
 
   Input *input;
-  for (int i = 0; i < DigitalInputs_Count; i++)
+  for (int i = 0; i < digitalInputs_Count; i++)
   {
-    input = DigitalInputs[i];
+    input = digitalInputs[i];
 
     Serial.print("..." + String(input->Label));
 
@@ -605,7 +630,7 @@ void setupDigitalInputs()
   }
 }
 
-void setupAnalogInputs()
+void setupAnalogInputs(Input *analogInputs[], int analogInputs_Count)
 {
 #ifdef DEBUG_MARKS
   Debug::Mark(1, __LINE__, __FILE__, __func__);
@@ -614,12 +639,12 @@ void setupAnalogInputs()
   // Basic Analog Inputs
   Serial.println();
   Serial_INFO;
-  Serial.println("🎚 Analog Inputs: " + String(AnalogInputs_Count));
+  Serial.println("🎚 Analog Inputs: " + String(analogInputs_Count));
 
   Input *input;
-  for (int i = 0; i < AnalogInputs_Count; i++)
+  for (int i = 0; i < analogInputs_Count; i++)
   {
-    input = AnalogInputs[i];
+    input = analogInputs[i];
 
     Serial.print("..." + String(input->Label));
 
@@ -629,7 +654,7 @@ void setupAnalogInputs()
 
       pinMode(input->Pin, INPUT);
 
-      // analogSetPinAttenuation(input->Pin, input->AnalogAttenuation);
+      // analogSetPinAttenuation(input->Pin, input->analogAttenuation);
     }
 
     if (input->VirtualPinInputs.size() > 0)
@@ -1403,13 +1428,17 @@ void setup()
   // Now we have a display, we can attempt to get some visuals out of any errors that take place
 
   setupRRE();
-  setupRenderLogo();
 
   setupBattery();
 #ifdef LIVE_BATTERY
+  // Main set up of inputs hasn't happened yet, so we make sure
+  // inputs used for battery handling are in place
+  setupDigitalInputs(DigitalInputs_Battery, DigitalInputs_Battery_Count);
+  setupAnalogInputs(AnalogInputs_Battery, AnalogInputs_Battery_Count);
   enforceBatteryChargeState();
 #endif
 
+  setupRenderLogo();
   setupUSB();
 
   Serial_INFO;
@@ -1466,9 +1495,9 @@ void setup()
   RREIcon.drawChar(58, 52, (unsigned char)Icon_FilledCircle_8);
   Display.display();
 
-  setupDigitalInputs();
+  setupDigitalInputs(DigitalInputs, DigitalInputs_Count);
+  setupAnalogInputs(AnalogInputs, AnalogInputs_Count);
   setupPulseInputs();
-  setupAnalogInputs();
   setupHatInputs();
 
   delay(SETUP_DELAY);
@@ -1710,7 +1739,7 @@ void MainLoop()
 #endif
 
 #ifdef INPUT_SERIAL_DEBUG_PLUS
-   delay(INPUT_SERIAL_DEBUG_PLUS_THROTTLE);
+  delay(INPUT_SERIAL_DEBUG_PLUS_THROTTLE);
 
   Serial.print("\033[3J\033[2J\033[H");
   // Serial.print("\033[H");
@@ -1751,8 +1780,8 @@ void MainLoop()
 #ifdef LIVE_BATTERY
   if (Battery::PreviousPercentage == 0)
   {
-    //Battery::DrawFullDisplay(SecondRollover, SecondFlipFlop);
-    //return; // Sorry - no more processing! Make em go and charge things up
+    // Battery::DrawFullDisplay(SecondRollover, SecondFlipFlop);
+    // return; // Sorry - no more processing! Make em go and charge things up
 
     // Blocks continuation until battery suitably charged
     // TODO: Blank all LED's
@@ -1781,7 +1810,7 @@ void MainLoop()
 
     // Serial.println("Battery level: " + String(currentBatteryLevel));
 
-    if (Battery::State == POWER_Charging)
+    if (Battery::IsCharging)
     {
       if (SecondFlipFlop)
         LastBatteryIcon = Icon_Battery;
@@ -1868,41 +1897,43 @@ void MainLoop()
     PulseInput *pulseInput = PulseInputs[i];
 
     // Use MCPWMIndex to look up the correct capture data
-    if (pulseInput->MCPWMIndex < 0 || pulseInput->MCPWMIndex >= PulseInputs_Count) {
-        continue; // Skip invalid indices
+    if (pulseInput->MCPWMIndex < 0 || pulseInput->MCPWMIndex >= PulseInputs_Count)
+    {
+      continue; // Skip invalid indices
     }
 
     PulseCaptureData_t *data = &g_pulse_capture_data[pulseInput->MCPWMIndex];
-    
-   // Get capture data from the array
+
+    // Get capture data from the array
     uint32_t period = data->captured_period;
     uint32_t high = data->captured_high;
     float dutyCycle = 0;
 
     if (period > 0 && data->has_valid_period)
     {
-        // Calculate Duty Cycle as a percentage (0.0 to 100.0)
-        dutyCycle = ((float)high / (float)period) * 100.0f;
+      // Calculate Duty Cycle as a percentage (0.0 to 100.0)
+      dutyCycle = ((float)high / (float)period) * 100.0f;
 
-        // Bit of averaging over 8 calculations
-        pulseInput->CumulativeDutyCycle += dutyCycle;
-        if (++pulseInput->CumulativeCount == 8) {
-          pulseInput->DutyCycle = (uint32_t)(pulseInput->CumulativeDutyCycle) >> 3; // >>3==/8 // * 0.2);
-          pulseInput->CumulativeDutyCycle = 0;
-          pulseInput->CumulativeCount = 0;
-        }
-        
-        //pulseInput->DutyCycle = (uint32_t)dutyCycle;
+      // Bit of averaging over 8 calculations
+      pulseInput->CumulativeDutyCycle += dutyCycle;
+      if (++pulseInput->CumulativeCount == 8)
+      {
+        pulseInput->DutyCycle = (uint32_t)(pulseInput->CumulativeDutyCycle) >> 3; // >>3==/8 // * 0.2);
+        pulseInput->CumulativeDutyCycle = 0;
+        pulseInput->CumulativeCount = 0;
+      }
 
-        // Check if value changed
-        if (pulseInput->DutyCycle != pulseInput->ValueState.AnalogValue)
-        {
-            pulseInput->ValueState.PreviousAnalogValue = pulseInput->ValueState.AnalogValue;
-            pulseInput->ValueState.AnalogValue = pulseInput->DutyCycle;
-            pulseInput->ValueState.StateChangedWhen = micros();
-            pulseInput->ValueState.StateJustChanged = true;
-            pulseInput->ValueState.StateJustChangedLED = true;
-        }
+      // pulseInput->DutyCycle = (uint32_t)dutyCycle;
+
+      // Check if value changed
+      if (pulseInput->DutyCycle != pulseInput->ValueState.AnalogValue)
+      {
+        pulseInput->ValueState.PreviousAnalogValue = pulseInput->ValueState.AnalogValue;
+        pulseInput->ValueState.AnalogValue = pulseInput->DutyCycle;
+        pulseInput->ValueState.StateChangedWhen = micros();
+        pulseInput->ValueState.StateJustChanged = true;
+        pulseInput->ValueState.StateJustChangedLED = true;
+      }
     }
     // else
     // {
@@ -2060,7 +2091,7 @@ void MainLoop()
           }
           else if (timeDifference >= input->LongPressTiming)
           {
-            //Serial.println("LONG PRESSED TIMING TRIGGER " + String(timeDifference) + " vs " + String(input->LongPressTiming));
+            // Serial.println("LONG PRESSED TIMING TRIGGER " + String(timeDifference) + " vs " + String(input->LongPressTiming));
 
             // Past long press time, pass child on to main routine
             input = input->LongPressChildInput;
@@ -2103,7 +2134,7 @@ void MainLoop()
               input->ValueState.Value = NOT_PRESSED; // Will force a press when we process the input below
               state = PRESSED;                       // Force a pretend pressing for this cycle for this input
               // Next loop will pick up it is not pressed any more and do the release
-             //  Serial.println("LONG PRESS - SHORT PRESSED");
+              //  Serial.println("LONG PRESS - SHORT PRESSED");
 
               input->AutoHold = timeCheck + input->ShortPressReleaseTime;
             }
@@ -2123,10 +2154,10 @@ void MainLoop()
       //   Serial.println("Digital State [" + String(input->Label) + "] Value: " + String(state) + ", " + String(input->ValueState.Value) + " (" + LONG_PRESS_MONITORING + ")");
       // }
 
-        // Process when state has changed
+      // Process when state has changed
       if (state != input->ValueState.Value && input->ValueState.Value != LONG_PRESS_MONITORING)
       {
-       // Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
+        // Serial.println("Digital Input Changed: " + String(input->Label) + " to " + String(state));
         input->ValueState.PreviousValue = !state;
         input->ValueState.Value = state;
         input->ValueState.StateChangedWhen = timeCheck;
@@ -2238,6 +2269,7 @@ void MainLoop()
     if (input->Pin != NONE)
     {
       // we do some
+      // TODO: Convert this to moving exponential average
       auto count = input->AverageOverAnalogCount;
       if (count > 0)
       {
@@ -2469,7 +2501,7 @@ void MainLoop()
     int16_t minAnalogValue = input->MinAnalogValue;
     int16_t maxAnalogValue = input->MaxAnalogValue;
     int16_t constrainedState = constrain(analogState, minAnalogValue, maxAnalogValue);
-      //Serial.printf("Previous: %d, Current: %d, Min=%d Max=%d", previousAnalogValue, analogState, minAnalogValue, maxAnalogValue);
+    // Serial.printf("Previous: %d, Current: %d, Min=%d Max=%d", previousAnalogValue, analogState, minAnalogValue, maxAnalogValue);
     if (
         // If we have changed my more than 3% or we have bottomed out/topped out of the range, then we process
         // analogState < (previousAnalogValue - threshold) || analogState > (previousAnalogValue + threshold) ||
@@ -2484,13 +2516,13 @@ void MainLoop()
     {
       // if (analogState != input->ValueState.AnalogValue)
       // {
-     //Serial.printf(" TRIGGERED %d, %d, %d, %d, [%s]\n", previousAnalogValue, analogState, minAnalogValue, maxAnalogValue, input->Label);
+      // Serial.printf(" TRIGGERED %d, %d, %d, %d, [%s]\n", previousAnalogValue, analogState, minAnalogValue, maxAnalogValue, input->Label);
 
       input->ValueState.AnalogValue = constrainedState;
       input->ValueState.PreviousValue = previousAnalogValue;
       input->ValueState.StateChangedWhen = micros(); // ToDo: More accurate setting here, as there have been delays
 
-      //Serial.println(input->Label);
+      // Serial.println(input->Label);
       input->ValueState.StateJustChanged = false;
 
       // Check if this input tracks trigger on/off values
@@ -2501,7 +2533,7 @@ void MainLoop()
         // and if we are over sensitive around no input/wrist position of an analog control, can lead to false cancellations of the idle state
         if (constrainedState >= input->TriggerOnValue || constrainedState >= input->TriggerOffValue)
           someControlStateJustChanged = true;
-          
+
         if (analogState >= input->TriggerOnValue && input->ValueState.Value == NOT_PRESSED)
         {
           input->ValueState.Value = PRESSED;
@@ -2548,8 +2580,8 @@ void MainLoop()
 
       sendReport = true;
     }
-    //Serial.println();
-    //}
+    // Serial.println();
+    // }
   }
 
 #ifdef INCLUDE_BENCHMARKS
@@ -2716,13 +2748,13 @@ void MainLoop()
 
   if (timeSinceLastAnyControlChanged >= IDLE_LED_TIMEOUT)
   {
-    
-      //Serial.printf("LED Idle ON  %.3f >= %.3f [%s] %d", (float)timeSinceLastAnyControlChanged, (float)IDLE_LED_TIMEOUT, input->Label, someControlStateJustChanged);
-      // for (int i = 0; i < ExternalLED_Count; i++) {
-      //   Serial.print(" ");
-      //   Serial.print(ExternalLedsEnabled[i]);
-      // }
-        
+
+    // Serial.printf("LED Idle ON  %.3f >= %.3f [%s] %d", (float)timeSinceLastAnyControlChanged, (float)IDLE_LED_TIMEOUT, input->Label, someControlStateJustChanged);
+    //  for (int i = 0; i < ExternalLED_Count; i++) {
+    //    Serial.print(" ");
+    //    Serial.print(ExternalLedsEnabled[i]);
+    //  }
+
 #ifdef DEBUG_MARKS
     Debug::Mark(400, __LINE__, __FILE__, __func__, "LED Idle");
 #endif
@@ -2740,7 +2772,7 @@ void MainLoop()
   }
   else
   {
-    //Serial.printf("LED Idle OFF %.3f < %.3f [%s] %d\n", (float)timeSinceLastAnyControlChanged, (float)IDLE_LED_TIMEOUT, input->Label, someControlStateJustChanged);
+    // Serial.printf("LED Idle OFF %.3f < %.3f [%s] %d\n", (float)timeSinceLastAnyControlChanged, (float)IDLE_LED_TIMEOUT, input->Label, someControlStateJustChanged);
 
     if (ControllerIdle_LED)
     {
@@ -2974,22 +3006,23 @@ void MainLoop()
 #ifdef INPUT_SERIAL_DEBUG_PLUS
   Serial.println();
 
-  bool isCharging = (Battery::State == POWER_Charging);
-  bool isPoweredByUSB = (Battery::State == POWER_USB || isCharging);
+  // bool isCharging = (Battery::State == POWER_Charging);
+  // bool isPoweredByUSB = (Battery::State == POWER_USB || isCharging);
 
-  snprintf(buffer, sizeof(buffer),
-           "Battery state: CurrentSensorReading: %4d, CurrentPercentage: %3d - Cumulative: %5d/%-2d, PowerSensorReading: %4d, Voltage: %.2f, RawVoltage: %.2f - IsCharging: %s, IsPoweredByUSB: %s",
-           Battery::ClampedBatterySensorReading,
-           Battery::ClampedBatteryPercentage,
-           Battery::CumulativeBatterySensorReadings,
-           Battery::BatteryLevelReadingsCount,
-           Battery::PowerSensorReading,
-           Battery::ClampedVoltage,
-           Battery::RawVoltage,
-           isCharging ? "1" : "0",
-           isPoweredByUSB ? "1" : "0");
+  // snprintf(buffer, sizeof(buffer),
+  //          "Battery state: CurrentSensorReading: %4d, CurrentPercentage: %3d - Cumulative: %5d/%-2d, PowerSensorReading: %4d, Voltage: %.2f, RawVoltage: %.2f - IsCharging: %s, IsPoweredByUSB: %s",
+  //          Battery::ClampedBatterySensorReading,
+  //          Battery::ClampedBatteryPercentage,
+  //          Battery::CumulativeBatterySensorReadings,
+  //          Battery::BatteryLevelReadingsCount,
+  //          Battery::PowerSensorReading,
+  //          Battery::ClampedVoltage,
+  //          Battery::RawVoltage,
+  //          isCharging ? "1" : "0",
+  //          isPoweredByUSB ? "1" : "0");
 
-  Serial.println(buffer);
+  // Serial.println(buffer);
+  Battery::PrintToSerial();
 
   Serial.println(); // Extra blank line helps cover up any previous output that might have been left on the serial monitor if an extra line got printed
 #endif

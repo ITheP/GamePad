@@ -153,10 +153,10 @@ Input AnalogInputs_Virtual_TriggeredGreen =
         .DefaultValue = NOT_PRESSED,
         .DefaultAnalogValue = -1,
         .AverageOverAnalogCount = 8,
-        .MinAnalogValue = 2160,
+        .MinAnalogValue = 2170,
         .MaxAnalogValue = 2380,
-        .TriggerOnValue = 2160 + 60,
-        .TriggerOffValue = 2160 + 30,
+        .TriggerOnValue = 2170 + 60,
+        .TriggerOffValue = 2170 + 30,
         .TriggerPartlyReleasedValue = 2500,
         .BluetoothPressOperation = NONE,
         .BluetoothReleaseOperation = NONE,
@@ -791,13 +791,22 @@ Input *DigitalInputs_ConfigMenu[] = {
     &DigitalInput_Config_Back
 };
 
-// Battery controls if put into battery boot state
-// Assumes these pins are defined in Digital_Input collection - i.e. will be enabled for reading. If not, may need extra code to enable.
-Input DigitalInput_Battery_Continue = {.VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen}, .Label = DIGITALINPUT_BATTERY_CONTINUE_LABEL};
+// Battery controls if put into battery state full screen display
+// Below was used (green button) but don't want it to conflict with holding down a profile button so ended up using start
+//Input DigitalInput_Battery_Continue = {.VirtualPinInputs = {&AnalogInputs_Virtual_TriggeredGreen}, .Label = DIGITALINPUT_BATTERY_CONTINUE_LABEL};
+Input DigitalInput_Battery_Continue = {.Pin = BUTTON_Start_PIN, .Label = DIGITALINPUT_BATTERY_CONTINUE_LABEL};
+Input DigitalInput_Battery_ExtraInfo = {.Pin = BUTTON_Select_PIN, .Label = DIGITALINPUT_BATTERY_EXTRAINFO_LABEL};
 
-Input *DigitalInputs_BatteryBoot[] = {
-    &DigitalInput_Battery_Continue
+Input *DigitalInputs_Battery[] = {
+    &DigitalInput_Battery_Continue,
+    &DigitalInput_Battery_ExtraInfo
 };
+
+// May be used as virtual inputs for digital inputs for battery
+Input *AnalogInputs_Battery[] = {
+   &AnalogInputs_Virtual_TriggeredGreen
+};
+
 
 // Input DigitalInput_Config_MenuUp = { .Pin = HAT1_Up_PIN, .Label = "Strum Up", .CustomOperationPressed = &Menus::Config_UpPressed, .CustomOperationReleased = &Menus::Config_UpReleased };
 // Input DigitalInput_Config_MenuDown = { .Pin = HAT1_Down_PIN, .Label = "Strum Down", .CustomOperationPressed = &Menus::Config_DownPressed, .CustomOperationReleased = &Menus::Config_DownReleased };
@@ -806,12 +815,13 @@ Input *DigitalInputs_BatteryBoot[] = {
 
 
 
-
 // -----------------------------------------------------
 // Array sizes
 
 int ControllerGfx_RunCount = sizeof(ControllerGfx) / sizeof(ControllerGfx[0]);
 int DigitalInputs_ConfigMenu_Count = sizeof(DigitalInputs_ConfigMenu) / sizeof(DigitalInputs_ConfigMenu[0]);
+int DigitalInputs_Battery_Count = sizeof(DigitalInputs_Battery) / sizeof(DigitalInputs_Battery[0]);
+int AnalogInputs_Battery_Count =  sizeof(AnalogInputs_Battery) / sizeof(AnalogInputs_Battery[0]);
 int DigitalInputs_Count = sizeof(DigitalInputs) / sizeof(DigitalInputs[0]);
 int PulseInputs_Count = sizeof(PulseInputs) / sizeof(PulseInputs[0]);
 int AnalogInputs_Count = sizeof(AnalogInputs) / sizeof(AnalogInputs[0]);

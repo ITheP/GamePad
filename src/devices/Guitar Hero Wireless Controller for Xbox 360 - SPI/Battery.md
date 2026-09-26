@@ -554,3 +554,7 @@ if (percentage > clamped_percentage)
     draw extra overcharge +
 
 ```
+
+
+USB - 3.981 @ 2235
+100% Bat = USB + Bat - 3.990 @ 2303

@@ -258,14 +258,14 @@ esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
     Battery::CalculateState();
 
     // Note that we assume USB powered if is charging as must be plugged in to charge!
-    bool isCharging = (Battery::State == PowerState::USB_Battery_Charging || Battery::State == PowerState::USB_Battery_Full);
-    bool onBattery = (Battery::State == PowerState::Battery || Battery::State == PowerState::Battery_Full);
-    bool isPoweredByUSB = (Battery::State == PowerState::USB || isCharging);
-    bool batteryFull = (Battery::State == PowerState::Battery_Full || Battery::State == PowerState::USB_Battery_Full);
+    // bool isCharging = (Battery::State == PowerState::USB_Battery_Charging || Battery::State == PowerState::USB_Battery_Full);
+    // bool onBattery = (Battery::State == PowerState::Battery || Battery::State == PowerState::Battery_Full);
+    // bool isPoweredByUSB = (Battery::State == PowerState::USB || isCharging);
+    // bool batteryFull = (Battery::State == PowerState::Battery_Full || Battery::State == PowerState::USB_Battery_Full);
 
     // Maxes out around 250 characters
     snprintf(json, sizeof(json),
-             "{\"BatteryPercentage\":%d, \"BatteryFullPercentage\":%.2f, \"BatteryVoltage\":%.2f, \"BatteryFullVoltage\":%.2f, \"BatteryUnmappedVoltage\":%.2f,  \"BatteryMinVoltage\":%.2f, \"BatteryMaxVoltage\":%.2f,  \"ChargingMinVoltage\":%.2f, \"ChargingMaxVoltage\":%.2f, \"BatteryPinReading\":%.2f, \"PowerPinReading\":%d, \"IsPoweredByBattery\":%s, \"LowBatteryWarning\":%s, \"OnBattery\":%s, \"IsCharging\":%s, \"BatteryFull\":%s, \"IsPoweredByUSB\":%s}",
+             "{\"BatteryPercentage\":%d, \"BatteryFullPercentage\":%.2f, \"BatteryVoltage\":%.2f, \"BatteryFullVoltage\":%.2f, \"BatteryUnmappedVoltage\":%.2f,  \"BatteryMinVoltage\":%.2f, \"BatteryMaxVoltage\":%.2f,  \"ChargingMinVoltage\":%.2f, \"ChargingMaxVoltage\":%.2f, \"BatteryPinReading\":%.2f, \"PowerPinReading\":%d, \"IsPoweredByBattery\":%s, \"LowBatteryWarning\":%s, \"OnBattery\":%s, \"IsCharging\":%s, \"BatteryFull\":%s, \"USBPower\":%s}",
              Battery::ClampedPercentage,
              Battery::Percentage,
              Battery::ClampedVoltage,
@@ -279,11 +279,11 @@ esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
              Battery::Raw_Power,
              Battery::ClampedPercentage < POWER_Percentage_Low ? "true" : "false",
              Battery::StateDescription,
-             onBattery ? "true" : "false",
-             isCharging ? "false" : "true",
-             isCharging ? "true" : "false",
-             batteryFull ? "true" : "false",
-             isPoweredByUSB ? "true" : "false");
+             Battery::OnBattery ? "true" : "false",
+             Battery::IsCharging ? "false" : "true",
+             Battery::IsCharging ? "true" : "false",
+             Battery::BatteryFull ? "true" : "false",
+             Battery::USBPower ? "true" : "false");
 
 #ifdef HTTPD_CLOSE_CONNECTIONS
     // Force the client to close the connection after this response - free's up limited connections

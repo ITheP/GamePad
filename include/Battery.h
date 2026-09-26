@@ -11,21 +11,23 @@
 enum class PowerState : uint8_t
 {
     Battery = 0,              // Power coming from battery
-    Battery_Full = 1,         // Power coming from battery, battery is also full
-    USB_Battery_Charging = 2, // Power from USB, battery charging
-    USB_Battery_Full = 3,     // Power from USB, battery full
-    USB = 4,                  // Power coming from external source (USB or other)
-    Unknown = 5               // Battery is being charged by external source (USB or other)
+    Battery_Empty = 1,        // Power really low - effectively empty
+    Battery_Full = 2,         // Power coming from battery, battery is also full
+    USB_Battery_Charging = 3, // Power from USB, battery charging
+    USB_Battery_Full = 4,     // Power from USB, battery full
+    USB = 5,                  // Power coming from external source (USB or other)
+    Unknown = 6               // Battery is being charged by external source (USB or other)
 };
 
 // Array to map PowerState enum values to their string representation
 const char* const PowerStateNames[] = {
     "Battery",                  // PowerState::Battery (0)
-    "Battery Full",             // PowerState::Battery_Full (1)
-    "USB + Battery Charging",   // PowerState::USB_Battery_Charging (2)
-    "USB + Battery Full",       // PowerState::USB_Battery_Full (3)
-    "USB",                      // PowerState::USB (4)
-    "Unknown"                   // PowerState::Unknown (5)
+    "Battery Empty"             // PowerState::Battery_Empty (1)
+    "Battery Full",             // PowerState::Battery_Full (2)
+    "USB + Battery Charging",   // PowerState::USB_Battery_Charging (3)
+    "USB + Battery Full",       // PowerState::USB_Battery_Full (4)
+    "USB",                      // PowerState::USB (5)
+    "Unknown"                   // PowerState::Unknown (6)
 };
 
 #define POWER_Percentage_Empty 0 // Percentage at which we consider battery to be empty and need to charge
@@ -79,17 +81,19 @@ class Battery
 public:
     static void TakeReading();
     static void CalculateState();
-    static void DrawFullDisplay(int secondRollover, int secondFlipFlop, bool canContinue, Input continueInput, bool includeLED = true);
-    static void CheckInputs();
+    static void ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bool canContinue, bool includeLED = true);
+    static void ProcessInputs();
     static const char* GetPowerStateString(PowerState state);
     static const char* StateDescription();
+    static void PrintToSerial();
 
-    inline static int ContinueState()
+    inline static int ContinueIsPressed()
     {
-        return DigitalInput_Battery_Continue.ValueState.Value;
+        return DigitalInput_Battery_Continue.ValueState.Value == PRESSED;
     }
 
     static PowerState State;
+    static int CalculationsSinceLastStateChange;
 
     static int Raw_CumulativeReadings;
     static int Raw_CumulativeCount;
@@ -99,7 +103,9 @@ public:
     static int PreviousPercentage;
     // static int ClampedBatterySensorReading;
     static int Percentage;
+    static float fPercentage;
     static int ClampedPercentage;
+    static float fClampedPercentage;
     static float Voltage;               // Calculated voltage, accounting for remapping of range if also powered (connected to power changes battery reading range)
     static float ClampedVoltage;        // Clamped to theoretical 0-100% battery range, good for UI's
     static float ActualVoltage;         // Actual voltage - good for debugging
@@ -110,6 +116,17 @@ public:
     static float Minimum_Voltage;       // Minimum voltage used for calculations - good for debugging
     static float Maximum;               // Maximum pin reading used for calculations - good for debugging
     static float Maximum_Voltage;       // Maximum voltage used for calculations - good for debugging
+
+    static bool IsCharging;
+    static bool OnBattery;
+    static bool USBPower;
+    static bool BatteryFull;
+
+    static void DitheredFill(int x, int y, int w, int h, float startPct, float endPct);
+    static void DitheredFillRandom(int x, int y, int w, int h, float startPct, float endPct);
+
+private:
+    static void DrawCenteredIcon(int yPos, char c);
 };
 
 inline void Battery::TakeReading()

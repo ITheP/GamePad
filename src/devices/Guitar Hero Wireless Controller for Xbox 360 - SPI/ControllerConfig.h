@@ -206,23 +206,23 @@ extern IconRun ControllerGfx[];
 #define BATTERY_MIN 1731
 #define BATTERY_MIN_V 3.3
 // Full battery equivalent - 100% full (approx 80% physically charged, can be more, but then considered overcharged)
-#define BATTERY_FULL 2090
+#define BATTERY_FULL 2090 // 2100 is when battery is ~4.015// 2090
 #define BATTERY_FULL_V 4.0
 // Theoretical actual battery max - ~130% overcharged (physically fine, shortens life of battery)
-#define BATTERY_MAX 2193
+#define BATTERY_MAX 2500 // MADE UP 2193
 #define BATTERY_MAX_V 4.20
 
 // Magic number where when power pin reads 4095 we can tell if the battery is connected or not. < this number = no battery, just power
-#define BATTERY_CHECK 1920
+#define BATTERY_CHECK 2235 // 1920
 
 // Readings when power plugged in and on battery
 // 0%->100% results here map to 0%->100% equivalent of battery range
 // so theoretically when plugging in and out a USB cable, code changes range it calculates the % battery charge as an equivalent to as if it was just the battery
 #define CHARGING_MIN 1598
 #define CHARGING_MIN_V 3.37
-#define CHARGING_FULL 1977
+#define CHARGING_FULL 2250 // measuring 4.045v // 1977
 #define CHARGING_FULL_V 4.0
-#define CHARGING_MAX 2097
+#define CHARGING_MAX 2500 // MADE UP 2097
 #define CHARGING_MAX_V 4.20
 
 // Consider power to be present if power pin above this (allows for some noise on power pin when not powered)
@@ -327,7 +327,17 @@ extern Input DigitalInput_Config_Select;
 extern Input DigitalInput_Config_Back;
 
 // Buttons used for battery boot
+#define BATTERY_HASINPUTS 1
+extern Input *DigitalInputs_Battery[];
 extern Input DigitalInput_Battery_Continue;
+extern Input DigitalInput_Battery_ExtraInfo;
+extern Input *AnalogInputs_Battery[];
+
+// Buttons used for battery boot status/charging screen
+// Continue to full boot
+extern Input DigitalInput_Battery_Continue;
+// Extra info shown in screen
+extern Input DigitalInput_Battery_ExtraInfo;
 
 // DigitalInput array, collated list of all digital inputs (buttons) iterated over to check current state of each input
 extern Input *DigitalInputs[];
@@ -399,6 +409,8 @@ extern int AnalogInputs_Count;
 extern int HatInputs_Count;
 extern int DigitalInputs_Count;
 extern int DigitalInputs_ConfigMenu_Count;
+extern int DigitalInputs_Battery_Count;
+extern int AnalogInputs_Battery_Count;
 extern int MiscLEDEffects_Count;
 extern int IdleLEDEffects_Count;
 
@@ -425,7 +437,8 @@ extern char SoftwareRevision[];
 #define DIGITALINPUT_CONFIG_BACK_LABEL "Red Button"
 
 // Battery boot up extra text
-#define DIGITALINPUT_BATTERY_CONTINUE_LABEL "Green Button"
+#define DIGITALINPUT_BATTERY_CONTINUE_LABEL "Start Button"
+#define DIGITALINPUT_BATTERY_EXTRAINFO_LABEL "Extra Info Button"
 
 // Message that appears in Config help menu
 // Will include controller specific instructions
