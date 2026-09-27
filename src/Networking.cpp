@@ -244,7 +244,7 @@ wl_status_t Networking::WiFiConnectionState;
 wl_status_t Networking::PreviousWiFiConnectionState = WL_SCAN_COMPLETED; // Initialize to something we know it won't be to force a UI update straight away;
 
 unsigned char Networking::LastWiFiCharacter;
-unsigned char Networking::LastWiFiStatusCharacter;
+//unsigned char Networking::LastWiFiStatusCharacter;
 int Networking::WiFiStatusIterations;
 
 // WiFi test state
@@ -256,7 +256,7 @@ unsigned char Networking::WiFiCharacter;
 const char *Networking::WiFiStatus = WiFi_UnknownStatus;
 int8_t Networking::WiFiStrength;
 
-unsigned char Networking::WiFiStatusCharacter;
+//unsigned char Networking::WiFiStatusCharacter;
 
 // We have a final character that might override the WiFiCharacter (e.g. something animated) but we want to retain what
 // the current WiFiCharacter is so that we can re-render it when status isn't changing.
@@ -388,7 +388,7 @@ void Networking::HandleWiFi(int second)
                 WiFiStatus = WiFi_Disabled;
             }
 
-            WiFiStatusCharacter = Icon_Skull;
+            //WiFiStatusCharacter = Icon_Skull;
         }
 
         FinalWiFiCharacter = WiFiCharacter;

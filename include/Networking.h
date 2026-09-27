@@ -61,9 +61,9 @@ private:
     static wl_status_t WiFiConnectionState;
     static wl_status_t PreviousWiFiConnectionState;
 
-    static unsigned char WiFiStatusCharacter;
+    //static unsigned char WiFiStatusCharacter;
     static unsigned char LastWiFiCharacter;
-    static unsigned char LastWiFiStatusCharacter;
+    //static unsigned char LastWiFiStatusCharacter;
     static unsigned char FinalWiFiCharacter;
 
     static int WiFiStatusIterations;

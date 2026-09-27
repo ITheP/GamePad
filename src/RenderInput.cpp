@@ -70,7 +70,7 @@ void RenderInput_Icon(Input *input)
 
     // Only draw if required - otherwise we might just be blanking previous icon
     if (input->FalseIcon != 0)
-      RREIcon.drawChar(input->XPos, input->YPos, input->FalseIcon);
+      RREIcons.drawChar(input->XPos, input->YPos, input->FalseIcon);
   }
   else
   {
@@ -80,7 +80,7 @@ void RenderInput_Icon(Input *input)
 
     // Only draw if required - otherwise we might just be blanking previous icon
     if (input->TrueIcon != NONE)
-      RREIcon.drawChar(input->XPos, input->YPos, input->TrueIcon);
+      RREIcons.drawChar(input->XPos, input->YPos, input->TrueIcon);
   }
 }
 
@@ -103,8 +103,8 @@ void RenderInput_DoubleIcon(Input *input)
 
     if (input->FalseIcon != NONE)
     {
-      RREIcon.drawChar(input->XPos, input->YPos, input->FalseIcon);
-      RREIcon.drawChar(input->XPos + 16, input->YPos, input->FalseIcon + 1);
+      RREIcons.drawChar(input->XPos, input->YPos, input->FalseIcon);
+      RREIcons.drawChar(input->XPos + 16, input->YPos, input->FalseIcon + 1);
     }
   }
   else
@@ -114,9 +114,9 @@ void RenderInput_DoubleIcon(Input *input)
 #endif
 
     if (input->TrueIcon != NONE)
-      RREIcon.drawChar(input->XPos, input->YPos, input->TrueIcon);
+      RREIcons.drawChar(input->XPos, input->YPos, input->TrueIcon);
 
-    RREIcon.drawChar(input->XPos + 16, input->YPos, input->TrueIcon + 1);
+    RREIcons.drawChar(input->XPos + 16, input->YPos, input->TrueIcon + 1);
   }
 }
 
@@ -185,5 +185,5 @@ void RenderInput_Hat(HatInput *hatInput)
   Display.fillRect(xPos, yPos, width, height, C_BLACK);
 
   // Value should be 0 for neutral position (nothing selected). Other icons are just + the value as an offset
-  RREIcon.drawChar(xPos, yPos, (hatInput->StartIcon + hatInput->ValueState.Value));
+  RREIcons.drawChar(xPos, yPos, (hatInput->StartIcon + hatInput->ValueState.Value));
 }

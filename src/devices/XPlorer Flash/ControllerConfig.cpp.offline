@@ -457,5 +457,5 @@ void Custom_RenderHatStrumState(HatInput *hatInput) {
     else
       c = Icon_Guitar2_CenterOff;
 
-    RREIcon.drawChar(26, 25, c);
+    RREIcons.drawChar(26, 25, c);
 }

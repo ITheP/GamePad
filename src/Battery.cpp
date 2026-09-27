@@ -136,10 +136,10 @@ void Battery::CalculateState()
     max = CHARGING_MAX;
     max_v = CHARGING_MAX_V;
 
-    if ((Raw_Battery >= BATTERY_CHECK) && (Raw_Power < POWER_MAX))
-      newState = PowerState::USB_Battery_Charging;
-    else if ((Raw_Battery >= CHARGING_FULL) && (Raw_Power > POWER_PRESENT))
+    if ((Raw_Battery >= CHARGING_FULL) && (Raw_Power > POWER_PRESENT))
       newState = PowerState::USB_Battery_Full;
+    else if ((Raw_Battery >= BATTERY_CHECK) && (Raw_Power < POWER_MAX))
+      newState = PowerState::USB_Battery_Charging;
     else if ((Raw_Battery < BATTERY_CHECK) && (Raw_Power == POWER_MAX))
       newState = PowerState::USB;
     else
@@ -303,116 +303,6 @@ void Battery::PrintToSerial()
       (float)POWER_Percentage_Empty);
 }
 
-// void Battery::CalculateState()
-// {
-//   // We have had multiple readings, so average them out and update current battery level
-//   if (BatteryLevelReadingsCount == 0)
-//   {
-//     // This may get called between a previous reading and next one
-//     // We like having a few averaged readings rather than just doing 1 here and returning that
-//     // so we put up with it and simply return last reading
-//     // return CurrentBatteryPercentage;
-//     return;
-//   }
-
-//   RawPinReading = CumulativeBatterySensorReadings / BatteryLevelReadingsCount;
-//   // We will clamp this reading lower down to effectively ignore any readings that are too high or too low, so we can easily have a 0% -> 100% reading without going outside this range in the UI
-//   // We don't care for ultimate accuracy - in device we are generally mapping to a small range of pixels in the UI, or a single decimal point accuracy for voltage
-//   CumulativeBatterySensorReadings = 0; // Ready for next round of readings
-//   BatteryLevelReadingsCount = 0;       // Set up to start readings again
-
-// // Calculating battery state can be a bit messy. Some of it is a bit of guess work and estimates, can depend on
-// // device, individual battery, charging circuit, tolerances, which way the wind is blowing, device load, etc.
-// // Voltage estimates have proved to be inaccurate in theory vs measured.
-// // This version is based on a pin that measures battery level, and also connected power supply, so we can
-// // estimate if we are charging or not, if we are powered by cable or by battery.
-// // Note that having a power cable connected/charging alters the readings on the battery pin!
-// // So we use the following...
-// // - Ignoring documented conversion ratios for pin readings -> voltage conversions, we based our pin readings on physical multimeter readings
-// // - Actual power readings of plugged in power supply aren't really important - just if it plugged in or not
-// // - Voltage range on battery pin is different for battery only or plugged in at same time, so we use 2 voltage ranges to measure 0% -> 100% battery left
-// // - As battery becomes full it becomes hard to distinguish between power only (no battery) and power + battery charging
-
-//   // We need to know the state of the power pin to know which range to use for the battery pin measurements,
-//   // as the battery pin is affected by the power pin (charging or not charging)
-//   RawPowerSensorReading = analogRead(POWER_MONITOR_PIN);
-
-//   // Power present skews the reading (puts extra voltage on the battery pin when charging, or false voltage on battery pin if no battery)
-//   // so we artificially reduce the reading to estimate what actual battery is
-//   // Experiments showed around 34% more voltage than actual battery voltage when charging, and around 90% of actual battery voltage when no battery connected (but powered by USB)
-//   // We compensate by knocking off ~ 0.14 volts from the reading
-//   // All other estimates, ranges etc. should then work based on this adjusted `pretend` battery value
-//   if (RawPowerSensorReading > PWR_PRESENT_THRESHOLD)
-//   {
-//     RawPinReading -= ((float)(BATTERY_MAX - BATTERY_MIN) * 0.34); // Reduce reading by 34% of the range to estimate actual battery voltage);
-//   }
-
-//   RawBatteryVoltage = fmap(RawPinReading, BATTERY_MIN, BATTERY_MAX, BATTERY_MINV, BATTERY_MAXV);
-
-//   // ALTERNATIVE
-//   // Drain battery till things JUST fail
-//   // Measure manually battery charge at that point - that's our base line we dont want to go under (rather than just 3.3 being the bottom)
-//   // Set that as battery minimum
-//   // Charge battery till won't charge any more
-//   // Measure manually battery charge at that point - thats our top line we don't want to go over (rather than just 3.7 being the top)
-//   // FIND A BASE LINE READING (multimeter included) FOR LOWEST NON CRASHING BATTERY READING
-
-//   ClampedBatterySensorReading = RawPinReading;
-//   // Manual clamp for easy wrapping of serial information
-
-//   if (ClampedBatterySensorReading > BATTERY_MAX)
-//   {
-// #if defined(EXTRA_SERIAL_DEBUG)
-//     Serial.printf("🔋 ⚠️ Battery sensor reading was above the max value! Max: %d, Reading: %d\n", BAT_MAX, ClampedBatterySensorReading);
-// #endif
-//     ClampedBatterySensorReading = BATTERY_MAX;
-//   }
-//   else if (ClampedBatterySensorReading < BATTERY_MIN)
-//   {
-// #if defined(EXTRA_SERIAL_DEBUG)
-//     Serial.printf("🔋 ⚠️ Battery sensor reading was below the min! Min: %d, Reading: %d\n", BAT_MIN, ClampedBatterySensorReading);
-// #endif
-//     ClampedBatterySensorReading = BATTERY_MIN;
-//   }
-
-//   ClampedBatteryPercentage = fmap(ClampedBatterySensorReading, BATTERY_MIN, BATTERY_MAX, 0.0, 100.0);
-//   ClampedVoltage = fmap(ClampedBatterySensorReading, BATTERY_MIN, BATTERY_MAX, BATTERY_MINV, BATTERY_MAXV);
-
-//   // Work out if we are powered by battery, usb, or charging the battery
-//   // Note there is no `charging` state we can actually query, so we estimate based on
-//   // battery level and if we are powered by USB or not.
-//   // Assumption is
-//   // ...100% battery + USB power = usb powered
-//   // ...other battery + USB power = charging
-//   // ...else battery powered
-
-//   // float powerVoltage = (PowerSensorReading / ADC_RESOLUTION) * ADC_REF; // * PWR_DIVIDER_RATIO;
-
-//   if (RawPowerSensorReading > PWR_PRESENT_THRESHOLD)
-//   {
-//     if (ClampedBatteryPercentage == 100)
-//       State = POWER_USB; // Powered by USB, but battery is full, so not charging
-//     else
-//       State = POWER_Charging; // Powered by USB and battery is not full, so we are charging
-//   }
-//   else
-//     State = POWER_Battery; // Not powered by USB, so we are on battery
-
-//   Serial.printf("🔋RawPinReading: %.2f, PowerSensorReading: %d, RawVoltage: %f, Battery Reading: %d, Battery %: %d, Approx Battery Voltage: %.2f, State: %s\n",
-//                 RawPinReading,
-//                 RawPowerSensorReading,
-//                 RawBatteryVoltage,
-//                 ClampedBatterySensorReading,
-//                 ClampedBatteryPercentage,
-//                 ClampedVoltage,
-//                 (State == POWER_Battery) ? "Battery" : (State == POWER_USB) ? "USB"
-//                                                                             : "Charging");
-
-// #ifdef EXTRA_SERIAL_DEBUG_PLUS
-//   Serial.println("Battery Sensor Limited: " + String(CurrentBatterySensorReading) + ", Battery %: " + String(CurrentBatteryPercentage) + ", Approx Battery Voltage: " + String(Voltage));
-// #endif
-// }
-
 #define BatteryGfxXPos ((SCREEN_WIDTH - 48) >> 1)
 #define BatteryCableGfxYPos (((SCREEN_HEIGHT - 16) >> 1) - 3 - FONT_SMALL_HEIGHT)
 #define BatteryGfxYPos (BatteryCableGfxYPos + 8 + 4)
@@ -442,10 +332,10 @@ static char Gfx_USBWithCable[] = {Icon_Wire_Horizontal, Icon_Menu_USB, 0};
 void Battery::DrawCenteredIcon(int yPos, char c)
 {
 
-  int w = RREIcon.charWidth(c);
+  int w = RREIcons.charWidth(c);
   static int centerX = (SCREEN_WIDTH - w) / 2;
 
-  RREIcon.drawChar(centerX, yPos, c);
+  RREIcons.drawChar(centerX, yPos, c);
 }
 
 // Pass the exitInput here so we can display a label
@@ -528,9 +418,9 @@ void Battery::ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bo
 
   // Draw text...
   if (canContinue)
-    snprintf(buffer, sizeof(buffer), "Hold %s", DIGITALINPUT_BATTERY_CONTINUE_LABEL);
+    snprintf(buffer, sizeof(buffer), "Press %s", DIGITALINPUT_BATTERY_CONTINUE_LABEL);
   else
-    snprintf(buffer, sizeof(buffer), "Charge to %d%%", POWER_Percentage_Empty);
+    snprintf(buffer, sizeof(buffer), "Charge to %d%%+", POWER_Percentage_Low);
 
   RRESmall.printStr(ALIGN_CENTER, SCREEN_HEIGHT - (FONT_SMALL_HEIGHT * 2), buffer);
   RRESmall.printStr(ALIGN_CENTER, SCREEN_HEIGHT - FONT_SMALL_HEIGHT, "to continue");
@@ -583,21 +473,21 @@ void Battery::ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bo
       snprintf(buffer, sizeof(buffer),
                "Charging... %d%%", ClampedPercentage);
 
-      RREIcon.printStr(ALIGN_CENTER, BatteryCableGfxYPos, Gfx_USBWithCable);
+      RREIcons.printStr(ALIGN_CENTER, BatteryCableGfxYPos, Gfx_USBWithCable);
       break;
 
     case PowerState::USB_Battery_Full:
       snprintf(buffer, sizeof(buffer),
                "USB + Full Battery");
 
-      RREIcon.printStr(ALIGN_CENTER, BatteryCableGfxYPos, Gfx_USBWithCable);
+      RREIcons.printStr(ALIGN_CENTER, BatteryCableGfxYPos, Gfx_USBWithCable);
       break;
 
     case PowerState::USB:
       snprintf(buffer, sizeof(buffer),
                "USB");
 
-      RREIcon.printStr(ALIGN_CENTER, BatteryCableGfxYPos, Gfx_USBWithCable);
+      RREIcons.printStr(ALIGN_CENTER, BatteryCableGfxYPos, Gfx_USBWithCable);
       break;
 
     default: // PowerState::Unknown
@@ -619,7 +509,7 @@ void Battery::ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bo
       {
         // Draw percentage full battery bar, with a moving fill to indicate charging
         Display.fillRect(BatteryGfxXPos, BatteryGfxYPos, 48, 12 + 4, C_BLACK);
-        RenderIconRuns(BatteryChargingGfx, BatteryGfx_RunCount);
+        RenderIconRuns(BatteryChargingGfx, BatteryGfx_RunCount, RREBatteryIcons);
         //      Display.fillRect(BatteryEmptyXPos + 2, BatteryEmptyYPos + 2, (int)((40.0 * f * ClampedPercentage) / 100.0), 12, C_WHITE);
 
         DitheredFillRandom(
@@ -641,13 +531,13 @@ void Battery::ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bo
         if (flipFlop)
         {
           if (Percentage > 100)
-            RenderIconRuns(BatteryFullPlusGfx, BatteryGfx_RunCount);
+            RenderIconRuns(BatteryFullPlusGfx, BatteryGfx_RunCount, RREBatteryIcons);
           else
-            RenderIconRuns(BatteryFullGfx, BatteryGfx_RunCount);
+            RenderIconRuns(BatteryFullGfx, BatteryGfx_RunCount, RREBatteryIcons);
         }
         else
         {
-          RenderIconRuns(BatteryBlankGfx, BatteryGfx_RunCount);
+          RenderIconRuns(BatteryBlankGfx, BatteryGfx_RunCount, RREBatteryIcons);
           DitheredFillRandom(
               BatteryGfxXPos + 2,
               BatteryGfxYPos + 2,
@@ -672,7 +562,7 @@ void Battery::ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bo
       {
         // Draw percentage full battery bar
         Display.fillRect(BatteryGfxXPos, BatteryGfxYPos, 48, 12 + 4, C_BLACK);
-        RenderIconRuns(BatteryBlankGfx, BatteryGfx_RunCount);
+        RenderIconRuns(BatteryBlankGfx, BatteryGfx_RunCount, RREBatteryIcons);
 
         DitheredFillRandom(
             BatteryGfxXPos + 2,
@@ -690,11 +580,11 @@ void Battery::ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bo
 
         if (flipFlop)
         {
-          RenderIconRuns(BatteryEmptyGfx, BatteryGfx_RunCount);
+          RenderIconRuns(BatteryEmptyGfx, BatteryGfx_RunCount, RREBatteryIcons);
         }
         else
         {
-          RenderIconRuns(BatteryBlankGfx, BatteryGfx_RunCount);
+          RenderIconRuns(BatteryBlankGfx, BatteryGfx_RunCount, RREBatteryIcons);
         }
       }
       else if (PowerState::USB == State)
@@ -703,11 +593,11 @@ void Battery::ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bo
 
         if (flipFlop)
         {
-          RenderIconRuns(BatteryOffGfx, BatteryGfx_RunCount);
+          RenderIconRuns(BatteryOffGfx, BatteryGfx_RunCount, RREBatteryIcons);
         }
         else
         {
-          RenderIconRuns(BatteryBlankGfx, BatteryGfx_RunCount);
+          RenderIconRuns(BatteryBlankGfx, BatteryGfx_RunCount, RREBatteryIcons);
         }
       }
       else if (PowerState::Battery_Full == State)
@@ -718,13 +608,13 @@ void Battery::ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bo
         if (flipFlop)
         {
           if (Percentage > 100)
-            RenderIconRuns(BatteryFullPlusGfx, BatteryGfx_RunCount);
+            RenderIconRuns(BatteryFullPlusGfx, BatteryGfx_RunCount, RREBatteryIcons);
           else
-            RenderIconRuns(BatteryFullGfx, BatteryGfx_RunCount);
+            RenderIconRuns(BatteryFullGfx, BatteryGfx_RunCount, RREBatteryIcons);
         }
         else
         {
-          RenderIconRuns(BatteryBlankGfx, BatteryGfx_RunCount);
+          RenderIconRuns(BatteryBlankGfx, BatteryGfx_RunCount, RREBatteryIcons);
 
           DitheredFillRandom(
               BatteryGfxXPos + 2,

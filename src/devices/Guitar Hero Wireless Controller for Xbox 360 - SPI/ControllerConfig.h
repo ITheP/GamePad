@@ -220,6 +220,7 @@ extern IconRun ControllerGfx[];
 // so theoretically when plugging in and out a USB cable, code changes range it calculates the % battery charge as an equivalent to as if it was just the battery
 #define CHARGING_MIN 1598
 #define CHARGING_MIN_V 3.37
+// Measuring 2280 @ 4.053v
 #define CHARGING_FULL 2250 // measuring 4.045v // 1977
 #define CHARGING_FULL_V 4.0
 #define CHARGING_MAX 2500 // MADE UP 2097

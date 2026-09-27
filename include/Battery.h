@@ -22,7 +22,7 @@ enum class PowerState : uint8_t
 // Array to map PowerState enum values to their string representation
 const char* const PowerStateNames[] = {
     "Battery",                  // PowerState::Battery (0)
-    "Battery Empty"             // PowerState::Battery_Empty (1)
+    "Battery Empty",             // PowerState::Battery_Empty (1)
     "Battery Full",             // PowerState::Battery_Full (2)
     "USB + Battery Charging",   // PowerState::USB_Battery_Charging (3)
     "USB + Battery Full",       // PowerState::USB_Battery_Full (4)

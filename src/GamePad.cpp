@@ -150,7 +150,7 @@ int SubSecond = 0;
 int SubSecondRollover = false; // SubSecond flag for things like statistics sampling
 // int SubSecondFlipFlop = false;
 
-char LastBatteryIcon = 0;
+char LastBatteryIcon = -1;
 int LastSerialState = -1;
 
 float FractionalSeconds = 0;
@@ -278,7 +278,16 @@ constexpr int LOGO_HEIGHT = 64;
 //   }
 // }
 
-void setupRenderLogo()
+
+void RenderStartupLogo()
+{
+  Display.clearDisplay();
+  RenderIconRuns(Logo, Logo_RunCount, RRELogos);
+  Display.display();
+}
+
+
+void RenderGlintingStartupLogo()
 {
 #ifdef DEBUG_MARKS
   Debug::Mark(1, __LINE__, __FILE__, __func__);
@@ -287,20 +296,21 @@ void setupRenderLogo()
   Serial_INFO;
   Serial.println("🎨 Rendering logo...");
 
-  Display.clearDisplay();
-  RenderLogoRuns(Logo, Logo_RunCount);
-  Display.display();
+  RenderStartupLogo();
 
   // Fancy arse gleam/glint effect on start up - just to look cool
   for (int frame = 0; frame < LOGO_WIDTH + LOGO_HEIGHT + 3; frame += 3)
   {
     // Reset logo from any previous frame
     Display.clearDisplay();
-    RenderLogoRuns(Logo, Logo_RunCount);
+    RenderIconRuns(Logo, Logo_RunCount, RRELogos);
 
     DisplayEffects::RenderGlint(frame, LOGO_HEIGHT, LOGO_WIDTH);
 
     Display.display();
+
+    delay(20);
+    //Battery::TakeReading();
   }
 }
 
@@ -323,6 +333,8 @@ void setupBattery()
 
   // Make sure we have atleast one battery reading completed
   Battery::TakeReading();
+  // Copy this into Raw_Battery so exponential smoothing isn't starting from 0
+  Battery::Raw_Battery = Battery::Raw_CumulativeReadings;
 }
 
 #ifdef LIVE_BATTERY
@@ -335,7 +347,7 @@ void enforceBatteryChargeState()
   // It's too critical and the device will fail to operate soon! Spend that time warning people.
   // A test board might have no battery connected to produce a measurable voltage, meaning a permanent 0 battery level
   // In this case undefine LIVE_BATTERY to skip power checks and lots of battery stuff
-  
+
   Battery::TakeReading();
   Battery::CalculateState();
   // int currentBatteryLevel = Battery::ClampedPercentage;
@@ -350,7 +362,6 @@ void enforceBatteryChargeState()
 
   // bool isCharging = Battery::IsCharging;
   // Serial.printf("EnforceBatteryChargeState: Battery level %d%%, Empty%% %d%%, isCharging=%d\n", Battery::ClampedPercentage, POWER_Percentage_Empty, Battery::IsCharging);
-
 
   Serial.println(Battery::StateDescription());
   if (POWER_Percentage_Low > Battery::ClampedPercentage)
@@ -390,7 +401,7 @@ void enforceBatteryChargeState()
         if (Battery::ContinueIsPressed)
           Serial.println("Continue is pressed");
 
-        // break;
+        break;
       }
 
       Battery::ProcessFullDisplayState(true, flipFlop, canContinue, false);
@@ -421,8 +432,8 @@ void setupUSB()
   // Animate USB socket coming into screen from off left - just to look cool
   for (int i = -32; i <= 0; i++)
   {
-    RenderIcon(Icon_Wire_Horizontal, i, uiUSB_yPos, 16, 9);
-    RenderIcon(Icon_USB_Unknown, i + 16, uiUSB_yPos, 16, 9);
+    RenderIcon(Icon_Wire_Horizontal, i, uiUSB_yPos, 16, 10);
+    RenderIcon(Icon_USB_Unknown, i + 16, uiUSB_yPos, 16, 10);
     Display.display();
     delay(10);
   }
@@ -802,7 +813,7 @@ void setupLEDs()
 
   // Flash a little LED icon up to show we are playing with LED's
 #if defined(USE_ONBOARD_LED) || defined(USE_EXTERNAL_LED)
-  RREIcon.drawChar(112, 49, (unsigned char)Icon_LEDOn);
+  RREIcons.drawChar(112, 49, (unsigned char)Icon_LEDOn);
   Display.display();
 
   FastLED.setBrightness(LED_BRIGHTNESS);
@@ -887,7 +898,7 @@ void setupLEDs()
 
 #endif // USE_EXTERNAL_LED
   // Final confirmation that either onboard and/or external LED's being used
-  RREIcon.drawChar(112, 49, (unsigned char)Icon_LEDOn);
+  RREIcons.drawChar(112, 49, (unsigned char)Icon_LEDOn);
   Display.display();
 
   delay(SETUP_DELAY);
@@ -1039,7 +1050,7 @@ void setupBluetooth()
   Serial.println("🔗 Setting up Bluetooth...");
 
   // Bluetooth and other general config
-  RREIcon.drawChar(uiBT_xPos, uiBT_yPos, (unsigned char)Icon_BTLogo);
+  RREIcons.drawChar(uiBT_xPos, uiBT_yPos, (unsigned char)Icon_BTLogo);
   Display.display();
 
   if (ESPChipIdOffset > 0)
@@ -1430,6 +1441,9 @@ void setup()
   setupRRE();
 
   setupBattery();
+
+  RenderGlintingStartupLogo();
+
 #ifdef LIVE_BATTERY
   // Main set up of inputs hasn't happened yet, so we make sure
   // inputs used for battery handling are in place
@@ -1437,8 +1451,8 @@ void setup()
   setupAnalogInputs(AnalogInputs_Battery, AnalogInputs_Battery_Count);
   enforceBatteryChargeState();
 #endif
-
-  setupRenderLogo();
+  
+  RenderStartupLogo();
   setupUSB();
 
   Serial_INFO;
@@ -1489,10 +1503,10 @@ void setup()
   Serial.println("PSRam: " + String(ESP.getPsramSize()) + " (" + String(ESP.getFreePsram()) + " free)");
 
   // Control's being set up icon
-  RREIcon.drawChar(56, 50, (unsigned char)Icon_EmptyCircle_12);
+  RREIcons.drawChar(56, 50, (unsigned char)Icon_EmptyCircle_12);
   Display.display();
   delay(SETUP_DELAY / 2);
-  RREIcon.drawChar(58, 52, (unsigned char)Icon_FilledCircle_8);
+  RREIcons.drawChar(58, 52, (unsigned char)Icon_FilledCircle_8);
   Display.display();
 
   setupDigitalInputs(DigitalInputs, DigitalInputs_Count);
@@ -1637,7 +1651,7 @@ void DrawMainScreen()
 
   // Nain controller GFX (e.g. Guitar body on Guitar controller)
   if (ControllerGfx_RunCount > 0)
-    RenderIconRuns(ControllerGfx, ControllerGfx_RunCount);
+    RenderIconRuns(ControllerGfx, ControllerGfx_RunCount, RREControllerIcons);
 
   // Whammy bar outline
   Display.drawRect(uiWhammyX, uiWhammyY, uiWhammyW, uiWhammyH, C_WHITE);
@@ -1647,7 +1661,7 @@ void DrawMainScreen()
   RenderIcon(Icon_EyesLeft, uiBTStatus_xPos, uiBTStatus_yPos, 0, 0);
 
   // Battery initial state
-  RenderIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 0, 0);
+  RenderBatteryIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 0, 0);
 
   Display.display();
 
@@ -1784,8 +1798,7 @@ void MainLoop()
     // return; // Sorry - no more processing! Make em go and charge things up
 
     // Blocks continuation until battery suitably charged
-    // TODO: Blank all LED's
-    // TODO: Maybe LED's off if battery < certain level?
+    // TODO: save and restore display state before continuing
     enforceBatteryChargeState();
   }
 #endif
@@ -1803,56 +1816,146 @@ void MainLoop()
 
     // Battery stuff
     Battery::CalculateState();
-    int currentBatteryLevel = Battery::ClampedPercentage;
+    int currentBatteryPercentage = Battery::ClampedPercentage;
+    PowerState batteryState = Battery::State;
+    bool drawPowerBar = false;
+    char batteryIcon;
 
-    // TODO: NOTE current h/w, charging is separate to powering device so can't happen at the same time. However in the future.... :)
-    bool charging = false;
-
-    // Serial.println("Battery level: " + String(currentBatteryLevel));
-
+    // Handling of 0 battery charge is handled later on
+// Serial.println(Battery::StateDescription());
+// Serial.println(Battery::Percentage);
+// Serial.println(Battery::IsCharging);
+// Serial.println((int)Battery::State);
+    // Show the following
+    // is charging
     if (Battery::IsCharging)
     {
-      if (SecondFlipFlop)
-        LastBatteryIcon = Icon_Battery;
-      else
-        LastBatteryIcon = Icon_BatteryCharging;
-
-      RenderIcon(LastBatteryIcon, uiBattery_xPos, uiBattery_yPos, 14, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
-    }
-    else if (currentBatteryLevel == 0)
-    {
-      // Handling of no battery, if not using full screen handling above
-      if (SecondFlipFlop)
-        LastBatteryIcon = Icon_Battery;
-      else
-        LastBatteryIcon = Icon_BatteryEmpty;
-
-      RenderIcon(LastBatteryIcon, uiBattery_xPos, uiBattery_yPos, 14, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
-
-      // ...however next line will trigger full screen low battery handling
-      Battery::PreviousPercentage = currentBatteryLevel;
-    }
-    else if (Battery::PreviousPercentage != currentBatteryLevel)
-    {
-      Battery::PreviousPercentage = currentBatteryLevel;
-      bleGamepad->setBatteryLevel(currentBatteryLevel);
-      // compositeHID->setBatteryLevel(currentBatteryLevel);
-      sendReport = true;
-
-      // Redraw standard battery icon if required
-      if (LastBatteryIcon != Icon_Battery)
+      if (PowerState::USB_Battery_Charging == batteryState)
       {
-        LastBatteryIcon = Icon_Battery;
-        RenderIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 14, 11);
+        if (SecondFlipFlop)
+        {
+          batteryIcon = Icon_BatteryCharging;
+        }
+        else
+        {
+          batteryIcon = Icon_Battery;
+          drawPowerBar = true;
+        }
       }
+      else if (PowerState::USB_Battery_Full == batteryState)
+      {
+        if (SecondFlipFlop)
+        {
+          batteryIcon = Icon_USBPower_Disconnect;
+        }
+        else
+        {
+          if (Battery::Percentage > 100)
+            batteryIcon = Icon_BatteryOverFull;
+          else
+            batteryIcon = Icon_BatteryFull;
+        }
+      }
+    }
+    else
+    {
+      if (PowerState::Battery == batteryState)
+      {
+        if (SecondFlipFlop && Battery::Percentage < POWER_Percentage_Low)
+          batteryIcon = Icon_BatteryNearlyEmpty;
+        else
+          batteryIcon = Icon_Battery;
 
+        drawPowerBar = true;
+      }
+      else if (PowerState::Battery_Empty == batteryState)
+      {
+        if (SecondFlipFlop)
+          batteryIcon = Icon_Battery;
+        else
+          batteryIcon = Icon_BatteryEmpty;
+      }
+      else if (PowerState::USB == batteryState)
+      {
+        batteryIcon = Icon_USBPower;
+      }
+      else if (PowerState::Battery_Full == batteryState)
+      {
+        if (SecondFlipFlop)
+        {
+          if (Battery::Percentage > 100)
+            batteryIcon = Icon_BatteryOvercharged;
+          else
+          {
+            batteryIcon = Icon_Battery;
+            drawPowerBar = true;
+          }
+        }
+        else
+        {
+          batteryIcon = Icon_Battery;
+          drawPowerBar = true;
+        }
+      }
+      else
+      {
+        // batteryState == PowerState::Unknown
+         batteryIcon = Icon_PowerStateUnknown;
+      }
+    }
+
+    if (batteryIcon != LastBatteryIcon) {
+      RenderBatteryIcon(batteryIcon, uiBattery_xPos, uiBattery_yPos, 16, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
+      LastBatteryIcon = batteryIcon;
+    }
+
+      if (drawPowerBar) {
       // Battery level scale to 0->10 pixels
-      int width = ((currentBatteryLevel / 100.0) * 10.0);
+      int width = ((currentBatteryPercentage / 100.0) * 10.0);
       // Render width as 0->10 pixel wide rectangle inside icon
       Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, 10, 5, C_BLACK);
 
       Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, width, 5, C_WHITE);
     }
+
+    // if (Battery::IsCharging)
+    // {
+    //   if (SecondFlipFlop)
+    //     LastBatteryIcon = Icon_Battery;
+    //   else
+    //     LastBatteryIcon = Icon_BatteryCharging;
+
+    //   RenderBatteryIcon(LastBatteryIcon, uiBattery_xPos, uiBattery_yPos, 14, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
+    // }
+    // else if (currentBatteryPercentage == 0)
+    // {
+    //   // Handling of no battery, if not using full screen handling above
+    //   if (SecondFlipFlop)
+    //     LastBatteryIcon = Icon_Battery;
+    //   else
+    //     LastBatteryIcon = Icon_BatteryEmpty;
+
+    //   RenderBatteryIcon(LastBatteryIcon, uiBattery_xPos, uiBattery_yPos, 14, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
+
+    //   // ...however next line will trigger full screen low battery handling
+    //   Battery::PreviousPercentage = currentBatteryPercentage;
+    // }
+    //else if (Battery::PreviousPercentage != currentBatteryPercentage)
+    if (Battery::PreviousPercentage != currentBatteryPercentage)
+    {
+      Battery::PreviousPercentage = currentBatteryPercentage;
+      bleGamepad->setBatteryLevel(currentBatteryPercentage);
+      // compositeHID->setBatteryLevel(currentBatteryLevel);
+      sendReport = true;
+    }
+      // // Redraw standard battery icon if required
+      // if (LastBatteryIcon != Icon_Battery)
+      // {
+      //   LastBatteryIcon = Icon_Battery;
+      //   RenderBatteryIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 14, 11);
+      // }
+
+
 
     UpdateSecondStats(Second);
 

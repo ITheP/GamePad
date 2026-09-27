@@ -4,6 +4,8 @@
 // #include <rre_7x12.h>
 #include <rre_fixed_8x16.h>
 #include "CustomIcons.16x16.h"
+#include "CustomBatteryIcons.16x16.h"
+#include "CustomControllerIcons.16x16.h"
 #include "CustomLogos.16x16.h"
 #include <IconMappings.h>
 #include <Debug.h>
@@ -11,8 +13,10 @@
 RREFont RRE;
 RREFont RREDefault;
 RREFont RRESmall;
-RREFont RREIcon;
-RREFont RRELogo;
+RREFont RREIcons;
+RREFont RREBatteryIcons;
+RREFont RREControllerIcons;
+RREFont RRELogos;
 
 int TextXPos = 0;
 int TextYPos = 0;
@@ -37,15 +41,25 @@ void setupRRE()
   RREDefault.setScale(1);
   RREDefault.setFont(&rre_fixed_8x16);
 
-  RREIcon.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
-  RREIcon.setCR(0);
-  RREIcon.setScale(1);
-  RREIcon.setFont(&rre_CustomIcons16);
+  RREIcons.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
+  RREIcons.setCR(0);
+  RREIcons.setScale(1);
+  RREIcons.setFont(&rre_CustomIcons16);
 
-  RRELogo.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
-  RRELogo.setCR(0);
-  RRELogo.setScale(1);
-  RRELogo.setFont(&rre_CustomLogos16);
+  RREBatteryIcons.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
+  RREBatteryIcons.setCR(0);
+  RREBatteryIcons.setScale(1);
+  RREBatteryIcons.setFont(&rre_CustomBatteryIcons16);
+
+  RREControllerIcons.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
+  RREControllerIcons.setCR(0);
+  RREControllerIcons.setScale(1);
+  RREControllerIcons.setFont(&rre_CustomControllerIcons16);
+
+  RRELogos.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
+  RRELogos.setCR(0);
+  RRELogos.setScale(1);
+  RRELogos.setFont(&rre_CustomLogos16);
 
   RRESmall.init(RRERect, SCREEN_WIDTH, SCREEN_HEIGHT);
   RRESmall.setCR(0);
@@ -89,7 +103,7 @@ void PrintDisplayLine(const TextLine *line)
     if (icon != 0)
     {
       // Icons are drawn and width calculated
-      RREIcon.drawChar(0, TextYPos - 1, icon);
+      RREIcons.drawChar(0, TextYPos - 1, icon);
       if (textPos == 0)
         textPos += 16;
     }
@@ -124,14 +138,14 @@ void PrintDisplayLine(const TextLine *line)
       if (icon != Icon_IGNORE)
       {
         char c = (icon == 0 ? Icon_FilledCircle_2 : icon);
-        RREIcon.drawChar(textPos + 4, TextYPos + 3, c);
+        RREIcons.drawChar(textPos + 4, TextYPos + 3, c);
       }
       textPos += 14;
     }
     else if (icon != 0)
     {
       // Icons are drawn and width calculated
-      RREIcon.drawChar(0, TextYPos - 1, icon);
+      RREIcons.drawChar(0, TextYPos - 1, icon);
       if (textPos == 0)
         textPos += 14;
     }
