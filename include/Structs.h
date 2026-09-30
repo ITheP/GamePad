@@ -4,15 +4,19 @@
 #include <vector>
 #include "Config.h"
 #include "Defines.h"
-// #include <BleGamepad.h>
-#include <BleCompositeHID.h>
-#include <GamepadDevice.h>
+#include <BleGamepad.h>
+// #include <BleCompositeHID.h>
+// #include <GamepadDevice.h>
 #include <FastLED.h>
 #include "LED.h"
 #include "stats.h"
+#include <hal/rmt_types.h>
+#include <driver/mcpwm.h>
 
-using GamepadFunctionPointer = void (GamepadDevice::*)(uint8_t);
-using GamepadFunctionPointerInt = void (GamepadDevice::*)(int16_t);
+typedef void (BleGamepad::*BleGamepadFunctionPointer)(uint8_t);
+typedef void (BleGamepad::*BleGamepadFunctionPointerInt)(int16_t);
+// using GamepadFunctionPointer = void (GamepadDevice::*)(uint8_t);
+// using GamepadFunctionPointerInt = void (GamepadDevice::*)(int16_t);
 
 typedef struct IntPair
 {
@@ -70,24 +74,22 @@ typedef struct PulseInput
 
   const char *Label;
 
+  int MCPWMIndex;
+
   volatile uint32_t LastTimestamp;
-  //volatile uint32_t Frequency;
+  volatile State ValueState;
   volatile uint32_t DutyCycle;
 
-  volatile uint32_t RiseTime;
-  volatile uint32_t LastFallTime;
-  volatile uint32_t HighPulseUs;
-  volatile uint32_t TotalPeriodUs;
-  volatile int Count;
-  volatile bool FreshData;
-
-  // volatile bool Ignored;
-  State ValueState;
-
-  // ESP-IDF hardware RMT monitoring
-  //rmt_channel_handle_t rx_channel;
-  //rmt_symbol_word_t raw_symbols[64];
+  float CumulativeDutyCycle;
+  uint32_t CumulativeCount;
 } PulseInput;
+
+typedef struct PulseInputConfig
+{
+  PulseInput *PulseInputSource;
+  uint32_t LowerBound;
+  uint32_t UpperBound;
+} PulseInputConfig;
 
 // General input (Digital and Analog - e.g. buttons)
 typedef struct Input
@@ -98,16 +100,16 @@ typedef struct Input
   //                                               // 0–2.2V signal, use ADC_6db
   //                                               // 0–3.3V signal, use ADC_11db
   // Currently only works with AnalogTriggeredInputs
-  std::vector<Input *> VirtualPinInputs;        // Rather than getting state from reading a pin, gets it from another input
-                                                // Means we can e.g. have 1 input acting as a button and also triggering an analog separate input
-  std::vector<PulseInput *> VirtualPulseInputs; // Pulse inputs - equivalent of above
+  std::vector<Input *> VirtualPinInputs;            // Rather than getting state from reading a pin, gets it from another input
+                                                    // Means we can e.g. have 1 input acting as a button and also triggering an analog separate input
+  std::vector<PulseInputConfig> VirtualPulseInputs; // Pulse inputs - equivalent of above
   VirtualPinModes VirtualPinMode;
 
   const char *Label;
   int BluetoothInput;
   int16_t DefaultValue;
   int16_t DefaultAnalogValue;
-
+  int16_t AverageOverAnalogCount;
   int16_t MinAnalogValue;             // Min value for analog input
   int16_t MaxAnalogValue;             // Max value for analog input
                                       // e.g. any variable resistor used in physical might not range from theoretical min->max values,
@@ -123,12 +125,12 @@ typedef struct Input
   // VirtualAnalogCopyTypes VirtualAnalogCopyType; // How to copy over values into virtual values
   // int16_t VirtualAnalogValue;                   // For any other controls using this Input as a VirtualPin, value is set here. Input may manipulate this value as it see's fit
 
-  // BleGamepadFunctionPointer BluetoothPressOperation;
-  // BleGamepadFunctionPointer BluetoothReleaseOperation;
-  // BleGamepadFunctionPointerInt BluetoothSetOperation;
-  GamepadFunctionPointer BluetoothPressOperation;
-  GamepadFunctionPointer BluetoothReleaseOperation;
-  GamepadFunctionPointerInt BluetoothSetOperation;
+  BleGamepadFunctionPointer BluetoothPressOperation;
+  BleGamepadFunctionPointer BluetoothReleaseOperation;
+  BleGamepadFunctionPointerInt BluetoothSetOperation;
+  // GamepadFunctionPointer BluetoothPressOperation;
+  // GamepadFunctionPointer BluetoothReleaseOperation;
+  // GamepadFunctionPointerInt BluetoothSetOperation;
   ControllerReport (*CustomOperationPressed)();  // Custom/specific operation, code may be within controller .cpp
   ControllerReport (*CustomOperationReleased)(); // Custom/specific operation, code may be within controller .cpp
 
@@ -147,8 +149,11 @@ typedef struct Input
   LED OnboardLED;    // Onboard LED is merged into other Onboard LED colours to create a `final combined colour`. Max of each R,G,B component generally gets used.
   ExternalLEDConfig *LEDConfig;
 
-  int ProfileId;                 // Set > 0 to enable this Input for Profile Id override inclusion on startup
-  State ValueState;              // Master set of data that stores actual state of input (PRESSED, NOT_PRESSED) and/or analog value, and also tracks when state changes happen etc.
+  int ProfileId;             // Set > 0 to enable this Input for Profile Id override inclusion on startup
+  State ValueState;          // Master set of data that stores actual state of input (PRESSED, NOT_PRESSED) and/or analog value, and also tracks when state changes happen etc.
+  uint32_t AnalogCumulative; // Used when averaging
+  uint16_t AnalogCount;
+  uint16_t AnalogRaw;            // Raw value (post any averaging etc.)
   unsigned long LongPressTiming; // Delayed operation timing in milliseconds for alternative press operation
   Input *LongPressChildInput;    // Equivalent Input configuration that kicks in if a delayed operation is required and is triggered
   // Set automatically by code

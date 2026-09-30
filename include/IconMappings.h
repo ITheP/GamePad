@@ -12,82 +12,198 @@
 #define Icon_Test5 0x94
 #define Icon_Test6 0x95
 
+// LOGOS - CustomLogos.16x16.h
 // Logo
 #define Icon_Logo_Start1 0xB0
 #define Icon_Logo_Start2 0xC0
 #define Icon_Logo_Start3 0xD0
 
+// BATTERY ICONS - CustomBatteryIcons.16x16.h
 // Battery
-#define Icon_Battery 0x6D
-#define Icon_BatteryCharging 0x6E
-#define Icon_BatteryEmpty 0x6F
-#define Icon_BatteryBigEmpty1 0x7D
-#define Icon_BatteryBigEmpty2 0x7E
-#define Icon_BatteryBigEmpty3 0x7F
+#define Icon_Battery 0x21
+#define Icon_BatteryCharging 0x22
+#define Icon_BatteryEmpty 0x23
+#define Icon_BatteryNearlyEmpty 0x24
+#define Icon_BatteryFull 0x25
+#define Icon_BatteryOvercharged 0x26
+#define Icon_BatteryOverFull 0x27
+#define Icon_USBPower 0x28
+#define Icon_USBPower_Disconnect 0x29
+#define Icon_PowerStateUnknown 0x2A
+#define Icon_BatteryFullV2 0x2B
 
-// LED
-#define Icon_LEDOn 0X87
-#define Icon_LEDOff 0X88
-#define Icon_LEDNone 0X89
+#define Icon_BigBattery_Empty1 0x30
+#define Icon_BigBattery_Empty2 0x31
+#define Icon_BigBattery_Empty3 0x32
 
+#define Icon_BigBattery_Blank1 0x33
+#define Icon_BigBattery_Blank2 0x34
+#define Icon_BigBattery_Blank3 0x35
 
-#define Icon_EyesLeft 0x79
-#define Icon_EyesRight 0x7A
-#define Icon_OK 0x7B
+#define Icon_BigBattery_Full1 0x40
+#define Icon_BigBattery_Full2 0x41
+#define Icon_BigBattery_Full3 0x42
 
-// Yes/No Animated Check Box
-#define Icon_Check_Spin1 0xEC
-#define Icon_Check_Spin2 0xED
-#define Icon_Check_Spin3 0xEE
-#define Icon_Check_Spin4 0xEF
-#define Icon_Check_Yes 0x96
-#define Icon_Check_No 0x86
+#define Icon_BigBattery_FullPlus1 0x43
+#define Icon_BigBattery_FullPlus2 0x44
+#define Icon_BigBattery_FullPlus3 0x45
 
+#define Icon_BigBattery_Off1 0x50
+#define Icon_BigBattery_Off2 0x51
+#define Icon_BigBattery_Off3 0x52
+
+#define Icon_BigBattery_Charging1 0x53
+#define Icon_BigBattery_Charging2 0x54
+#define Icon_BigBattery_Charging3 0x55
+
+// ICONS - CustomIcons.16x16.h
+
+#define Icon_ITP_S 0x20
+#define Icon_ITP_M 0x21
+
+#define Icon_EyesLeft 0x22
+#define Icon_EyesRight 0x23
+#define Icon_OK 0x24
 // Bluetooth
-#define Icon_BTLogo 0x7C
-//#define Icon_Heart 0x7C
-
-// USB
-#define Icon_Wire_Horizontal 0xA8
-#define Icon_USB_Unknown 0x69
-#define Icon_USB_Connected 0x6A
-#define Icon_USB_Controller 0x6B
-#define Icon_USB_Disconnected 0x6C
-
-// WiFi
-#define Icon_WiFi_TraceSignal 0x97
-#define Icon_WiFi_LowSignal 0x98
-#define Icon_WiFi_MiddleSignal 0x99
-#define Icon_WiFi_TopSignal 0x9A
-#define Icon_WiFi_MediumSignal 0x9B
-#define Icon_WiFi_HighSignal 0x9C
-#define Icon_WiFi_Query 0x9D
-#define Icon_WiFi_LostSignal 0x9E
-#define Icon_WiFi_Disabled 0x9F
-
+#define Icon_BTLogo 0x25
 // WebServer
-#define Icon_Web_Traffic 0x66
-#define Icon_Web_Enabled 0x67
-#define Icon_Web_Disabled 0x68
+#define Icon_Web_Traffic 0x26
+#define Icon_Web_Enabled 0x27
+#define Icon_Web_Disabled 0x28
+// LED
+#define Icon_LEDOn 0X29
+#define Icon_LEDOff 0X2A
+#define Icon_LEDNone 0X2B
 
 // Misc.
-#define Icon_Settings 0xA7
-#define Icon_ITP_S 0xB8
-#define Icon_ITP_M 0xC8
-#define Icon_Skull 0xD8
+#define Icon_Settings 0x2C
+#define Icon_Save 0x2D
+//#define Icon_Skull 0xD6
 
+// Yes/No Animated Check Box
+#define Icon_Check_Spin1 0x7A
+#define Icon_Check_Spin2 0x7B
+#define Icon_Check_Spin3 0x7C
+#define Icon_Check_Spin4 0x7D
+#define Icon_Check_Yes 0x7E
+#define Icon_Check_No 0x7F
+
+// USB
+#define Icon_Wire_Horizontal 0x40
+#define Icon_USB_Unknown 0x41
+#define Icon_USB_Connected 0x42
+#define Icon_USB_Controller 0x43
+#define Icon_USB_Disconnected 0x44
+
+// WiFi
+#define Icon_WiFi_TraceSignal 0x50
+#define Icon_WiFi_LowSignal 0x51
+#define Icon_WiFi_MiddleSignal 0x52
+#define Icon_WiFi_TopSignal 0x53
+#define Icon_WiFi_MediumSignal 0x54
+#define Icon_WiFi_HighSignal 0x55
+#define Icon_WiFi_Query 0x56
+#define Icon_WiFi_LostSignal 0x57
+#define Icon_WiFi_Disabled 0x58
 
 // Extra buttons
-#define Icon_Start 0x8A
-#define Icon_Select1 0x8B
-#define Icon_Select2 0x8C
-#define Icon_Menu 0x78
+#define Icon_Menu 0x70
+#define Icon_Start 0x71
+#define Icon_Select1 0x72
+#define Icon_Select2 0x73
+#define Icon_VolUp 0x74
+#define Icon_VolDown 0x75
+#define Icon_VolMute 0x76
+
+// Empty circles
+#define Icon_EmptyCircle_1 0x80
+#define Icon_EmptyCircle_2 0x81
+#define Icon_EmptyCircle_3 0x82
+#define Icon_EmptyCircle_4 0x83
+#define Icon_EmptyCircle_5 0x84
+#define Icon_EmptyCircle_6 0x85
+#define Icon_EmptyCircle_7 0x86
+#define Icon_EmptyCircle_8 0x87
+#define Icon_EmptyCircle_9 0x88
+#define Icon_EmptyCircle_10 0x89
+#define Icon_EmptyCircle_11 0x8A
+#define Icon_EmptyCircle_12 0x8B
+#define Icon_EmptyCircle_13 0x8C
+#define Icon_EmptyCircle_14 0x8D
+
+// Filled circles
+#define Icon_FilledCircle_1 0x90
+#define Icon_FilledCircle_2 0x91
+#define Icon_FilledCircle_3 0x92
+#define Icon_FilledCircle_4 0x93
+#define Icon_FilledCircle_5 0x94
+#define Icon_FilledCircle_6 0x95
+#define Icon_FilledCircle_7 0x96
+#define Icon_FilledCircle_8 0x97
+#define Icon_FilledCircle_9 0x98
+#define Icon_FilledCircle_10 0x99
+#define Icon_FilledCircle_11 0x9A
+#define Icon_FilledCircle_12 0x9B
+#define Icon_FilledCircle_13 0x9C
+#define Icon_FilledCircle_14 0x9D
+
+// Menu Items
+#define Icon_Menu_QuestionMark 0x30
+#define Icon_Menu_Stats 0x31
+#define Icon_Menu_USB 0x32
+#define Icon_Menu_WiFi 0x33
+#define Icon_Menu_WebServer 0x34
+#define Icon_Menu_Battery 0x35
+#define Icon_Menu_Version 0x36
+#define Icon_Menu_FPS 0x37
+#define Icon_Menu_Bluetooth 0x38
+#define Icon_Menu_Smile 0x39
+#define Icon_Menu_Debug 0x3A
+#define Icon_Menu_Save 0x3B
+#define Icon_Menu_Key 0x3C
+
+#define Icon_Arrow_Up_Outline 0x60
+#define Icon_Arrow_Up 0x61
+#define Icon_Arrow_Down_Outline 0x62
+#define Icon_Arrow_Down 0x63
+#define Icon_Arrow_Left_Outline 0x64
+#define Icon_Arrow_Left_Outline_Medium 0x65
+#define Icon_Arrow_Left_Outline_Small 0x66
+#define Icon_Arrow_Left 0x67
+#define Icon_Arrow_Left_Medium 0x68
+#define Icon_Arrow_Left_Small 0x69
+#define Icon_Arrow_Right_Outline 0x6A
+#define Icon_Arrow_Right_Outline_Medium 0x6B
+#define Icon_Arrow_Right_Outline_Small 0x6C
+#define Icon_Arrow_Right 0x6D
+#define Icon_Arrow_Right_Medium 0x6E
+#define Icon_Arrow_Right_Small 0x6F
+
+// Array of filled circle icons in order
+static const char FilledCircleIcons[] = {
+    Icon_FilledCircle_1,
+    Icon_FilledCircle_2,
+    Icon_FilledCircle_3,
+    Icon_FilledCircle_4,
+    Icon_FilledCircle_5,
+    Icon_FilledCircle_6,
+    Icon_FilledCircle_7,
+    Icon_FilledCircle_8,
+    Icon_FilledCircle_9,
+    Icon_FilledCircle_10,
+    Icon_FilledCircle_11,
+    Icon_FilledCircle_12,
+    Icon_FilledCircle_13,
+    Icon_FilledCircle_14
+};
+
+static const int FilledCircleIconsSize = sizeof(FilledCircleIcons) / sizeof(FilledCircleIcons[0]);
+
+
+// CONTROLLER - CustomControllerIcons.16x16.h
+// Controller
 
 #define Icon_Tilt 0x57
-
-#define Icon_VolUp 0x8D
-#define Icon_VolDown 0x8E
-#define Icon_VolMute 0x8F
 
 // DPad
 #define Icon_DPad_Icon 0x26
@@ -186,87 +302,3 @@
 #define Icon_JPad_Hi_DownLeft 0x5D
 #define Icon_JPad_Hi_Left 0x5E
 #define Icon_JPad_Hi_UpLeft 0x5F
-
-// Empty circles
-#define Icon_EmptyCircle_1 0xA9
-#define Icon_EmptyCircle_2 0xAA
-#define Icon_EmptyCircle_3 0xAB
-#define Icon_EmptyCircle_4 0xAC
-#define Icon_EmptyCircle_5 0xAD
-#define Icon_EmptyCircle_6 0xAE
-#define Icon_EmptyCircle_7 0xAF
-#define Icon_EmptyCircle_8 0xB9
-#define Icon_EmptyCircle_9 0xBA
-#define Icon_EmptyCircle_10 0xBB
-#define Icon_EmptyCircle_11 0xBC
-#define Icon_EmptyCircle_12 0xBD
-#define Icon_EmptyCircle_13 0xBE
-#define Icon_EmptyCircle_14 0xBF
-
-// Filled circles
-#define Icon_FilledCircle_1 0xC9
-#define Icon_FilledCircle_2 0xCA
-#define Icon_FilledCircle_3 0xCB
-#define Icon_FilledCircle_4 0xCC
-#define Icon_FilledCircle_5 0xCD
-#define Icon_FilledCircle_6 0xCE
-#define Icon_FilledCircle_7 0xCF
-#define Icon_FilledCircle_8 0xD9
-#define Icon_FilledCircle_9 0xDA
-#define Icon_FilledCircle_10 0xDB
-#define Icon_FilledCircle_11 0xDC
-#define Icon_FilledCircle_12 0xDD
-#define Icon_FilledCircle_13 0xDE
-#define Icon_FilledCircle_14 0xDF
-
-// Menu Items
-#define Icon_Menu_QuestionMark 0xE0
-#define Icon_Menu_Stats 0xE1
-#define Icon_Menu_USB 0xE2
-#define Icon_Menu_WiFi 0xE3
-#define Icon_Menu_WebServer 0xE4
-#define Icon_Menu_Battery 0xE5
-#define Icon_Menu_Version 0xE6
-#define Icon_Menu_FPS 0xE7
-#define Icon_Menu_Bluetooth 0xE8
-#define Icon_Menu_Smile 0xE9
-#define Icon_Menu_Debug 0xEA
-#define Icon_Menu_Save 0xEB
-#define Icon_Menu_Key 0x77
-
-#define Icon_Arrow_Up_Outline 0xF0
-#define Icon_Arrow_Up 0xF1
-#define Icon_Arrow_Down_Outline 0xF2
-#define Icon_Arrow_Down 0xF3
-#define Icon_Arrow_Left_Outline 0xF4
-#define Icon_Arrow_Left_Outline_Medium 0xF5
-#define Icon_Arrow_Left_Outline_Small 0xF6
-#define Icon_Arrow_Left 0xF7
-#define Icon_Arrow_Left_Medium 0xF8
-#define Icon_Arrow_Left_Small 0xF9
-#define Icon_Arrow_Right_Outline 0xFA
-#define Icon_Arrow_Right_Outline_Medium 0xFB
-#define Icon_Arrow_Right_Outline_Small 0xFC
-#define Icon_Arrow_Right 0xFD
-#define Icon_Arrow_Right_Medium 0xFE
-#define Icon_Arrow_Right_Small 0xFF
-
-// Array of filled circle icons in order
-static const char FilledCircleIcons[] = {
-    Icon_FilledCircle_1,
-    Icon_FilledCircle_2,
-    Icon_FilledCircle_3,
-    Icon_FilledCircle_4,
-    Icon_FilledCircle_5,
-    Icon_FilledCircle_6,
-    Icon_FilledCircle_7,
-    Icon_FilledCircle_8,
-    Icon_FilledCircle_9,
-    Icon_FilledCircle_10,
-    Icon_FilledCircle_11,
-    Icon_FilledCircle_12,
-    Icon_FilledCircle_13,
-    Icon_FilledCircle_14
-};
-
-static const int FilledCircleIconsSize = sizeof(FilledCircleIcons) / sizeof(FilledCircleIcons[0]);

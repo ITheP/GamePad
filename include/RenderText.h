@@ -34,17 +34,21 @@ struct TextLine {
 // General RRE that general purpose text display might use - can be retargetted to different fonts so e.g.
 // PrintDisplayLine() can render different font sizes
 extern RREFont RRE;
+// Specific fonts
 extern RREFont RREDefault;
-extern RREFont RREIcon;
 extern RREFont RRESmall;
+extern RREFont RREIcons;
+extern RREFont RREBatteryIcons;
+extern RREFont RREControllerIcons;
+extern RREFont RRELogos;
 
 extern RRE_Font rre_CustomIcons16;
+extern RRE_Font rre_CustomBatteryIcons16;
+extern RRE_Font rre_CustomControllerIcons16;
 extern RRE_Font rre_5x8;
-// extern RRE_Font rre_7x12;
 extern RRE_Font rre_fixed_8x16;
 
 static const byte RREHeight_5x8 = 10;
-// static const byte RREHeight_7x12 = 12;
 static const byte RREHeight_fixed_8x16 = 14;
 static const byte RREHeight_Icon = 14;
 
@@ -62,8 +66,14 @@ void RRERect(int x, int y, int width, int height, int colour);
 #define FONT_SMALL    &rre_5x8
 #define FONT_SMALL_HEIGHT RREHeight_5x8
 
-#define FONT_ICON   &rre_CustomIcons16
-#define FONT_ICON_HEIGHT RREHeight_Icon
+#define FONT_ICONS   &rre_CustomIcons16
+#define FONT_ICONS_HEIGHT RREHeight_Icon
+
+#define FONT_BATTERY_ICONS &rre_CustomBatteryIcons16
+#define FONT_BATTERY_ICONS_HEIGHT RREHeight_Icon      // Actually varies!
+
+#define FONT_CONTROLLER_ICONS &rre_CustomControllerIcons16
+#define FONT_CONTROLLER_ICONS_HEIGHT RREHeight_Icon      // Actually varies!
 
 inline void SetFontSmall()
 {
@@ -77,11 +87,25 @@ inline void SetFontFixed()
   TextLineHeight = RREHeight_fixed_8x16;
 }
 
-inline void SetFontIcon()
+inline void SetFontIcons()
 {
   RRE.setFont(&rre_CustomIcons16);
   TextLineHeight = RREHeight_Icon;
 }
+
+inline void SetFontCBatteryIcons()
+{
+  RRE.setFont(&rre_CustomBatteryIcons16);
+  TextLineHeight = RREHeight_Icon;
+}
+
+
+inline void SetFontControllerIcons()
+{
+  RRE.setFont(&rre_CustomControllerIcons16);
+  TextLineHeight = RREHeight_Icon;
+}
+
 
 extern char buffer[512];
 

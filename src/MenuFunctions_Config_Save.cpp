@@ -94,7 +94,7 @@ void MenuFunctions::Config_Draw_SaveSettings()
 {
   Display.fillRect(0, MenuContentStartY - 2, SCREEN_WIDTH, (SCREEN_HEIGHT - MenuContentStartY + 2), C_BLACK);
 
-  SetFontIcon();
+  SetFontIcons();
 
   // Save circle
   int checkX = (SCREEN_WIDTH / 2) - 7;
@@ -104,7 +104,7 @@ void MenuFunctions::Config_Draw_SaveSettings()
   if (currentSaveState == SAVE_SAVING)
   {
     // Get width of the growing icon and center it dynamically
-    int iconOffset = RREIcon.charWidth(Icon) / 2;
+    int iconOffset = RREIcons.charWidth(Icon) / 2;
     int centeredX = (SCREEN_WIDTH / 2) - iconOffset;
     int centeredY = MenuContentStartY + 20 - iconOffset;
     

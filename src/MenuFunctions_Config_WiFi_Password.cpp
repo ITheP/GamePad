@@ -347,11 +347,11 @@ void MenuFunctions::Config_Draw_WiFi_Password(int showScrollIcons)
 
     int iconOffset = (Menus::MenuFrame >> 2) % 3;
 
-    RREIcon.setColor(C_BLACK);
+    RREIcons.setColor(C_BLACK);
     RenderIcon(Icon_Arrow_Left_Outline + iconOffset, -3, middle - 3, 0, 0);
     RenderIcon(Icon_Arrow_Right_Outline + iconOffset, SCREEN_WIDTH - 7 - 2, middle - 3, 0, 0);
 
-    RREIcon.setColor(C_WHITE);
+    RREIcons.setColor(C_WHITE);
     RenderIcon(Icon_Arrow_Left + iconOffset, 0, middle, 0, 0);
     RenderIcon(Icon_Arrow_Right + iconOffset, SCREEN_WIDTH - 7, middle, 0, 0);
   }

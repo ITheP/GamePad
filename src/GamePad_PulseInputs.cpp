@@ -3,133 +3,197 @@
 #include <Debug.h>
 #include <DeviceConfig.h>
 
-#include "esp_netif.h"
-#include "driver/mcpwm_cap.h"
+#include "driver/mcpwm.h"
+#include "soc/mcpwm_periph.h"
 
-// Store handles for capture channels
-// Note we set a max of 6 in code
-mcpwm_cap_timer_handle_t mcpwm_cap_timer = NULL;
-mcpwm_cap_channel_handle_t *mcpwm_cap_channels = NULL;
+#include "driver/mcpwm.h"
+#include "soc/mcpwm_periph.h"
+#include "driver/gpio.h"
+#include <soc/soc.h>
 
-static bool mcpwm_capture_callback(mcpwm_cap_channel_handle_t cap_chan, const mcpwm_capture_event_data_t *edata, void *user_data)
+// Data we are playing with - MUST be in DRAM else our interrupt is not going to be happy
+
+// Pointer to the dynamically allocated capture data array
+// This will point to DRAM-allocated memory
+PulseCaptureData_t* g_pulse_capture_data = NULL;
+
+// ISR - must be in IRAM and use only DRAM data
+static bool IRAM_ATTR capture_isr(
+    mcpwm_unit_t mcpwm, 
+    mcpwm_capture_channel_id_t cap_channel, 
+    const cap_event_data_t *edata, 
+    void *user_data)
 {
-    PulseInput *pulseInput = static_cast<PulseInput *>(user_data);
+    int channel_index = (int)(uintptr_t)user_data;
+    
+    if (channel_index < 0 || g_pulse_capture_data == NULL) {
+        return false;
+    }
+    
+    PulseCaptureData_t *data = &g_pulse_capture_data[channel_index];
+    uint32_t current = edata->cap_value;
 
-    // No point in processing loads of these needlessly
-  // if (pulseInput->Count > 100)
-  //   return false;
+    // Check for timer rollover (if current < previous, timer wrapped)
+    if (data->last_timestamp != 0 && current < data->last_timestamp) {
+        // Timer rolled over - invalidate everything and reset
+        data->has_valid_period = false;
+        data->last_rising_edge = 0;
+        data->last_falling_edge = 0;
+        data->captured_period = 0;
+        data->captured_high = 0;
+        data->last_timestamp = current;
+        //data->is_high = false;
+        return false;  // ⚠️ EXIT EARLY - don't process this edge
+    }
 
-    pulseInput->Count++;
-
-if (edata->cap_edge == MCPWM_CAP_EDGE_POS)
-    {
-        uint32_t currentTime = edata->cap_value;
-
-        // If we have a previous rising edge, calculate the total period
-        if (pulseInput->RiseTime != 0)
-        {
-            pulseInput->TotalPeriodUs = currentTime - pulseInput->RiseTime;
-
-            // Prevent division by zero and filter out noise
-            if (pulseInput->TotalPeriodUs > 0 && pulseInput->HighPulseUs > 0 && pulseInput->HighPulseUs <= pulseInput->TotalPeriodUs)
-            {
-                // Calculate Duty Cycle (0 to 100)
-                pulseInput->DutyCycle = (pulseInput->HighPulseUs * 100) / pulseInput->TotalPeriodUs;
-                pulseInput->FreshData = true;
+    if (edata->cap_edge == MCPWM_POS_EDGE) {
+        if (data->last_rising_edge != 0) {
+            data->captured_period = current - data->last_rising_edge;
+            // Only mark valid if period is reasonable (e.g., > 10 ticks to avoid noise)
+            if (data->captured_period > 10) {
+                data->has_valid_period = true;
+            } else {
+                data->has_valid_period = false;  // Too short - likely noise
             }
+        } else {
+            data->has_valid_period = false;
         }
-        
-        pulseInput->RiseTime = currentTime;
-        pulseInput->LastTimestamp = currentTime;
-    }
-    else if (edata->cap_edge == MCPWM_CAP_EDGE_NEG)
-    {
-        pulseInput->LastFallTime = edata->cap_value;
-
-        // Falling edge: Calculate how long the signal stayed HIGH during this cycle
-        if (pulseInput->RiseTime != 0)
-        {
-            pulseInput->HighPulseUs = edata->cap_value - pulseInput->RiseTime;
+        data->last_rising_edge = current;
+        //data->is_high = true;
+    } 
+    else if (edata->cap_edge == MCPWM_NEG_EDGE) {
+        if (data->last_rising_edge != 0 && current >= data->last_rising_edge) {
+            data->captured_high = current - data->last_rising_edge;
+            // Verify high time is less than period (sanity check)
+            if (data->has_valid_period && data->captured_high > data->captured_period) {
+                data->has_valid_period = false;  // Invalid - high > period
+            }
+        } else {
+            data->captured_high = 0;
+            data->has_valid_period = false;
         }
+        data->last_falling_edge = current;
+        //data->is_high = false;
     }
-
-    return false; 
+    
+    data->last_timestamp = current;
+    return false;
 }
 
-void setupPulseInputs()
-{
-#ifdef DEBUG_MARKS
-  Debug::Mark(1, __LINE__, __FILE__, __func__);
-#endif
+// Helper function to free allocated memory (call if setup fails)
+static void free_capture_data() {
+    if (g_pulse_capture_data != NULL) {
+        free((void*)g_pulse_capture_data);
+        g_pulse_capture_data = NULL;
+    }
+}
 
-  Serial.println();
-  Serial_INFO;
-  Serial.println("🎚 Pulse Inputs on MCPWM Capture: " + String(PulseInputs_Count));
+void setupPulseInputs() {
+    Serial.println();
+    Serial.println("🎚 Pulse Input via Hardware MCPWM - Count: " + String(PulseInputs_Count));
 
-  int count = PulseInputs_Count;
-  
-  // Enforce the absolute ESP32-S3 hardware limit of 6 capture channels across both units
-  if (count > 6)
-  {
-    Serial_ERROR;
-    Serial.println("Warning: ESP32-S3 hardware MCPWM capture max is 6 channels. Limiting to 6.");
-    count = 6;
-  }
+    if (PulseInputs_Count < 1) {
+        Serial.println("❌ No pulse inputs configured!");
+        return;
+    }
 
-  // Dynamically allocate the exact number of channel handles needed
-  if (mcpwm_cap_channels != NULL) {
-    free(mcpwm_cap_channels);
-  }
-  mcpwm_cap_channels = (mcpwm_cap_channel_handle_t *)calloc(count, sizeof(mcpwm_cap_channel_handle_t));
-  if (mcpwm_cap_channels == NULL) {
-    Serial_ERROR;
-    Serial.println("Failed to allocate memory for MCPWM capture channels!");
-    return;
-  }
+    // Dynamically allocate capture data array in DRAM
+    // Use heap_caps_malloc to ensure it's in DRAM (not PSRAM)
+    size_t alloc_size = sizeof(PulseCaptureData_t) * PulseInputs_Count;
+    g_pulse_capture_data = (PulseCaptureData_t*)heap_caps_malloc(alloc_size, MALLOC_CAP_INTERNAL);
 
-  // 1. Create a shared high-resolution hardware capture timer (1 MHz -> 1 tick = 1 µs)
-  mcpwm_capture_timer_config_t cap_timer_config = {};
-  cap_timer_config.group_id = 0;
-  cap_timer_config.clk_src = MCPWM_CAPTURE_CLK_SRC_DEFAULT;
-  cap_timer_config.resolution_hz = 1000000; // 1 MHz tick rate
+    if (g_pulse_capture_data == NULL) {
+        Serial.printf("❌ Failed to allocate %d bytes for capture data!\n", alloc_size);
+        return;
+    }
+    
+    // Zero-initialize all capture data
+    memset((void*)g_pulse_capture_data, 0, alloc_size);
 
-  ESP_ERROR_CHECK(mcpwm_new_capture_timer(&cap_timer_config, &mcpwm_cap_timer));
+    esp_err_t err;
+    
+    // Store count in a global for ISR safety checks
+    // (PulseInputs_Count is already global from Structs.h)
 
-  // 2. Configure individual input channels for each pulse pin up to 'count'
-  for (int i = 0; i < count; i++)
-  {
-    PulseInput *pulseInput = PulseInputs[i];
-    Serial.print("..." + String(pulseInput->Label));
+    // Configure each pulse input
+    for (int i = 0; i < PulseInputs_Count; i++) {
+        PulseInput *sourceInput = PulseInputs[i];
+        int pin = sourceInput->Pin;
+        
+        // Store the index in the pulse input structure for later reference
+        sourceInput->MCPWMIndex = i;
+        //sourceInput->HasValidPeriod = false;
+        //sourceInput->Frequency = 0;
 
-    pinMode(pulseInput->Pin, INPUT_PULLUP);
+        // Configure GPIO
+        gpio_reset_pin((gpio_num_t)pin);
+        gpio_set_direction((gpio_num_t)pin, GPIO_MODE_INPUT);
+        gpio_pullup_en((gpio_num_t)pin);
 
-    mcpwm_capture_channel_config_t cap_chan_config = {};
-    cap_chan_config.gpio_num = (gpio_num_t)pulseInput->Pin;
-    cap_chan_config.prescale = 1;
-    // Capture both positive and negative edges to map full pulse widths
-    cap_chan_config.flags.pos_edge = true;
-    cap_chan_config.flags.neg_edge = true;
-    cap_chan_config.flags.pull_up = true;
+        // Map MCPWM unit and channel based on index
+        mcpwm_unit_t unit = MCPWM_UNIT_0;
+        mcpwm_timer_t timer = MCPWM_TIMER_0;
 
-    ESP_ERROR_CHECK(mcpwm_new_capture_channel(mcpwm_cap_timer, &cap_chan_config, &mcpwm_cap_channels[i]));
+        // For mcpwm_gpio_init - use MCPWM_CAP_0, MCPWM_CAP_1, MCPWM_CAP_2
+        mcpwm_io_signals_t cap_signal;
+        switch (i % 3) {
+            case 0: cap_signal = MCPWM_CAP_0; break;
+            case 1: cap_signal = MCPWM_CAP_1; break;
+            case 2: cap_signal = MCPWM_CAP_2; break;
+            default: cap_signal = MCPWM_CAP_0; break;
+        }
+        
+        // For mcpwm_capture_enable_channel - use MCPWM_SELECT_CAP0, etc.
+        mcpwm_capture_signal_t cap_channel;
+        switch (i % 3) {
+            case 0: cap_channel = MCPWM_SELECT_CAP0; break;
+            case 1: cap_channel = MCPWM_SELECT_CAP1; break;
+            case 2: cap_channel = MCPWM_SELECT_CAP2; break;
+            default: cap_channel = MCPWM_SELECT_CAP0; break;
+        }
 
-    // Register the hardware interrupt callback for this channel
-    mcpwm_capture_event_callbacks_t cbs = {
-        .on_cap = mcpwm_capture_callback,
-    };
+        // Initialize MCPWM timer only once
+        if (i == 0) {
+            mcpwm_config_t timer_config = {
+                .frequency = 1000000,
+                .cmpr_a = 0,
+                .cmpr_b = 0,
+                .duty_mode = MCPWM_DUTY_MODE_0,
+                .counter_mode = MCPWM_UP_COUNTER,
+            };
+            err = mcpwm_init(unit, timer, &timer_config);
+            if (err != ESP_OK) {
+                Serial.printf("❌ MCPWM init failed: %s\n", esp_err_to_name(err));
+                free_capture_data();
+                return;
+            }
+        }
 
-    // Pass pulseInput directly into user_data
-    ESP_ERROR_CHECK(mcpwm_capture_channel_register_event_callbacks(mcpwm_cap_channels[i], &cbs, (void *)pulseInput));
+        // Route GPIO to the capture pin - uses mcpwm_io_signals_t
+        err = mcpwm_gpio_init(unit, cap_signal, pin);
+        if (err != ESP_OK) {
+            Serial.printf("❌ GPIO init failed for pin %d: %s\n", pin, esp_err_to_name(err));
+            continue;
+        }
 
-    // Enable the capture channel
-    ESP_ERROR_CHECK(mcpwm_capture_channel_enable(mcpwm_cap_channels[i]));
+        // Pass the index as user_data so ISR knows which channel this is
+        mcpwm_capture_config_t capture_config = {
+            .cap_edge = MCPWM_BOTH_EDGE,
+            .cap_prescale = 1,
+            .capture_cb = capture_isr,
+            .user_data = (void *)(uintptr_t)i
+        };
 
-    Serial.printf(" started on pin %d via MCPWM hardware capture\n", pulseInput->Pin);
-  }
+        // Enable capture channel - uses mcpwm_capture_signal_t
+        err = mcpwm_capture_enable_channel(unit, cap_channel, &capture_config);
 
-  // 3. Start the shared hardware capture timer
-  ESP_ERROR_CHECK(mcpwm_capture_timer_enable(mcpwm_cap_timer));
-  ESP_ERROR_CHECK(mcpwm_capture_timer_start(mcpwm_cap_timer));
+        if (err != ESP_OK) {
+            Serial.printf("❌ Capture enable failed for pin %d: %s\n", pin, esp_err_to_name(err));
+            continue;
+        }
 
-  Serial.println("MCPWM capture initialized successfully");
+        Serial.printf("✅ Hardware MCPWM Capture ready on pin %d (channel %d)\n", pin, i);
+    }
+
+    Serial.println("✅ All pulse inputs configured!");
 }

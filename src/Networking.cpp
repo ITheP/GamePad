@@ -244,7 +244,7 @@ wl_status_t Networking::WiFiConnectionState;
 wl_status_t Networking::PreviousWiFiConnectionState = WL_SCAN_COMPLETED; // Initialize to something we know it won't be to force a UI update straight away;
 
 unsigned char Networking::LastWiFiCharacter;
-unsigned char Networking::LastWiFiStatusCharacter;
+//unsigned char Networking::LastWiFiStatusCharacter;
 int Networking::WiFiStatusIterations;
 
 // WiFi test state
@@ -256,7 +256,7 @@ unsigned char Networking::WiFiCharacter;
 const char *Networking::WiFiStatus = WiFi_UnknownStatus;
 int8_t Networking::WiFiStrength;
 
-unsigned char Networking::WiFiStatusCharacter;
+//unsigned char Networking::WiFiStatusCharacter;
 
 // We have a final character that might override the WiFiCharacter (e.g. something animated) but we want to retain what
 // the current WiFiCharacter is so that we can re-render it when status isn't changing.
@@ -388,7 +388,7 @@ void Networking::HandleWiFi(int second)
                 WiFiStatus = WiFi_Disabled;
             }
 
-            WiFiStatusCharacter = Icon_Skull;
+            //WiFiStatusCharacter = Icon_Skull;
         }
 
         FinalWiFiCharacter = WiFiCharacter;
@@ -418,7 +418,14 @@ void Networking::HandleWiFi(int second)
                     // WiFi.mode (WIFI_APSTA); //WIFI_STA);
                     // esp_wifi_set_ps(WIFI_PS_NONE);
 
+                    // WEB SERVER TEST - try make it more responsive
                     WiFi.begin(ssid, password);
+
+                    // Below is recommended for better wifi (stops issues) but device crashes with error...
+                    // E (11393) wifi:Error! Should enable WiFi modem sleep when both WiFi and Bluetooth are enabled!!!!!!
+                    // ...if it is set
+                    // WiFi.setSleep(false);
+
                     WiFiConnecting = true;
                     WiFiStatus = WiFi_Connecting;
                 }

@@ -120,7 +120,7 @@ void Menus::InitMenuItemDisplay(const char *text, MenuScrollState scrollStatus)
 {
   Display.fillRect(0, 0, MenuTextStartX - 1, 13, C_BLACK);
 
-  RREIcon.drawChar(0, 2, CurrentMenuOption->Icon);
+  RREIcons.drawChar(0, 2, CurrentMenuOption->Icon);
 
   if (text != NONE)
     UpdateMenuText(text, scrollStatus);
@@ -293,7 +293,7 @@ void Menus::FinishScrollingText()
   // After scrolling content, the left edge rendering will creep past where the left of the
   // menu is - so we re-draw this area to the left to keep everything neat
   Display.fillRect(16 - 7, 0, 9, 13, C_BLACK);
-  RREIcon.drawChar(0, 2, CurrentMenuOption->Icon);
+  RREIcons.drawChar(0, 2, CurrentMenuOption->Icon);
 }
 
 // Super simple display of basic centered text - no icons or anything (e.g. used for Device Name)

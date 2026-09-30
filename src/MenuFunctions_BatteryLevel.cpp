@@ -44,7 +44,7 @@ void MenuFunctions::DrawBatteryLevel()
 
   snprintf(Menus::MenuTextBuffer, MenuTextBufferSize, "%s %d%% %.1fv",
            text,
-           Battery::ClampedBatteryPercentage,
+           Battery::ClampedPercentage,
            Battery::ClampedVoltage);
 
   Menus::UpdateMenuText(Menus::MenuTextBuffer, NoScrollNeeded);

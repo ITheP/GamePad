@@ -45,25 +45,27 @@ function main() {
             uniform float time;
 
             void main() {
-                float contrast = 1.0; // 0.3;
+                float contrast = 0.5; //1.0; // 0.3;
                 
+                float adjust = sin(time);
+
                 // Apply zoom-out effect
-                vec2 zoomUvR = v_texCoord * 8.0;
-                float wave = sin(zoomUvR.x) + sin(time * 1.17);
+                vec2 zoomUvR = v_texCoord * 6.0; //8.0;
+                float wave = sin(zoomUvR.x) + sin(time * 1.17) + adjust;
                 float offsetR = sin(zoomUvR.x + sin(time)) + sin(zoomUvR.y + wave) * (cos(wave + time));
                 float r = (sin((time + zoomUvR.y) * 0.5) * offsetR) + 0.5;
                 r *= contrast;
 
-                float time2 = time + 1.141;
+                float time2 = time; // + 1.141;
                 vec2 zoomUvG = v_texCoord * 6.0;
-                wave = sin(zoomUvG.x) + sin(time2 * 0.49);
+                wave = sin(zoomUvG.x) + sin(time2 * 1.17) + adjust + adjust; //0.49);
                 float offsetG = sin(zoomUvG.x + sin(time2)) + sin(zoomUvG.y + wave) * (cos(wave + time2));
                 float g = (sin((time2 + zoomUvG.y) * 0.5) * offsetG) + 0.5;
                 g *= contrast;
 
-                float time3 = time + 2.141;
-                vec2 zoomUvB = v_texCoord * 4.0;
-                wave = sin(zoomUvB.x) + sin(time3 * 0.78);
+                float time3 = time; // + 2.141;
+                vec2 zoomUvB = v_texCoord * 6.0; //4.0;
+                wave = sin(zoomUvB.x) + sin(time3 * 1.17); //0.78);
                 float offsetB = sin(zoomUvB.x + sin(time3)) + sin(zoomUvB.y + wave) * (cos(wave + time3));
                 float b = (sin((time3 + zoomUvB.y) * 0.5) * offsetB) + 0.5;
                 b *= contrast;

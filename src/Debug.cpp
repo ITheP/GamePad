@@ -20,7 +20,7 @@
 #include "esp_ota_ops.h"
 #include <esp_debug_helpers.h>
 #include "esp_cpu.h"
-#include "esp_memory_utils.h"
+// #5 #include "esp_memory_utils.h"
 
 // When we generate our own capture of crash data, we try and re-create what the system generates
 // Example core dump...

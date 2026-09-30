@@ -37,7 +37,8 @@ void AnalogEffects::ConstrainedSimpleSet(void *analogInput, float time)
 
   ExternalLEDConfig *ledConfig = input->LEDConfig;
 
-  int amount = map(input->ValueState.AnalogValue, input->MinAnalogValue, input->MaxAnalogValue, 0, 255); // Map slightly outside 0-255 range
+  int analogValue = constrain(input->ValueState.AnalogValue, input->MinAnalogValue, input->MaxAnalogValue);
+  int amount = map(analogValue, input->MinAnalogValue, input->MaxAnalogValue, 0, 255);
  //int amount = map(input->ValueState.AnalogValue, 0, 4095, -20, 275); // Map slightly outside 0-255 range
  // amount = constrain(amount, 0, 255);                           // ...then clip to range
   *(ledConfig->ExternalLED) = blend(ledConfig->SecondaryColour.Colour, ledConfig->PrimaryColour.Colour, amount);

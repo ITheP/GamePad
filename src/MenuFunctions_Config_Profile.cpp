@@ -266,7 +266,7 @@ void MenuFunctions::Config_Draw_Profile(int showScrollIcons)
     if (currentCopyPasteState == CP_COPYING || currentCopyPasteState == CP_PASTING)
     {
       // Get width of the growing icon and center it dynamically
-      int iconOffset = RREIcon.charWidth(Icon) / 2;
+      int iconOffset = RREIcons.charWidth(Icon) / 2;
       int centeredX = (SCREEN_WIDTH / 2) - iconOffset;
       int centeredY = MenuContentStartY + 20 - iconOffset;
       RenderIcon(Icon, centeredX, centeredY, 0, 0);
