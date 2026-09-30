@@ -4,6 +4,10 @@
 #include "Stats.h"
 #include "RenderText.h"
 #include "IconMappings.h"
+#include <string>
+#include <map>
+#include <optional>
+#include <cstring>
 
 // Notes
 
@@ -16,6 +20,91 @@
 // 5-8 NeoPixels at full brightness (60mA per LED)
 // ...accounting for an extra 100 or so mA for controller
 // and remembering standard USB 2.0 ports are typically rated for 500mA, and USB 3.0 ports 900 mA
+
+// --- Configuration System Definitions (High Performance, Compile-Time Safe) ---
+
+// 1. Metadata structure (remains the same)
+struct ConfigMetadata {
+    ConfigType type;
+    std::string description;
+    std::string group_id; // For grouping in the web UI
+    std::string display_name;
+    // Constraints
+    // When processing in web then based on config type will convert below to int for int or string lengths
+    float min;  // min value or min string length
+    float max;  // max value or max string length
+};
+
+// 2. Wrapper Structs (The core of the performance improvement)
+// These structs wrap the value and metadata, ensuring type safety at compile time.
+
+struct IntPlus {
+    ConfigMetadata metadata;
+    int value;
+};
+
+struct BoolPlus {
+    ConfigMetadata metadata;
+    bool value;
+};
+
+struct StringPlus {
+    ConfigMetadata metadata;
+    char value[256]; // Fixed size buffer for embedded safety
+};
+
+struct FloatPlus {
+    ConfigMetadata metadata;
+    float value;
+};
+
+// 3. The Singleton Manager
+class ConfigManager {
+private:
+    ConfigManager() = default;
+    ~ConfigManager() = default;
+
+    // Map to hold pointers to the wrapper structs, keyed by a unique ID string
+    std::map<std::string, const void*> settings_;
+
+public:
+    // Singleton access
+    static ConfigManager& getInstance() {
+        static ConfigManager instance;
+        return instance;
+    }
+
+    // Prevent copying and assignment
+    ConfigManager(const ConfigManager&) = delete;
+    ConfigManager& operator=(const ConfigManager&) = delete;
+
+    // Registration function (used in .cpp)
+    template<typename T>
+    void registerSetting(const std::string& id, const std::string& display, const std::string& group, T* settingPtr, const ConfigMetadata& meta) {
+        // Store the address of the wrapper struct instance
+        settings_[id] = (const void*)settingPtr;
+    }
+
+    // Retrieval function (used by web UI/runtime)
+    // Returns a void* pointer to the raw memory location of the setting's value.
+    // The caller MUST know the expected type (e.g., (IntPlus*)ptr)
+    const void* getSettingRaw(const std::string& id) const {
+        if (settings_.count(id)) {
+            return settings_.at(id);
+        }
+        return nullptr;
+    }
+
+    // Utility to get all settings for web UI iteration
+    const std::map<std::string, const void*>& getAllSettings() const {
+        return settings_;
+    }
+};
+
+// Global instance access (for convenience in .cpp)
+extern ConfigManager& ConfigManagerInstance();
+
+// --- End of Configuration System Definitions ---
 
 // General configuration - reminder some config options are in Config.h
 #define LIVE_BATTERY            // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
