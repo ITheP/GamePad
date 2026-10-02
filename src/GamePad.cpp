@@ -816,7 +816,8 @@ void setupLEDs()
   RREIcons.drawChar(112, 49, (unsigned char)Icon_LEDOn);
   Display.display();
 
-  FastLED.setBrightness(LED_BRIGHTNESS);
+  ApplyGlobalLEDBrightnessFromConfig();
+  //FastLED.setBrightness(DEFAULT_LED_BRIGHTNESS);
 
   // FastLED.Show() main loop can be processed on a separate thread to allow for running on other cores.
   // At time of writing, thread runs on same core as main loop (core 1)
@@ -1431,6 +1432,11 @@ void setup()
   }
 
   Debug::ClearCrashCheckData();
+
+
+  ConfigManager::AddConfigArray(ConfigManager_ControllerDefinitions, ConfigManager_ControllerDefinitions_Size);
+
+
 
   Serial.println();
   setupDisplay();
@@ -2849,7 +2855,7 @@ void MainLoop()
 // Call idle LED effects etc. if controllers not had anything pressed for a while
 #if defined(USE_ONBOARD_LED) || defined(USE_ONBOARD_LED_STATUS_ONLY)
 
-  if (timeSinceLastAnyControlChanged >= IDLE_LED_TIMEOUT)
+  if (timeSinceLastAnyControlChanged >= Config_Idle_LED_Timeout.Value)
   {
 
     // Serial.printf("LED Idle ON  %.3f >= %.3f [%s] %d", (float)timeSinceLastAnyControlChanged, (float)IDLE_LED_TIMEOUT, input->Label, someControlStateJustChanged);
@@ -2899,7 +2905,7 @@ void MainLoop()
   }
 #else
   // Call idle screen effects etc. if controllers not had anything pressed for a while
-  if (timeSinceLastAnyControlChanged >= IDLE_SCREEN_TIMEOUT)
+  if (timeSinceLastAnyControlChanged >= Config_Idle_Screen_Timeout.Value)
   {
 #ifdef DEBUG_MARKS
     Debug::Mark(450, __LINE__, __FILE__, __func__, "Screen Idle");

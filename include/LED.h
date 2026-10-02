@@ -1,8 +1,10 @@
 #pragma once
 
+#include <vector>
 #include "FastLED.h"
 #include "Stats.h"
 //#include "DeviceConfig.h"
+#include "ConfigManager.h"
 
 struct Input;
 struct HatInput;
@@ -55,6 +57,9 @@ typedef struct ExternalLEDConfig {
 void InitExternalLED(ExternalLEDConfig* config, CRGB* leds);
 void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate);
 void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate);
+
+ConfigManagerUpdateResult OnGlobalLEDBrightnessConfigChange(BaseConfig* cfg, void* newValue);
+void ApplyGlobalLEDBrightnessFromConfig();
 
 // void Test();
 // void FastTest();

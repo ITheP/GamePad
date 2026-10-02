@@ -24,6 +24,21 @@ extern CRGB ExternalLeds[];
 extern int ExternalLedsEnabled[];
 extern int Second;
 
+ConfigManagerUpdateResult OnGlobalLEDBrightnessConfigChange(BaseConfig* cfg, void* newValue)
+{
+    IntConfig* c = (IntConfig*)cfg;
+    int v = *static_cast<float*>(newValue);
+
+    c->Value = v;
+    ApplyGlobalLEDBrightnessFromConfig();
+
+    return ConfigManagerUpdateResult::OK;
+}
+
+void ApplyGlobalLEDBrightnessFromConfig() {
+  FastLED.setBrightness(Config_LED_Brightness.Value);
+}
+
 void InitExternalLED(ExternalLEDConfig *config, CRGB *leds)
 {
   // We effectively account for either 1 LED being specified (nice and simple) or an array of them being specified (for fancy connected effects)
@@ -87,7 +102,7 @@ void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate)
   // If you want idle effect AND non idle LED's at the same time, don't check for the ControllerIdle_LED state below and make sure the
   // Idle effects handling loop isn't conditionally called but always included
   // but note that things like always run LED's might override Idle effect fade out
-#ifdef IDLE_LED_RUN_EXCLUSIVELY
+#ifdef DEFAULT_IDLE_LED_RUN_EXCLUSIVELY
   if (!ControllerIdle_LED)
   {
 #endif
@@ -334,7 +349,7 @@ void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate)
 #ifdef INCLUDE_BENCHMARKS_LED
     LEDBenchmark.Snapshot("Loop.Clone", secondRollover);
 #endif
-#ifdef IDLE_LED_RUN_EXCLUSIVELY
+#ifdef DEFAULT_IDLE_LED_RUN_EXCLUSIVELY
   }
   else
   {
@@ -357,7 +372,7 @@ void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate)
 #ifdef INCLUDE_BENCHMARKS_LED
     LEDBenchmark.Snapshot("Loop.IdleLEDEffects", secondRollover);
 #endif
-#ifdef IDLE_LED_RUN_EXCLUSIVELY
+#ifdef DEFAULT_IDLE_LED_RUN_EXCLUSIVELY
   }
 #endif
 

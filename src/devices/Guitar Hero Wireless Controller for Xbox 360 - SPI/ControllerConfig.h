@@ -4,6 +4,7 @@
 #include "Stats.h"
 #include "RenderText.h"
 #include "IconMappings.h"
+#include "ConfigManager.h"
 #include <string>
 #include <map>
 #include <optional>
@@ -21,93 +22,8 @@
 // ...accounting for an extra 100 or so mA for controller
 // and remembering standard USB 2.0 ports are typically rated for 500mA, and USB 3.0 ports 900 mA
 
-// --- Configuration System Definitions (High Performance, Compile-Time Safe) ---
-
-// 1. Metadata structure (remains the same)
-struct ConfigMetadata {
-    ConfigType type;
-    std::string description;
-    std::string group_id; // For grouping in the web UI
-    std::string display_name;
-    // Constraints
-    // When processing in web then based on config type will convert below to int for int or string lengths
-    float min;  // min value or min string length
-    float max;  // max value or max string length
-};
-
-// 2. Wrapper Structs (The core of the performance improvement)
-// These structs wrap the value and metadata, ensuring type safety at compile time.
-
-struct IntPlus {
-    ConfigMetadata metadata;
-    int value;
-};
-
-struct BoolPlus {
-    ConfigMetadata metadata;
-    bool value;
-};
-
-struct StringPlus {
-    ConfigMetadata metadata;
-    char value[256]; // Fixed size buffer for embedded safety
-};
-
-struct FloatPlus {
-    ConfigMetadata metadata;
-    float value;
-};
-
-// 3. The Singleton Manager
-class ConfigManager {
-private:
-    ConfigManager() = default;
-    ~ConfigManager() = default;
-
-    // Map to hold pointers to the wrapper structs, keyed by a unique ID string
-    std::map<std::string, const void*> settings_;
-
-public:
-    // Singleton access
-    static ConfigManager& getInstance() {
-        static ConfigManager instance;
-        return instance;
-    }
-
-    // Prevent copying and assignment
-    ConfigManager(const ConfigManager&) = delete;
-    ConfigManager& operator=(const ConfigManager&) = delete;
-
-    // Registration function (used in .cpp)
-    template<typename T>
-    void registerSetting(const std::string& id, const std::string& display, const std::string& group, T* settingPtr, const ConfigMetadata& meta) {
-        // Store the address of the wrapper struct instance
-        settings_[id] = (const void*)settingPtr;
-    }
-
-    // Retrieval function (used by web UI/runtime)
-    // Returns a void* pointer to the raw memory location of the setting's value.
-    // The caller MUST know the expected type (e.g., (IntPlus*)ptr)
-    const void* getSettingRaw(const std::string& id) const {
-        if (settings_.count(id)) {
-            return settings_.at(id);
-        }
-        return nullptr;
-    }
-
-    // Utility to get all settings for web UI iteration
-    const std::map<std::string, const void*>& getAllSettings() const {
-        return settings_;
-    }
-};
-
-// Global instance access (for convenience in .cpp)
-extern ConfigManager& ConfigManagerInstance();
-
-// --- End of Configuration System Definitions ---
-
 // General configuration - reminder some config options are in Config.h
-#define LIVE_BATTERY            // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
+#define LIVE_BATTERY              // Enable for device normally, but when testing on breadboard you might not have relevant battery or monitoring in place, triggering low battery handling. Disable to ignore these low battery checks.
 #define USE_ONBOARD_LED           // Enable onboard Neopixel LED
 #define STATUS_LED_COMBINE_INPUTS // Status LED includes a generalised colour made up of Status colour + other LED's (in an approximately additive way)
 #define USE_EXTERNAL_LED          // Enable external LEDs - may want to check the ExternalLED_FastLEDCount below too
@@ -117,11 +33,11 @@ extern ConfigManager& ConfigManagerInstance();
 
 #define CLEAR_STATS_ON_FLIP // Resets stats counter when screen flipped (just a handy way for a manual zeroing without needing an extra button)
 
-// Idle effect timings and settings
-#define IDLE_LED_TIMEOUT 10.0     // Seconds before LED's go into Idle mode
-#define IDLE_SCREEN_TIMEOUT 30.0  // Seconds before Screen goes into Idle mode
-#define IDLE_EFFECT_RESTART 60.0  // Seconds before screen restarts it's idle effect (keeps it more interesting)
-#define IDLE_LED_RUN_EXCLUSIVELY  // Idle effect LED's run on their own - all other LED effects stop.
+// Idle effect default timings and settings
+#define DEFAULT_IDLE_LED_TIMEOUT 10.0     // Seconds before LED's go into Idle mode
+#define DEFAULT_IDLE_SCREEN_TIMEOUT 30.0  // Seconds before Screen goes into Idle mode
+#define DEFAULT_IDLE_EFFECT_RESTART 60.0  // Seconds before screen restarts it's idle effect (keeps it more interesting)
+#define DEFAULT_IDLE_LED_RUN_EXCLUSIVELY  // Idle effect LED's run on their own - all other LED effects stop.
                                   // You may want both to be processed at the same time (especially if the Idle effects are only set to process on a subset of LED's)
 
 // =====
@@ -145,7 +61,7 @@ enum class LEDStrip {
     COUNT   // Should auto-populate as part of the enum as last item
 };
 
-#define LED_BRIGHTNESS 200 // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
+#define DEFAULT_LED_BRIGHTNESS 200 // 0->255 - note FastLED has 1 global brightness setting, so affects both onboard and external LED's
 
 #define ONBOARD_LED_FADE_RATE (1.0 / 0.2) // 0.15 is the total amount of seconds a complete 255->0 fade will be over
 
@@ -529,246 +445,3 @@ extern char SoftwareRevision[];
 // Battery boot up extra text
 #define DIGITALINPUT_BATTERY_CONTINUE_LABEL "Start Button"
 #define DIGITALINPUT_BATTERY_EXTRAINFO_LABEL "Extra Info Button"
-
-// Message that appears in Config help menu
-// Will include controller specific instructions
-// Note: See Style definition in RenderText.h for limitations
-
-static const TextLine ConfigHelpText[] = {
-    // {STYLE_NONE, "This is a test"},
-    // {STYLE_H1, "This is H1"},
-    // {STYLE_NONE, "This is a test"},
-    // {STYLE_BOLD, "This is Bold"},
-    // {STYLE_UNDERLINE, "This is Underline"},
-    // {STYLE_BOLD | STYLE_UNDERLINE, "This is Bold Underline"},
-    // {STYLE_SEPARATOR, ""},
-    // {STYLE_SEPARATOR, "This is a separator"},
-    // {STYLE_HIGHLIGHT, "This is Highlighted"},
-    // {STYLE_CENTRED, "This is centred"},
-    // {STYLE_ALIGNRIGHT, "Aligned Right"},
-    // {STYLE_HIGHLIGHT | STYLE_CENTRED, "Highlighted Centred"},
-    // {STYLE_NONE, "This is a test"},
-    // {STYLE_BULLET, "1 This is a test"},
-    // {STYLE_BULLET, "2 This is a test"},
-    // {STYLE_BULLET, "3 This is a test"},
-
-    {STYLE_H1, "Help"},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL " +"},
-    {STYLE_NONE, DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL},
-    {STYLE_NONE, "to scroll this help text."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL},
-    {STYLE_NONE, "to change menu."},
-    {STYLE_NONE, "Different menus use"},
-    {STYLE_NONE, "controller buttons"},
-    {STYLE_NONE, "in different ways."},
-    {STYLE_NONE, "See below for details."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "This configuration "},
-    {STYLE_NONE, "screen allows you to"},
-    {STYLE_NONE, "alter profiles, enter"},
-    {STYLE_NONE, "WiFi details, etc."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Note WiFi is only used"},
-    {STYLE_NONE, "to enable access to a"},
-    {STYLE_NONE, "web server on the device"},
-    {STYLE_NONE, "and is not required to"},
-    {STYLE_NONE, "operate as a controller."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Once changes are"},
-    {STYLE_NONE, "complete, don't forget"},
-    {STYLE_NONE, "to go to the save menu."},
-    {STYLE_NONE, "and save."},
-    {STYLE_NONE, ""},
-    {STYLE_SEPARATOR, ""},
-    {STYLE_NONE, ""},
-    {STYLE_H1, " Profile", Icon_Menu_Smile},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Device allows for"},
-    {STYLE_NONE, "multiple profiles with"},
-    {STYLE_NONE, "with own"},
-    {STYLE_NONE, ""},
-    {STYLE_BULLET, "Unique Device name"},
-    {STYLE_BULLET, "Wifi settings"},
-    {STYLE_BULLET, "Unique Bluetooth"},
-    {STYLE_BULLET, "identify", Icon_IGNORE},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Handy if you want to"},
-    {STYLE_NONE, "pair your controller"},
-    {STYLE_NONE, "with multiple"},
-    {STYLE_NONE, "devices and on"},
-    {STYLE_NONE, "different WiFi networks."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Normally controller uses"},
-    {STYLE_NONE, "the default profile."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Profiles 1-5 are accessed"},
-    {STYLE_NONE, "are accessed on"},
-    {STYLE_NONE, "controller power-up by"},
-    {STYLE_NONE, "by holding down"},
-    {STYLE_NONE, "corresponding"},
-    {STYLE_NONE, "green, red, yellow, blue"},
-    {STYLE_NONE, "or orange buttons on the"},
-    {STYLE_NONE, "guitar neck."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "You set the WiFi settings"},
-    {STYLE_NONE, "for each profile"},
-    {STYLE_NONE, "separately."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Different bluetooth"},
-    {STYLE_NONE, "identities need device"},
-    {STYLE_NONE, "pairing for each profile."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "You can copy/paste"},
-    {STYLE_NONE, "profile settings to"},
-    {STYLE_NONE, "make it easy to"},
-    {STYLE_NONE, "duplicate WiFi"},
-    {STYLE_NONE, "configurations etc."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, ""},
-    {STYLE_H1, "Moving between Profiles"},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "In the Profile menu,"},
-    {STYLE_NONE, "hold " DIGITALINPUT_CONFIG_SELECT_LABEL},
-    {STYLE_NONE, "and then use"},
-    {STYLE_NONE, DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL},
-    {STYLE_NONE, "to move between profiles."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, ""},
-    {STYLE_H1, "Copying Profiles"},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "In the Profile menu,"},
-    {STYLE_NONE, "hold " DIGITALINPUT_CONFIG_BACK_LABEL},
-    {STYLE_NONE, "to access a profile"},
-    {STYLE_NONE, "copy/paste function."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Then hold " DIGITALINPUT_CONFIG_UP_LABEL},
-    {STYLE_NONE, "to copy the current."},
-    {STYLE_NONE, "profile."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Move to your target"},
-    {STYLE_NONE, "profile (see earlier)"},
-    {STYLE_NONE, "and hold " DIGITALINPUT_CONFIG_BACK_LABEL},
-    {STYLE_NONE, "to access copy/paste"},
-    {STYLE_NONE, "again. Finally"},
-    {STYLE_NONE, "hold " DIGITALINPUT_CONFIG_DOWN_LABEL},
-    {STYLE_NONE, "to paste the settings."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Settings will not be"},
-    {STYLE_NONE, "saved until you go to"},
-    {STYLE_NONE, "the Save menu."},
-    {STYLE_NONE, ""},
-    {STYLE_SEPARATOR, ""},
-    {STYLE_NONE, ""},
-    {STYLE_H1, "WiFi Set-up", Icon_Menu_WiFi},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Wifi Settings let you..."},
-    {STYLE_NONE, ""},
-    {STYLE_BULLET, "Select required WiFi"},
-    {STYLE_BULLET, "access point", Icon_IGNORE},
-    {STYLE_BULLET, "Set a password"},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Note that passwords"},
-    {STYLE_NONE, "are saved in the"},
-    {STYLE_NONE, "controller in an"},
-    {STYLE_NONE, "encrypted format"},
-    {STYLE_NONE, "but are visible in"},
-    {STYLE_NONE, "this configuration"},
-    {STYLE_NONE, "screen."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, ""},
-    {STYLE_H1, "WiFi Access Point"},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "A list of WiFi access"},
-    {STYLE_NONE, "points are"},
-    {STYLE_NONE, "automatically scanned"},
-    {STYLE_NONE, "and updated every few"},
-    {STYLE_NONE, "seconds."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL},
-    {STYLE_NONE, "and then use"},
-    {STYLE_NONE, DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL},
-    {STYLE_NONE, "to move to the access"},
-    {STYLE_NONE, "point you want to use."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "In the list, a small"},
-    {STYLE_NONE, "bar is shown to the left"},
-    {STYLE_NONE, "of the access point"},
-    {STYLE_NONE, "to show signal strength"},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, ""},
-    {STYLE_H1, "WiFi Password", Icon_Menu_Key},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "In the password menu"},
-    {STYLE_NONE, "any currently known"},
-    {STYLE_NONE, "password will be"},
-    {STYLE_NONE, "shown. The password"},
-    {STYLE_NONE, "will be blank if none"},
-    {STYLE_NONE, "has been specified yet."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "There will be a flashing"},
-    {STYLE_NONE, "cursor at the end"},
-    {STYLE_NONE, "of the password."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL},
-    {STYLE_NONE, "and then use"},
-    {STYLE_NONE, DIGITALINPUT_CONFIG_UP_LABEL "/" DIGITALINPUT_CONFIG_DOWN_LABEL},
-    {STYLE_NONE, "to scroll through a"},
-    {STYLE_NONE, "list of characters"},
-    {STYLE_NONE, "for the current letter"},
-    {STYLE_NONE, "in the password."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Once a letter is"},
-    {STYLE_NONE, "selected, the cursor"},
-    {STYLE_NONE, "will automatically move"},
-    {STYLE_NONE, "to the next position."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Press " DIGITALINPUT_CONFIG_BACK_LABEL},
-    {STYLE_NONE, "to delete the last"},
-    {STYLE_NONE, "letter and move the"},
-    {STYLE_NONE, "cursor back."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "A status is shown for the"},
-    {STYLE_NONE, "entered password"},
-    {STYLE_NONE, "and if it works with your"},
-    {STYLE_NONE, "your selected WiFi access"},
-    {STYLE_NONE, "point."},
-    {STYLE_NONE, ""},
-    {STYLE_SEPARATOR, ""},
-    {STYLE_NONE, ""},
-    {STYLE_H1, "Save Settings", Icon_Menu_Save},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "Hold " DIGITALINPUT_CONFIG_SELECT_LABEL},
-    {STYLE_NONE, "to save any changes."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "ALL profile settings"},
-    {STYLE_NONE, "will be saved."},
-    {STYLE_NONE, ""},
-    {STYLE_BOLD, "Warning:"},
-    {STYLE_NONE, "If you do not save,"},
-    {STYLE_NONE, "all changes will be"},
-    {STYLE_NONE, "lost."},
-    {STYLE_NONE, ""},
-    {STYLE_SEPARATOR, ""},
-    {STYLE_NONE, ""},
-    {STYLE_H1, "Notes", Icon_Menu_QuestionMark},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "To access other menus,"},
-    {STYLE_NONE, "during normal controller"},
-    {STYLE_NONE, "operations, hold down"},
-    {STYLE_NONE, "the Select Button."},
-    {STYLE_NONE, ""},
-    {STYLE_NONE, "If WiFi is"},
-    {STYLE_NONE, "configured and OK"},
-    {STYLE_NONE, "then the main WiFi menu"},
-    {STYLE_NONE, "will show an IP Address"},
-    {STYLE_NONE, "(if available) to"},
-    {STYLE_NONE, "access further"},
-    {STYLE_NONE, "functionality and"},
-    {STYLE_NONE, "information from a"},
-    {STYLE_NONE, "standard web browser."},
-    {STYLE_NONE, ""},
-    {STYLE_SEPARATOR, ""},
-    {STYLE_NONE, ""}
-    };
