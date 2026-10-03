@@ -64,7 +64,8 @@ private:
     static esp_err_t Send_WiFiStatus(httpd_req_t *req);
     static esp_err_t Send_WiFiTestStatus(httpd_req_t *req);
     static esp_err_t Send_HotspotInfo(httpd_req_t *req);
-
+    static esp_err_t Send_Config(httpd_req_t *req);
+    static esp_err_t POST_UpdateConfig(httpd_req_t *req);
     static esp_err_t POST_UpdateWiFiDetails(httpd_req_t *req);
 
     static void InitWebServerCustomHandler();

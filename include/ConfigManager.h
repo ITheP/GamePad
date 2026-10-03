@@ -9,11 +9,11 @@
 // ENUMS
 // ------------------------------------------------------------
 
-enum ConfigType {
+enum class ConfigType {
     Int,
     Bool,
     Float,
-    CharStar,
+    String,
     Colour
 };
 
@@ -21,7 +21,7 @@ static const char* ConfigTypeDescriptions[] = {
     "Int",
     "Bool",
     "Float",
-    "CharStar",
+    "String",
     "Colour"
 };
 
@@ -152,13 +152,14 @@ public:
     static BaseConfig* GetConfig(int id);
     static ConfigManagerUpdateResult UpdateConfigById(int id, void* value);
     static void AddConfigArray(BaseConfig** configs, int count);
+    static void RenderConfigToJson(std::ostringstream& json);
 
     template <typename T>
     static void AddConfig(T *config)
     {
         EnsureCapacity();
 
-        Serial.println("Adding config [" + String(config->Id) + "." + String(ConfigTypeDescriptions[config->Type]) + "]: " + String(config->Metadata.Label.c_str()));
+        Serial.println("Adding config [" + String(config->Id) + "." + String(ConfigTypeDescriptions[(int)config->Type]) + "]: " + String(config->Metadata.Label.c_str()));
 
         // All your config structs begin with Type, Id, Metadata
         BaseConfig *base = reinterpret_cast<BaseConfig *>(config);

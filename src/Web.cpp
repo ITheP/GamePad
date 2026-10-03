@@ -451,6 +451,11 @@ esp_err_t Web::Send_HotspotInfo(httpd_req_t *req)
     return ESP_OK;
 }
 
+esp_err_t Web::POST_UpdateConfig(httpd_req_t *req)
+{
+            return ESP_OK;
+}
+
 esp_err_t Web::POST_UpdateWiFiDetails(httpd_req_t *req)
 {
     char buf[512];
@@ -529,6 +534,42 @@ esp_err_t Web::POST_UpdateWiFiDetails(httpd_req_t *req)
 #endif
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, "{\"status\":\"ok\"}", 16);
+    return ESP_OK;
+}
+
+esp_err_t Web::Send_Config(httpd_req_t *req)
+{
+    std::ostringstream json;
+    json << "{\"config\": [";
+
+    // Hand off to the ConfigManager to loop through all config and generate JSON details
+    ConfigManager::RenderConfigToJson(json);
+
+    for (int i = 0; i < AllStats_Count; i++)
+    {
+        if (i > 0)
+            json << ",";
+
+        json << "{\"Name\": \"" << AllStats[i]->Description << "\","
+             << "\"Current_SecondCount\": " << AllStats[i]->Current_SecondCount << ","
+             << "\"Current_TotalCount\": " << AllStats[i]->Current_TotalCount << ","
+             << "\"Current_MaxPerSecond\": " << AllStats[i]->Current_MaxPerSecond << ","
+             << "\"Current_MaxPerSecondOverLastMinute\": " << AllStats[i]->Current_MaxPerSecondOverLastMinute << ","
+             << "\"Session_TotalCount\": " << AllStats[i]->Ever_TotalCount << ","
+             << "\"Session_MaxPerSecond\": " << AllStats[i]->Ever_MaxPerSecond << ","
+             << "\"Ever_TotalCount\": " << AllStats[i]->Ever_TotalCount << ","
+             << "\"Ever_MaxPerSecond\": " << AllStats[i]->Ever_MaxPerSecond << "}";
+    }
+
+    json << "]}";
+
+    std::string response = json.str();
+#ifdef HTTPD_CLOSE_CONNECTIONS
+    // Force the client to close the connection after this response - free's up limited connections
+    httpd_resp_set_hdr(req, "Connection", "close");
+#endif
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, response.c_str(), response.length());
     return ESP_OK;
 }
 
@@ -764,11 +805,27 @@ void Web::InitWebServer()
         { return Web::Send_BatteryInfo(req); },
     };
 
+    static const httpd_uri_t uri_config_json = {
+        .uri = "/json/stats",
+        .method = HTTP_GET,
+        .handler = [](httpd_req_t *req)
+        { return Web::Send_Config(req); },
+    };
+
+    static const httpd_uri_t uri_config_update = {
+        .uri = "/api/UpdateConfig",
+        .method = HTTP_POST,
+        .handler = [](httpd_req_t *req)
+        { return Web::POST_UpdateConfig(req); },
+    };
+
     register_handler(uri_root);
     register_handler(uri_main);
     register_handler(uri_debug);
     register_handler(uri_stats_table);
     register_handler(uri_stats_json);
+    register_handler(uri_config_json);
+    register_handler(uri_config_update);
     register_handler(uri_wifi_status);
     register_handler(uri_battery_info);
 
