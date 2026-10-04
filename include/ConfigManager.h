@@ -159,13 +159,17 @@ public:
     {
         EnsureCapacity();
 
-        Serial.println("Adding config [" + String(config->Id) + "." + String(ConfigTypeDescriptions[(int)config->Type]) + "]: " + String(config->Metadata.Label.c_str()));
-
         // All your config structs begin with Type, Id, Metadata
         BaseConfig *base = reinterpret_cast<BaseConfig *>(config);
 
         base->Id = ConfigCount;
         ConfigMap[ConfigCount++] = base;
+
+        Serial.printf("Adding config [%3d.%-12s]: %s\n",
+            config->Id,
+            ConfigTypeDescriptions[(int)config->Type],
+            config->Metadata.Label.c_str());
+
 
         // Check if is also saved in Preferences and load in value if it is
     }

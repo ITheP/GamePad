@@ -85,6 +85,7 @@ int ExternalLedsEnabled[ExternalLED_Count];
 #include <Idle.h>
 #include <Prefs.h>
 #include <driver/rmt.h>
+#include <SerialDebug.h>
 
 // Task for handling FastLED updates
 // void UpdateExternalLEDs(void *parameter)
@@ -1436,8 +1437,6 @@ void setup()
 
   ConfigManager::AddConfigArray(ConfigManager_ControllerDefinitions, ConfigManager_ControllerDefinitions_Size);
 
-
-
   Serial.println();
   setupDisplay();
 
@@ -1599,6 +1598,10 @@ void setup()
 
   // delay(600000);
 
+  // We include this quite late - if we start checking for Serial input too early,
+  // other initialisations might not have been completed, and requests might crash the device.
+  SerialDebug::Init();
+
   Serial.println();
   Serial_OK;
   Serial.println("✅ Setup complete!");
@@ -1681,6 +1684,8 @@ void loop()
 #ifdef DEBUG_MARKS
   Debug::Mark(10, __LINE__, __FILE__, __func__);
 #endif
+
+  SerialDebug::CheckSerialInput();
 
   unsigned long currentMicroS = micros();
   FractionalSeconds = (double)(currentMicroS / 1000000.0);

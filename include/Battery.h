@@ -85,7 +85,7 @@ public:
     static void ProcessInputs();
     static const char* GetPowerStateString(PowerState state);
     static const char* StateDescription();
-    static void PrintToSerial();
+    static void PrintPowerStateToSerial();
 
     inline static int ContinueIsPressed()
     {

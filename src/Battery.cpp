@@ -258,7 +258,7 @@ void Battery::CalculateState()
 #endif
 }
 
-void Battery::PrintToSerial()
+void Battery::PrintPowerStateToSerial()
 {
   Serial.printf(
       "🔋%-22s - "
