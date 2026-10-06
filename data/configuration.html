@@ -1,58 +1,31 @@
-<!-- <canvas id="shader" style="z-index: -1; top: 0; left: 0; position: fixed"></canvas> -->
+<!-- Configuration page - styles for the generated inputs -->
+<link rel="stylesheet" href="configuration.css" />
 
 <div class="shaderOverlay">
     <div style="padding: 25px;">
-        <p>Configuration</p>
-        <p>PROFILE INFORMATION<p>
-            from device...
-
-            Profile
-            Settings  {
-                {setting, description, type, min, max, value}
-            }
-
-            Change settings but not instant....
-            ...press save to sync settings back up
-
-
-            On device need a list of settings (with above information)
-            saved into config
-            per profile
-            push out via web in json
-            receive back json (of changes)
-            ...for profile
-            ...for each setting
-            ...create list of incoming settings and if they match saved setting names, type, range
-            ...if any are out of range then return error
-            ...otherwise go through and apply to profile config and save
-            ...and apply in device itself to update live settings
-            ...   maybe live settings just need to read values from config but slow so need to apply the updated value into a live variable
-
-        <table>
-            <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Method</th>
-                <th>URL</th>
-            </tr>
-            <tr>
-                <td>Stats</td>
-                <td>Lots of statistics about the controller, including button presses and usage</td>
-                <td>GET</td>
-                <td><a href="/json/stats" target="_blank">/json/stats</a></td>
-            </tr>
-            <tr>
-                <td>Battery</td>
-                <td>Basic information about current battery level and voltage</td>
-                <td>GET</td>
-                <td><a href="/json/battery_info" target="_blank">/json/battery_info</a></td>
-            </tr>
-            <tr>
-                <td>WiFi</td>
-                <td>Basic Wifi information including signal strength</td>
-                <td>GET</td>
-                <td><a href="/json/wifi_status" target="_blank">/json/wifi_status</a></td>
-            </tr>
-        </table>
+        <h2>Configuration</h2>
+        <p>
+            Be aware that wifi connectivity can sometimes be a little unreliable!
+            For some settings, changes won't be automatically applied until 💾 is pressed.
+        </p>
+        <div class="config-toolbar">
+            <span id="configGlobalStatus" class="config-global-status"></span>
+            <button type="button" id="configRefreshButton" class="btn config-refresh btn--autowidth">🔄 Refresh All</button>
         </div>
+
+        <table id="configTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody id="configTableBody">
+                <tr>
+                    <td colspan="3" class="config-placeholder">⏳ Loading configuration…</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 </div>

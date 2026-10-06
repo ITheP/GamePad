@@ -279,14 +279,12 @@ constexpr int LOGO_HEIGHT = 64;
 //   }
 // }
 
-
 void RenderStartupLogo()
 {
   Display.clearDisplay();
   RenderIconRuns(Logo, Logo_RunCount, RRELogos);
   Display.display();
 }
-
 
 void RenderGlintingStartupLogo()
 {
@@ -311,7 +309,7 @@ void RenderGlintingStartupLogo()
     Display.display();
 
     delay(20);
-    //Battery::TakeReading();
+    // Battery::TakeReading();
   }
 }
 
@@ -364,11 +362,11 @@ void enforceBatteryChargeState()
   // bool isCharging = Battery::IsCharging;
   // Serial.printf("EnforceBatteryChargeState: Battery level %d%%, Empty%% %d%%, isCharging=%d\n", Battery::ClampedPercentage, POWER_Percentage_Empty, Battery::IsCharging);
 
-  Serial.println(Battery::StateDescription());
-  if (POWER_Percentage_Low > Battery::ClampedPercentage)
-    Serial.println("First TRUE");
-  if (Battery::IsCharging)
-    Serial.println("BAT CHARGING");
+  // Serial.println(Battery::StateDescription());
+  // if (POWER_Percentage_Low > Battery::ClampedPercentage)
+  //   Serial.println("First TRUE");
+  // if (Battery::IsCharging)
+  //   Serial.println("BAT CHARGING");
 
   // If power is too low or we are in a charging stage, boot to charge screen
   if (POWER_Percentage_Low > Battery::ClampedPercentage || Battery::IsCharging)
@@ -818,7 +816,7 @@ void setupLEDs()
   Display.display();
 
   ApplyGlobalLEDBrightnessFromConfig();
-  //FastLED.setBrightness(DEFAULT_LED_BRIGHTNESS);
+  // FastLED.setBrightness(DEFAULT_LED_BRIGHTNESS);
 
   // FastLED.Show() main loop can be processed on a separate thread to allow for running on other cores.
   // At time of writing, thread runs on same core as main loop (core 1)
@@ -1434,7 +1432,7 @@ void setup()
 
   Debug::ClearCrashCheckData();
 
-
+  ConfigManager::AddConfigArray(ConfigManager_GlobalDefinitions, ConfigManager_GlobalDefinitions_Size);
   ConfigManager::AddConfigArray(ConfigManager_ControllerDefinitions, ConfigManager_ControllerDefinitions_Size);
 
   Serial.println();
@@ -1456,7 +1454,7 @@ void setup()
   setupAnalogInputs(AnalogInputs_Battery, AnalogInputs_Battery_Count);
   enforceBatteryChargeState();
 #endif
-  
+
   RenderStartupLogo();
   setupUSB();
 
@@ -1471,32 +1469,7 @@ void setup()
   Prefs::Init();
 
   Serial.println();
-  Serial_INFO;
-  Serial.println("💥 📁 Checking for crash logs...");
-  std::vector<String> crashLogs;
-  Debug::GetCrashLogPaths(crashLogs, true);
-  int logCount = crashLogs.size();
-  snprintf(buffer, sizeof(buffer), "💥 ℹ️ Found %d crash log(s)", logCount);
-  Serial_INFO;
-  Serial.println(buffer);
-  Serial.println("IMPORTANT: Reminder that when viewing crash logs with something like PlatformIO Serial Monitor");
-  Serial.println("with automatic core debugging turned on where PC and Backtraces are decoded,");
-  Serial.println("this is dependant on the correct .elf being available to decode against.");
-  if (logCount > 2)
-    Serial.println("💥 📄  Only last 2 log's shown here - check web debug for others\n");
-
-  int count = 0;
-  for (const auto &logPath : crashLogs)
-  {
-    if (count < 2)
-    {
-      DumpFileToSerial(logPath.c_str()); // Output any previous crash files we might have had for info purposes
-      Serial.println();
-    }
-    else
-      Serial.println("💥 📄  " + logPath + " skipped");
-    count++;
-  }
+  Debug::RenderCrashLogsToSerial();
 
   // We need inputs set up now before anything else
   // so we can check for boot up redirection to configuration screen
@@ -1763,12 +1736,16 @@ void MainLoop()
   MainBenchmark.Start("Loop", showBenchmark);
 #endif
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-  delay(INPUT_SERIAL_DEBUG_PLUS_THROTTLE);
+  // #ifdef DEFAULT_INPUT_SERIAL_LIVE_OUTPUT
+  if (Config_InputSerialLiveOutput.Value)
+  {
+    // Resets serial output (if serial monitor client supports it) so output overwrites previous output
+    delay(Config_InputSerialLiveOutputThrottle.Value);
 
-  Serial.print("\033[3J\033[2J\033[H");
+    Serial.print("\033[3J\033[2J\033[H");
+  }
   // Serial.print("\033[H");
-#endif
+  // #endif
 
   // SubSecond flagging - specific integer used for things like sub second sliding window calculations of UpDownCounts
   SubSecond = (int)(Now * SUB_SECOND_COUNT) % SUB_SECOND_COUNT;
@@ -1833,10 +1810,10 @@ void MainLoop()
     char batteryIcon;
 
     // Handling of 0 battery charge is handled later on
-// Serial.println(Battery::StateDescription());
-// Serial.println(Battery::Percentage);
-// Serial.println(Battery::IsCharging);
-// Serial.println((int)Battery::State);
+    // Serial.println(Battery::StateDescription());
+    // Serial.println(Battery::Percentage);
+    // Serial.println(Battery::IsCharging);
+    // Serial.println((int)Battery::State);
     // Show the following
     // is charging
     if (Battery::IsCharging)
@@ -1911,16 +1888,18 @@ void MainLoop()
       else
       {
         // batteryState == PowerState::Unknown
-         batteryIcon = Icon_PowerStateUnknown;
+        batteryIcon = Icon_PowerStateUnknown;
       }
     }
 
-    if (batteryIcon != LastBatteryIcon) {
+    if (batteryIcon != LastBatteryIcon)
+    {
       RenderBatteryIcon(batteryIcon, uiBattery_xPos, uiBattery_yPos, 16, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
       LastBatteryIcon = batteryIcon;
     }
 
-      if (drawPowerBar) {
+    if (drawPowerBar)
+    {
       // Battery level scale to 0->10 pixels
       int width = ((currentBatteryPercentage / 100.0) * 10.0);
       // Render width as 0->10 pixel wide rectangle inside icon
@@ -1951,7 +1930,7 @@ void MainLoop()
     //   // ...however next line will trigger full screen low battery handling
     //   Battery::PreviousPercentage = currentBatteryPercentage;
     // }
-    //else if (Battery::PreviousPercentage != currentBatteryPercentage)
+    // else if (Battery::PreviousPercentage != currentBatteryPercentage)
     if (Battery::PreviousPercentage != currentBatteryPercentage)
     {
       Battery::PreviousPercentage = currentBatteryPercentage;
@@ -1959,14 +1938,12 @@ void MainLoop()
       // compositeHID->setBatteryLevel(currentBatteryLevel);
       sendReport = true;
     }
-      // // Redraw standard battery icon if required
-      // if (LastBatteryIcon != Icon_Battery)
-      // {
-      //   LastBatteryIcon = Icon_Battery;
-      //   RenderBatteryIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 14, 11);
-      // }
-
-
+    // // Redraw standard battery icon if required
+    // if (LastBatteryIcon != Icon_Battery)
+    // {
+    //   LastBatteryIcon = Icon_Battery;
+    //   RenderBatteryIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 14, 11);
+    // }
 
     UpdateSecondStats(Second);
 
@@ -2055,16 +2032,19 @@ void MainLoop()
     //     pulseInput->Frequency = 0; // ?? NOT NEEDED
     // }
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-    snprintf(buffer, sizeof(buffer),
-             "Pulse input   %2d [%-35s]: DutyCycle: %4d, AnalogValue: %4d",
-             i,
-             pulseInput->Label,
-             pulseInput->DutyCycle,
-             pulseInput->ValueState.AnalogValue);
+    // #ifdef DEFAULT_INPUT_SERIAL_LIVE_OUTPUT
+    if (Config_InputSerialLiveOutput.Value)
+    {
+      snprintf(buffer, sizeof(buffer),
+               "Pulse input   %2d [%-35s]: DutyCycle: %4d, AnalogValue: %4d",
+               i,
+               pulseInput->Label,
+               pulseInput->DutyCycle,
+               pulseInput->ValueState.AnalogValue);
 
-    Serial.println(buffer);
-#endif
+      Serial.println(buffer);
+    }
+    // #endif
   }
 
 #ifdef INCLUDE_BENCHMARKS
@@ -2106,16 +2086,19 @@ void MainLoop()
 
       // Serial.println("Digital input i=" + String(i) + " for " + String(input->Label) + " raw: " + String(state) + ", Pre.ValueState.State: " + String(input->ValueState.Value));
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-      snprintf(buffer, sizeof(buffer),
-               "Digital input %2d [%-35s]: raw: %4d, Pre.ValueState.      Value: %4d",
-               i,
-               input->Label,
-               state,
-               input->ValueState.Value);
+      // #ifdef DEFAULT_INPUT_SERIAL_LIVE_OUTPUT
+      if (Config_InputSerialLiveOutput.Value)
+      {
+        snprintf(buffer, sizeof(buffer),
+                 "Digital input %2d [%-35s]: raw: %4d, Pre.ValueState.      Value: %4d",
+                 i,
+                 input->Label,
+                 state,
+                 input->ValueState.Value);
 
-      Serial.println(buffer);
-#endif
+        Serial.println(buffer);
+        // #endif
+      }
 
       // Combine with virtual pin if required
       // TODO: This may be an array
@@ -2130,14 +2113,17 @@ void MainLoop()
 
           state = state && virtualinput->ValueState.Value;
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-          snprintf(buffer, sizeof(buffer),
-                   "    Virtual input <- %4d + Virtual Trigger: %d, Final state %4d",
-                   virtualinput->ValueState.AnalogValue,
-                   virtualinput->ValueState.Value,
-                   state);
-          Serial.println(buffer);
-#endif
+          // #ifdef DEFAULT_INPUT_SERIAL_LIVE_OUTPUT
+          if (Config_InputSerialLiveOutput.Value)
+          {
+            snprintf(buffer, sizeof(buffer),
+                     "    Virtual input <- %4d + Virtual Trigger: %d, Final state %4d",
+                     virtualinput->ValueState.AnalogValue,
+                     virtualinput->ValueState.Value,
+                     state);
+            Serial.println(buffer);
+          }
+          // #endif
         }
       }
 
@@ -2158,18 +2144,21 @@ void MainLoop()
 
         // analogState = virtualPulseInput->ValueState.AnalogValue;
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-        snprintf(buffer, sizeof(buffer),
-                 "    Pulse Virtual input <- %4d, Ranged [%4d] %d [%4d] - [%s]",
-                 pulseValue,
-                 virtualPulseInput->LowerBound,
-                 (pulseValue >= virtualPulseInput->LowerBound && pulseValue <= virtualPulseInput->UpperBound) ? PRESSED : NOT_PRESSED,
-                 virtualPulseInput->UpperBound,
-                 virtualPulseInput->PulseInputSource->Label);
+        // #ifdef DEFAULT_INPUT_SERIAL_LIVE_OUTPUT
+        if (Config_InputSerialLiveOutput.Value)
+        {
+          snprintf(buffer, sizeof(buffer),
+                   "    Pulse Virtual input <- %4d, Ranged [%4d] %d [%4d] - [%s]",
+                   pulseValue,
+                   virtualPulseInput->LowerBound,
+                   (pulseValue >= virtualPulseInput->LowerBound && pulseValue <= virtualPulseInput->UpperBound) ? PRESSED : NOT_PRESSED,
+                   virtualPulseInput->UpperBound,
+                   virtualPulseInput->PulseInputSource->Label);
 
-        Serial.println(buffer);
-#endif
-        // }
+          Serial.println(buffer);
+        }
+        // #endif
+        //  }
 
         // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
 
@@ -2405,26 +2394,29 @@ void MainLoop()
       analogState = input->AnalogRaw; // analogRead(input->Pin);
     }
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-    ////  Serial.println("Analog input i=" + String(i) + " for " + String(input->Label) + " raw: " + String(analogState) + ", Pre.ValueState.AnalogValue: " + String(input->ValueState.AnalogValue));
-    ////if (i == 0) {
-    snprintf(buffer, sizeof(buffer),
-             "Analog  input %2d [%-35s]: raw: %5d, Pre.ValueState.AnalogValue: %4d - Min/Max: %4d/%-4d, Trigger On/OFf: %4d/%-4d, Cumulative: %6d, AnalogCount %4d/%4d",
-             i,
-             input->Label,
-             analogState,
-             input->ValueState.AnalogValue,
-             input->MinAnalogValue,
-             input->MaxAnalogValue,
-             input->TriggerOnValue,
-             input->TriggerOffValue,
-             input->AnalogCumulative,
-             input->AnalogCount,
-             input->AverageOverAnalogCount);
+    // #ifdef DEFAULT_INPUT_SERIAL_LIVE_OUTPUT
+    if (Config_InputSerialLiveOutput.Value)
+    {
+      ////  Serial.println("Analog input i=" + String(i) + " for " + String(input->Label) + " raw: " + String(analogState) + ", Pre.ValueState.AnalogValue: " + String(input->ValueState.AnalogValue));
+      ////if (i == 0) {
+      snprintf(buffer, sizeof(buffer),
+               "Analog  input %2d [%-35s]: raw: %5d, Pre.ValueState.AnalogValue: %4d - Min/Max: %4d/%-4d, Trigger On/OFf: %4d/%-4d, Cumulative: %6d, AnalogCount %4d/%4d",
+               i,
+               input->Label,
+               analogState,
+               input->ValueState.AnalogValue,
+               input->MinAnalogValue,
+               input->MaxAnalogValue,
+               input->TriggerOnValue,
+               input->TriggerOffValue,
+               input->AnalogCumulative,
+               input->AnalogCount,
+               input->AverageOverAnalogCount);
 
-    Serial.println(buffer);
-    ////}
-#endif
+      Serial.println(buffer);
+      ////}
+      // #endif
+    }
 
     int virtualPinInputCount = input->VirtualPinInputs.size();
     if (virtualPinInputCount > 0)
@@ -2485,23 +2477,26 @@ void MainLoop()
         if (rangedVirtualState > analogState)
           analogState = rangedVirtualState;
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-        snprintf(buffer, sizeof(buffer),
-                 "    Virtual input <- %4d + Virtual Trigger: %d, Constrained to [%4d] %4d [%4d], Ranged to [%4d] %4d [%4d], Final: %4d - [%s]",
-                 virtualInput->ValueState.AnalogValue,
-                 virtualInput->ValueState.Value,
-                 virtualInput->MinAnalogValue,
-                 constrainedVirtualState,
-                 virtualInput->MaxAnalogValue,
-                 input->MinAnalogValue,
-                 rangedVirtualState,
-                 input->MaxAnalogValue,
-                 analogState,
-                 virtualInput->Label);
+        // #ifdef DEFAULT_INPUT_SERIAL_LIVE_OUTPUT
+        if (Config_InputSerialLiveOutput.Value)
+        {
+          snprintf(buffer, sizeof(buffer),
+                   "    Virtual input <- %4d + Virtual Trigger: %d, Constrained to [%4d] %4d [%4d], Ranged to [%4d] %4d [%4d], Final: %4d - [%s]",
+                   virtualInput->ValueState.AnalogValue,
+                   virtualInput->ValueState.Value,
+                   virtualInput->MinAnalogValue,
+                   constrainedVirtualState,
+                   virtualInput->MaxAnalogValue,
+                   input->MinAnalogValue,
+                   rangedVirtualState,
+                   input->MaxAnalogValue,
+                   analogState,
+                   virtualInput->Label);
 
-        Serial.println(buffer);
-#endif
-        // }
+          Serial.println(buffer);
+        }
+        // #endif
+        //  }
 
         // Serial.println("... virtual input <- " + String(input->VirtualPinInputs[j]->ValueState.AnalogValue) + " + Virtual Trigger: " + String(input->VirtualPinInputs[j]->ValueState.Value) + ", Constrained to " + String(testA) + ", Ranged to " + String(testB) + ", Final: " + String(analogState));
       }
@@ -2595,22 +2590,25 @@ void MainLoop()
     float threshold = .015 * 4095; // 1.5% change required
     int previousAnalogValue = input->ValueState.AnalogValue;
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-    snprintf(buffer, sizeof(buffer),
-             "    Final calc.    - %4d                 , Constrained to [%4d] %4d [%4d], BT Ranged to [%4d] %5d [%5d], Triggered: [%4d] %d [%4d]",
-             input->ValueState.AnalogValue,
-             input->MinAnalogValue,
-             constrain(analogState, input->MinAnalogValue, input->MaxAnalogValue),
-             input->MaxAnalogValue,
-             0,
-             map(constrain(analogState, input->MinAnalogValue, input->MaxAnalogValue), input->MinAnalogValue, input->MaxAnalogValue, 0, 32737),
-             32737,
-             input->TriggerOnValue,
-             input->ValueState.Value,
-             input->TriggerOffValue);
+    // #ifdef DEFAULT_INPUT_SERIAL_LIVE_OUTPUT
+    if (Config_InputSerialLiveOutput.Value)
+    {
+      snprintf(buffer, sizeof(buffer),
+               "    Final calc.    - %4d                 , Constrained to [%4d] %4d [%4d], BT Ranged to [%4d] %5d [%5d], Triggered: [%4d] %d [%4d]",
+               input->ValueState.AnalogValue,
+               input->MinAnalogValue,
+               constrain(analogState, input->MinAnalogValue, input->MaxAnalogValue),
+               input->MaxAnalogValue,
+               0,
+               map(constrain(analogState, input->MinAnalogValue, input->MaxAnalogValue), input->MinAnalogValue, input->MaxAnalogValue, 0, 32737),
+               32737,
+               input->TriggerOnValue,
+               input->ValueState.Value,
+               input->TriggerOffValue);
 
-    Serial.println(buffer);
-#endif
+      Serial.println(buffer);
+      // #endif
+    }
 
     int16_t minAnalogValue = input->MinAnalogValue;
     int16_t maxAnalogValue = input->MaxAnalogValue;
@@ -3072,34 +3070,42 @@ void MainLoop()
   MainBenchmark.Snapshot("Loop.MenuHandled", showBenchmark);
 #endif
 
-#ifdef WHITE_SCREEN
-  // Show a completely white screen - handy for physical alignment when fitting screen panel in device
-  Display.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, C_WHITE);
-#endif
-
-#ifdef INCLUDE_BENCHMARKS
-  MainBenchmark.Snapshot("Loop.PreDisplay", showBenchmark);
-#endif
-
   // And finally update the display with all the lovely changes above - throttled as quite high overhead
   if (DisplayRollover)
   {
-    if (ControllerIdle_Screen)
-    {
-      // if (DisplayRollover || SecondRollover)
-      //{
-      RenderIdleEffect();
+
+    // #ifdef WHITE_SCREEN
+    if (Config_ScreenWhite.Value)
+      // Show a completely white screen - handy for physical alignment when fitting screen panel in device
+      Display.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, C_WHITE);
+    // #endif
 
 #ifdef INCLUDE_BENCHMARKS
-      MainBenchmark.Snapshot("Loop.IdleEffect", showBenchmark);
+    MainBenchmark.Snapshot("Loop.PreDisplay", showBenchmark);
 #endif
-      //}
+    else
+    {
+      // Don't do idle effects on a white screen! Complete white pixel overload that will bork out the effects
+      if (ControllerIdle_Screen)
+      {
+        // if (DisplayRollover || SecondRollover)
+        //{
+        RenderIdleEffect();
 
-#ifdef FORCE_FPS_DISPLAY
-      Display.fillRect(HALF_SCREEN_WIDTH, 0, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
-      itoa(FPS, buffer, 10);
-      RREDefault.printStr(ALIGN_RIGHT, 0, buffer);
+#ifdef INCLUDE_BENCHMARKS
+        MainBenchmark.Snapshot("Loop.IdleEffect", showBenchmark);
 #endif
+        //}
+      }
+
+      // #ifdef FORCE_FPS_DISPLAY
+      if (Config_ForceFPSDisplay.Value)
+      {
+        Display.fillRect(HALF_SCREEN_WIDTH, 0, HALF_SCREEN_WIDTH, RREHeight_fixed_8x16, C_BLACK);
+        itoa(FPS, buffer, 10);
+        RREDefault.printStr(ALIGN_RIGHT, 0, buffer);
+      }
+      // #endif
     }
 
 #ifdef DEBUG_MARKS
@@ -3117,29 +3123,29 @@ void MainLoop()
   Debug::Mark(1100, __LINE__, __FILE__, __func__, "End");
 #endif
 
-#ifdef INPUT_SERIAL_DEBUG_PLUS
-  Serial.println();
+// #ifdef DEFAULT_INPUT_SERIAL_LIVE_OUTPUT
+//   Serial.println();
 
-  // bool isCharging = (Battery::State == POWER_Charging);
-  // bool isPoweredByUSB = (Battery::State == POWER_USB || isCharging);
+//   // bool isCharging = (Battery::State == POWER_Charging);
+//   // bool isPoweredByUSB = (Battery::State == POWER_USB || isCharging);
 
-  // snprintf(buffer, sizeof(buffer),
-  //          "Battery state: CurrentSensorReading: %4d, CurrentPercentage: %3d - Cumulative: %5d/%-2d, PowerSensorReading: %4d, Voltage: %.2f, RawVoltage: %.2f - IsCharging: %s, IsPoweredByUSB: %s",
-  //          Battery::ClampedBatterySensorReading,
-  //          Battery::ClampedBatteryPercentage,
-  //          Battery::CumulativeBatterySensorReadings,
-  //          Battery::BatteryLevelReadingsCount,
-  //          Battery::PowerSensorReading,
-  //          Battery::ClampedVoltage,
-  //          Battery::RawVoltage,
-  //          isCharging ? "1" : "0",
-  //          isPoweredByUSB ? "1" : "0");
+//   // snprintf(buffer, sizeof(buffer),
+//   //          "Battery state: CurrentSensorReading: %4d, CurrentPercentage: %3d - Cumulative: %5d/%-2d, PowerSensorReading: %4d, Voltage: %.2f, RawVoltage: %.2f - IsCharging: %s, IsPoweredByUSB: %s",
+//   //          Battery::ClampedBatterySensorReading,
+//   //          Battery::ClampedBatteryPercentage,
+//   //          Battery::CumulativeBatterySensorReadings,
+//   //          Battery::BatteryLevelReadingsCount,
+//   //          Battery::PowerSensorReading,
+//   //          Battery::ClampedVoltage,
+//   //          Battery::RawVoltage,
+//   //          isCharging ? "1" : "0",
+//   //          isPoweredByUSB ? "1" : "0");
 
-  // Serial.println(buffer);
-  Battery::PrintToSerial();
+//   // Serial.println(buffer);
+//   Battery::PrintPowerStateToSerial();
 
-  Serial.println(); // Extra blank line helps cover up any previous output that might have been left on the serial monitor if an extra line got printed
-#endif
+//   Serial.println(); // Extra blank line helps cover up any previous output that might have been left on the serial monitor if an extra line got printed
+// #endif
 
 // TODO: Include Virtual Inputs
 #ifdef INPUT_SERIAL_DEBUG

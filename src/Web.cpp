@@ -253,7 +253,7 @@ esp_err_t Web::Send_DeviceInfo(httpd_req_t *req)
 
 esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
 {
-    char json[384];
+    static char json[512];
 
     Battery::CalculateState();
 
@@ -265,25 +265,42 @@ esp_err_t Web::Send_BatteryInfo(httpd_req_t *req)
 
     // Maxes out around 250 characters
     snprintf(json, sizeof(json),
-             "{\"BatteryPercentage\":%d, \"BatteryFullPercentage\":%.2f, \"BatteryVoltage\":%.2f, \"BatteryFullVoltage\":%.2f, \"BatteryUnmappedVoltage\":%.2f,  \"BatteryMinVoltage\":%.2f, \"BatteryMaxVoltage\":%.2f,  \"ChargingMinVoltage\":%.2f, \"ChargingMaxVoltage\":%.2f, \"BatteryPinReading\":%.2f, \"PowerPinReading\":%d, \"IsPoweredByBattery\":%s, \"LowBatteryWarning\":%s, \"OnBattery\":%s, \"IsCharging\":%s, \"BatteryFull\":%s, \"USBPower\":%s}",
-             Battery::ClampedPercentage,
-             Battery::Percentage,
-             Battery::ClampedVoltage,
-             Battery::Voltage,
-             Battery::ActualVoltage,
-             BATTERY_MIN_V,
-             BATTERY_MAX_V,
-             CHARGING_MIN_V,
-             CHARGING_MAX_V,
-             Battery::Raw_Battery,
-             Battery::Raw_Power,
-             Battery::ClampedPercentage < POWER_Percentage_Low ? "true" : "false",
-             Battery::StateDescription,
-             Battery::OnBattery ? "true" : "false",
-             Battery::IsCharging ? "false" : "true",
-             Battery::IsCharging ? "true" : "false",
-             Battery::BatteryFull ? "true" : "false",
-             Battery::USBPower ? "true" : "false");
+            "{"
+            "\"BatteryPercentage\":%d, "
+            "\"BatteryFullPercentage\":%d, "
+            "\"BatteryVoltage\":%.2f, "
+            "\"BatteryFullVoltage\":%.2f, "
+            "\"BatteryUnmappedVoltage\":%.2f, "
+            "\"BatteryMinVoltage\":%.2f, "
+            "\"BatteryMaxVoltage\":%.2f, "
+            "\"ChargingMinVoltage\":%.2f, "
+            "\"ChargingMaxVoltage\":%.2f, "
+            "\"BatteryPinReading\":%.2f, "
+            "\"PowerPinReading\":%d, "
+            "\"State\":\"%s\", "
+            "\"IsPoweredByBattery\":%s, "
+            "\"LowBatteryWarning\":%s, "
+            "\"IsCharging\":%s, "
+            "\"BatteryFull\":%s, "
+            "\"USBPower\":%s"
+            "}",          
+             Battery::ClampedPercentage,    // int      BatteryPercentage
+             Battery::Percentage,           // int      BatteryFullPercentage
+             Battery::ClampedVoltage,       // float    BatteryVoltage
+             Battery::Voltage,              // float    BatteryFullVoltage
+             Battery::ActualVoltage,        // float    BatteryUnmappedVoltage
+             BATTERY_MIN_V,                 // float    BatteryMinVoltage
+             BATTERY_MAX_V,                 // float    BatteryMaxVoltage
+             CHARGING_MIN_V,                // float    ChargingMinVoltage
+             CHARGING_MAX_V,                // float    ChargingMaxVoltage
+             Battery::Raw_Battery,          // float    BatteryPinReading
+             Battery::Raw_Power,            // int      PowerPinReading
+             Battery::StateDescription(),   // char*    State
+             Battery::OnBattery ? "true" : "false",     // char* IsPoweredByBattery
+             Battery::ClampedPercentage < POWER_Percentage_Low ? "true" : "false",      // char* LowbatteryWarning
+             Battery::IsCharging ? "true" : "false",    // char* IsCharging
+             Battery::BatteryFull ? "true" : "false",   // char* BatteryFull
+             Battery::USBPower ? "true" : "false");     // char* USBPower
 
 #ifdef HTTPD_CLOSE_CONNECTIONS
     // Force the client to close the connection after this response - free's up limited connections
@@ -453,6 +470,21 @@ esp_err_t Web::Send_HotspotInfo(httpd_req_t *req)
 
 esp_err_t Web::POST_UpdateConfig(httpd_req_t *req)
 {
+    char buf[512];
+    int ret = httpd_req_recv(req, buf, sizeof(buf));
+    if (ret <= 0)
+    {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+    buf[ret] = '\0';
+
+    String data(buf);
+    Serial.println(buf);
+
+
+    httpd_resp_send(req, "{\"status\":\"ok\"}", 16);
+    
             return ESP_OK;
 }
 
@@ -539,17 +571,17 @@ esp_err_t Web::POST_UpdateWiFiDetails(httpd_req_t *req)
 
 esp_err_t Web::Send_Config(httpd_req_t *req)
 {
-    std::ostringstream json;
-    json << "{\"config\": [";
+    //std::ostringstream json;
+    //json << "{\"config\": [";
 
     // Hand off to the ConfigManager to loop through all config and generate JSON details
-    ConfigManager::RenderConfigToJson(json);
+    std::ostringstream json = ConfigManager::GetConfigAsJson();
 
-    json << "]}";
+    //json << "]}";
 
     std::string response = json.str();
 
-    Serial.println(response.c_str());
+    //Serial.println(response.c_str());
 
 
 #ifdef HTTPD_CLOSE_CONNECTIONS

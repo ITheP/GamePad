@@ -144,34 +144,47 @@ function updateBatteryInformation() {
         })
         .then(data => {
             let batteryPercentage = data.BatteryPercentage;
+            let batteryFullPercentage = data.BatteryFullPercentage;
             let batteryVoltage = data.BatteryVoltage;
-            let batteryRawVoltage = data.BatteryRawVoltage;
+            let batteryFullVoltage = data.BatteryFullVoltage;
+            let batteryUnmappedVoltage = data.BatteryUnmappedVoltage;
             let batteryMinVoltage = data.BatteryMinVoltage;
             let batteryMaxVoltage = data.BatteryMaxVoltage;
+            let batteryChargingMinVoltage = data.BatteryChargingMinVoltage;
+            let batteryChargingMaxVoltage = data.BatteryChargingMaxVoltage;
             let batteryPinReading = data.BatteryPinReading;
             let powerPinReading = data.PowerPinReading;
+            let state = data.State;
             let isPoweredByBattery = data.IsPoweredByBattery;
+            let lowBatteryWarning = data.LowBatteryWarning;
             let isCharging = data.IsCharging;
-            let isPoweredByUSB = data.IsPoweredByUSB;
+            let batteryFull = data.BatteryFull;
+            let usbPower = data.USBPower;
 
             console.log(
                 "Battery Info: " +
                 "Percentage=" + batteryPercentage + "%, " +
+                "FullPercentage=" + batteryFullPercentage + "%, " +
                 "Voltage=" + batteryVoltage + "V, " +
-                "RawVoltage=" + batteryRawVoltage + ", " +
+                "FullVoltage=" + batteryFullVoltage + "V, " +
+                "UnmappedVoltage=" + batteryUnmappedVoltage + "V, " +
                 "MinVoltage=" + batteryMinVoltage + ", " +
                 "MaxVoltage=" + batteryMaxVoltage + ", " +
+                "ChargingMinVoltage=" + batteryChargingMinVoltage + ", " +
+                "ChargingMaxVoltage=" + batteryChargingMaxVoltage + ", " +
                 "BatteryPinReading=" + batteryPinReading + ", " +
                 "PowerPinReading=" + powerPinReading + ", " +
-                "MaxVoltage=" + batteryMaxVoltage + ", " +
-                "IsCharging=" + isCharging + ", " +
+                "State=" + state + ", " +
                 "IsPoweredByBattery=" + isPoweredByBattery + ", " +
-                "IsPoweredByUSB=" + isPoweredByUSB
+                "LowBatteryWarning=" + lowBatteryWarning + ", " +
+                "IsCharging=" + isCharging + ", " +
+                "batteryFull=" + batteryFull + ", " +
+                "USBPower=" + usbPower
             );
 
             if (isCharging)
                 ui.powerState.textContent = "⚡ Charging";
-            else if (isPoweredByUSB)
+            else if (usbPower)
                 ui.powerState.textContent = "🔌 USB Powered";
             else
                 ui.powerState.textContent = "🔋 Battery Power";

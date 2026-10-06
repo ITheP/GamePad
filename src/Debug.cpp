@@ -20,6 +20,7 @@
 #include "esp_ota_ops.h"
 #include <esp_debug_helpers.h>
 #include "esp_cpu.h"
+#include <RenderText.h>
 // #5 #include "esp_memory_utils.h"
 
 // When we generate our own capture of crash data, we try and re-create what the system generates
@@ -86,7 +87,7 @@ namespace
         uint32_t lbeg;
         uint32_t lend;
         uint32_t lcount;
-        uint32_t BackTrace[32];         // backtrace PCs
+        uint32_t BackTrace[32]; // backtrace PCs
         char SHA256[65];
     };
 
@@ -94,13 +95,15 @@ namespace
 }
 
 // Print "0x12345678"
-static void BackTracePrintHex32(uint32_t v) {
+static void BackTracePrintHex32(uint32_t v)
+{
     panic_print_str("0x");
     panic_print_hex(v);
 }
 
 // Print one backtrace entry: " 0xPC:0xSP"
-static void BackTracePrintEntry(uint32_t pc, uint32_t sp) {
+static void BackTracePrintEntry(uint32_t pc, uint32_t sp)
+{
     panic_print_str(" ");
     BackTracePrintHex32(pc);
     panic_print_str(":");
@@ -155,14 +158,15 @@ static void PanicPrintReg(const char *label, uint32_t value)
 
 // Helper macro to strip Xtensa windowed ABI bits (top 2 bits) in ESP-IDF v5
 #if CONFIG_IDF_TARGET_ARCH_XTENSA
-  #define PROCESS_STACK_PC(pc) ((uintptr_t)(pc) & 0x3FFFFFFF)
+#define PROCESS_STACK_PC(pc) ((uintptr_t)(pc) & 0x3FFFFFFF)
 #else
-  #define PROCESS_STACK_PC(pc) ((uintptr_t)(pc))
+#define PROCESS_STACK_PC(pc) ((uintptr_t)(pc))
 #endif
 
 extern "C" void IRAM_ATTR PrintBackTrace(const XtExcFrame *frame)
 {
-    if (!frame) {
+    if (!frame)
+    {
         panic_print_str("Backtrace: no frame\n");
         return;
     }
@@ -233,12 +237,14 @@ extern "C" void IRAM_ATTR PrintBackTrace(const XtExcFrame *frame)
 
 extern "C" void IRAM_ATTR SaveBackTraceToPanicRecord(PanicRecord *rec, const XtExcFrame *frame)
 {
-    if (!rec) return;
+    if (!rec)
+        return;
 
     // Clear the backtrace buffer
     memset(rec->BackTrace, 0, sizeof(rec->BackTrace));
 
-    if (!frame) return;
+    if (!frame)
+        return;
 
     // Seed from exception frame
     esp_backtrace_frame_t bt_frame = {};
@@ -275,11 +281,11 @@ extern "C" void IRAM_ATTR SaveBackTraceToPanicRecord(PanicRecord *rec, const XtE
 // assuming using esp32-s3 toolchain here, and esp_panic_handler is what we are after
 
 // Pointer to original panic handler, so we can it from our override
-//extern "C" void __real_esp_panic_handler(void *info);
+// extern "C" void __real_esp_panic_handler(void *info);
 extern "C" void __real___wrap_esp_panic_handler(void *info);
 
 // extern "C" void IRAM_ATTR esp_panic_handler(void *info)
-//extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
+// extern "C" void IRAM_ATTR __wrap_esp_panic_handler(void *info)
 extern "C" void IRAM_ATTR __wrap___wrap_esp_panic_handler(void *info)
 {
     // Following is done very carefully, running from IRAM and remembering that
@@ -916,6 +922,36 @@ void Debug::CheckForCrashInfo(esp_reset_reason_t reason)
         }
 
         Serial.println();
+    }
+}
+
+void Debug::RenderCrashLogsToSerial()
+{
+    Serial_INFO;
+    Serial.println("💥 📁 Checking for crash logs...");
+    std::vector<String> crashLogs;
+    Debug::GetCrashLogPaths(crashLogs, true);
+    int logCount = crashLogs.size();
+    snprintf(buffer, sizeof(buffer), "💥 ℹ️ Found %d crash log(s)", logCount);
+    Serial_INFO;
+    Serial.println(buffer);
+    Serial.println("IMPORTANT: Reminder that when viewing crash logs with something like PlatformIO Serial Monitor");
+    Serial.println("with automatic core debugging turned on where PC and Backtraces are decoded,");
+    Serial.println("this is dependant on the correct .elf being available to decode against.");
+    if (logCount > 2)
+        Serial.println("💥 📄  Only last 2 log's shown here - check web debug for others\n");
+
+    int count = 0;
+    for (const auto &logPath : crashLogs)
+    {
+        if (count < 2)
+        {
+            DumpFileToSerial(logPath.c_str()); // Output any previous crash files we might have had for info purposes
+            Serial.println();
+        }
+        else
+            Serial.println("💥 📄  " + logPath + " skipped");
+        count++;
     }
 }
 

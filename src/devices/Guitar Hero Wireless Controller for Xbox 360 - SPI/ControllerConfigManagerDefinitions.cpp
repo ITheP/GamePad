@@ -3,14 +3,14 @@
 
 FloatConfig Config_Idle_LED_Timeout {
     .Type = ConfigType::Float,
-    .Id = 0,
     .Metadata = {
         .Group = "Idle",
         .Label = "LED Timeout",
         .Description = "Seconds before LED's go into idle mode.",
         .Info = "",
-        .min = 0,
-        .max = 60 * 60 * 24,
+        .Unit = "Sec",
+        .Min = 0,
+        .Max = 60 * 60 * 24,
         .uiMin = 0,
         .uiMax = 60 * 10,
         .uiStep = 10,
@@ -22,15 +22,15 @@ FloatConfig Config_Idle_LED_Timeout {
 
 FloatConfig Config_Idle_Screen_Timeout {
     .Type = ConfigType::Float,
-    .Id = 0,
     .Metadata = {
         .Group = "Idle",
         .Label = "Screen Timeout",
         .Description = "Seconds before screen go into idle mode.",
         .Info = "",
-        .min = 0,
-        .max = 60 * 60 * 24,
-        .uiMin = 0,
+        .Unit = "Sec",
+        .Min = 1,
+        .Max = 60 * 60 * 24,
+        .uiMin = 1,
         .uiMax = 60 * 10,
         .uiStep = 10,
         .FunctionOnSet = nullptr
@@ -41,14 +41,14 @@ FloatConfig Config_Idle_Screen_Timeout {
 
 FloatConfig Config_Idle_Effect_Restart {
     .Type = ConfigType::Float,
-    .Id = 0,
     .Metadata = {
         .Group = "Idle",
         .Label = "Screen Restart",
         .Description = "Seconds before screen idle effect restarts.",
         .Info = "",
-        .min = 0,
-        .max = 60 * 60 * 24,
+        .Unit = "Sec",
+        .Min = 0,
+        .Max = 60 * 60 * 24,
         .uiMin = 0,
         .uiMax = 60 * 10,
         .uiStep = 10,
@@ -60,17 +60,17 @@ FloatConfig Config_Idle_Effect_Restart {
 
 IntConfig Config_LED_Brightness {
     .Type = ConfigType::Int,
-    .Id = 0,
     .Metadata = {
         .Group = "LED",
         .Label = "Brightness",
         .Description = "Global maximum brightness of LED's",
         .Info = "Very low brightness levels may result in funny looking LED colours or fades as there isn't the resolution of brightness levels to represent subtle differences in colour",
-        .min = 0,
-        .max = 255,
+        .Unit = "Thingies",
+        .Min = 0,
+        .Max = 255,
         .uiMin = 0,
-        .uiMax = 60 * 10,
-        .uiStep = 10,
+        .uiMax = 255,
+        .uiStep = 1,
         .FunctionOnSet = &OnGlobalLEDBrightnessConfigChange
     },
     .Value = DEFAULT_LED_BRIGHTNESS,

@@ -25,6 +25,18 @@ static const char* ConfigTypeDescriptions[] = {
     "Colour"
 };
 
+enum class ConfigRenderAs {
+    Default = 0,
+    CheckBox,
+    Toggle
+};
+
+static const char* ConfigRenderAsDescriptions[] = {
+    "Default",
+    "CheckBox",
+    "Toggle"
+};
+
 enum class ConfigManagerUpdateResult {
     OK,
     NumberTooLow,
@@ -62,12 +74,15 @@ struct ConfigMetadata {
     std::string Label;
     std::string Description;
     std::string Info;
-    float min;
-    float max;
+    ConfigRenderAs RenderAs;
+    std::string Unit;
+    float Min;
+    float Max;
     float uiMin;
     float uiMax;
     float uiStep;
 
+    bool SaveInPrefs;             // Some things we want saved in preferences, others should be reset every time device is reset
     OnSetCallback FunctionOnSet;
 };
 
@@ -142,7 +157,7 @@ struct CheckListConfig {
 
 class ConfigManager {
 public:
-    static int ConfigId;
+    //static int ConfigId;
     static BaseConfig **ConfigMap;
     static int ConfigCount;
     static int ConfigCapacity;
@@ -152,7 +167,9 @@ public:
     static BaseConfig* GetConfig(int id);
     static ConfigManagerUpdateResult UpdateConfigById(int id, void* value);
     static void AddConfigArray(BaseConfig** configs, int count);
-    static void RenderConfigToJson(std::ostringstream& json);
+    static std::ostringstream GetConfigAsJson();
+    static void RenderConfigToSerial();
+    static void RenderConfigJsonToSerial();
 
     template <typename T>
     static void AddConfig(T *config)
