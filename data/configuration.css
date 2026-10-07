@@ -3,6 +3,24 @@
    All input-specific styles are scoped under .config-input
    ========================================================================== */
 
+/* ---------- Key ---------- */
+  /* Hide the checkbox itself */
+  #toggle-key {
+    display: none;
+  }
+
+  /* The key table is hidden by default */
+  #status-key {
+    display: none;
+    margin-top: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* When checkbox is checked, show the key table */
+  #toggle-key:checked ~ #status-key {
+    display: table;
+  }
+
 /* ---------- Toolbar ---------- */
 .config-toolbar {
     display: flex;
@@ -142,7 +160,8 @@
     color: #888;
 }
 
-.btn--save.dirty {
+.btn--save.dirty,
+.btn--retry.dirty {
     border-color: #4CAF50;
     color: #4CAF50;
 }
@@ -154,7 +173,7 @@
 }
 
 /* Retry (🔄) */
-.btn--retry {
+/* .btn--retry {
     border: none;
     border-radius: 0;
     padding: 0;
@@ -162,7 +181,7 @@
     height: 36px;
     font-size: 18px;
     color: #ff9800;
-}
+} */
 
 .btn--retry:hover:not(:disabled) {
     background: transparent;
@@ -307,6 +326,7 @@
 
 /* Save / tick / error / warning icon all share the same 36×36 slot */
 .status-saving,
+.status-key-saved,
 .status-tick,
 .status-error,
 .warning-icon {
@@ -324,12 +344,17 @@
 
 /* Saving – pulsing hourglass */
 .status-saving {
-    animation: pulse 1s infinite;
+    /* animation: pulse 1s infinite; */
+    animation: spinPause 1s infinite;
 }
 
 /* Success tick – fades out over 1s */
 .status-tick {
     animation: fadeOut 1s forwards;
+}
+
+.status-key-saved {
+    animation: fadeOut 1s forwards infinite;
 }
 
 /* Error icon */
@@ -352,9 +377,15 @@
 
 /* ---------- Animations ---------- */
 @keyframes pulse {
-    0%   { opacity: 1; }
-    50%  { opacity: 0.4; }
-    100% { opacity: 1; }
+    0%   { opacity: 1;   transform: scale(1);   }
+    50%  { opacity: 0.4; transform: scale(1.25); }
+    100% { opacity: 1;   transform: scale(1);   }
+}
+
+@keyframes spinPause {
+    0%   { transform: rotate(0deg);   }
+    40%  { transform: rotate(0deg);   }
+    100% { transform: rotate(360deg); }
 }
 
 @keyframes fadeOut {

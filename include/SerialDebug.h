@@ -20,6 +20,7 @@ public:
 
 private:
     static void ShowHelp();
+    static void AddSerialDebugFunctions(SerialDebugFunction serialDebugFunctions[], int count);
 
     static std::unordered_map<std::string, SerialDebugFunction*> FunctionMap;
     static SerialDebugFunction SerialDebugFunctions[];

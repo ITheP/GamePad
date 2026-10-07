@@ -185,5 +185,5 @@ void RenderInput_Hat(HatInput *hatInput)
   Display.fillRect(xPos, yPos, width, height, C_BLACK);
 
   // Value should be 0 for neutral position (nothing selected). Other icons are just + the value as an offset
-  RREIcons.drawChar(xPos, yPos, (hatInput->StartIcon + hatInput->ValueState.Value));
+  RREControllerIcons.drawChar(xPos, yPos, (hatInput->StartIcon + hatInput->ValueState.Value));
 }

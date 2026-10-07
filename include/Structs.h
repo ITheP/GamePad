@@ -32,6 +32,11 @@ typedef struct IconRun
   int YPos;
 } IconRun;
 
+// struct GfxSet {
+//     IconRun* Runs;
+//     char offset;
+// };
+
 typedef struct State
 {
   int StateJustChanged; // Used for things like LED effects that only want to change a value when a state change happens

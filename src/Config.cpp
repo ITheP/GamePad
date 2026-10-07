@@ -106,11 +106,12 @@ void ConfigScreenWhite_ToggleState()
 
 // Config variables we want exposing to web/preferences
 // Put in order you want things processed
-BaseConfig* ConfigManager_GlobalDefinitions[] = {
+BaseConfig* ConfigManager_Web_GlobalDefinitions[] = {
+    reinterpret_cast<BaseConfig*>(&Config_InputSerialLiveOutput),
     reinterpret_cast<BaseConfig*>(&Config_ScreenWhite),
     reinterpret_cast<BaseConfig*>(&Config_ForceFPSDisplay),
     reinterpret_cast<BaseConfig*>(&Config_InputSerialLiveOutput),
     reinterpret_cast<BaseConfig*>(&Config_InputSerialLiveOutputThrottle)
 };
 
-int ConfigManager_GlobalDefinitions_Size = sizeof(ConfigManager_GlobalDefinitions) / sizeof(BaseConfig*);
+int ConfigManager_Web_GlobalDefinitions_Count = sizeof(ConfigManager_Web_GlobalDefinitions) / sizeof(BaseConfig*);

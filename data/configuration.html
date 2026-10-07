@@ -6,11 +6,47 @@
         <h2>Configuration</h2>
         <p>
             Be aware that wifi connectivity can sometimes be a little unreliable!
-            For some settings, changes won't be automatically applied until 💾 is pressed.
         </p>
+        
+            <input type="checkbox" id="toggle-key">
+            <label for="toggle-key" class="btn btn--autowidth">Show / Hide Key</label>
+
+        <table id="status-key">
+            <tr>
+                <th>Icon</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><button type="button" class="btn btn--save dirty" title="Save changes">💾</button></td>
+                <td>Setting change won't be applied until save pressed</td>
+            </tr>
+            <tr>
+                <td><button type="button" class="btn btn--save" title="No changes to save" disabled="">💾</button></td>
+                <td>No changes to save</td>
+            </tr>
+            <tr>
+                <td><span class="status-saving" title="Saving…">⏳</span></td>
+                <td>Saving setting. May take a moment for the devices web service to respond</td>
+            </tr>
+            <tr>
+                <td><span class="status-key-saved" title="Saved">✅</span></td>
+                <td>Setting saved successfully</td>
+            </tr>
+            <tr>
+                <td><span class="warning-icon">⚠️</span></td>
+                <td>Warning - e.g. setting value out of range</td>
+            </tr>
+            <tr>
+                <td><span class="status-error" title="Error">❌</span><button type="button" class="btn btn--retry dirty"
+                        title="Retry saving">🔄</button></td>
+                <td>Error saving setting with a retry button. e.g. Lost connection with device web server.</td>
+            </tr>
+        </table>
+
         <div class="config-toolbar">
             <span id="configGlobalStatus" class="config-global-status"></span>
-            <button type="button" id="configRefreshButton" class="btn config-refresh btn--autowidth">🔄 Refresh All</button>
+            <button type="button" id="configRefreshButton" class="btn config-refresh btn--autowidth">🔄 Refresh
+                All</button>
         </div>
 
         <table id="configTable">

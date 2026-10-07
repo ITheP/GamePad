@@ -217,59 +217,74 @@ static const int FilledCircleIconsSize = sizeof(FilledCircleIcons) / sizeof(Fill
 #define Icon_DPad_Left 0x2E
 #define Icon_DPad_UpLeft 0x2F
 
-// Guitar 1 Gfx
-#define Icon_Guitar1_T1 0x20
-#define Icon_Guitar1_T2 0x21
-#define Icon_Guitar1_T3 0x22
-#define Icon_Guitar1_T4 0x23
-#define Icon_Guitar1_T5 0x24
-#define Icon_Guitar1_T6 0x25
-#define Icon_Guitar1_B1 0x30
-#define Icon_Guitar1_B2 0x31
-#define Icon_Guitar1_B3 0x32
-#define Icon_Guitar1_B4 0x33
-#define Icon_Guitar1_B5 0x34
-#define Icon_Guitar1_B6 0x35
-#define Icon_Guitar1_CenterOff 0x40
-#define Icon_Guitar1_CenterTop 0x41
-#define Icon_Guitar1_CenterBottom 0x42
-#define Icon_Guitar1_CenterOn 0x43
+// Guitar gfx
+// We have multiple models so multiple sets of gfx
+// and need to be able to dynamically repoint to each one if user changes required model
+// So offsets here are based on relative rather than absolute values
 
-// Guitar 2 Gfx
-#define Icon_Guitar2_T1 0x50
-#define Icon_Guitar2_T2 0x51
-#define Icon_Guitar2_T3 0x52
-#define Icon_Guitar2_T4 0x53
-#define Icon_Guitar2_T5 0x54
-#define Icon_Guitar2_T6 0x55
-#define Icon_Guitar2_B1 0x60
-#define Icon_Guitar2_B2 0x61
-#define Icon_Guitar2_B3 0x62
-#define Icon_Guitar2_B4 0x63
-#define Icon_Guitar2_B5 0x64
-#define Icon_Guitar2_B6 0x65
-#define Icon_Guitar2_CenterOff 0x70
-#define Icon_Guitar2_CenterTop 0x71
-#define Icon_Guitar2_CenterBottom 0x72
-#define Icon_Guitar2_CenterOn 0x73
+// Guitar offset into font bank
+// Reminder - 0x20 is first character in font
+#define Icon_Guitar1_Offset 0x30 // base line 1st guitar graphic and set of live icons
+#define Icon_Guitar2_Offset 0x60 // 2nd guitar graphic and set of live icons
+#define Icon_Guitar3_Offset 0x90 // 3rd guitar graphic and set of live icons
+#define Icon_Guitar4_Offset 0xC0
+#define Icon_Guitar5_Offset 0x67
+#define Icon_Guitar6_Offset 0x97
 
-// Guitar 3 Gfx
-#define Icon_Guitar3_T1 0x80
-#define Icon_Guitar3_T2 0x81
-#define Icon_Guitar3_T3 0x82
-#define Icon_Guitar3_T4 0x83
-#define Icon_Guitar3_T5 0x84
-#define Icon_Guitar3_T6 0x85
-#define Icon_Guitar3_B1 0x90
-#define Icon_Guitar3_B2 0x91
-#define Icon_Guitar3_B3 0x92
-#define Icon_Guitar3_B4 0x93
-#define Icon_Guitar3_B5 0x94
-#define Icon_Guitar3_B6 0x95
-#define Icon_Guitar3_CenterOff 0xA0
-#define Icon_Guitar3_CenterTop 0xA1
-#define Icon_Guitar3_CenterBottom 0xA2
-#define Icon_Guitar3_CenterOn 0xA3
+// Relative icons based on an offset rather than absolute character position
+// Used for redirecting to alternative gfx sets within same font
+#define RelativeIcon_Guitar_T1 0x00
+#define RelativeIcon_Guitar_T2 0x01
+#define RelativeIcon_Guitar_T3 0x02
+#define RelativeIcon_Guitar_T4 0x03
+#define RelativeIcon_Guitar_T5 0x04
+#define RelativeIcon_Guitar_T6 0x05
+#define RelativeIcon_Guitar_B1 0x10
+#define RelativeIcon_Guitar_B2 0x11
+#define RelativeIcon_Guitar_B3 0x12
+#define RelativeIcon_Guitar_B4 0x13
+#define RelativeIcon_Guitar_B5 0x14
+#define RelativeIcon_Guitar_B6 0x15
+#define RelativeIcon_Guitar_CenterOff 0x20
+#define RelativeIcon_Guitar_CenterTop 0x21
+#define RelativeIcon_Guitar_CenterBottom 0x22
+#define RelativeIcon_Guitar_CenterOn 0x23
+
+// // Guitar 2 Gfx
+// #define Icon_Guitar2_T1 0x50
+// #define Icon_Guitar2_T2 0x51
+// #define Icon_Guitar2_T3 0x52
+// #define Icon_Guitar2_T4 0x53
+// #define Icon_Guitar2_T5 0x54
+// #define Icon_Guitar2_T6 0x55
+// #define Icon_Guitar2_B1 0x60
+// #define Icon_Guitar2_B2 0x61
+// #define Icon_Guitar2_B3 0x62
+// #define Icon_Guitar2_B4 0x63
+// #define Icon_Guitar2_B5 0x64
+// #define Icon_Guitar2_B6 0x65
+// #define Icon_Guitar2_CenterOff 0x70
+// #define Icon_Guitar2_CenterTop 0x71
+// #define Icon_Guitar2_CenterBottom 0x72
+// #define Icon_Guitar2_CenterOn 0x73
+
+// // Guitar 3 Gfx
+// #define Icon_Guitar3_T1 0x80
+// #define Icon_Guitar3_T2 0x81
+// #define Icon_Guitar3_T3 0x82
+// #define Icon_Guitar3_T4 0x83
+// #define Icon_Guitar3_T5 0x84
+// #define Icon_Guitar3_T6 0x85
+// #define Icon_Guitar3_B1 0x90
+// #define Icon_Guitar3_B2 0x91
+// #define Icon_Guitar3_B3 0x92
+// #define Icon_Guitar3_B4 0x93
+// #define Icon_Guitar3_B5 0x94
+// #define Icon_Guitar3_B6 0x95
+// #define Icon_Guitar3_CenterOff 0xA0
+// #define Icon_Guitar3_CenterTop 0xA1
+// #define Icon_Guitar3_CenterBottom 0xA2
+// #define Icon_Guitar3_CenterOn 0xA3
 
 // Joypad low states
 #define Icon_JPad_Icon 0x36

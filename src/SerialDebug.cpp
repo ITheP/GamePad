@@ -90,17 +90,27 @@ const int SerialDebug::SerialDebugFunctionsCount =
 
 // Lookup dictionary
 std::unordered_map<std::string, SerialDebugFunction *> SerialDebug::FunctionMap;
+static std::vector<SerialDebugFunction *> FunctionOrder;
 
 // --------------------------------
 // Initialise dictionary from array
 // --------------------------------
 void SerialDebug::Init()
 {
-    for (int i = 0; i < SerialDebugFunctionsCount; i++)
-    {
-        auto &entry = SerialDebugFunctions[i];
+    AddSerialDebugFunctions(SerialDebugFunctions, SerialDebugFunctionsCount);
+    AddSerialDebugFunctions(ConfigManager_SerialDebugFunctions, ConfigManager_SerialDebugFunctions_Count);
+}
 
-        // Ignore headers
+void SerialDebug::AddSerialDebugFunctions(SerialDebugFunction serialDebugFunctions[], int count)
+{
+    for (int i = 0; i < count; i++)
+    {
+        auto &entry = serialDebugFunctions[i];
+
+        // Every entry goes into the ordered list (for when help is called), so headers appear too.
+        FunctionOrder.push_back(&entry);
+
+        // Ignore headers in actual map, we don't care
         if (entry.Instruction.empty())
             continue;
 
@@ -118,21 +128,19 @@ void SerialDebug::Init()
 // --------------------------------
 void SerialDebug::ShowHelp()
 {
-
     Serial.println("Available Commands:");
-    for (int i = 0; i < SerialDebugFunctionsCount; i++)
+
+    for (auto *entry : FunctionOrder)
     {
-        auto &entry = SerialDebugFunctions[i];
-        if (entry.Instruction.empty())
+        if (entry->Instruction.empty())
         {
-            Serial.printf("\n%s...\n",
-                      entry.Description.c_str());
+            Serial.printf("\n%s...\n", entry->Description.c_str());
         }
         else
         {
-        Serial.printf("  %-20s - %s\n",
-                      entry.Instruction.c_str(),
-                      entry.Description.c_str());
+            Serial.printf("  %-20s - %s\n",
+                          entry->Instruction.c_str(),
+                          entry->Description.c_str());
         }
     }
 }

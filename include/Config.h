@@ -46,18 +46,20 @@
 
 extern BoolConfig Config_ScreenWhite;
 void ConfigScreenWhite_ToggleState();
+
 extern BoolConfig Config_InputSerialLiveOutput;
 void ConfigInputSerialLiveOutput_ToggleState();
+
 extern IntConfig Config_InputSerialLiveOutputThrottle;
 void ConfigInputSerialLiveOutput_ToggleState();
 void ConfigInputSerialLiveOutputThrottle_Slow();
 void ConfigInputSerialLiveOutputThrottle_Medium();
 void ConfigInputSerialLiveOutputThrottle_Fast();
 void ConfigInputSerialLiveOutputThrottle_Max();
+
 extern BoolConfig Config_ForceFPSDisplay;
 void ConfigForceFPSDisplay_ToggleState();
 
 // Config variables we want exposing to web/preferences
-// Put in order you want things processed
-extern BaseConfig* ConfigManager_GlobalDefinitions[];
-extern int ConfigManager_GlobalDefinitions_Size;
+extern BaseConfig* ConfigManager_Web_GlobalDefinitions[];
+extern int ConfigManager_Web_GlobalDefinitions_Count;

@@ -55,6 +55,27 @@ void RenderIconRuns(IconRun runs[], int count, RREFont &font)
   }
 }
 
+void RenderIconRuns(IconRun runs[], int count, unsigned char offset, RREFont &font)
+{
+  for (int i = 0; i < count; i++)
+  {
+    IconRun run = runs[i];
+    int xPos = run.XPos;
+    int yPos = run.YPos;
+    unsigned char c = run.StartIcon + offset;
+
+    for (int j = 0; j < run.Count; j++)
+    {
+      font.drawChar(xPos, yPos, c);
+      xPos += 16;
+      // Serial.print(c, HEX);
+      // Serial.print(" ");
+      c++;
+    }
+    // Serial.println();
+  }
+}
+
 // // TODO: Specify font reference in IconRuns in a structure that encapsulates as much so we only need 1 function to do this
 // void RenderLogoRuns(IconRun runs[], int count)
 // {

@@ -162,13 +162,14 @@ main();
     var SAVE_TIMEOUT_MS = 10000;
 
     var ICON = {
-        FAILED:  "\u274C",                  // ❌
-        SAVE:    "\uD83D\uDCBE",            // 💾
-        SAVING:  "\u23F3",                  // ⏳
+        FAILED:  "❌",                      // "\u274C"
+        SAVE:    "💾",                      // "\uD83D\uDCBE"
+        SAVING:  "⏳",                      // "\u23F3",
+        TICK:    "✅",                      // "\u2705"
         DEFAULT: "Default",
-        RETRY:   "\uD83D\uDD04",            // 🔄
-        WARNING: "\u26A0\uFE0F",            // ⚠️
-        INFO:    "\u2139\uFE0F"             // ℹ️
+        RETRY:   "🔄",                      // "\uD83D\uDD04"
+        WARNING: "⚠️",                      // "\u26A0\uFE0F"
+        INFO:    "ℹ️"                       // "\u2139\uFE0F"
     };
 
     /* ---------------------------------------------------------------------
@@ -273,17 +274,17 @@ main();
 
         while (ui.tableBody.firstChild) ui.tableBody.removeChild(ui.tableBody.firstChild);
 
-        var TEST_CONFIG_JSON = `{
-        "config": [
-            {"Id": 3,"Type": "Bool","Metadata": {"Group": "Inputs","Label": "Live Serial Output","Description": "Enables detailed serial output of input states, including digital, analog, virtual and battery states.","Info": "","RenderAs": "Toggle","SaveInPrefs": 0,"min": 0,"max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-            {"Id": 1,"Type": "Bool","Metadata": {"Group": "Screen","Label": "White Screen","Description": "Screen will show a solid white, handy when physically aligning panel in device where visible edges are visible","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-            {"Id": 2,"Type": "Bool","Metadata": {"Group": "Screen","Label": "Force FPS Display","Description": "Forces the display of FPS in the top right corner of the screen","Info": "","RenderAs": "Toggle","SaveInPrefs": 1,"min": 0,"max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-            {"Id": 4,"Type": "Float","Metadata": {"Group": "Idle","Label": "LED Timeout","Description": "Seconds before LED's go into idle mode.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 10,"DefaultValue": 0}},
-            {"Id": 5,"Type": "Float","Metadata": {"Group": "Idle","Label": "Screen Timeout","Description": "Seconds before screen go into idle mode.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 30,"DefaultValue": 0}},
-            {"Id": 6,"Type": "Float","Metadata": {"Group": "Idle","Label": "Screen Restart","Description": "Seconds before screen idle effect restarts.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 60,"DefaultValue": 0}},
-            {"Id": 7,"Type": "Int","Metadata": {"Group": "LED","Label": "Brightness","Description": "Global maximum brightness of LED's","Info": "Very low brightness levels may result in funny looking LED colours or fades as there isn't the resolution of brightness levels to represent subtle differences in colour","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 255,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 200,"DefaultValue": 0}}
-        ]
-        }`;
+        // var TEST_CONFIG_JSON = `{
+        // "config": [
+        //     {"Id": 3,"Type": "Bool","Metadata": {"Group": "Inputs","Label": "Live Serial Output","Description": "Enables detailed serial output of input states, including digital, analog, virtual and battery states.","Info": "","RenderAs": "Toggle","SaveInPrefs": 0,"min": 0,"max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
+        //     {"Id": 1,"Type": "Bool","Metadata": {"Group": "Screen","Label": "White Screen","Description": "Screen will show a solid white, handy when physically aligning panel in device where visible edges are visible","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
+        //     {"Id": 2,"Type": "Bool","Metadata": {"Group": "Screen","Label": "Force FPS Display","Description": "Forces the display of FPS in the top right corner of the screen","Info": "","RenderAs": "Toggle","SaveInPrefs": 1,"min": 0,"max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
+        //     {"Id": 4,"Type": "Float","Metadata": {"Group": "Idle","Label": "LED Timeout","Description": "Seconds before LED's go into idle mode.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 10,"DefaultValue": 0}},
+        //     {"Id": 5,"Type": "Float","Metadata": {"Group": "Idle","Label": "Screen Timeout","Description": "Seconds before screen go into idle mode.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 30,"DefaultValue": 0}},
+        //     {"Id": 6,"Type": "Float","Metadata": {"Group": "Idle","Label": "Screen Restart","Description": "Seconds before screen idle effect restarts.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 60,"DefaultValue": 0}},
+        //     {"Id": 7,"Type": "Int","Metadata": {"Group": "LED","Label": "Brightness","Description": "Global maximum brightness of LED's","Info": "Very low brightness levels may result in funny looking LED colours or fades as there isn't the resolution of brightness levels to represent subtle differences in colour","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 255,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 200,"DefaultValue": 0}}
+        // ]
+        // }`;
 
         // ---- Loader (test mode) ----
         // return Promise.resolve(JSON.parse(TEST_CONFIG_JSON))
@@ -309,7 +310,7 @@ main();
             .catch(function (err) {
                 console.error("Configuration: failed to load config \u2013", err);
                 showMessage("Unable to load configuration from the device.", "error");
-                setGlobalStatus(ICON.FAILED + " Failed to load configuration");
+                setGlobalStatus(ICON.FAILED + " Failed to load configuration. Web service on device may not be responding.");
             })
             .finally(function () {
                 if (ui.refreshBtn) ui.refreshBtn.disabled = false;
@@ -399,7 +400,7 @@ main();
                 break;
 
             case "saved": {
-                var tick = iconSpan("\u2713", "status-tick", "Saved");
+                var tick = iconSpan(ICON.TICK, "status-tick", "Saved");
                 el.appendChild(tick);
 
                 tick.addEventListener("animationend", function () {
@@ -570,11 +571,20 @@ main();
     function buildNumericControl(item, row) {
         var isIntType = isInt(item);
 
-        var min    = num(field(item, "min", 0), 0);
-        var max    = num(field(item, "max", 100), 100);
-        var uiMin  = num(field(item, "uiMin", min), min);
-        var uiMax  = num(field(item, "uiMax", max), max);
-        var uiStep = num(field(item, "uiStep", 0), 0);
+        // Read each independently so we can tell what's actually present
+        var rawMin   = field(item, "min",   undefined);
+        var rawMax   = field(item, "max",   undefined);
+        var rawUiMin = field(item, "uiMin", undefined);
+        var rawUiMax = field(item, "uiMax", undefined);
+        var uiStep   = num(field(item, "uiStep", 0), 0);
+
+        // uiMin/uiMax and min/max each fall back to the other pair, then to a
+        // final default only if the device provides nothing at all. This keeps
+        // the hint text, the warning range, and the slider in lockstep.
+        var uiMin = num(rawUiMin, num(rawMin, 0));
+        var uiMax = num(rawUiMax, num(rawMax, 100));
+        var min   = num(rawMin,   uiMin);
+        var max   = num(rawMax,   uiMax);
 
         if (max   < min)   { var t1 = min;   min   = max;   max   = t1; }
         if (uiMax < uiMin) { var t2 = uiMin; uiMin = uiMax; uiMax = t2; }

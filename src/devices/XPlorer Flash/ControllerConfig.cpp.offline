@@ -49,9 +49,25 @@ int LEDClones_Count = sizeof(LEDClones) / sizeof(LEDClones[0]);
 //   },
 // }
 
-IconRun ControllerGfx[] = {
+IconRun ControllerGfx1[] = {
   { .StartIcon = Icon_Guitar3_T1, .Count = 6, .XPos = uiGuitar_xPos, .YPos = uiGuitar_yPos },
   { .StartIcon = Icon_Guitar3_B1, .Count = 6, .XPos = uiGuitar_xPos, .YPos = uiGuitar_yPos + 16 }
+};
+
+IconRun ControllerGfx2[] = {
+  { .StartIcon = Icon_Guitar2_T1, .Count = 6, .XPos = uiGuitar_xPos, .YPos = uiGuitar_yPos },
+  { .StartIcon = Icon_Guitar2_B1, .Count = 6, .XPos = uiGuitar_xPos, .YPos = uiGuitar_yPos + 16 }
+};
+
+IconRun ControllerGfx3[] = {
+  { .StartIcon = Icon_Guitar3_T1, .Count = 6, .XPos = uiGuitar_xPos, .YPos = uiGuitar_yPos },
+  { .StartIcon = Icon_Guitar3_B1, .Count = 6, .XPos = uiGuitar_xPos, .YPos = uiGuitar_yPos + 16 }
+};
+
+IconRun* ControllerGfxSets[] = {
+    ControllerGfx1,
+    ControllerGfx2,
+    ControllerGfx3
 };
 
 // Usage statistics

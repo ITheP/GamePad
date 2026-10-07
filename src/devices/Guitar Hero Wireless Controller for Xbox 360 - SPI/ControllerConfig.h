@@ -95,6 +95,7 @@ extern int LEDClones_Count;
 #define uiWhammyH 31
 
 extern IconRun ControllerGfx[];
+extern unsigned char ControllerGfxOffsets[];
 
 // ===============
 // PIN definitions

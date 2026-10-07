@@ -1432,8 +1432,8 @@ void setup()
 
   Debug::ClearCrashCheckData();
 
-  ConfigManager::AddConfigArray(ConfigManager_GlobalDefinitions, ConfigManager_GlobalDefinitions_Size);
-  ConfigManager::AddConfigArray(ConfigManager_ControllerDefinitions, ConfigManager_ControllerDefinitions_Size);
+  ConfigManager::AddConfigArray(ConfigManager_Web_GlobalDefinitions, ConfigManager_Web_GlobalDefinitions_Count);
+  ConfigManager::AddConfigArray(ConfigManager_Web_ControllerDefinitions, ConfigManager_Web_ControllerDefinitions_Count);
 
   Serial.println();
   setupDisplay();
@@ -1632,8 +1632,14 @@ void DrawMainScreen()
   // Controller name displayed by default first menu option
 
   // Nain controller GFX (e.g. Guitar body on Guitar controller)
+
+  // if (ControllerGfxSets_RunCount > 0)
+  // {
+  //   IconRunSet *controllerGfx = ControllerGfxSets[1];
+  //   RenderIconRuns(controllerGfx->Runs, controllerGfx->RunCount, RREControllerIcons);
+  // }
   if (ControllerGfx_RunCount > 0)
-    RenderIconRuns(ControllerGfx, ControllerGfx_RunCount, RREControllerIcons);
+    RenderIconRuns(ControllerGfx, ControllerGfx_RunCount, ControllerGfxOffsets[Config_GfxGuitarModel.Value], RREControllerIcons);
 
   // Whammy bar outline
   Display.drawRect(uiWhammyX, uiWhammyY, uiWhammyW, uiWhammyH, C_WHITE);
