@@ -45,7 +45,15 @@ enum class ConfigManagerUpdateResult {
     StringTooLong,
     StringMissing,
     ColourOutOfRange,
-    UnknownConfigType
+    UnknownConfigType,
+
+    IdMissing,
+    InvalidId,
+    IdNotFound,
+    InvalidNumber,
+    InvalidBool,
+    InvalidString,
+    InvalidColour
 };
 
 static const char* ConfigManagerUpdateResultDescriptions[] = {
@@ -56,7 +64,15 @@ static const char* ConfigManagerUpdateResultDescriptions[] = {
     "String Too Long",
     "String Missing",
     "Colour Out Of Range",
-    "Unknown Config Type"
+    "Unknown Config Type",
+
+    "Id Missing",
+    "Invalid Id",
+    "Id Not Found",
+    "Invalid Number",
+    "Invalid Bool",
+    "Invalid String",
+    "Invalid Colour"
 };
 
 // Forward declaration
@@ -84,6 +100,9 @@ struct ConfigMetadata {
 
     bool SaveInPrefs;             // Some things we want saved in preferences, others should be reset every time device is reset
     OnSetCallback FunctionOnSet;
+    std::string Image;                  // e.g. mypic.png
+    int ImageVariants;                  // e.g. 3 -> mypic.0.png mypic.1.png mypic.2.png
+    bool ImageSplitVertically;          // e.g. min = 0, max = 3 = 4. Split image vertically into 4, should only display 1/4 the image at a time depending if value is 0,1,2 or 3
 };
 
 // ------------------------------------------------------------
@@ -165,7 +184,10 @@ public:
 
     //static void AddConfig(BaseConfig* config);
     static BaseConfig* GetConfig(int id);
+    static ConfigManagerUpdateResult AttemptUpdateConfigById(char *id, char *value);
     static ConfigManagerUpdateResult UpdateConfigById(int id, void* value);
+    static ConfigManagerUpdateResult UpdateConfig(BaseConfig *base, void *value);
+
     static void AddConfigArray(BaseConfig** configs, int count);
     static std::ostringstream GetConfigAsJson();
     static void RenderConfigToSerial();

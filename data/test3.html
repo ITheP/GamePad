@@ -1,0 +1,367 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>squishy letter ring</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0e0e12; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+<canvas id="c"></canvas>
+<script>
+(() => {
+'use strict';
+
+const CFG = {
+  text:        ' 🏝️ Badger packed his tiny bag, Stripy towel and sun‑hat swag, Waddled down the sandy track, Dreaming of a seaside snack. But on the shore he heard a “Yarr!”. Saw an eyepatch gleaming far — A pirate starfish struck a pose, Saltwater dripping off his toes. ⭐ Oh, the badger and the starfish on a sunny holiday, One wants treasure buried deep, the other loves to play. Digging through the golden sand, a perfect little team, If there’s a jam sandwich waiting, life is truly supreme. ⚓ Starfish waved his tiny arm, “Matey, help me! No alarm — I’ve got treasure, shiny bright, But I can’t dig — it’s quite a sight.” - Badger grinned, “Well that’s my thing, I’ll dig a hole fit for a king. But I’ll need payment for my toil… How ‘bout a jam sandwich for the spoil?” 🥪 Oh, the badger and the starfish on a sunny holiday, One wants treasure buried deep, the other loves to play. Digging through the golden sand, a perfect little team, If there’s a jam sandwich waiting, life is truly supreme. 🍓 So they dug and dug until the sun, Turned the waves to liquid gold. Starfish placed his chest inside, Secrets safe and stories told. Badger munched his sandwich sweet, Jam dripping on his sandy feet — Two new friends upon the shore, Pirate tales forevermore. 🏴‍☠️ Yeah, the badger and the starfish on a sunny holiday, Treasure buried, sandwich eaten, perfect seaside day. If you stroll along that beach, you might just hear them sing — A pirate’s laugh, a badger’s cheer, in harmony they ring.',
+  radius:      300,
+  rollRadius: 300,
+  fontSize:    64,
+  fontWeight:  700,
+  fontFamily:  'system-ui, -apple-system, "Segoe UI", sans-serif',
+  color:       '#f2f2f5',
+
+  gapFraction: 0.07,
+  ringOffset:  Math.PI / 2,
+
+  letterSpacing: 0,
+  startVx:       -3.0,
+  startVy:      -7.0,
+  initialOmega:  0,
+
+  gravity:       0.08,
+  spinDamp:      0.995,
+  minSpinSpeed: -0.032,
+  edgeContact:   0.08,
+
+  // Minimum bounce heights as a FRACTION of the screen (0..1).
+  // Converted to pixel heights — then to speeds — at startup and on
+  // every resize, using the current gravity. 0 = no floor on that wall.
+  minBounceTopPct:     0.00,   // fraction of screen HEIGHT (ceiling)
+  minBounceBottomPct:  0.70,   // fraction of screen HEIGHT (floor)
+  minBounceSidesPct:   0.0,   // fraction of screen WIDTH  (left/right)
+
+
+  edgeMargin:  0.69,
+  restitution: 1.0,
+
+  ringPoints:  360,
+  ringIters:   1,
+  ringStiff:   0.18,
+  ringDamp:    0.88,
+  glyphPad:    0.62,
+};
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha: false });
+let W = 0, H = 0;
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width  = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', () => { resize(); computeGeometry(); clampBody(); });
+
+/* letter layout -------------------------------------------------- */
+let chars = [], advances = [], prefixes = [], textLen = 0;
+function layoutText() {
+  ctx.font = `${CFG.fontWeight} ${CFG.fontSize}px ${CFG.fontFamily}`;
+  chars = Array.from(CFG.text);
+  advances = []; prefixes = []; textLen = 0;
+  let cursor = 0;
+  for (const ch of chars) {
+    prefixes.push(cursor);
+    const w = ctx.measureText(ch).width;
+    advances.push(w);
+    cursor += w + CFG.letterSpacing;
+  }
+  textLen = cursor;
+}
+
+/* body ----------------------------------------------------------- */
+const body = { x: 0, y: 0, vx: 0, vy: 0, spin: 0, omega: 0 };
+
+let pad = 0, bodyLim = 0, contactR = 0;
+let minSpeedTop = 0, minSpeedBottom = 0, minSpeedSides = 0;
+
+function computeGeometry() {
+  pad      = CFG.fontSize * CFG.glyphPad;
+  bodyLim  = CFG.radius * CFG.edgeMargin;
+  contactR = Math.max(1, bodyLim - pad);
+
+  const g = CFG.gravity;
+  const hTop    = H * CFG.minBounceTopPct;
+  const hBottom = H * CFG.minBounceBottomPct;
+  const hSides  = W * CFG.minBounceSidesPct;
+
+  minSpeedTop    = Math.sqrt(2 * g * hTop);
+  minSpeedBottom = Math.sqrt(2 * g * hBottom);
+  minSpeedSides  = Math.sqrt(2 * g * hSides);
+}
+
+function resetBody() {
+  body.x = W * 0.5;
+  body.y = H * 0.5;
+  body.vx = CFG.startVx ?? 0;
+  body.vy = CFG.startVy ?? 0;
+  body.spin = 0;
+  body.omega = CFG.initialOmega ?? 0;
+}
+
+function clampBody() {
+  const m = CFG.radius * CFG.edgeMargin;
+  body.x = Math.min(Math.max(body.x, m), Math.max(m, W - m));
+  body.y = Math.min(Math.max(body.y, m), Math.max(m, H - m));
+}
+
+function stepBody() {
+  const R  = CFG.radius;
+  const m  = bodyLim;
+  const loX = m, hiX = W - m, loY = m, hiY = H - m;
+
+  // Detect whether any actual ring point (i.e. a letter) is currently
+  // clamped against a wall.
+  const eps = 1.0;
+  let onLeft = false, onRight = false, onTop = false, onBot = false;
+  for (let k = 0; k < N; k++) {
+    const p = ring[k];
+    if (p.x <= pad + eps)     onLeft  = true;
+    if (p.x >= W - pad - eps) onRight = true;
+    if (p.y <= pad + eps)     onTop   = true;
+    if (p.y >= H - pad - eps) onBot   = true;
+    if (onLeft && onRight && onTop && onBot) break;
+  }
+  const onWall = onLeft || onRight || onTop || onBot;
+
+  // Gravity + integration.
+  body.vy += CFG.gravity;
+  body.x  += body.vx;
+  body.y  += body.vy;
+
+  // Horizontal bounces — both sides share minSpeedSides.
+  if (body.x < loX) {
+    body.x = loX;
+    let v = Math.abs(body.vx) * CFG.restitution;
+    if (v < minSpeedSides) v = minSpeedSides;
+    body.vx = v;
+  } else if (body.x > hiX) {
+    body.x = hiX;
+    let v = Math.abs(body.vx) * CFG.restitution;
+    if (v < minSpeedSides) v = minSpeedSides;
+    body.vx = -v;
+  }
+
+  // Top wall — its own floor (0 = pure restitution).
+  if (body.y < loY) {
+    body.y = loY;
+    let v = Math.abs(body.vy) * CFG.restitution;
+    if (v < minSpeedTop) v = minSpeedTop;
+    body.vy = v;
+  }
+
+  // Bottom wall — its own floor.
+  if (body.y > hiY) {
+    body.y = hiY;
+    let v = Math.abs(body.vy) * CFG.restitution;
+    if (v < minSpeedBottom) v = minSpeedBottom;
+    body.vy = -v;
+  }
+
+  // Spin rule.
+  if (onWall) {
+    const lr = CFG.rollRadius;
+    let sum = 0, count = 0;
+    if (onLeft)  { sum +=  body.vy / lr; count++; }
+    if (onRight) { sum += -body.vy / lr; count++; }
+    if (onTop)   { sum += -body.vx / lr; count++; }
+    if (onBot)   { sum +=  body.vx / lr; count++; }
+    body.omega = sum / count;
+  } else {
+    body.omega = CFG.minSpinSpeed + (body.omega - CFG.minSpinSpeed) * CFG.spinDamp;
+  }
+
+  body.spin += body.omega;
+  if (textLen > 0) {
+    const wrap = textLen / R;
+    body.spin = ((body.spin % wrap) + wrap) % wrap;
+  }
+}
+
+/* soft ring ------------------------------------------------------ */
+const N = CFG.ringPoints;
+const restX = new Float64Array(N), restY = new Float64Array(N);
+for (let k = 0; k < N; k++) {
+  const a = CFG.ringOffset + (k / N) * Math.PI * 2;
+  restX[k] = Math.cos(a) * CFG.radius;
+  restY[k] = Math.sin(a) * CFG.radius;
+}
+const segLen = (2 * Math.PI * CFG.radius) / N;
+
+const ring = [];
+function initRing() {
+  ring.length = 0;
+  for (let k = 0; k < N; k++) {
+    const x = body.x + restX[k], y = body.y + restY[k];
+    ring.push({ x, y, px: x, py: y });
+  }
+}
+
+function stepRing() {
+  const minX = pad, maxX = W - pad, minY = pad, maxY = H - pad;
+
+  for (let k = 0; k < N; k++) {
+    const p  = ring[k];
+    const ix = body.x + restX[k];
+    const iy = body.y + restY[k];
+
+    const vx = (p.x - p.px) * CFG.ringDamp;
+    const vy = (p.y - p.py) * CFG.ringDamp;
+
+    p.px = p.x; p.py = p.y;
+    p.x += vx + (ix - p.x) * CFG.ringStiff;
+    p.y += vy + (iy - p.y) * CFG.ringStiff;
+  }
+
+  for (let it = 0; it < CFG.ringIters; it++) {
+    for (let k = 0; k < N; k++) {
+      const a = ring[k], b = ring[(k + 1) % N];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.hypot(dx, dy) || 1e-9;
+      const f = ((d - segLen) / d) * 0.5;
+      dx *= f; dy *= f;
+      a.x += dx; a.y += dy;
+      b.x -= dx; b.y -= dy;
+    }
+    for (let k = 0; k < N; k++) {
+      const p = ring[k];
+      if (p.x < minX) p.x = minX; else if (p.x > maxX) p.x = maxX;
+      if (p.y < minY) p.y = minY; else if (p.y > maxY) p.y = maxY;
+    }
+  }
+}
+
+/* arc-length lookup --------------------------------------------- */
+const cum = new Float64Array(N + 1);
+let totalCurveLen = 0;
+
+function buildCurve() {
+  cum[0] = 0;
+  for (let k = 0; k < N; k++) {
+    const a = ring[k], b = ring[(k + 1) % N];
+    cum[k + 1] = cum[k] + Math.hypot(b.x - a.x, b.y - a.y);
+  }
+  totalCurveLen = cum[N];
+}
+
+const S = { x: 0, y: 0, tx: 1, ty: 0 };
+function sampleAt(t) {
+  t -= Math.floor(t);
+  const target = t * totalCurveLen;
+
+  let lo = 0, hi = N;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (cum[mid] <= target) lo = mid + 1; else hi = mid;
+  }
+  const k = Math.min(N - 1, Math.max(0, lo - 1));
+  const a = ring[k], b = ring[(k + 1) % N];
+  const seg = cum[k + 1] - cum[k] || 1e-9;
+  const u = Math.min(1, Math.max(0, (target - cum[k]) / seg));
+
+  S.x = a.x + (b.x - a.x) * u;
+  S.y = a.y + (b.y - a.y) * u;
+
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const l = Math.hypot(dx, dy) || 1e-9;
+  S.tx = dx / l; S.ty = dy / l;
+  return S;
+}
+
+/* render --------------------------------------------------------- */
+function render() {
+  ctx.fillStyle = '#0e0e12';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.font = `${CFG.fontWeight} ${CFG.fontSize}px ${CFG.fontFamily}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = CFG.color;
+
+  if (textLen <= 0) return;
+
+  const C       = 2 * Math.PI * CFG.radius;
+  const span    = C * (1 - CFG.gapFraction);
+  const wStart  = C * CFG.gapFraction * 0.5;
+  const fadeArc = Math.min(CFG.fontSize * 2.5, span * 0.2);
+
+  const scroll = body.spin * CFG.radius;
+
+  for (let i = 0; i < chars.length; i++) {
+    const half = advances[i] * 0.5;
+    const base = prefixes[i] + half + scroll;
+
+    const kMin = Math.ceil(-base / textLen);
+    const kMax = Math.floor((span - base) / textLen);
+
+    for (let k = kMin; k <= kMax; k++) {
+      const d = base + k * textLen;
+      if (d < 0 || d > span) continue;
+
+      const edge  = Math.min(d, span - d);
+      const alpha = fadeArc > 0 ? Math.min(1, edge / fadeArc) : 1;
+      if (alpha <= 0.02) continue;
+
+      const p   = sampleAt((wStart + d) / C);
+      const ang = Math.atan2(p.ty, p.tx);
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(ang);
+      ctx.fillText(chars[i], 0, 0);
+      ctx.restore();
+    }
+  }
+}
+
+/* loop ----------------------------------------------------------- */
+const STEP = 1 / 60;
+let acc = 0, last = 0;
+
+function frame(now) {
+  if (!last) last = now;
+  let dt = (now - last) / 1000;
+  last = now;
+  if (dt > 0.25) dt = 0.25;
+  acc += dt;
+
+  while (acc >= STEP) {
+    stepBody();
+    stepRing();
+    acc -= STEP;
+  }
+
+  buildCurve();
+  render();
+  requestAnimationFrame(frame);
+}
+
+/* boot ----------------------------------------------------------- */
+function init() {
+  resize();
+  computeGeometry();
+  layoutText();
+  resetBody();
+  initRing();
+  requestAnimationFrame(frame);
+}
+
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(init);
+} else {
+  init();
+}
+})();
+</script>

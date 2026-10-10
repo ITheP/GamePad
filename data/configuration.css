@@ -325,7 +325,7 @@
 }
 
 /* Save / tick / error / warning icon all share the same 36×36 slot */
-.status-saving,
+.status-waiting,
 .status-key-saved,
 .status-tick,
 .status-error,
@@ -342,8 +342,8 @@
     flex-shrink: 0;
 }
 
-/* Saving – pulsing hourglass */
-.status-saving {
+/* Waiting – pulsing hourglass */
+.status-waiting {
     /* animation: pulse 1s infinite; */
     animation: spinPause 1s infinite;
 }
@@ -392,4 +392,23 @@
     0%   { opacity: 1; }
     70%  { opacity: 1; }
     100% { opacity: 0; }
+}
+
+/* ---------- Config images (Description column) ---------- */
+.config-image {
+    display: block;
+    margin-top: 8px;
+    max-width: 100%;
+    height: auto;
+    /* border-radius: 3px; */
+}
+
+/* Vertical sprite: width, height, background-size and background-position
+   are all set from JS once the sprite's natural dimensions are known. */
+.config-image-split {
+    display: block;
+    margin-top: 8px;
+    background-repeat: no-repeat;
+    /* border-radius: 3px; */
+    /* max-width: 100%; */
 }

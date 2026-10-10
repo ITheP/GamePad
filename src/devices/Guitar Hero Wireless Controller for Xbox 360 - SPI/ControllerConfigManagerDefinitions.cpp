@@ -20,7 +20,10 @@ IntConfig Config_GfxGuitarModel {
         .uiMin = 0,
         .uiMax = 5,
         .SaveInPrefs = true,
-        .FunctionOnSet = nullptr
+        .FunctionOnSet = nullptr,
+        .Image = "guitar_logos.png",
+        .ImageVariants = 8,
+        .ImageSplitVertically = true
     },
     .Value = 1,
     .DefaultValue = 0

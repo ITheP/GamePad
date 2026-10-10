@@ -8,6 +8,7 @@
 #include "Arduino.h"
 #include <esp_http_server.h>
 #include <esp_https_server.h>
+#include <cJSON.h>
 #include <sstream>
 #include <LittleFS.h>
 #include <Prefs.h>
@@ -468,24 +469,96 @@ esp_err_t Web::Send_HotspotInfo(httpd_req_t *req)
     return ESP_OK;
 }
 
+static constexpr size_t POST_MAX_BODY = 1024;
+
 esp_err_t Web::POST_UpdateConfig(httpd_req_t *req)
 {
-    char buf[512];
-    int ret = httpd_req_recv(req, buf, sizeof(buf));
-    if (ret <= 0)
-    {
-        httpd_resp_send_500(req);
+    // ---- 1. Cap the body size -------------------------------------------
+    size_t contentLen = req->content_len;
+    if (contentLen == 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Empty body");
         return ESP_FAIL;
     }
-    buf[ret] = '\0';
+    if (contentLen > POST_MAX_BODY) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Out of memory");
+        return ESP_FAIL;
+    }
 
-    String data(buf);
-    Serial.println(buf);
+    // ---- 2. Read the full body into a stack buffer ----------------------
+    char buf[POST_MAX_BODY + 1];
+    int received = 0;
+    while (received < (int)contentLen) {
+        int ret = httpd_req_recv(req, buf + received, contentLen - received);
+        if (ret <= 0) {
+            if (ret == HTTPD_SOCK_ERR_TIMEOUT) continue;
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Read failed");
+            return ESP_FAIL;
+        }
+        received += ret;
+    }
+    buf[received] = '\0';
 
+    Serial.printf("POST_UpdateConfig: %s\n", buf);
 
-    httpd_resp_send(req, "{\"status\":\"ok\"}", 16);
-    
-            return ESP_OK;
+    // ---- 3. Parse JSON --------------------------------------------------
+    cJSON *root = cJSON_Parse(buf);
+    if (!root) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    cJSON *idItem    = cJSON_GetObjectItem(root, "Id");
+    cJSON *valueItem = cJSON_GetObjectItem(root, "Value");
+
+    // ---- 4. Validate — Id first, then Value -----------------------------
+    if (!cJSON_IsNumber(idItem)) {
+        cJSON_Delete(root);
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, "{\"error\":\"Id missing\"}", HTTPD_RESP_USE_STRLEN);
+        return ESP_FAIL;
+    }
+
+    if (valueItem == nullptr) {
+        cJSON_Delete(root);
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, "{\"error\":\"Value missing\"}", HTTPD_RESP_USE_STRLEN);
+        return ESP_FAIL;
+    }
+
+    // ---- 5. Extract id and value as-is ----------------------------------
+    char idStr[16];
+    snprintf(idStr, sizeof(idStr), "%d", idItem->valueint);
+
+    char *valueCStr = cJSON_PrintUnformatted(valueItem);
+    if (!valueCStr) {
+        cJSON_Delete(root);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Serialise failed");
+        return ESP_FAIL;
+    }
+
+    // ---- 6. Apply the change --------------------------------------------
+    ConfigManagerUpdateResult result = ConfigManager::AttemptUpdateConfigById(idStr, valueCStr);
+
+    free(valueCStr);
+    cJSON_Delete(root);
+
+    // ---- 7. Respond -----------------------------------------------------
+    if (result == ConfigManagerUpdateResult::OK) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_send(req, "{\"status\":\"ok\"}", HTTPD_RESP_USE_STRLEN);
+        return ESP_OK;
+    }
+
+    httpd_resp_set_status(req, "500 Internal Server Error");
+    httpd_resp_set_type(req, "application/json");
+
+    String errBody = String("{\"error\":\"")
+                   + ConfigManagerUpdateResultDescriptions[(int)result]
+                   + "\"}";
+    httpd_resp_send(req, errBody.c_str(), errBody.length());
+    return ESP_FAIL;
 }
 
 esp_err_t Web::POST_UpdateWiFiDetails(httpd_req_t *req)

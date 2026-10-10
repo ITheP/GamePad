@@ -7,7 +7,7 @@
         <p>
             Be aware that wifi connectivity can sometimes be a little unreliable!
         </p>
-        
+
             <input type="checkbox" id="toggle-key">
             <label for="toggle-key" class="btn btn--autowidth">Show / Hide Key</label>
 
@@ -17,8 +17,12 @@
                 <th>Description</th>
             </tr>
             <tr>
+                <td></td>
+                <td>Settings without a 💾 button will automatically save</td>
+            </tr>
+            <tr>
                 <td><button type="button" class="btn btn--save dirty" title="Save changes">💾</button></td>
-                <td>Setting change won't be applied until save pressed</td>
+                <td>Setting changed, press to save to device</td>
             </tr>
             <tr>
                 <td><button type="button" class="btn btn--save" title="No changes to save" disabled="">💾</button></td>
@@ -26,7 +30,7 @@
             </tr>
             <tr>
                 <td><span class="status-saving" title="Saving…">⏳</span></td>
-                <td>Saving setting. May take a moment for the devices web service to respond</td>
+                <td>Saving setting - may take a moment for the devices web service to respond</td>
             </tr>
             <tr>
                 <td><span class="status-key-saved" title="Saved">✅</span></td>
@@ -39,7 +43,7 @@
             <tr>
                 <td><span class="status-error" title="Error">❌</span><button type="button" class="btn btn--retry dirty"
                         title="Retry saving">🔄</button></td>
-                <td>Error saving setting with a retry button. e.g. Lost connection with device web server.</td>
+                <td>Error saving setting with a retry button. e.g. Lost connection with device web server. Press retry button to try again.</td>
             </tr>
         </table>
 
@@ -59,7 +63,7 @@
             </thead>
             <tbody id="configTableBody">
                 <tr>
-                    <td colspan="3" class="config-placeholder">⏳ Loading configuration…</td>
+                    <td colspan="3" class="config-placeholder"><span class="status-waiting">⏳</span> Loading configuration…</td>
                 </tr>
             </tbody>
         </table>

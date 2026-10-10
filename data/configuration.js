@@ -162,14 +162,14 @@ main();
     var SAVE_TIMEOUT_MS = 10000;
 
     var ICON = {
-        FAILED:  "❌",                      // "\u274C"
-        SAVE:    "💾",                      // "\uD83D\uDCBE"
-        SAVING:  "⏳",                      // "\u23F3",
-        TICK:    "✅",                      // "\u2705"
+        FAILED: "❌",                      // "\u274C"
+        SAVE: "💾",                      // "\uD83D\uDCBE"
+        SAVING: "⏳",                      // "\u23F3",
+        TICK: "✅",                      // "\u2705"
         DEFAULT: "Default",
-        RETRY:   "🔄",                      // "\uD83D\uDD04"
+        RETRY: "🔄",                      // "\uD83D\uDD04"
         WARNING: "⚠️",                      // "\u26A0\uFE0F"
-        INFO:    "ℹ️"                       // "\u2139\uFE0F"
+        INFO: "ℹ️"                       // "\u2139\uFE0F"
     };
 
     /* ---------------------------------------------------------------------
@@ -190,9 +190,9 @@ main();
     function typeOf(item) {
         return String(field(item, "Type", "String")).toLowerCase();
     }
-    function isBool(item)   { var t = typeOf(item); return t === "bool" || t === "boolean"; }
-    function isInt(item)    { var t = typeOf(item); return t === "int" || t === "integer"; }
-    function isFloat(item)  { var t = typeOf(item); return t === "float" || t === "double"; }
+    function isBool(item) { var t = typeOf(item); return t === "bool" || t === "boolean"; }
+    function isInt(item) { var t = typeOf(item); return t === "int" || t === "integer"; }
+    function isFloat(item) { var t = typeOf(item); return t === "float" || t === "double"; }
     function isString(item) { return !isBool(item) && !isInt(item) && !isFloat(item); }
 
     function num(v, fallback) {
@@ -238,7 +238,7 @@ main();
 
     function roundStep(raw) {
         if (!(raw > 0)) return 1;
-        var mag  = Math.pow(10, Math.floor(Math.log10(raw)));
+        var mag = Math.pow(10, Math.floor(Math.log10(raw)));
         var norm = raw / mag;
         var nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
         return nice * mag;
@@ -257,8 +257,8 @@ main();
        --------------------------------------------------------------------- */
 
     var ui = {
-        tableBody:    null,
-        refreshBtn:   null,
+        tableBody: null,
+        refreshBtn: null,
         globalStatus: null
     };
 
@@ -274,47 +274,49 @@ main();
 
         while (ui.tableBody.firstChild) ui.tableBody.removeChild(ui.tableBody.firstChild);
 
-        // var TEST_CONFIG_JSON = `{
-        // "config": [
-        //     {"Id": 3,"Type": "Bool","Metadata": {"Group": "Inputs","Label": "Live Serial Output","Description": "Enables detailed serial output of input states, including digital, analog, virtual and battery states.","Info": "","RenderAs": "Toggle","SaveInPrefs": 0,"min": 0,"max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-        //     {"Id": 1,"Type": "Bool","Metadata": {"Group": "Screen","Label": "White Screen","Description": "Screen will show a solid white, handy when physically aligning panel in device where visible edges are visible","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-        //     {"Id": 2,"Type": "Bool","Metadata": {"Group": "Screen","Label": "Force FPS Display","Description": "Forces the display of FPS in the top right corner of the screen","Info": "","RenderAs": "Toggle","SaveInPrefs": 1,"min": 0,"max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-        //     {"Id": 4,"Type": "Float","Metadata": {"Group": "Idle","Label": "LED Timeout","Description": "Seconds before LED's go into idle mode.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 10,"DefaultValue": 0}},
-        //     {"Id": 5,"Type": "Float","Metadata": {"Group": "Idle","Label": "Screen Timeout","Description": "Seconds before screen go into idle mode.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 30,"DefaultValue": 0}},
-        //     {"Id": 6,"Type": "Float","Metadata": {"Group": "Idle","Label": "Screen Restart","Description": "Seconds before screen idle effect restarts.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 60,"DefaultValue": 0}},
-        //     {"Id": 7,"Type": "Int","Metadata": {"Group": "LED","Label": "Brightness","Description": "Global maximum brightness of LED's","Info": "Very low brightness levels may result in funny looking LED colours or fades as there isn't the resolution of brightness levels to represent subtle differences in colour","RenderAs": "Default","SaveInPrefs": 0,"min": 0,"max": 255,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 200,"DefaultValue": 0}}
-        // ]
-        // }`;
+        var TEST_CONFIG_JSON = `{"config": [
+{"Id": 6,"Type": "Bool","Metadata": {"Group": "Debug","Label": "Live Serial Output","Description": "Enables detailed serial output of input states, including digital, analog, virtual and battery states.","Info": "","RenderAs": "Toggle","SaveInPrefs": 0,"Unit": "","Min": 0,"Max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
+{"Id": 1,"Type": "Bool","Metadata": {"Group": "Screen","Label": "White Screen","Description": "Screen will show a solid white, handy when physically aligning panel in device where visible edges are visible","Info": "","RenderAs": "Default","SaveInPrefs": 0,"Unit": "","Min": 0,"Max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
+{"Id": 2,"Type": "Bool","Metadata": {"Group": "Screen","Label": "Force FPS Display","Description": "Forces the display of FPS in the top right corner of the screen","Info": "","RenderAs": "Toggle","SaveInPrefs": 1,"Unit": "","Min": 0,"Max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
+{"Id": 6,"Type": "Bool","Metadata": {"Group": "Debug","Label": "Live Serial Output","Description": "Enables detailed serial output of input states, including digital, analog, virtual and battery states.","Info": "","RenderAs": "Toggle","SaveInPrefs": 0,"Unit": "","Min": 0,"Max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
+{"Id": 4,"Type": "Int","Metadata": {"Group": "Debug","Label": "Live Serial Output Throttle","Description": "Introduces a delay when viewing live serial output of input states. Will slow down device.","Info": "","RenderAs": "Default","SaveInPrefs": 1,"Unit": "","Min": 0,"Max": 1000,"uiMin": 0,"uiMax": 1000,"uiStep": 10,"Value": 200,"DefaultValue": 0}},
+{"Id": 5,"Type": "Int","Metadata": {"Group": "Gfx","Label": "Guitar Model","Description": "Visual model used for guitar.","Info": "","RenderAs": "Default","SaveInPrefs": 1,"Unit": "Guitar number","Min": 0,"Max": 5,"uiMin": 0,"uiMax": 5,"uiStep": 0,"Image": "guitar_logos.png", "ImageVariants": 8,"ImageSplitVertically": true,"Value": 1,"DefaultValue": 0}},
+{"Id": 6,"Type": "Bool","Metadata": {"Group": "Debug","Label": "Live Serial Output","Description": "Enables detailed serial output of input states, including digital, analog, virtual and battery states.","Info": "","RenderAs": "Toggle","SaveInPrefs": 0,"Unit": "","Min": 0,"Max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
+{"Id": 7,"Type": "Float","Metadata": {"Group": "Idle","Label": "LED Timeout","Description": "Seconds before LED's go into idle mode.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"Unit": "Sec","Min": 0,"Max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 10,"DefaultValue": 0}},
+{"Id": 8,"Type": "Float","Metadata": {"Group": "Idle","Label": "Screen Timeout","Description": "Seconds before screen go into idle mode.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"Unit": "Sec","Min": 1,"Max": 86400,"uiMin": 1,"uiMax": 600,"uiStep": 10,"Value": 30,"DefaultValue": 0}},
+{"Id": 9,"Type": "Float","Metadata": {"Group": "Idle","Label": "Screen Restart","Description": "Seconds before screen idle effect restarts.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"Unit": "Sec","Min": 0,"Max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 60,"DefaultValue": 0}},
+{"Id": 10,"Type": "Int","Metadata": {"Group": "LED","Label": "Brightness","Description": "Global brightness of LED's","Info": "Very low brightness levels may result in funny looking LED colours or fades as there isn't the resolution of brightness levels to represent subtle differences in colour","RenderAs": "Default","SaveInPrefs": 0,"Unit": "Thingies","Min": 0,"Max": 255,"uiMin": 0,"uiMax": 255,"uiStep": 1,"Value": 200,"DefaultValue": 0}}
+]}`;
 
         // ---- Loader (test mode) ----
-        // return Promise.resolve(JSON.parse(TEST_CONFIG_JSON))
-        //     .then(function (data) {
-        //         var list = (data && (data.config || data.Config)) || data;
-        //         if (!Array.isArray(list)) list = [];
-        //         renderConfig(list);
-        //         setGlobalStatus("");
-        //     });
-
-        // ---- Loader (live mode) ----
-        return fetch(CONFIG_URL, { cache: "no-store" })
-            .then(function (res) {
-                if (!res.ok) throw new Error("HTTP " + res.status + ": " + res.statusText);
-                return res.json();
-            })
+        return Promise.resolve(JSON.parse(TEST_CONFIG_JSON))
             .then(function (data) {
                 var list = (data && (data.config || data.Config)) || data;
                 if (!Array.isArray(list)) list = [];
                 renderConfig(list);
                 setGlobalStatus("");
-            })
-            .catch(function (err) {
-                console.error("Configuration: failed to load config \u2013", err);
-                showMessage("Unable to load configuration from the device.", "error");
-                setGlobalStatus(ICON.FAILED + " Failed to load configuration. Web service on device may not be responding.");
-            })
-            .finally(function () {
-                if (ui.refreshBtn) ui.refreshBtn.disabled = false;
             });
+
+        // // ---- Loader (live mode) ----
+        // return fetch(CONFIG_URL, { cache: "no-store" })
+        //     .then(function (res) {
+        //         if (!res.ok) throw new Error("HTTP " + res.status + ": " + res.statusText);
+        //         return res.json();
+        //     })
+        //     .then(function (data) {
+        //         var list = (data && (data.config || data.Config)) || data;
+        //         if (!Array.isArray(list)) list = [];
+        //         renderConfig(list);
+        //         setGlobalStatus("");
+        //     })
+        //     .catch(function (err) {
+        //         console.error("Configuration: failed to load config \u2013", err);
+        //         showMessage("Unable to load configuration from the device.", "error");
+        //         setGlobalStatus(ICON.FAILED + " Failed to load configuration. Web service on device may not be responding.");
+        //     })
+        //     .finally(function () {
+        //         if (ui.refreshBtn) ui.refreshBtn.disabled = false;
+        //     });
     }
 
     function postUpdateConfig(id, value) {
@@ -329,7 +331,7 @@ main();
                 catch (err) { reject(err); }
             });
         }
-        
+
         return fetch(UPDATE_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -345,7 +347,7 @@ main();
     function interpretResponse(result) {
         if (result === undefined || result === null) return true;
         if (typeof result === "boolean") return result;
-        if (typeof result === "number")  return result !== 0;
+        if (typeof result === "number") return result !== 0;
 
         if (typeof result === "string") {
             var s = result.trim().toLowerCase();
@@ -396,7 +398,7 @@ main();
 
         switch (row.statusState) {
             case "saving":
-                el.appendChild(iconSpan(ICON.SAVING, "status-saving", "Saving\u2026"));
+                el.appendChild(iconSpan(ICON.SAVING, "status-waiting", "Saving\u2026"));
                 break;
 
             case "saved": {
@@ -455,15 +457,22 @@ main();
 
     function setStatus(row, state, opts) {
         opts = opts || {};
-        row.statusState   = state;
+        row.statusState = state;
         row.statusMessage = opts.message || "";
         renderStatus(row);
     }
+
+    // function markDirty(row) {
+    //     row.dirty = true;
+    //     if (row.statusState === "saved") row.statusState = "idle";
+    //     renderStatus(row);
+    // }
 
     function markDirty(row) {
         row.dirty = true;
         if (row.statusState === "saved") row.statusState = "idle";
         renderStatus(row);
+        if (typeof row.updateImage === "function") row.updateImage();
     }
 
     /* ---------------------------------------------------------------------
@@ -520,15 +529,15 @@ main();
        --------------------------------------------------------------------- */
 
     function buildControl(item, row) {
-        if (isBool(item))                   return buildBoolControl(item, row);
-        if (isInt(item) || isFloat(item))   return buildNumericControl(item, row);
+        if (isBool(item)) return buildBoolControl(item, row);
+        if (isInt(item) || isFloat(item)) return buildNumericControl(item, row);
         return buildStringControl(item, row);
     }
 
     /* ----- Bool ---------------------------------------------------------- */
 
     function buildBoolControl(item, row) {
-        var renderAs  = String(field(item, "RenderAs", "")).toLowerCase();
+        var renderAs = String(field(item, "RenderAs", "")).toLowerCase();
         var useToggle = (renderAs === "toggle");
 
         var input = document.createElement("input");
@@ -572,38 +581,38 @@ main();
         var isIntType = isInt(item);
 
         // Read each independently so we can tell what's actually present
-        var rawMin   = field(item, "min",   undefined);
-        var rawMax   = field(item, "max",   undefined);
+        var rawMin = field(item, "Min", undefined);
+        var rawMax = field(item, "Max", undefined);
         var rawUiMin = field(item, "uiMin", undefined);
         var rawUiMax = field(item, "uiMax", undefined);
-        var uiStep   = num(field(item, "uiStep", 0), 0);
+        var uiStep = num(field(item, "uiStep", 0), 0);
 
         // uiMin/uiMax and min/max each fall back to the other pair, then to a
         // final default only if the device provides nothing at all. This keeps
         // the hint text, the warning range, and the slider in lockstep.
         var uiMin = num(rawUiMin, num(rawMin, 0));
         var uiMax = num(rawUiMax, num(rawMax, 100));
-        var min   = num(rawMin,   uiMin);
-        var max   = num(rawMax,   uiMax);
+        var min = num(rawMin, uiMin);
+        var max = num(rawMax, uiMax);
 
-        if (max   < min)   { var t1 = min;   min   = max;   max   = t1; }
+        if (max < min) { var t1 = min; min = max; max = t1; }
         if (uiMax < uiMin) { var t2 = uiMin; uiMin = uiMax; uiMax = t2; }
         if (!(uiStep > 0)) uiStep = isIntType ? 1 : roundStep((uiMax - uiMin) / 100);
 
         var initialValue = num(field(item, "Value", min), min);
 
         var slider = document.createElement("input");
-        slider.type  = "range";
-        slider.min   = String(uiMin);
-        slider.max   = String(uiMax);
-        slider.step  = String(uiStep);
+        slider.type = "range";
+        slider.min = String(uiMin);
+        slider.max = String(uiMax);
+        slider.step = String(uiStep);
         slider.value = String(clamp(initialValue, uiMin, uiMax));
 
         var number = document.createElement("input");
-        number.type  = "number";
-        number.min   = String(min);
-        number.max   = String(max);
-        number.step  = String(uiStep);
+        number.type = "number";
+        number.min = String(min);
+        number.max = String(max);
+        number.step = String(uiStep);
         number.value = formatNumber(initialValue, isIntType, uiStep);
 
         var container = document.createElement("div");
@@ -620,7 +629,7 @@ main();
         hints.appendChild(hintMin);
         hints.appendChild(hintMax);
 
-        var warningActive  = false;
+        var warningActive = false;
         var warningMessage = "";
 
         function checkRange(v) {
@@ -649,7 +658,7 @@ main();
 
         return {
             element: container,
-            extra:   hints,
+            extra: hints,
 
             getValue: function () { return num(number.value, initialValue); },
 
@@ -684,13 +693,13 @@ main();
     /* ----- String -------------------------------------------------------- */
 
     function buildStringControl(item, row) {
-        var minLen = num(field(item, "min", 0), 0);
-        var maxLen = num(field(item, "max", 0), 0);
-        var raw    = field(item, "Value", "");
+        var minLen = num(field(item, "Min", 0), 0);
+        var maxLen = num(field(item, "Max", 0), 0);
+        var raw = field(item, "Value", "");
         var initialValue = (raw === null || raw === undefined) ? "" : String(raw);
 
         var input = document.createElement("input");
-        input.type  = "text";
+        input.type = "text";
         input.value = initialValue;
 
         var hints = document.createElement("div");
@@ -702,7 +711,7 @@ main();
         hints.appendChild(hintMin);
         hints.appendChild(hintMax);
 
-        var warningActive  = false;
+        var warningActive = false;
         var warningMessage = "";
 
         function checkLength(v) {
@@ -722,7 +731,7 @@ main();
 
         return {
             element: input,
-            extra:   hints,
+            extra: hints,
 
             getValue: function () { return input.value; },
 
@@ -747,6 +756,109 @@ main();
         };
     }
 
+    /* ----- Description cell image ----- */
+   function buildImageElement(item, row) {
+    var imageName = field(item, "Image", "");
+    if (!imageName) return null;
+
+    // Variant substitution: guitar_logos.png → guitar_logos.8.png
+    var variants = num(field(item, "ImageVariants", 0), 0);
+    if (variants > 0) {
+        var variant = Math.floor(Math.random() * variants);
+        var dotIdx = imageName.lastIndexOf(".");
+        if (dotIdx > 0) {
+            imageName = imageName.substring(0, dotIdx) + "." + variant + imageName.substring(dotIdx);
+        } else {
+            imageName = imageName + "." + variant;
+        }
+    }
+    var url = "/data/img/" + imageName;
+
+    // Read the range FIRST — segment count depends on it.
+    var min = num(field(item, "Min", 0), 0);
+    var max = num(field(item, "Max", 0), 0);
+    if (max < min) { var t = min; min = max; max = t; }
+
+    // ImageSplitVertically is a BOOL. When false/absent, show the whole image.
+    var isSplit = toBool(field(item, "ImageSplitVertically", 0));
+
+    // Segment count = number of values in [min, max].
+    var segments = isSplit ? Math.max(1, Math.round(max - min + 1)) : 1;
+        console.log("imageName " + imageName + " - isSplit " + isSplit + " - min,max " + min + "," + max + " - segments " + segments);
+
+    // No split → plain image
+    if (segments <= 1) {
+        var plain = document.createElement("img");
+        plain.src = url;
+        plain.alt = "";
+        plain.className = "config-image";
+        return { element: plain };
+    }
+
+    var initialValue = num(field(item, "Value", min), min);
+
+    function pickSegment(v) {
+        var s = Math.round(v - min);
+        if (!isFinite(s)) s = 0;
+        if (s < 0) s = 0;
+        if (s >= segments) s = segments - 1;
+        return s;
+    }
+
+    var wrap = document.createElement("div");
+    wrap.className = "config-image-split";
+    wrap.style.backgroundImage = "url(" + url + ")";
+
+    var currentSeg = pickSegment(initialValue);
+    var loaded     = false;
+    var spriteW    = 0;
+    var spriteH    = 0;
+    var segH       = 0;
+    var scaledSegH = 0;
+
+    function applySegment() {
+        if (scaledSegH <= 0) return;
+        wrap.style.backgroundPosition = "0px " + (-currentSeg * scaledSegH) + "px";
+    }
+
+    function layout() {
+        if (!loaded) return;
+        var parentW = (wrap.parentElement && wrap.parentElement.clientWidth) || 0;
+        if (parentW <= 0) { requestAnimationFrame(layout); return; }
+
+// Actual size. Only shrink if the sprite is naturally wider than the cell.
+        var targetW = Math.min(spriteW, parentW);
+        var scale   = targetW / spriteW;
+
+        var scaledSpriteH = spriteH * scale;
+        scaledSegH        = segH * scale;
+
+        wrap.style.width          = targetW + "px";
+        wrap.style.height         = scaledSegH + "px";
+        wrap.style.backgroundSize = targetW + "px " + scaledSpriteH + "px";
+        applySegment();
+    }
+
+    var preload = new Image();
+    preload.onload = function () {
+        spriteW = preload.naturalWidth;
+        spriteH = preload.naturalHeight;
+        segH    = spriteH / segments;
+        loaded  = true;
+        requestAnimationFrame(layout);
+    };
+    preload.src = url;
+
+    function updateSegment() {
+        if (!row.control) return;
+        var v = num(row.control.getValue(), min);
+        currentSeg = pickSegment(v);
+        applySegment();
+    }
+
+    return { element: wrap, updateSegment: updateSegment };
+}
+
     /* ---------------------------------------------------------------------
        Row construction
        --------------------------------------------------------------------- */
@@ -755,21 +867,21 @@ main();
         var id = field(item, "Id", null);
 
         var row = {
-            id:             id,
-            item:           item,
-            dirty:          false,
-            statusState:    "idle",
-            statusMessage:  "",
-            saveToken:      0,
+            id: id,
+            item: item,
+            dirty: false,
+            statusState: "idle",
+            statusMessage: "",
+            saveToken: 0,
             showSaveButton: true,
-            element:        null,
-            statusEl:       null,
-            control:        null
+            element: null,
+            statusEl: null,
+            control: null
         };
 
         row.markDirty = function () { markDirty(row); };
-        row.getValue  = function () { return row.control ? row.control.getValue() : null; };
-        row.validate  = function () {
+        row.getValue = function () { return row.control ? row.control.getValue() : null; };
+        row.validate = function () {
             return (row.control && row.control.validate) ? row.control.validate() : { ok: true };
         };
 
@@ -788,6 +900,15 @@ main();
         var desc = field(item, "Description", "");
         if (desc) tdDesc.appendChild(document.createTextNode(String(desc)));
 
+        // var info = field(item, "Info", "");
+        // if (info) {
+        //     var infoEl = document.createElement("span");
+        //     infoEl.className = "info";
+        //     infoEl.textContent = String(info);
+        //     tdDesc.appendChild(infoEl);
+        // }
+        // tr.appendChild(tdDesc);
+
         var info = field(item, "Info", "");
         if (info) {
             var infoEl = document.createElement("span");
@@ -795,6 +916,14 @@ main();
             infoEl.textContent = String(info);
             tdDesc.appendChild(infoEl);
         }
+
+        // Optional image (split or whole), shown under the description
+        var imageInfo = buildImageElement(item, row);
+        if (imageInfo) {
+            tdDesc.appendChild(imageInfo.element);
+            if (imageInfo.updateSegment) row.updateImage = imageInfo.updateSegment;
+        }
+
         tr.appendChild(tdDesc);
 
         /* ---- Value cell ---- */
@@ -902,7 +1031,7 @@ main();
         });
 
         // Group by Metadata.Group, preserving first-seen order.
-        var order  = [];
+        var order = [];
         var groups = Object.create(null);
         unique.forEach(function (item) {
             var g = String(field(item, "Group", "General"));
@@ -941,8 +1070,8 @@ main();
        --------------------------------------------------------------------- */
 
     function init() {
-        ui.tableBody    = document.getElementById("configTableBody");
-        ui.refreshBtn   = document.getElementById("configRefreshButton");
+        ui.tableBody = document.getElementById("configTableBody");
+        ui.refreshBtn = document.getElementById("configRefreshButton");
         ui.globalStatus = document.getElementById("configGlobalStatus");
 
         if (!ui.tableBody) {

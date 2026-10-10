@@ -73,41 +73,41 @@ void ConfigManager::RenderConfigJsonToSerial()
 
 void ConfigManager::RenderConfigToSerial()
 {
-    std::ostringstream json;
-    json << "Config...\n";
+    std::ostringstream output;
+    output << "Config...\n";
 
     for (int i = 0; i < ConfigCount; i++)
     {
         auto config = ConfigMap[i];
 
         if (i > 0)
-            json << "\n";
+            output << "\n";
 
-        json << "[" << config->Id << "] "
+        output << "[" << config->Id << "] "
              << config->Metadata.Group << "." << config->Metadata.Label << "\n"
              << "Type: " << ConfigTypeDescriptions[(int)config->Type] << ", ";
 
         switch (config->Type)
         {
         case ConfigType::Int:
-            json << "Value: " << reinterpret_cast<IntConfig *>(config)->Value << ", "
+            output << "Value: " << reinterpret_cast<IntConfig *>(config)->Value << ", "
                  << "DefaultValue: " << reinterpret_cast<IntConfig *>(config)->DefaultValue;
             break;
 
         case ConfigType::Float:
-            json << "Value: " << reinterpret_cast<FloatConfig *>(config)->Value << ", "
+            output << "Value: " << reinterpret_cast<FloatConfig *>(config)->Value << ", "
                  << "DefaultValue: " << reinterpret_cast<FloatConfig *>(config)->DefaultValue;
             break;
         case ConfigType::Bool:
-            json << "Value: " << reinterpret_cast<BoolConfig *>(config)->Value << ", "
+            output << "Value: " << reinterpret_cast<BoolConfig *>(config)->Value << ", "
                  << "DefaultValue: " << reinterpret_cast<BoolConfig *>(config)->DefaultValue;
             break;
         case ConfigType::String:
-            json << "Value: " << reinterpret_cast<StringConfig *>(config)->Value << ","
+            output << "Value: " << reinterpret_cast<StringConfig *>(config)->Value << ","
                  << "DefaultValue: " << reinterpret_cast<StringConfig *>(config)->DefaultValue;
             break;
         case ConfigType::Colour:
-            json << "Value: {"
+            output << "Value: {"
                  << "r: " << (int)reinterpret_cast<ColorConfig *>(config)->r << ","
                  << "g: " << (int)reinterpret_cast<ColorConfig *>(config)->g << ","
                  << "b: " << (int)reinterpret_cast<ColorConfig *>(config)->b << "},"
@@ -118,7 +118,7 @@ void ConfigManager::RenderConfigToSerial()
             break;
         }
 
-        json << "\nMetadata...\n"
+        output << "\nMetadata...\n"
              << "\tDescription: " << config->Metadata.Description << "\n"
              << "\tInfo: " << config->Metadata.Info << "\n"
              << "\tRenderAs: " << ConfigRenderAsDescriptions[(int)config->Metadata.RenderAs] << ", "
@@ -128,12 +128,15 @@ void ConfigManager::RenderConfigToSerial()
              << "Max: " << config->Metadata.Max << ", "
              << "uiMin: " << config->Metadata.uiMin << ", "
              << "uiMax: " << config->Metadata.uiMax << ", "
-             << "uiStep: " << config->Metadata.uiStep;
+             << "uiStep: " << config->Metadata.uiStep << ", "
+             << "Image: " << config->Metadata.Image << ", "
+             << "ImageVariants: " << config->Metadata.ImageVariants << ", "
+             << "ImageSplitVertically: " << ( config->Metadata.ImageSplitVertically ? "true" : "false");
     }
 
-    json << "\n";
+    output << "\n";
 
-    Serial.print(json.str().c_str());
+    Serial.print(output.str().c_str());
 }
 
 std::ostringstream ConfigManager::GetConfigAsJson()
@@ -148,6 +151,7 @@ std::ostringstream ConfigManager::GetConfigAsJson()
         if (i > 0)
             json << ",\n";
 
+        // TODO: Only push out json with values, ignore otherwise - save bandwidth!
         json << "{\"Id\": " << config->Id << ","
              << "\"Type\": \"" << ConfigTypeDescriptions[(int)config->Type] << "\","
              << "\"Metadata\": {"
@@ -163,6 +167,15 @@ std::ostringstream ConfigManager::GetConfigAsJson()
              << "\"uiMin\": " << config->Metadata.uiMin << ","
              << "\"uiMax\": " << config->Metadata.uiMax << ","
              << "\"uiStep\": " << config->Metadata.uiStep << ",";
+
+             if (config->Metadata.ImageVariants > 0)
+                json << "\"Image\": \"" << config->Metadata.Image << "\", ";
+
+             if (config->Metadata.ImageVariants > 0)
+                json << "\"ImageVariants\": " << config->Metadata.ImageVariants << ",";
+
+             if (config->Metadata.ImageSplitVertically)
+                json << "\"ImageSplitVertically\": true,";
 
         switch (config->Type)
         {
@@ -203,9 +216,126 @@ std::ostringstream ConfigManager::GetConfigAsJson()
     return json;
 }
 
+
+ConfigManagerUpdateResult ConfigManager::AttemptUpdateConfigById(char *id, char *value)
+{
+    // ---- 1. Parse the id ------------------------------------------------
+    if (id == nullptr || *id == '\0') {
+        return ConfigManagerUpdateResult::InvalidId;
+    }
+
+    errno = 0;
+    char *idEnd = nullptr;
+    long idLong = strtol(id, &idEnd, 10);
+
+    // Ids are non-negative. 0 is valid, negatives are not.
+    if (idEnd == id || *idEnd != '\0'
+        || errno == ERANGE
+        || idLong < 0 || idLong > INT_MAX) {
+        return ConfigManagerUpdateResult::InvalidId;
+    }
+
+    int configId = (int)idLong;
+
+    // ---- 2. Look up the config (direct index) --------------------------
+    if (configId < 0 || configId >= ConfigCount) {
+        return ConfigManagerUpdateResult::IdNotFound;
+    }
+
+    BaseConfig *base = ConfigMap[configId];
+    if (base == nullptr) {
+        return ConfigManagerUpdateResult::IdNotFound;
+    }
+
+    // ---- 3. Validate + convert the value by type ------------------------
+    if (value == nullptr) {
+        return ConfigManagerUpdateResult::InvalidNumber;
+    }
+
+    switch (base->Type)
+    {
+        case ConfigType::Int:
+        {
+            errno = 0;
+            char *end = nullptr;
+            long v = strtol(value, &end, 10);
+            if (end == value || *end != '\0' || errno == ERANGE
+                || v < INT_MIN || v > INT_MAX) {
+                return ConfigManagerUpdateResult::InvalidNumber;
+            }
+            // UpdateConfig reads this as `int*` — so store into an int.
+            int typedValue = (int)v;
+            return UpdateConfig(base, &typedValue);
+        }
+
+        case ConfigType::Float:
+        {
+            errno = 0;
+            char *end = nullptr;
+            float v = strtof(value, &end);
+            if (end == value || *end != '\0' || errno == ERANGE) {
+                return ConfigManagerUpdateResult::InvalidNumber;
+            }
+            return UpdateConfig(base, &v);
+        }
+
+        case ConfigType::Bool:
+        {
+            bool v;
+            if      (strcmp(value, "true")  == 0 || strcmp(value, "1") == 0) v = true;
+            else if (strcmp(value, "false") == 0 || strcmp(value, "0") == 0) v = false;
+            else return ConfigManagerUpdateResult::InvalidBool;
+            return UpdateConfig(base, &v);
+        }
+
+        case ConfigType::String:
+        {
+            // Strip the outer quotes cJSON added.
+            char *raw = value;
+            size_t len = strlen(value);
+            if (len >= 2 && value[0] == '"' && value[len - 1] == '"') {
+                value[len - 1] = '\0';
+                raw = value + 1;
+            }
+            // char* converts to void* implicitly — no cast needed.
+            return UpdateConfig(base, raw);
+        }
+
+        case ConfigType::Colour:
+        {
+            const char *c = value;
+            if (*c == '"') ++c;
+
+            size_t hexLen = 0;
+            while (isxdigit((unsigned char)c[hexLen])) ++hexLen;
+            if (hexLen != 6) return ConfigManagerUpdateResult::InvalidNumber;
+            if (c[hexLen] != '\0' && !(c[hexLen] == '"' && c[hexLen + 1] == '\0')) {
+                return ConfigManagerUpdateResult::InvalidNumber;
+            }
+
+            // Parse RRGGBB, then split into three bytes for UpdateConfig,
+            // which reads the value as a uint8_t[3] (r, g, b).
+            uint32_t rgb = (uint32_t)strtoul(c, nullptr, 16);
+            uint8_t bytes[3];
+            bytes[0] = (uint8_t)((rgb >> 16) & 0xFF);   // r
+            bytes[1] = (uint8_t)((rgb >>  8) & 0xFF);   // g
+            bytes[2] = (uint8_t)( rgb        & 0xFF);   // b
+
+            return UpdateConfig(base, bytes);
+        }
+    }
+
+    return ConfigManagerUpdateResult::UnknownConfigType;
+}
 ConfigManagerUpdateResult ConfigManager::UpdateConfigById(int id, void *value)
 {
     BaseConfig *base = ConfigMap[id];
+
+    return UpdateConfig(base, value);
+}
+
+ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *value)
+{
     auto result = ConfigManagerUpdateResult::OK;
 
     switch (base->Type)

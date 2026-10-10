@@ -1,0 +1,768 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>squishy letter ring</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0e0e12; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+<canvas id="c"></canvas>
+<script>
+(() => {
+'use strict';
+
+const CFG = {
+  // ─── Text ───────────────────────────────────────────────────────────
+  // The full string that gets laid out along the ring's arc. It repeats
+  // seamlessly, so as one copy scrolls out of view the next scrolls in.
+  // Any characters work — emoji included — though note that emoji are
+  // measured via measureText and may be wider than a normal glyph.
+  text:        ' 🦀⭐🍓🥪🌊⛵🦀⭐🍓🥪🌊⛵ Badger packed his tiny bag, Stripy towel and sun‑hat swag, Waddled down the sandy track, Dreaming of a seaside snack. But on the shore he heard a “Yarr!”. Saw an eyepatch gleaming far - A pirate starfish struck a pose, Saltwater dripping off his toes. ⭐ Oh, the badger and the starfish on a sunny holiday, One wants treasure buried deep, the other loves to play. Digging through the golden sand, a perfect little team, If there’s a jam sandwich waiting, life is truly supreme. ⚓ Starfish waved his tiny arm, “Matey, help me! No alarm - I’ve got treasure, shiny bright, But I can’t dig - it’s quite a sight.” - Badger grinned, “Well that’s my thing, I’ll dig a hole fit for a king. But I’ll need payment for my toil… How ‘bout a jam sandwich for the spoil?” 🥪 Oh, the badger and the starfish on a sunny holiday, One wants treasure buried deep, the other loves to play. Digging through the golden sand, a perfect little team, If there’s a jam sandwich waiting, life is truly supreme. 🍓 So they dug and dug until the sun, Turned the waves to liquid gold. Starfish placed his chest inside, Secrets safe and stories told. Badger munched his sandwich sweet, Jam dripping on his sandy feet - Two new friends upon the shore, Pirate tales forevermore. 🏴‍☠️ Yeah, the badger and the starfish on a sunny holiday, Treasure buried, sandwich eaten, perfect seaside day. If you stroll along that beach, you might just hear them sing - A pirate’s laugh, a badger’s cheer, in harmony they ring.',
+
+  // Canvas font settings. fontFamily should be a stack ending in a
+  // fallback; system-ui works almost everywhere. fontWeight is a number
+  // (100..900) or a keyword string. These are passed straight to
+  // ctx.font each frame.
+  fontWeight:  700,
+  fontFamily:  'system-ui, -apple-system, "Segoe UI", sans-serif',
+
+  // ─── Fill appearance ────────────────────────────────────────────────
+  // Solid fill used only when fillStops has 0 or 1 entries.
+  fillColor: '#f2f2f5',
+
+  // The fill can be a scrolling gradient. Provide 2+ stops; each has a position in [0,1] (0 = top of gradient, 1 = bottom) and a colour.
+  // The pattern is treated as CYCLIC — for a seamless wrap while animating, give the first and last stop the same colour.
+  //
+  // The gradient is drawn in each letter's LOCAL coordinate space (after the letter's rotation is applied), so it rotates with the
+  // letter. Every letter shares the same reference range, so an 'a' and an 'A' next to each other see the same gradient positions.
+  //
+  // To disable the gradient and use a solid fill, set this to a single entry (or an empty array).
+  fillStops: [
+    { pos: 0.00, color: '#ff3366' },
+    { pos: 0.33, color: '#ffcc00' },
+    { pos: 0.66, color: '#33ccff' },
+    { pos: 1.00, color: '#ff3366' },   // same as pos 0 → cyclic
+  ],
+
+  // Animation speed for the gradient, in full cycles per second.
+  // 0 = static. Positive scrolls the pattern downward through the text.
+  fillAnimSpeed: 0.15,
+
+  // Vertical half-height of the gradient as a fraction of fontSize. The gradient spans from -H*fontSize to +H*fontSize measured from
+  // the letter's visual center (y = 0 in local space). 0.5 covers the em box; slightly larger values give a bit of breathing room above
+  // tall caps and below descenders.
+  fillGradientHalfHeightPct: 0.55,
+
+  // ─── Stroke / outline ───────────────────────────────────────────────
+  // Optional outline drawn beneath the fill. Set strokeEnabled: false to disable.
+  strokeEnabled:  true,
+  strokeWidthPct: 0.06,                // stroke width as fraction of fontSize
+  strokeLineJoin: 'round',             // 'round' | 'bevel' | 'miter'
+  strokeLineCap:  'round',             // 'round' | 'butt' | 'square'
+
+  // Solid stroke colour, used when strokeStops has 0 or 1 entries.
+  strokeColor: '#000000',
+
+  // Stroke gradient stops — same format & rules as fillStops.
+  // Independent of the fill gradient: they can animate at different speeds, in different directions, or be entirely different patterns.
+  strokeStops: [
+    { pos: 1.00, color: '#ff3366' },
+    { pos: 0.66, color: '#ffcc00' },
+    { pos: 0.33, color: '#33ccff' },
+    { pos: 0.00, color: '#ff3366' },   // same as pos 0 → cyclic
+  ],
+  strokeAnimSpeed: 0.15,               // cycles / second (can differ from fill)
+  strokeGradientHalfHeightPct: 0.55,   // keep equal to fill's for aligned bands
+
+  // ─── Sizes (fractions of unit = min(W, H)) ──────────────────────────
+  // Using the shorter viewport dimension means the ring always fits in both portrait and landscape without any manual tuning.
+
+  // Glyph height, as a fraction of unit. 0.069 → ~69px on a 1000px reference; scales up/down with the window.
+  fontSizePct:      0.069,
+
+  // Extra gap inserted between glyphs, as a fraction of fontSize.
+  // 0 = natural spacing. Positive loosens; negative tightens (can slightly overlap). Affects total strip length, so it also changes
+  // how many glyphs are visible on the ring.
+  letterSpacingPct: 0.00,
+
+  // Ring radius — the distance from the body's centre to each ring point's resting position. 0.30 of unit gives a fairly large ring.
+  radiusPct:        0.25,
+
+  // Lever arm used ONLY for wall-contact rolling: omega = v / rollRadius. Keep equal to radiusPct for a natural "wheel of this size" roll.
+  // Drop it toward the squished radius for true no-slip (much faster spin). Raise it for an even lazier roll.
+  rollRadiusPct:    0.25,
+
+  // ─── Speeds (fractions of unit per step) ────────────────────────────
+  // "Per step" means per 1/60s tick of the fixed-timestep loop.
+
+  // Initial horizontal / vertical velocity. Negative vx = starts moving left, negative vy = starts moving up (canvas Y grows downward).
+  // 0.003 × 1000px = 3px/step at unit = 1000.
+  startVxPct:  -0.003,
+  startVyPct:  -0.007,
+
+  // Downward acceleration added to vy every step. Larger = stronger gravity = shorter, faster arcs; smaller = floatier, longer arcs.
+  // 0.00028 × 1000px = 0.28px/step² at unit = 1000.
+  gravityPct:   0.00048,
+
+  // ─── Angular (dimensionless — not scaled by unit) ───────────────────
+  // Spin rate is in RADIANS per step, and the text's visual scroll is omega × radius, so the on-screen speed already scales with radius.
+  // These stay raw.
+
+  // Starting spin rate. 0 = no spin until first wall contact.
+  initialOmega:  0,
+
+  // Airborne target spin rate that spinDamp eases toward. Negative = one direction, positive = the other. This is what makes the text
+  // keep drifting slowly even when the ring is in free flight.
+  minSpinSpeed: -0.05,
+
+  // Per-step multiplier pulling omega toward minSpinSpeed while airborne (and NOT while any letter is touching a wall).
+  //   1.0   = spin never decays in flight
+  //   0.995 = slow drift
+  //   0.98  = snappy
+  spinDamp:      0.975,
+
+  // ─── Ring geometry ──────────────────────────────────────────────────
+
+  // Fraction of the ring's circumference left empty — the "join" where the text starts and ends. 0.05 = 5% gap. Increase for a wider seam;
+  // decrease for a barely visible one. The gap sits at ringOffset.
+  gapFraction: 0.05,
+
+  // Where parameter 0 of the ring sits. Math.PI/2 with canvas Y-down puts the gap at the BOTTOM of the ring. Use 0 for right,
+  // -Math.PI/2 for top, Math.PI for left.
+  ringOffset:  Math.PI / 2,
+
+  // ─── Edge behaviour ─────────────────────────────────────────────────
+
+  // Fraction of radius added around the "on wall" test to give a bit of hysteresis. Prevents the airborne spin-damp from fighting the wall
+  // spin on the frames right after a bounce while the ring is still visually stuck to the edge.
+  edgeContact: 0.075,
+
+  // Minimum bounce height off each wall, as a fraction of the relevant screen dimension (HEIGHT for top/bottom, WIDTH for sides).
+  // These are turned into speeds at startup via v = sqrt(2 · g · h), so they always produce that visual bounce height regardless of
+  // gravity or window size. 0 = no floor; pure restitution instead.
+  minBounceTopPct:     0.00,   // ceiling  — currently pure reflection
+  minBounceBottomPct:  0.50,   // floor    — big kick back up
+  minBounceSidesPct:   0.01,   // sides    — almost no extra kick
+
+  // How far from a wall the body's centre is allowed to travel, as a fraction of radius. 0.25 means the centre stops 25% of R from the
+  // wall; the remaining 75% would be squish room. Lower = more squish (ring visually flattens harder); higher = less squish.
+  edgeMargin:  0.80,
+
+  // 1.0 = perfectly elastic bounces (no energy lost). Values below 1.0 lose energy on each hit, which combines with minBounce*Pct as a
+  // hard floor that keeps the ring from ever settling.
+  restitution: 1.0,
+
+  // Randomness applied to the outgoing bounce speed, as a fraction of the computed bounce. 0 = fully deterministic. 0.1 = the outgoing
+  // speed varies between 90% and 100% of what it would otherwise be. Applied after restitution and after the min-bounce floor, so even
+  // bounces pinned to the minimum speed vary a little.
+  bounceRandomness: 0.10,
+
+  // ─── Reflected floor ────────────────────────────────────────────────
+  // Fraction of screen HEIGHT reserved as a "mirror" strip at the very bottom. The effective floor is raised by this much — all physics,
+  // bouncing, and squishing treats the top of this strip as the real ground. The strip itself shows a reflection of whatever is above
+  // it, squished vertically to 50% and dimmed to 50% brightness.
+  //
+  //   0.00 → no reflection strip (floor at the true bottom edge)
+  //   0.05 → bottom 5% is mirror (a good default)
+  //   0.15 → a large, obvious mirror band
+  reflectionMarginPct: 0.05,
+
+  // Reflection brightness (0 = invisible, 1 = full). 0.5 means 50% darker.
+  reflectionBrightness: 0.15,
+
+  // How much the reflection is squished vertically. 0.5 = half height. Larger values make a taller reflection (may overflow the strip).
+  reflectionSquish: 0.50,
+
+  // ─── Emoji rendering ────────────────────────────────────────────────
+  // Colour emoji (🦀 ⭐ 🍓 etc.) are drawn by the OS's colour font, which
+  // ignores both fillStyle and strokeStyle — they always appear in their
+  // own colours, with no gradient and no outline. They are also far more
+  // expensive to rasterise than normal glyphs, so drawing them fresh every
+  // frame causes frame-time spikes.
+  //
+  // When cacheEmoji is true, each unique emoji character is rasterised
+  // ONCE into an offscreen canvas at the current font size and then blitted
+  // with drawImage every frame. This removes the per-frame emoji cost and
+  // is by far the biggest fix for juddery motion.
+  //
+  // Trade-off: because they're pre-rasterised as-is, cached emoji do NOT
+  // respect the animated fill/stroke gradients (they never did anyway) and
+  // do NOT re-render if you change fill/stroke settings at runtime.
+  // Set to false to revert to the direct fillText path.
+  cacheEmoji: true,
+
+  // ─── Soft-body ring ─────────────────────────────────────────────────
+
+  // Number of points making up the ring's soft outline. More = smoother deformation when squished, at higher CPU cost. 260–360 is a good
+  // range; below ~64 you'll see polygon edges when it presses a wall.
+  ringPoints:  360,
+
+  // How many times per frame the distance constraints are relaxed. Higher = stiffer, more stable ring. More points needs more iters
+  // to propagate forces around the chain; 1 works fine at 360 points.
+  ringIters:   1,
+
+  // Spring constant pulling each point back toward its undeformed position on the ideal ring. Higher = stiffer / bounces back fast;
+  // lower = floppier, more deformable.
+  ringStiff:   0.18,
+
+  // Velocity retention for ring points each step (Verlet damping).
+  // 1.0 = no damping (jittery), 0.88 = smooth, lower = more sluggish.
+  ringDamp:    0.88,
+
+  // Glyph half-extent as a fraction of fontSize — used to keep letters from clipping the screen edge when the ring is pressed against a wall.
+  // ~0.62 covers most descenders without over-padding.
+  glyphPad:    0.62,
+};
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha: false });
+let W = 0, H = 0;
+
+let radius = 0, rollRadius = 0, fontSize = 0, letterSpacing = 0;
+let startVx = 0, startVy = 0, gravity = 0;
+let pad = 0, bodyLim = 0, contactR = 0;
+let minSpeedTop = 0, minSpeedBottom = 0, minSpeedSides = 0;
+let strokeWidth = 0, fillGradHalfH = 0, strokeGradHalfH = 0;
+
+let floorY = 0;
+let marginPx = 0;
+
+const N = CFG.ringPoints;
+let restX, restY, segLen;
+const ring = [];
+
+/* emoji bitmap cache -------------------------------------------- */
+const emojiCache = new Map();
+
+// Extended_Pictographic covers emoji + pictographic symbols. It's not a
+// perfect test (a few symbols render as monochrome text on some systems),
+// but for the characters people actually put in strings like this it's
+// spot-on and avoids per-frame work.
+const EMOJI_RE = /\p{Extended_Pictographic}/u;
+function isEmoji(ch) { return EMOJI_RE.test(ch); }
+
+function clearEmojiCache() { emojiCache.clear(); }
+
+function getEmojiBitmap(ch) {
+  let entry = emojiCache.get(ch);
+  if (entry) return entry;
+
+  ctx.font = `${CFG.fontWeight} ${fontSize}px ${CFG.fontFamily}`;
+  const m   = ctx.measureText(ch);
+  const pad = Math.ceil(fontSize * 0.35);
+  const w   = Math.ceil(m.width) + pad * 2;
+  const h   = Math.ceil(fontSize * 1.6);
+
+  const c  = document.createElement('canvas');
+  c.width  = w;
+  c.height = h;
+  const cc = c.getContext('2d');
+  cc.font         = `${CFG.fontWeight} ${fontSize}px ${CFG.fontFamily}`;
+  cc.textAlign    = 'center';
+  cc.textBaseline = 'middle';
+  cc.fillText(ch, w / 2, h / 2);
+
+  entry = { canvas: c, w, h };
+  emojiCache.set(ch, entry);
+  return entry;
+}
+
+/* sizing -------------------------------------------------------- */
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width  = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function computeSizes() {
+  const u = Math.min(W, H);
+
+  radius        = u * CFG.radiusPct;
+  rollRadius    = u * CFG.rollRadiusPct;
+  fontSize      = u * CFG.fontSizePct;
+  letterSpacing = fontSize * CFG.letterSpacingPct;
+
+  startVx = u * CFG.startVxPct;
+  startVy = u * CFG.startVyPct;
+  gravity = u * CFG.gravityPct;
+
+  pad             = fontSize * CFG.glyphPad;
+  bodyLim         = radius * CFG.edgeMargin;
+  contactR        = Math.max(1, bodyLim - pad);
+  strokeWidth     = fontSize * CFG.strokeWidthPct;
+  fillGradHalfH   = fontSize * CFG.fillGradientHalfHeightPct;
+  strokeGradHalfH = fontSize * CFG.strokeGradientHalfHeightPct;
+
+  marginPx = H * CFG.reflectionMarginPct;
+  floorY   = H - marginPx;
+
+  minSpeedTop    = Math.sqrt(2 * gravity * floorY * CFG.minBounceTopPct);
+  minSpeedBottom = Math.sqrt(2 * gravity * floorY * CFG.minBounceBottomPct);
+  minSpeedSides  = Math.sqrt(2 * gravity * W * CFG.minBounceSidesPct);
+
+  restX = new Float64Array(N);
+  restY = new Float64Array(N);
+  for (let k = 0; k < N; k++) {
+    const a = CFG.ringOffset + (k / N) * Math.PI * 2;
+    restX[k] = Math.cos(a) * radius;
+    restY[k] = Math.sin(a) * radius;
+  }
+  segLen = (2 * Math.PI * radius) / N;
+
+  // Font size changed, so any cached emoji bitmaps are stale.
+  clearEmojiCache();
+}
+
+/* letter layout -------------------------------------------------- */
+let chars = [], advances = [], prefixes = [], textLen = 0;
+
+function layoutText() {
+  ctx.font = `${CFG.fontWeight} ${fontSize}px ${CFG.fontFamily}`;
+  chars = Array.from(CFG.text);
+  advances = []; prefixes = []; textLen = 0;
+  let cursor = 0;
+  for (const ch of chars) {
+    prefixes.push(cursor);
+    const w = ctx.measureText(ch).width;
+    advances.push(w);
+    cursor += w + letterSpacing;
+  }
+  textLen = cursor;
+}
+
+/* helpers -------------------------------------------------------- */
+function bounceMul() {
+  return 1 - Math.random() * CFG.bounceRandomness;
+}
+
+function parseColor(c) {
+  if (typeof c !== 'string') return [255, 255, 255];
+  c = c.trim();
+  if (c[0] === '#') {
+    if (c.length === 4) {
+      return [parseInt(c[1]+c[1],16), parseInt(c[2]+c[2],16), parseInt(c[3]+c[3],16)];
+    }
+    if (c.length === 7) {
+      return [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)];
+    }
+  }
+  return [255, 255, 255];
+}
+function lerpColor(a, b, t) {
+  const A = parseColor(a), B = parseColor(b);
+  const r = Math.round(A[0] + (B[0]-A[0])*t);
+  const g = Math.round(A[1] + (B[1]-A[1])*t);
+  const bl = Math.round(A[2] + (B[2]-A[2])*t);
+  return `rgb(${r},${g},${bl})`;
+}
+function colorAtCyclic(stops, u) {
+  const n = stops.length;
+  if (n === 0) return '#ffffff';
+  if (n === 1) return stops[0].color;
+  if (u <= stops[0].pos) return stops[0].color;
+  if (u >= stops[n-1].pos) return stops[n-1].color;
+  for (let i = 0; i < n - 1; i++) {
+    if (u >= stops[i].pos && u <= stops[i+1].pos) {
+      const range = stops[i+1].pos - stops[i].pos;
+      const f = range > 1e-9 ? (u - stops[i].pos) / range : 0;
+      return lerpColor(stops[i].color, stops[i+1].color, f);
+    }
+  }
+  return stops[n-1].color;
+}
+function buildGradient(ctx, y0, y1, stops, t) {
+  const grad = ctx.createLinearGradient(0, y0, 0, y1);
+  const n = stops.length;
+  if (n < 2 || t === 0) {
+    for (const s of stops) grad.addColorStop(s.pos, s.color);
+    return grad;
+  }
+  t = ((t % 1) + 1) % 1;
+  const pts = [];
+  for (let k = -1; k <= 1; k++) {
+    for (let i = 0; i < n; i++) {
+      const p = stops[i].pos + k + t;
+      if (p >= 0 && p <= 1) pts.push({ pos: p, color: stops[i].color });
+    }
+  }
+  pts.sort((a, b) => a.pos - b.pos);
+  const merged = [];
+  for (const p of pts) {
+    if (merged.length > 0 && Math.abs(merged[merged.length-1].pos - p.pos) < 1e-6) {
+      merged[merged.length-1] = p;
+    } else {
+      merged.push(p);
+    }
+  }
+  const uEnd = ((1 - t) % 1 + 1) % 1;
+  const endColor = colorAtCyclic(stops, uEnd);
+  if (merged.length === 0 || merged[0].pos > 1e-6) merged.unshift({ pos: 0, color: endColor });
+  if (merged[merged.length-1].pos < 1 - 1e-6) merged.push({ pos: 1, color: endColor });
+  for (const m of merged) grad.addColorStop(m.pos, m.color);
+  return grad;
+}
+
+/* body ----------------------------------------------------------- */
+const body = { x: 0, y: 0, vx: 0, vy: 0, spin: 0, omega: 0 };
+
+function resetBody() {
+  body.x = W * 0.5;
+  body.y = floorY * 0.5;
+  body.vx = startVx;
+  body.vy = startVy;
+  body.spin = 0;
+  body.omega = CFG.initialOmega;
+}
+
+function clampBody() {
+  const m = radius * CFG.edgeMargin;
+  body.x = Math.min(Math.max(body.x, m), Math.max(m, W - m));
+  body.y = Math.min(Math.max(body.y, m), Math.max(m, floorY - m));
+}
+
+function stepBody() {
+  const R  = radius;
+  const m  = bodyLim;
+  const loX = m, hiX = W - m, loY = m, hiY = floorY - m;
+
+  const eps = 1.0;
+  let onLeft = false, onRight = false, onTop = false, onBot = false;
+  for (let k = 0; k < N; k++) {
+    const p = ring[k];
+    if (p.x <= pad + eps)          onLeft  = true;
+    if (p.x >= W - pad - eps)      onRight = true;
+    if (p.y <= pad + eps)          onTop   = true;
+    if (p.y >= floorY - pad - eps) onBot   = true;
+    if (onLeft && onRight && onTop && onBot) break;
+  }
+  const onWall = onLeft || onRight || onTop || onBot;
+
+  body.vy += gravity;
+  body.x  += body.vx;
+  body.y  += body.vy;
+
+  if (body.x < loX) {
+    body.x = loX;
+    let v = Math.abs(body.vx) * CFG.restitution;
+    if (v < minSpeedSides) v = minSpeedSides;
+    v *= bounceMul();
+    body.vx = v;
+  } else if (body.x > hiX) {
+    body.x = hiX;
+    let v = Math.abs(body.vx) * CFG.restitution;
+    if (v < minSpeedSides) v = minSpeedSides;
+    v *= bounceMul();
+    body.vx = -v;
+  }
+
+  if (body.y < loY) {
+    body.y = loY;
+    let v = Math.abs(body.vy) * CFG.restitution;
+    if (v < minSpeedTop) v = minSpeedTop;
+    v *= bounceMul();
+    body.vy = v;
+  }
+  if (body.y > hiY) {
+    body.y = hiY;
+    let v = Math.abs(body.vy) * CFG.restitution;
+    if (v < minSpeedBottom) v = minSpeedBottom;
+    v *= bounceMul();
+    body.vy = -v;
+  }
+
+  if (onWall) {
+    const lr = rollRadius;
+    let sum = 0, count = 0;
+    if (onLeft)  { sum +=  body.vy / lr; count++; }
+    if (onRight) { sum += -body.vy / lr; count++; }
+    if (onTop)   { sum += -body.vx / lr; count++; }
+    if (onBot)   { sum +=  body.vx / lr; count++; }
+    body.omega = sum / count;
+  } else {
+    body.omega = CFG.minSpinSpeed + (body.omega - CFG.minSpinSpeed) * CFG.spinDamp;
+  }
+
+  body.spin += body.omega;
+  if (textLen > 0) {
+    const wrap = textLen / R;
+    body.spin = ((body.spin % wrap) + wrap) % wrap;
+  }
+}
+
+/* soft ring ------------------------------------------------------ */
+function initRing() {
+  ring.length = 0;
+  for (let k = 0; k < N; k++) {
+    const x = body.x + restX[k], y = body.y + restY[k];
+    ring.push({ x, y, px: x, py: y });
+  }
+}
+
+function stepRing() {
+  const minX = pad, maxX = W - pad, minY = pad, maxY = floorY - pad;
+
+  for (let k = 0; k < N; k++) {
+    const p  = ring[k];
+    const ix = body.x + restX[k];
+    const iy = body.y + restY[k];
+
+    const vx = (p.x - p.px) * CFG.ringDamp;
+    const vy = (p.y - p.py) * CFG.ringDamp;
+
+    p.px = p.x; p.py = p.y;
+    p.x += vx + (ix - p.x) * CFG.ringStiff;
+    p.y += vy + (iy - p.y) * CFG.ringStiff;
+  }
+
+  for (let it = 0; it < CFG.ringIters; it++) {
+    for (let k = 0; k < N; k++) {
+      const a = ring[k], b = ring[(k + 1) % N];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.hypot(dx, dy) || 1e-9;
+      const f = ((d - segLen) / d) * 0.5;
+      dx *= f; dy *= f;
+      a.x += dx; a.y += dy;
+      b.x -= dx; b.y -= dy;
+    }
+    for (let k = 0; k < N; k++) {
+      const p = ring[k];
+      if (p.x < minX) p.x = minX; else if (p.x > maxX) p.x = maxX;
+      if (p.y < minY) p.y = minY; else if (p.y > maxY) p.y = maxY;
+    }
+  }
+}
+
+/* arc-length lookup --------------------------------------------- */
+const cum = new Float64Array(N + 1);
+let totalCurveLen = 0;
+
+function buildCurve() {
+  cum[0] = 0;
+  for (let k = 0; k < N; k++) {
+    const a = ring[k], b = ring[(k + 1) % N];
+    cum[k + 1] = cum[k] + Math.hypot(b.x - a.x, b.y - a.y);
+  }
+  totalCurveLen = cum[N];
+}
+
+const S = { x: 0, y: 0, tx: 1, ty: 0 };
+function sampleAt(t) {
+  t -= Math.floor(t);
+  const target = t * totalCurveLen;
+
+  let lo = 0, hi = N;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (cum[mid] <= target) lo = mid + 1; else hi = mid;
+  }
+  const k = Math.min(N - 1, Math.max(0, lo - 1));
+  const a = ring[k], b = ring[(k + 1) % N];
+  const seg = cum[k + 1] - cum[k] || 1e-9;
+  const u = Math.min(1, Math.max(0, (target - cum[k]) / seg));
+
+  S.x = a.x + (b.x - a.x) * u;
+  S.y = a.y + (b.y - a.y) * u;
+
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const l = Math.hypot(dx, dy) || 1e-9;
+  S.tx = dx / l; S.ty = dy / l;
+  return S;
+}
+
+/* glyph pass ----------------------------------------------------- */
+let fillAnimTime = 0;
+let strokeAnimTime = 0;
+
+function drawGlyphs(alphaMul) {
+  if (textLen <= 0) return;
+
+  const C       = 2 * Math.PI * radius;
+  const span    = C * (1 - CFG.gapFraction);
+  const wStart  = C * CFG.gapFraction * 0.5;
+  const fadeArc = Math.min(fontSize * 2.5, span * 0.2);
+
+  const scroll = body.spin * radius;
+
+  const useFillGrad   = CFG.fillStops   && CFG.fillStops.length   > 1;
+  const useStrokeGrad = CFG.strokeStops && CFG.strokeStops.length > 1;
+
+  for (let i = 0; i < chars.length; i++) {
+    const ch   = chars[i];
+    const half = advances[i] * 0.5;
+    const base = prefixes[i] + half + scroll;
+    const emoji = CFG.cacheEmoji && isEmoji(ch);
+
+    const kMin = Math.ceil(-base / textLen);
+    const kMax = Math.floor((span - base) / textLen);
+
+    for (let k = kMin; k <= kMax; k++) {
+      const d = base + k * textLen;
+      if (d < 0 || d > span) continue;
+
+      const edge  = Math.min(d, span - d);
+      const alpha = fadeArc > 0 ? Math.min(1, edge / fadeArc) : 1;
+      if (alpha <= 0.02) continue;
+
+      const p   = sampleAt((wStart + d) / C);
+      const ang = Math.atan2(p.ty, p.tx);
+
+      ctx.save();
+      ctx.globalAlpha = alpha * alphaMul;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(ang);
+
+      if (emoji) {
+        // Cached emoji: cheap bitmap blit. Fill/stroke are ignored anyway
+        // because the OS colour font supplies its own colours.
+        const bmp = getEmojiBitmap(ch);
+        ctx.drawImage(bmp.canvas, -bmp.w * 0.5, -bmp.h * 0.5);
+      } else {
+        if (CFG.strokeEnabled && strokeWidth > 0) {
+          ctx.lineWidth = strokeWidth;
+          ctx.lineJoin  = CFG.strokeLineJoin;
+          ctx.lineCap   = CFG.strokeLineCap;
+          let strokeStyle;
+          if (useStrokeGrad) {
+            strokeStyle = buildGradient(ctx, -strokeGradHalfH, strokeGradHalfH,
+                                        CFG.strokeStops, strokeAnimTime);
+          } else if (CFG.strokeStops && CFG.strokeStops.length === 1) {
+            strokeStyle = CFG.strokeStops[0].color;
+          } else {
+            strokeStyle = CFG.strokeColor;
+          }
+          ctx.strokeStyle = strokeStyle;
+          ctx.strokeText(ch, 0, 0);
+        }
+
+        let fillStyle;
+        if (useFillGrad) {
+          fillStyle = buildGradient(ctx, -fillGradHalfH, fillGradHalfH,
+                                    CFG.fillStops, fillAnimTime);
+        } else if (CFG.fillStops && CFG.fillStops.length === 1) {
+          fillStyle = CFG.fillStops[0].color;
+        } else {
+          fillStyle = CFG.fillColor;
+        }
+        ctx.fillStyle = fillStyle;
+        ctx.fillText(ch, 0, 0);
+      }
+
+      ctx.restore();
+    }
+  }
+}
+
+/* render --------------------------------------------------------- */
+function render() {
+  ctx.fillStyle = '#0e0e12';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.font = `${CFG.fontWeight} ${fontSize}px ${CFG.fontFamily}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  drawGlyphs(1.0);
+
+  if (marginPx > 0.5 && CFG.reflectionBrightness > 0) {
+    const closestY = body.y + radius;
+    const maxReflectRange = marginPx / Math.max(0.01, CFG.reflectionSquish);
+    if (closestY > floorY - maxReflectRange) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, floorY, W, marginPx);
+      ctx.clip();
+      ctx.translate(0, floorY);
+      ctx.scale(1, -CFG.reflectionSquish);
+      ctx.translate(0, -floorY);
+      drawGlyphs(CFG.reflectionBrightness);
+      ctx.restore();
+    }
+  }
+}
+
+/* loop ----------------------------------------------------------- */
+const STEP = 1 / 60;
+let acc = 0, last = 0;
+
+function frame(now) {
+  if (!last) last = now;
+  let dt = (now - last) / 1000;
+  last = now;
+  if (dt > 0.25) dt = 0.25;
+  acc += dt;
+
+  while (acc >= STEP) {
+    stepBody();
+    stepRing();
+    acc -= STEP;
+  }
+
+  if (CFG.fillAnimSpeed) {
+    fillAnimTime += dt * CFG.fillAnimSpeed;
+    fillAnimTime = ((fillAnimTime % 1) + 1) % 1;
+  }
+  if (CFG.strokeAnimSpeed) {
+    strokeAnimTime += dt * CFG.strokeAnimSpeed;
+    strokeAnimTime = ((strokeAnimTime % 1) + 1) % 1;
+  }
+
+  buildCurve();
+  render();
+  requestAnimationFrame(frame);
+}
+
+/* boot ----------------------------------------------------------- */
+let prevUnit = 0;
+
+function onResize() {
+  const oldUnit = prevUnit;
+  const oldW = W, oldH = H;
+
+  resize();
+  computeSizes();
+
+  const newUnit = Math.min(W, H);
+  if (oldUnit > 0 && oldW > 0 && oldH > 0) {
+    const ru = newUnit / oldUnit;
+    body.x *= W / oldW;
+    body.y *= H / oldH;
+    body.vx *= ru;
+    body.vy *= ru;
+  }
+  prevUnit = newUnit;
+
+  layoutText();
+  clampBody();
+  initRing();
+}
+window.addEventListener('resize', onResize);
+
+function normaliseStops(stops) {
+  if (!stops || !stops.length) return stops;
+  return stops
+    .map(s => ({ pos: Math.max(0, Math.min(1, s.pos)), color: s.color }))
+    .sort((a, b) => a.pos - b.pos);
+}
+
+function init() {
+  CFG.fillStops   = normaliseStops(CFG.fillStops);
+  CFG.strokeStops = normaliseStops(CFG.strokeStops);
+
+  resize();
+  computeSizes();
+  prevUnit = Math.min(W, H);
+  layoutText();
+  resetBody();
+  initRing();
+  requestAnimationFrame(frame);
+}
+
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(init);
+} else {
+  init();
+}
+})();
+</script>
