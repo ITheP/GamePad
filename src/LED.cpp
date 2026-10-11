@@ -27,7 +27,7 @@ extern int Second;
 ConfigManagerUpdateResult OnGlobalLEDBrightnessConfigChange(BaseConfig* cfg, void* newValue)
 {
     IntConfig* c = (IntConfig*)cfg;
-    int v = *static_cast<float*>(newValue);
+    int v = *static_cast<int*>(newValue);
 
     c->Value = v;
     ApplyGlobalLEDBrightnessFromConfig();

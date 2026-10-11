@@ -37,15 +37,17 @@ const CFG = {
   //
   // To disable the gradient and use a solid fill, set this to a single entry (or an empty array).
   fillStops: [
-    { pos: 0.00, color: '#ff3366' },
-    { pos: 0.33, color: '#ffcc00' },
-    { pos: 0.66, color: '#33ccff' },
-    { pos: 1.00, color: '#ff3366' },   // same as pos 0 → cyclic
+    { pos: 0.20, color: '#222222' },
+    { pos: 0.35, color: '#777799' },
+    { pos: 0.50, color: '#ffffff' },
+    { pos: 0.501, color: '#e09000' },
+    { pos: 0.75, color: '#000000' },
+    { pos: 0.80, color: '#222222' },   // same as pos 0 → cyclic
   ],
 
   // Animation speed for the gradient, in full cycles per second.
   // 0 = static. Positive scrolls the pattern downward through the text.
-  fillAnimSpeed: 0.15,
+  fillAnimSpeed: 0, //.15,
 
   // Vertical half-height of the gradient as a fraction of fontSize. The gradient spans from -H*fontSize to +H*fontSize measured from
   // the letter's visual center (y = 0 in local space). 0.5 covers the em box; slightly larger values give a bit of breathing room above
@@ -65,12 +67,11 @@ const CFG = {
   // Stroke gradient stops — same format & rules as fillStops.
   // Independent of the fill gradient: they can animate at different speeds, in different directions, or be entirely different patterns.
   strokeStops: [
-    { pos: 1.00, color: '#ff3366' },
-    { pos: 0.66, color: '#ffcc00' },
-    { pos: 0.33, color: '#33ccff' },
-    { pos: 0.00, color: '#ff3366' },   // same as pos 0 → cyclic
+    { pos: 0.0, color: '#ffffff' },
+    { pos: 0.50, color: '#000000' },
+    { pos: 1.0, color: '#ffffff' },  // same as pos 0 → cyclic
   ],
-  strokeAnimSpeed: 0.15,               // cycles / second (can differ from fill)
+  strokeAnimSpeed: 0, //.15,               // cycles / second (can differ from fill)
   strokeGradientHalfHeightPct: 0.55,   // keep equal to fill's for aligned bands
 
   // ─── Sizes (fractions of unit = min(W, H)) ──────────────────────────

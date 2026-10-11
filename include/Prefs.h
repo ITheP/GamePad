@@ -3,12 +3,16 @@
 #include <Preferences.h>
 #include <Arduino.h>
 #include <string>
+#include "ConfigManager.h"
 
 class Prefs {
 public:
     static void Init();
-    static void Save();
-    static void Load();
+    static void SaveStats();
+    static void LoadStats();
+    static void LoadConfig(BaseConfig *config);
+    static void SaveConfig(BaseConfig *config);
+    static void RenderPrefsConfigToSerial();
     static void Close();
     static void SaveEverything();
 

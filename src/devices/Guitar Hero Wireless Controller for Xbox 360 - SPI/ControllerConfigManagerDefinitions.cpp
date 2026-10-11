@@ -4,6 +4,7 @@
 #include "LED.h"
 #include "ControllerConfig.h"
 #include "SerialDebug.h"
+#include "ControllerConfigManagerDefinitions.h"
 #include <Icons.h>
 #include <Screen.h>
 
@@ -19,8 +20,8 @@ IntConfig Config_GfxGuitarModel {
         .Max = 5,
         .uiMin = 0,
         .uiMax = 5,
-        .SaveInPrefs = true,
-        .FunctionOnSet = nullptr,
+        .PrefsId = "Gfx.GuitarModel",
+        .FunctionOnSet = &OnGfxGuitarModelConfigChange,
         .Image = "guitar_logos.png",
         .ImageVariants = 8,
         .ImageSplitVertically = true
@@ -28,6 +29,27 @@ IntConfig Config_GfxGuitarModel {
     .Value = 1,
     .DefaultValue = 0
 };
+
+ConfigManagerUpdateResult OnGfxGuitarModelConfigChange(BaseConfig* cfg, void* newValue)
+{
+    IntConfig* c = (IntConfig*)cfg;
+    int v = *static_cast<int*>(newValue);
+
+    Display.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, C_BLACK);
+    
+    c->Value = v;
+
+    // TODO: Redraw Display
+
+    Serial.println("Cycled Guitar Model to " + String(v));
+    
+    Display.clearDisplay();
+
+    if (ControllerGfx_RunCount > 0)
+        RenderIconRuns(ControllerGfx, ControllerGfx_RunCount, ControllerGfxOffsets[Config_GfxGuitarModel.Value], RREControllerIcons);
+
+    return ConfigManagerUpdateResult::OK;
+}
 
 void Config_GfxGuitarModel_CycleValue()
 {

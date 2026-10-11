@@ -1,8 +1,10 @@
 #pragma once
 #include <SerialDebug.h>
+#include "ConfigManager.h"
 
 extern IntConfig Config_GfxGuitarModel;
 void Config_GfxGuitarModel_CycleValue();
+ConfigManagerUpdateResult OnGfxGuitarModelConfigChange(BaseConfig* cfg, void* newValue);
 
 extern FloatConfig Config_Idle_LED_Timeout;
 

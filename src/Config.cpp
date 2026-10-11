@@ -33,7 +33,7 @@ IntConfig Config_InputSerialLiveOutputThrottle {
         .uiMin = 0,
         .uiMax = 1000,
         .uiStep = 10,
-        .SaveInPrefs = true,
+        .PrefsId = "Debug.LSOT",
         .FunctionOnSet = nullptr,
     },
     .Value = DEFAULT_INPUT_SERIAL_LIVE_OUTPUT_THROTTLE,
@@ -72,7 +72,7 @@ BoolConfig Config_ForceFPSDisplay {
         .Description = "Forces the display of FPS in the top right corner of the screen",
         .Info = "",
         .RenderAs = ConfigRenderAs::Toggle,
-        .SaveInPrefs = true,
+        .PrefsId = "Screen.ForceFPS",
         .FunctionOnSet = nullptr
     },
     .Value = DEFAULT_FORCE_FPS_DISPLAY,
@@ -84,6 +84,7 @@ void ConfigForceFPSDisplay_ToggleState()
     Config_ForceFPSDisplay.Value = !Config_ForceFPSDisplay.Value;
 };
 
+// Extra function pointer here to make when screen no longer white it's redrawn accordingly
 BoolConfig Config_ScreenWhite {
     .Type = ConfigType::Bool,
     .Metadata = {
@@ -91,11 +92,23 @@ BoolConfig Config_ScreenWhite {
         .Label = "White Screen",
         .Description = "Screen will show a solid white, handy when physically aligning panel in device where visible edges are visible",
         .Info = "",
-        .FunctionOnSet = nullptr
+        .FunctionOnSet = &OnWhiteConfigChange
     },
     .Value = DEFAULT_WHITE_SCREEN,
     .DefaultValue = false
 };
+
+ConfigManagerUpdateResult OnWhiteConfigChange(BaseConfig* cfg, void* newValue)
+{
+    IntConfig* c = (IntConfig*)cfg;
+    int v = *static_cast<int*>(newValue);
+
+    Display.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, C_BLACK);
+    
+    c->Value = v;
+
+    return ConfigManagerUpdateResult::OK;
+}
 
 void ConfigScreenWhite_ToggleState()
 {

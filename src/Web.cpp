@@ -548,6 +548,7 @@ esp_err_t Web::POST_UpdateConfig(httpd_req_t *req)
     if (result == ConfigManagerUpdateResult::OK) {
         httpd_resp_set_type(req, "application/json");
         httpd_resp_send(req, "{\"status\":\"ok\"}", HTTPD_RESP_USE_STRLEN);
+
         return ESP_OK;
     }
 
@@ -557,6 +558,7 @@ esp_err_t Web::POST_UpdateConfig(httpd_req_t *req)
     String errBody = String("{\"error\":\"")
                    + ConfigManagerUpdateResultDescriptions[(int)result]
                    + "\"}";
+
     httpd_resp_send(req, errBody.c_str(), errBody.length());
     return ESP_FAIL;
 }

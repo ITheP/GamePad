@@ -1,5 +1,6 @@
 #include "SerialDebug.h"
 #include "Battery.h"
+#include "Prefs.h"
 
 // Forward declarations of handlers
 static void HandleHelp(const std::string &param);
@@ -9,7 +10,7 @@ SerialDebugFunction SerialDebug::SerialDebugFunctions[] = {
     {Description : "General"}, // Heading
 
     {"Help",
-     "Show This Help.\n  Help <command>       - ...for more detailed information about a specific command",
+     "Show This Help.\n  Help <command>            - ...for more detailed information about a specific command",
      "",
      &SerialDebug::ShowHelp},
 
@@ -31,6 +32,21 @@ SerialDebugFunction SerialDebug::SerialDebugFunctions[] = {
      "Show runtime configurable settings in JSON format",
      "Specifically live config settings, definable at run time, and exposed via the web interface. Doesn't include all settings, hardcoded defaults etc. Output shown is in JSON format, as supplied via web api to frontend web.",
      &ConfigManager::RenderConfigJsonToSerial},
+
+    {"Show Prefs Config",
+     "Show Prefs saved Config",
+     "Config entries that have been saved into Prefs/Preferences. Will be loaded when device boots. Are saved when web site updates relevant Config entries.",
+     &Prefs::RenderPrefsConfigToSerial},
+
+    {"Save Config To Prefs",
+     "Saves all relevant Config items to Preferences",
+     "Only Config items with a PrefsId defined will be saved",
+     &ConfigManager::SaveAllConfigToPrefs},
+
+    {"Load Config From Prefs",
+     "Loads all relevant Config items from Preferences",
+     "Only Config items with a PrefsId defined will be saved",
+     &ConfigManager::LoadAllConfigFromPrefs},
 
     {Description : "Inputs"}, // Heading
 
@@ -138,7 +154,7 @@ void SerialDebug::ShowHelp()
         }
         else
         {
-            Serial.printf("  %-20s - %s\n",
+            Serial.printf("  %-25s - %s\n",
                           entry->Instruction.c_str(),
                           entry->Description.c_str());
         }

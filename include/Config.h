@@ -46,12 +46,11 @@
 
 extern BoolConfig Config_ScreenWhite;
 void ConfigScreenWhite_ToggleState();
+extern ConfigManagerUpdateResult OnWhiteConfigChange(BaseConfig* cfg, void* newValue);
 
 extern BoolConfig Config_InputSerialLiveOutput;
 void ConfigInputSerialLiveOutput_ToggleState();
-
 extern IntConfig Config_InputSerialLiveOutputThrottle;
-void ConfigInputSerialLiveOutput_ToggleState();
 void ConfigInputSerialLiveOutputThrottle_Slow();
 void ConfigInputSerialLiveOutputThrottle_Medium();
 void ConfigInputSerialLiveOutputThrottle_Fast();

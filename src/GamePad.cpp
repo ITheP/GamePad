@@ -1432,8 +1432,14 @@ void setup()
 
   Debug::ClearCrashCheckData();
 
+  Serial_INFO;
+  Serial.println("🔧⚙️ Init Config");
   ConfigManager::AddConfigArray(ConfigManager_Web_GlobalDefinitions, ConfigManager_Web_GlobalDefinitions_Count);
   ConfigManager::AddConfigArray(ConfigManager_Web_ControllerDefinitions, ConfigManager_Web_ControllerDefinitions_Count);
+
+  // Load custom preferences early incase they influence other parts of the startup
+  Serial.println("🧠⚙️ Loading available Config from Prefs");
+  ConfigManager::LoadAllConfigFromPrefs();
 
   Serial.println();
   setupDisplay();
