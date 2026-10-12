@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Structs.h"
+#include "RREFont.h"
 
 void RenderIcon(unsigned char icon, int xPos, int yPos, int clearWidth, int clearHeight);
 void RenderBatteryIcon(unsigned char icon, int xPos, int yPos, int clearWidth, int clearHeight);

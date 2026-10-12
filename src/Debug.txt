@@ -41,7 +41,7 @@ Common ones used...
 📺 Display
 🔌 Serial
 🔢 Digital
-🎚 Analog
+🎚️ Analog
 🎩 Hat
 🔘 Buttons
 🎛 Inputs

@@ -10,6 +10,7 @@
 #include <FastLED.h>
 #include "LED.h"
 #include "stats.h"
+#include "RenderText.h"
 #include <hal/rmt_types.h>
 #include <driver/mcpwm.h>
 
@@ -124,7 +125,7 @@ typedef struct Input
   int16_t TriggerOnValue;             // For analog button - the value at which the button is considered on/pressed
   int16_t TriggerOffValue;            // For analog button - the value at which the  button is considered off/released
                                       // E.g. Trigger at 2000 and release at 4000 so pressure variance doesn't cause a rapid on/off around the trigger point
-  int16_t TriggerPartlyReleasedValue; // E.g. Partial dissengagement post full press before virtual analog emulation engages
+  int16_t TriggerPartlyReleasedValue; // E.g. Partial disengagement post full press before virtual analog emulation engages
 
   // int16_t VirtualDigitalPin;                    // When used, sets PRESSED/RELEASED here based on trigger points, for use as a virtual digital pin on digital inputs
   // VirtualAnalogCopyTypes VirtualAnalogCopyType; // How to copy over values into virtual values
@@ -148,6 +149,7 @@ typedef struct Input
 
   unsigned char TrueIcon;
   unsigned char FalseIcon;
+  RREFont *IconFont = &RREIcons;
 
   Stats *Statistics; // Stats for this input, if required
                      // Below LED's are ALWAYS used/set, non existence defaults to {0,0,0,false} which will turn things off

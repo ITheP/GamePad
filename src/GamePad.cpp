@@ -36,6 +36,7 @@
 #include "Menus.h"
 #include "Debug.h"
 #include "Web.h"
+#include "BT.h"
 
 // TODO: IfDef on pulse inputs being defined, else ignore
 #include "GamePad_PulseInputs.h"
@@ -286,6 +287,14 @@ void RenderStartupLogo()
   Display.display();
 }
 
+void RenderSerialIcons()
+{
+  if (Serial)
+    RenderIcon(Icon_USB_Connected, 0, 53, 16, 9);
+  else
+    RenderIcon(Icon_USB_Disconnected, 0, 53, 16, 9);
+}
+
 void RenderGlintingStartupLogo()
 {
 #ifdef DEBUG_MARKS
@@ -329,6 +338,8 @@ void setupBattery()
   // 0db is more accurate but only 1.1v in range
   analogSetPinAttenuation(BATTERY_MONITOR_PIN, ADC_6db);
   // TODO: Can we use uint32_t voltage_mv = analogReadMilliVolts(BATTERY_MONITOR_PIN); ?
+
+  Battery::Init();
 
   // Make sure we have atleast one battery reading completed
   Battery::TakeReading();
@@ -588,7 +599,7 @@ void setupDigitalInputs(Input *digitalInputs[], int digitalInputs_Count)
   {
     input = digitalInputs[i];
 
-    Serial.print("..." + String(input->Label));
+    Serial.print("🔘 " + String(input->Label));
 
     if (input->Pin != NONE)
     {
@@ -649,14 +660,14 @@ void setupAnalogInputs(Input *analogInputs[], int analogInputs_Count)
   // Basic Analog Inputs
   Serial.println();
   Serial_INFO;
-  Serial.println("🎚 Analog Inputs: " + String(analogInputs_Count));
+  Serial.println("🎚️ Analog Inputs: " + String(analogInputs_Count));
 
   Input *input;
   for (int i = 0; i < analogInputs_Count; i++)
   {
     input = analogInputs[i];
 
-    Serial.print("..." + String(input->Label));
+    Serial.print("🎚️ " + String(input->Label));
 
     if (input->Pin != NONE)
     {
@@ -719,7 +730,7 @@ void setupHatInputs()
   {
     hatInput = HatInputs[i];
 
-    Serial.print("... Hat " + String(hatInput->Label) + ": pins");
+    Serial.print("🎩 Hat " + String(hatInput->Label) + ": pins");
 
     for (int j = 0; j < 4; j++)
     {
@@ -744,7 +755,7 @@ void setupHatInputs()
     Serial.println();
 
 #ifdef USE_EXTERNAL_LED
-    Serial.print("... Hat " + String(hatInput->Label) + ": LEDs");
+    Serial.print("🎩 Hat " + String(hatInput->Label) + ": LEDs");
 
     for (int i = 0; i < 9; i++)
     {
@@ -1050,6 +1061,8 @@ void setupBluetooth()
   Serial.println("🔗 Setting up Bluetooth...");
 
   // Bluetooth and other general config
+  BT::Init();
+
   RREIcons.drawChar(uiBT_xPos, uiBT_yPos, (unsigned char)Icon_BTLogo);
   Display.display();
 
@@ -1184,59 +1197,59 @@ void setupController()
 
   Serial_INFO;
   Serial.println("🔗 Final Bluetooth configuration...");
-  Serial.println("... Name: " + String(FullDeviceName));
-  Serial.println("... Type: " + String(ControllerType));
+  Serial.println("ℹ️ Name: " + String(FullDeviceName));
+  Serial.println("ℹ️ Type: " + String(ControllerType));
   BleGamepadConfiguration bleGamepadConfig;
 
   bleGamepadConfig.setControllerType(CONTROLLER_TYPE_GAMEPAD); // CONTROLLER_TYPE_JOYSTICK, CONTROLLER_TYPE_GAMEPAD (DEFAULT), CONTROLLER_TYPE_MULTI_AXIS
-  Serial.println("... Controller Type: Gamepad");
+  Serial.println("ℹ️ Controller Type: Gamepad");
 
   bleGamepadConfig.setVid(VID);
-  Serial.println("... VID: " + String(VID)); // Cosmetic
+  Serial.println("ℹ️ VID: " + String(VID)); // Cosmetic
 
   bleGamepadConfig.setPid(PID);
-  Serial.println("... PID: " + String(PID)); // Cosmetic
+  Serial.println("ℹ️ PID: " + String(PID)); // Cosmetic
 
   bleGamepadConfig.setModelNumber(ModelNumber);
-  Serial.println("... Model Number: " + String(ModelNumber)); // Cosmetic
+  Serial.println("ℹ️ Model Number: " + String(ModelNumber)); // Cosmetic
 
   bleGamepadConfig.setSerialNumber(SerialNumber);
-  Serial.println("... Serial Number: " + String(SerialNumber)); // Cosmetic
+  Serial.println("ℹ️ Serial Number: " + String(SerialNumber)); // Cosmetic
 
-  Serial.println("... Core build: " + String(GetBuildVersion()));
+  Serial.println("ℹ️ Core build: " + String(GetBuildVersion()));
 
   // TODO: Revision versions in config file
-  bleGamepadConfig.setFirmwareRevision(FirmwareRevision);       // Version of this firmware
-  Serial.println("... Firmware: v" + String(FirmwareRevision)); // Cosmetic
+  bleGamepadConfig.setFirmwareRevision(FirmwareRevision);     // Version of this firmware
+  Serial.println("ℹ️ Firmware: v" + String(FirmwareRevision)); // Cosmetic
 
-  bleGamepadConfig.setHardwareRevision(HardwareRevision);       // Version of circuit board etc.
-  Serial.println("... Hardware: v" + String(HardwareRevision)); // Cosmetic
+  bleGamepadConfig.setHardwareRevision(HardwareRevision);     // Version of circuit board etc.
+  Serial.println("ℹ️ Hardware: v" + String(HardwareRevision)); // Cosmetic
 
   bleGamepadConfig.setSoftwareRevision(SoftwareRevision);
-  Serial.println("... Software: v" + String(SoftwareRevision)); // Cosmetic
+  Serial.println("ℹ️ Software: v" + String(SoftwareRevision)); // Cosmetic
 
   bleGamepadConfig.setHidReportId(1);
 
   // Start, Select, Menu, Home, Back, VolumeInc, VolumeDec, b
   // TODO: Actual digital count of bluetooth devices (loop and count)
   bleGamepadConfig.setButtonCount(DigitalInputs_Count);
-  Serial.println("... Buttons/Digital Input Count: " + String(DigitalInputs_Count));
+  Serial.println("ℹ️ Buttons/Digital Input Count: " + String(DigitalInputs_Count));
 
   // bleGamepadConfig.setButtonCount(AnalogInputs_Count);
-  Serial.println("... Analog Input Count: " + String(AnalogInputs_Count));
+  Serial.println("ℹ️ Analog Input Count: " + String(AnalogInputs_Count));
 
   bleGamepadConfig.setWhichSpecialButtons(true, true, true, true, true, true, true, true);
   bleGamepadConfig.setHatSwitchCount(HatInputs_Count);
-  Serial.println("... Hat Count: " + String(HatInputs_Count));
+  Serial.println("ℹ️ Hat Count: " + String(HatInputs_Count));
 
 #ifdef Enable_Slider1
   bleGamepadConfig.setIncludeSlider1(true);
-  Serial.println("... Slider 1 Enabled");
+  Serial.println("ℹ️ Slider 1 Enabled");
 #endif
 
 #ifdef Enable_Slider2
   bleGamepadConfig.setIncludeSlider2(true);
-  Serial.println("... Slider 2 Enabled");
+  Serial.println("ℹ️ Slider 2 Enabled");
 #endif
 
   // Other possibilities, might want to use some time
@@ -1376,7 +1389,7 @@ void SetupLittleFS()
   {
     // Serial.begin(SERIAL_SPEED);
     // delay(200);
-    Serial.println("📁 ⛔ Critical failure, LittleFS mount failed. Halting!");
+    Serial.println("📁⛔ Critical failure, LittleFS mount failed. Halting!");
     Debug::WarningFlashes(LittleFSFailedToMount);
   }
 }
@@ -1423,10 +1436,10 @@ void setup()
   esp_reset_reason_t reason = esp_reset_reason();
   Serial_INFO;
   if (reason == ESP_RST_POWERON)
-    Serial.println("ℹ️  Device initial power on");
+    Serial.println("ℹ️ Device initial power on");
   else
   {
-    Serial.println("ℹ️  Device rebooted");
+    Serial.println("ℹ️ Device rebooted");
     Debug::CheckForCrashInfo(reason);
   }
 
@@ -1438,7 +1451,6 @@ void setup()
   ConfigManager::AddConfigArray(ConfigManager_Web_ControllerDefinitions, ConfigManager_Web_ControllerDefinitions_Count);
 
   // Load custom preferences early incase they influence other parts of the startup
-  Serial.println("🧠⚙️ Loading available Config from Prefs");
   ConfigManager::LoadAllConfigFromPrefs();
 
   Serial.println();
@@ -1465,11 +1477,11 @@ void setup()
   setupUSB();
 
   Serial_INFO;
-  Serial.printf("ℹ️  ESP SDK Version: %s\n", ESP.getSdkVersion()); // prints IDF version used by Arduino core
+  Serial.printf("ℹ️ ESP SDK Version: %s\n", ESP.getSdkVersion()); // prints IDF version used by Arduino core
   Serial_INFO;
-  Serial.printf("ℹ️  Arduino IDF ESP SDK Version: %s\n", esp_get_idf_version());
+  Serial.printf("ℹ️ Arduino IDF ESP SDK Version: %s\n", esp_get_idf_version());
   Serial_INFO;
-  Serial.printf("ℹ️  Arduino Core Version: %d\n", ARDUINO);
+  Serial.printf("ℹ️ Arduino Core Version: %d\n", ARDUINO);
 
   // Initialize NVS preferences storage (boot count, settings, etc.)
   Prefs::Init();
@@ -1635,27 +1647,40 @@ void DrawMainScreen()
 
   Display.clearDisplay();
 
-  // Controller name displayed by default first menu option
+  // Menu text/top of screen
+  // If we are on the name menu option, draw accordingly, else use menu text handling
+  // Assumes Name menu is first menu entry in MainMenuOptions
+  if (Menus::MainMenu.RequiredMenuOffset == 0)
+  {
+    if (Menus::MainMenu.MenuOptions[0].InitOperation != nullptr)
+      Menus::MainMenu.MenuOptions[0].InitOperation();
+  }
+  else
+    Menus::DisplayMenuText();
 
-  // Nain controller GFX (e.g. Guitar body on Guitar controller)
-
-  // if (ControllerGfxSets_RunCount > 0)
-  // {
-  //   IconRunSet *controllerGfx = ControllerGfxSets[1];
-  //   RenderIconRuns(controllerGfx->Runs, controllerGfx->RunCount, RREControllerIcons);
-  // }
+  // Main controller GFX (e.g. Guitar body on Guitar controller)
   if (ControllerGfx_RunCount > 0)
     RenderIconRuns(ControllerGfx, ControllerGfx_RunCount, ControllerGfxOffsets[Config_GfxGuitarModel.Value], RREControllerIcons);
 
   // Whammy bar outline
   Display.drawRect(uiWhammyX, uiWhammyY, uiWhammyW, uiWhammyH, C_WHITE);
 
+  // Network
+  Networking::RenderIcons(true);
+
+  // Web
+  Web::RenderIcons(true);
+
   // Bluetooth Initial state
-  RenderIcon(Icon_BTLogo, uiBT_xPos, uiBT_yPos, 0, 0);
-  RenderIcon(Icon_EyesLeft, uiBTStatus_xPos, uiBTStatus_yPos, 0, 0);
+  // RenderIcon(Icon_BTLogo, uiBT_xPos, uiBT_yPos, 0, 0);
+  // RenderIcon(Icon_EyesLeft, uiBTStatus_xPos, uiBTStatus_yPos, 0, 0);
+  BT::RenderIcons();
 
   // Battery initial state
-  RenderBatteryIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 0, 0);
+  // RenderBatteryIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 0, 0);
+  Battery::RenderIcons();
+
+  RenderSerialIcons();
 
   Display.display();
 
@@ -1906,43 +1931,27 @@ void MainLoop()
 
     if (batteryIcon != LastBatteryIcon)
     {
-      RenderBatteryIcon(batteryIcon, uiBattery_xPos, uiBattery_yPos, 16, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
+      // RenderBatteryIcon(batteryIcon, uiBattery_xPos, uiBattery_yPos, 16, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
+      Battery::RenderIcon(batteryIcon);
       LastBatteryIcon = batteryIcon;
     }
 
     if (drawPowerBar)
     {
-      // Battery level scale to 0->10 pixels
-      int width = ((currentBatteryPercentage / 100.0) * 10.0);
-      // Render width as 0->10 pixel wide rectangle inside icon
-      Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, 10, 5, C_BLACK);
+      // // Battery level scale to 0->10 pixels
+      // int width = ((currentBatteryPercentage / 100.0) * 10.0);
+      // // Render width as 0->10 pixel wide rectangle inside icon
+      // Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, 10, 5, C_BLACK);
 
-      Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, width, 5, C_WHITE);
+      // Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, width, 5, C_WHITE);
+
+      Battery::RenderBar(currentBatteryPercentage);
+    }
+    else
+    {
+      Battery::NoPowerBar();
     }
 
-    // if (Battery::IsCharging)
-    // {
-    //   if (SecondFlipFlop)
-    //     LastBatteryIcon = Icon_Battery;
-    //   else
-    //     LastBatteryIcon = Icon_BatteryCharging;
-
-    //   RenderBatteryIcon(LastBatteryIcon, uiBattery_xPos, uiBattery_yPos, 14, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
-    // }
-    // else if (currentBatteryPercentage == 0)
-    // {
-    //   // Handling of no battery, if not using full screen handling above
-    //   if (SecondFlipFlop)
-    //     LastBatteryIcon = Icon_Battery;
-    //   else
-    //     LastBatteryIcon = Icon_BatteryEmpty;
-
-    //   RenderBatteryIcon(LastBatteryIcon, uiBattery_xPos, uiBattery_yPos, 14, 11); // Actual area cleared is just the area where battery rectangle or charging lightning bolt is
-
-    //   // ...however next line will trigger full screen low battery handling
-    //   Battery::PreviousPercentage = currentBatteryPercentage;
-    // }
-    // else if (Battery::PreviousPercentage != currentBatteryPercentage)
     if (Battery::PreviousPercentage != currentBatteryPercentage)
     {
       Battery::PreviousPercentage = currentBatteryPercentage;
@@ -1950,12 +1959,6 @@ void MainLoop()
       // compositeHID->setBatteryLevel(currentBatteryLevel);
       sendReport = true;
     }
-    // // Redraw standard battery icon if required
-    // if (LastBatteryIcon != Icon_Battery)
-    // {
-    //   LastBatteryIcon = Icon_Battery;
-    //   RenderBatteryIcon(Icon_Battery, uiBattery_xPos, uiBattery_yPos, 14, 11);
-    // }
 
     UpdateSecondStats(Second);
 
@@ -1963,10 +1966,7 @@ void MainLoop()
     if (LastSerialState != Serial)
     {
       LastSerialState = Serial;
-      if (Serial)
-        RenderIcon(Icon_USB_Connected, 0, 53, 16, 9);
-      else
-        RenderIcon(Icon_USB_Disconnected, 0, 53, 16, 9);
+      RenderSerialIcons();
     }
   }
 
@@ -2985,7 +2985,8 @@ void MainLoop()
     if (PreviousBTConnectionState != BTConnectionState)
     {
       // Draw the connected icon
-      RenderIcon(Icon_OK, uiBTStatus_xPos, uiBTStatus_yPos, 16, 12);
+      // RenderIcon(Icon_OK, uiBTStatus_xPos, uiBTStatus_yPos, 16, 12);
+      BT::RenderStatusIcon(Icon_OK);
       PreviousBTConnectionState = BTConnectionState;
 
 #ifdef USE_EXTERNAL_LED
@@ -3013,7 +3014,8 @@ void MainLoop()
 
     if (SecondRollover)
       // Blanking area big enough to cover the `OK` if required
-      RenderIcon(SecondFlipFlop ? Icon_EyesLeft : Icon_EyesRight, uiBTStatus_xPos, uiBTStatus_yPos, 16, 12);
+      BT::RenderStatusIcon(SecondFlipFlop ? Icon_EyesLeft : Icon_EyesRight);
+    // RenderIcon(SecondFlipFlop ? Icon_EyesLeft : Icon_EyesRight, uiBTStatus_xPos, uiBTStatus_yPos, 16, 12);
 
     // Hunting for Bluetooth flashing blue status
     if (SecondFlipFlop)

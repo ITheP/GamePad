@@ -79,6 +79,15 @@ const char* const PowerStateNames[] = {
 class Battery
 {
 public:
+    static void Init();
+
+    static char Icon;
+    static bool ShowPowerBar;
+    static void NoPowerBar();
+    static void RenderIcons();
+    static void RenderIcon(char icon);
+    static void RenderBar(int percentage);
+
     static void TakeReading();
     static void CalculateState();
     static void ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bool canContinue, bool includeLED = true);

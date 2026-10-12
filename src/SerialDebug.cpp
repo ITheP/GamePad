@@ -115,6 +115,9 @@ void SerialDebug::Init()
 {
     AddSerialDebugFunctions(SerialDebugFunctions, SerialDebugFunctionsCount);
     AddSerialDebugFunctions(ConfigManager_SerialDebugFunctions, ConfigManager_SerialDebugFunctions_Count);
+    
+    Serial_INFO;
+    Serial.println("🔌 SerialDebug Initialised. Enter 'Help' for commands.");
 }
 
 void SerialDebug::AddSerialDebugFunctions(SerialDebugFunction serialDebugFunctions[], int count)
@@ -135,8 +138,6 @@ void SerialDebug::AddSerialDebugFunctions(SerialDebugFunction serialDebugFunctio
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
         FunctionMap[key] = &entry;
     }
-
-    Serial.println("SerialDebug: Ready. Type 'Help' for commands.");
 }
 
 // --------------------------------

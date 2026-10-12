@@ -502,16 +502,16 @@ void Networking::HandleWiFi(int second)
 
 //char WiFiAnimatedSearch[] = { Icon_WiFi_LostSignal, Icon_WiFi_LowSignal, Icon_WiFi_MiddleSignal, Icon_WiFi_TopSignal };
 
-void Networking::RenderIcons()
+void Networking::RenderIcons(bool forceRedraw)
 {
-    if (FinalWiFiCharacter != LastWiFiCharacter)
+    if (FinalWiFiCharacter != LastWiFiCharacter || forceRedraw)
     {
         RenderIcon(FinalWiFiCharacter, uiWiFi_xPos, uiWiFi_yPos, 14, 16);
         LastWiFiCharacter = FinalWiFiCharacter;
     }
 
     // TEMPORARY TEST
-    Web::RenderIcons();
+    //Web::RenderIcons();
 }
 
 // WiFi Connection Testing Functions

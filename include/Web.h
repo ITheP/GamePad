@@ -35,7 +35,7 @@ public:
     static void WiFiEnabled();
     static void WiFiDisabled();
 
-    static void RenderIcons();
+    static void RenderIcons(bool forceRedraw = false);
 
     static void ListDir(const char *dirname, uint8_t depth = 0);
     static void WebListDir(std::ostringstream *stream, const char *dirname, uint8_t depth = 0);

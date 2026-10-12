@@ -124,7 +124,7 @@ void ConfigManager::RenderConfigToSerial()
                << "\tDescription: " << config->Metadata.Description << "\n"
                << "\tInfo: " << config->Metadata.Info << "\n"
                << "\tRenderAs: " << ConfigRenderAsDescriptions[(int)config->Metadata.RenderAs] << ", "
-               << "PrefsId: " << config->Metadata.PrefsId << ", "
+               << "PrefsId: " << (config->Metadata.PrefsId ? config->Metadata.PrefsId : "") << ", "
                << "Unit: " << config->Metadata.Unit << "\n"
                << "\tMin: " << config->Metadata.Min << ", "
                << "Max: " << config->Metadata.Max << ", "
@@ -162,7 +162,7 @@ std::ostringstream ConfigManager::GetConfigAsJson()
              << "\"Description\": \"" << config->Metadata.Description << "\","
              << "\"Info\": \"" << config->Metadata.Info << "\","
              << "\"RenderAs\": \"" << ConfigRenderAsDescriptions[(int)config->Metadata.RenderAs] << "\","
-             << "\"PrefsId\": \"" << config->Metadata.PrefsId << "\","
+             << "\"PrefsId\": \"" << (config->Metadata.PrefsId ? config->Metadata.PrefsId : "") << "\","
              << "\"Unit\": \"" << config->Metadata.Unit << "\","
              << "\"Min\": " << config->Metadata.Min << ","
              << "\"Max\": " << config->Metadata.Max << ","
@@ -386,8 +386,10 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *va
         IntConfig *config = (IntConfig *)base;
         int v = *static_cast<int *>(value);
 
-        if (v > (int)config->Metadata.Max) return ConfigManagerUpdateResult::NumberTooHigh;
-        if (v < (int)config->Metadata.Min) return ConfigManagerUpdateResult::NumberTooLow;
+        if (v > (int)config->Metadata.Max)
+            return ConfigManagerUpdateResult::NumberTooHigh;
+        if (v < (int)config->Metadata.Min)
+            return ConfigManagerUpdateResult::NumberTooLow;
 
         int oldValue = config->Value;
 
@@ -396,9 +398,7 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *va
         else
             config->Value = v;
 
-        if (result == ConfigManagerUpdateResult::OK
-            && config->Metadata.PrefsId != nullptr
-            && oldValue != config->Value)
+        if (result == ConfigManagerUpdateResult::OK && config->Metadata.PrefsId != nullptr && oldValue != config->Value)
         {
             Prefs::SaveConfig(base);
         }
@@ -414,8 +414,10 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *va
         FloatConfig *config = (FloatConfig *)base;
         float v = *static_cast<float *>(value);
 
-        if (v > config->Metadata.Max) return ConfigManagerUpdateResult::NumberTooHigh;
-        if (v < config->Metadata.Min) return ConfigManagerUpdateResult::NumberTooLow;
+        if (v > config->Metadata.Max)
+            return ConfigManagerUpdateResult::NumberTooHigh;
+        if (v < config->Metadata.Min)
+            return ConfigManagerUpdateResult::NumberTooLow;
 
         float oldValue = config->Value;
 
@@ -424,9 +426,7 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *va
         else
             config->Value = v;
 
-        if (result == ConfigManagerUpdateResult::OK
-            && config->Metadata.PrefsId != nullptr
-            && oldValue != config->Value)
+        if (result == ConfigManagerUpdateResult::OK && config->Metadata.PrefsId != nullptr && oldValue != config->Value)
         {
             Prefs::SaveConfig(base);
         }
@@ -449,9 +449,7 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *va
         else
             config->Value = v;
 
-        if (result == ConfigManagerUpdateResult::OK
-            && config->Metadata.PrefsId != nullptr
-            && oldValue != config->Value)
+        if (result == ConfigManagerUpdateResult::OK && config->Metadata.PrefsId != nullptr && oldValue != config->Value)
         {
             Prefs::SaveConfig(base);
         }
@@ -468,8 +466,10 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *va
         char *str = static_cast<char *>(value);
 
         int len = strlen(str);
-        if (len < (int)config->Metadata.Min) return ConfigManagerUpdateResult::StringTooShort;
-        if (len > (int)config->Metadata.Max) return ConfigManagerUpdateResult::StringTooLong;
+        if (len < (int)config->Metadata.Min)
+            return ConfigManagerUpdateResult::StringTooShort;
+        if (len > (int)config->Metadata.Max)
+            return ConfigManagerUpdateResult::StringTooLong;
 
         // Snapshot the old value (copy, because SetValue/FunctionOnSet may
         // free and reallocate config->Value, invalidating any pointer we held).
@@ -484,17 +484,20 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *va
         // Determine whether the string actually changed.
         bool changed;
         bool hasNewValue = (config->Value != nullptr);
-        if (hadOldValue != hasNewValue) {
-            changed = true;                         // null <-> non-null
-        } else if (!hasNewValue) {
-            changed = false;                        // both null
-        } else {
-            changed = (oldValue != config->Value);  // both non-null — compare contents
+        if (hadOldValue != hasNewValue)
+        {
+            changed = true; // null <-> non-null
+        }
+        else if (!hasNewValue)
+        {
+            changed = false; // both null
+        }
+        else
+        {
+            changed = (oldValue != config->Value); // both non-null — compare contents
         }
 
-        if (result == ConfigManagerUpdateResult::OK
-            && config->Metadata.PrefsId != nullptr
-            && changed)
+        if (result == ConfigManagerUpdateResult::OK && config->Metadata.PrefsId != nullptr && changed)
         {
             Prefs::SaveConfig(base);
         }
@@ -526,9 +529,7 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *va
             config->b = rgb[2];
         }
 
-        if (result == ConfigManagerUpdateResult::OK
-            && config->Metadata.PrefsId != nullptr
-            && (oldR != config->r || oldG != config->g || oldB != config->b))
+        if (result == ConfigManagerUpdateResult::OK && config->Metadata.PrefsId != nullptr && (oldR != config->r || oldG != config->g || oldB != config->b))
         {
             Prefs::SaveConfig(base);
         }
@@ -539,31 +540,59 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *va
 
     return ConfigManagerUpdateResult::UnknownConfigType;
 }
+
+std::string ConfigManager::GetConfigValueAsString(BaseConfig *config)
+{
+    if (config == nullptr)
+    {
+        return "";
+    }
+
+    switch (config->Type)
+    {
+    case ConfigType::Int:
+    {
+        IntConfig *c = reinterpret_cast<IntConfig *>(config);
+        return std::to_string(c->Value);
+    }
+
+    case ConfigType::Float:
+    {
+        FloatConfig *c = reinterpret_cast<FloatConfig *>(config);
+        // Trim trailing zeros: 3.140000 -> 3.14, 10.000000 -> 10
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%g", c->Value);
+        return std::string(buf);
+    }
+
+    case ConfigType::Bool:
+    {
+        BoolConfig *c = reinterpret_cast<BoolConfig *>(config);
+        return c->Value ? "true" : "false";
+    }
+
+    case ConfigType::String:
+    {
+        StringConfig *c = reinterpret_cast<StringConfig *>(config);
+        return (c->Value != nullptr) ? std::string(c->Value) : std::string();
+    }
+
+    case ConfigType::Colour:
+    {
+        ColorConfig *c = reinterpret_cast<ColorConfig *>(config);
+        char buf[8]; // "#RRGGBB" + NUL = 8 bytes exactly
+        snprintf(buf, sizeof(buf), "#%02X%02X%02X", c->r, c->g, c->b);
+        return std::string(buf);
+    }
+    }
+
+    return "";
+}
+
 void ConfigManager::SaveAllConfigToPrefs()
 {
     Serial_INFO;
-    Serial.printf("⚙️ Saving Config to Prefs");
-
-    for (int i = 0; i < ConfigCount; i++)
-    {
-        auto config = ConfigMap[i];
-
-        if (config->Metadata.PrefsId != nullptr)
-        {
-            Serial.printf("💾 %12s.%-30s <- [%s]\n",
-                          config->Metadata.Group.c_str(),
-                          config->Metadata.Label.c_str(),
-                          config->Metadata.PrefsId ? config->Metadata.PrefsId : "(null)");
-
-            Prefs::SaveConfig(config);
-        }
-    }
-}
-
-void ConfigManager::LoadAllConfigFromPrefs()
-{
-    Serial_INFO;
-    Serial.println("⚙️ Loading saved Config from Prefs");
+    Serial.println("⚙️ Saving Config to Prefs");
 
     std::string lastGroup;
 
@@ -580,9 +609,39 @@ void ConfigManager::LoadAllConfigFromPrefs()
             lastGroup = config->Metadata.Group;
         }
 
-        Serial.printf("💾 %-30s -> [%s]\n",
+        Serial.printf("💾 [%-15s] %-20s <- %s\n",
+                      config->Metadata.PrefsId,
                       config->Metadata.Label.c_str(),
-                      config->Metadata.PrefsId);
+                      GetConfigValueAsString(config).c_str());
+
+        Prefs::SaveConfig(config);
+    }
+}
+
+void ConfigManager::LoadAllConfigFromPrefs()
+{
+    Serial_INFO;
+    Serial.println("🧠⚙️ Loading saved Config from Prefs");
+
+    std::string lastGroup;
+
+    for (int i = 0; i < ConfigCount; i++)
+    {
+        auto config = ConfigMap[i];
+
+        if (config->Metadata.PrefsId == nullptr)
+            continue;
+
+        if (config->Metadata.Group != lastGroup)
+        {
+            Serial.printf("%s...\n", config->Metadata.Group.c_str());
+            lastGroup = config->Metadata.Group;
+        }
+
+        Serial.printf("🧠 [%-15s] %-30s -> %s\n",
+                      config->Metadata.PrefsId,
+                      config->Metadata.Label.c_str(),
+                      GetConfigValueAsString(config).c_str());
 
         Prefs::LoadConfig(config);
     }

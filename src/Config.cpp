@@ -1,6 +1,7 @@
 #include "Config.h"
 #include "ConfigManager.h"
 #include <Screen.h>
+#include <GamePad.h>
 
 BoolConfig Config_InputSerialLiveOutput {
     .Type = ConfigType::Bool,
@@ -100,21 +101,24 @@ BoolConfig Config_ScreenWhite {
 
 ConfigManagerUpdateResult OnWhiteConfigChange(BaseConfig* cfg, void* newValue)
 {
-    IntConfig* c = (IntConfig*)cfg;
-    int v = *static_cast<int*>(newValue);
+    BoolConfig* c = (BoolConfig*)cfg;
+    int v = *static_cast<bool*>(newValue);
 
-    Display.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, C_BLACK);
-    
     c->Value = v;
 
+    if (!v)
+        DrawMainScreen();
+    
     return ConfigManagerUpdateResult::OK;
 }
 
 void ConfigScreenWhite_ToggleState()
 {
-    // Just in case we are turning off, we blank the screen to remove any previous white (helps stop idle effect overloading too)
-    Display.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, C_BLACK);
     Config_ScreenWhite.Value = !Config_ScreenWhite.Value;
+
+    // if we are turning off - need to redisplay the main screen
+    if (!Config_ScreenWhite.Value)
+        DrawMainScreen();
 }
 
 // Config variables we want exposing to web/preferences

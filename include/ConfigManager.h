@@ -100,7 +100,7 @@ struct ConfigMetadata
     float uiMax;
     float uiStep;
 
-    char *PrefsId; // Some things we want saved in preferences, others should be reset every time device is reset. To save, give a unique prefs name. Max 15 chars.
+    char *PrefsId = nullptr;             // Some things we want saved in preferences, others should be reset every time device is reset. To save, give a unique prefs name. Max 15 chars.
     OnSetCallback FunctionOnSet;
     std::string Image;         // e.g. mypic.png
     int ImageVariants;         // e.g. 3 -> mypic.0.png mypic.1.png mypic.2.png
@@ -222,6 +222,8 @@ public:
     static void RenderConfigToSerial();
     static void RenderConfigJsonToSerial();
 
+    static std::string GetConfigValueAsString(BaseConfig *config);
+
     static void LoadAllConfigFromPrefs();
     static void SaveAllConfigToPrefs();
 
@@ -238,9 +240,10 @@ public:
         base->Id = ConfigCount;
         ConfigMap[ConfigCount++] = base;
 
-        Serial.printf("🔧 %3d.%s [%s]\n",
+        Serial.printf("🔧 [%-3d] %-30s -> %s (%s)\n",
                       config->Id,
                       config->Metadata.Label.c_str(),
+                      GetConfigValueAsString(config).c_str(),
                       ConfigTypeDescriptions[(int)config->Type]);
 
         // Check if is also saved in Preferences and load in value if it is

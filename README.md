@@ -29,7 +29,8 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 
 ## To Do Lists
 
-- [ ] Separate Logo/Controller gfx files for different types, #include ones relevant to controller type...
+- [ ] Separate Logo gfx files for different types, #include ones relevant to controller type...
+- [X] Separate Controller gfx files for different types, #include ones relevant to controller type...
 - [x] OLED screen support
 - [x] Custom icons
 - [x] Battery life indicator
@@ -70,29 +71,29 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 - [ ] Menu option to auto-re-boot into configuration menus
 - [ ] Statistics menu item, show changing every x seconds random stats. Possibly when scroll ends it updates with content from a new scroll (2*scroll text move from one to other)
 - [ ] Controller idle - on display idle keep to max ?3? pixel for first ?20? seconds in case actually in game and don't want performance drop of long term idle effect overhead.
-- [ ] Shift logos out of Icons font into own Logo font to free up icon space, and devices font for device images
+- [] Shift logos out of Icons font into own Logo font to free up icon space, and devices font for device images
 - [x] Separate LED and Screen idle triggers and timings (allows for different overheads to affect the device separately)
-- [ ] Boot info/hardware info should separate out virtual input info
+- [x] Boot info/hardware info should separate out virtual input info
 
 ## To Do - Config & Prefs
 - [x] User selectable configuration in web
 - [x] Controller config WiFi access point selection
 - [x] Controller config WiFi set password
-- [ ] Controller config set custom Device Name
+- [ ] Controller config set custom Device Name via Web + save to Prefs
 - [ ] Analog inputs - have a configuration screen that allows you to set min/max values (by using them) and save to settings
 - [ ] Use same WiFi details as Default (makes multiple profiles easier while specifying single WiFi). Menus should should dynamically change when this is enabled (don't show access point selection or password)
 - [ ] No WiFi? Make sure not powered.
 - [ ] Config current profile via built in access point menu option
 
 ## To Do - Web Config & Prefs
-- [ ] Preferences/settings page in Web site
+- [x] Preferences/settings page in Web site
 - [ ] Profile editor in Web Site
 - [ ] Custom device name (also remove current hardcoded custom device name, won't be needed)
 - [ ] Invert display (black on white)
 - [ ] Default all profiles to using Default profile WiFi
 - [ ] Flip-able controls - i.e. flips mappings inside so e.g. up and down flipped on strum bar (or whole HAT is flipped and upside down)
 - [ ] Icons for Profiles
-- [ ] Choose different guitar/controller gfx
+- [x] Choose different guitar/controller gfx
 - [ ] Set controller boot speed - slow (twice normal delay), normal (standard boot default delays), fast (remove all delays)
 
 ## To Do - Networking
@@ -108,9 +109,9 @@ For any questions or feedback, feel free to contact MisterB at [ITheP](https://g
 - [x] Controller config profile copy/paste
 
 ## To Do - Battery
-- [ ] More accurate battery life indicator
-- [ ] When h/w allows, initial live battery monitoring loop checks for battery level - and if charging, and level high enough, will then exit on past the loop and allow device to continue booting.
-- [ ] Charging battery status (when hardware allows for it) - flashing when charging, not flashing when plugged in by charged
+- [x] More accurate battery life indicator
+- [x] When h/w allows, initial live battery monitoring loop checks for battery level - and if charging, and level high enough, will then exit on past the loop and allow device to continue booting.
+- [x] Charging battery status (when hardware allows for it) - flashing when charging, not flashing when plugged in by charged
 
 ## To Do - LED
 - [x] Startup LED tests

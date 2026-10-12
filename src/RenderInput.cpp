@@ -70,7 +70,8 @@ void RenderInput_Icon(Input *input)
 
     // Only draw if required - otherwise we might just be blanking previous icon
     if (input->FalseIcon != 0)
-      RREIcons.drawChar(input->XPos, input->YPos, input->FalseIcon);
+      //RREIcons.drawChar(input->XPos, input->YPos, input->FalseIcon);
+      input->IconFont->drawChar(input->XPos, input->YPos, input->FalseIcon);
   }
   else
   {
@@ -80,7 +81,8 @@ void RenderInput_Icon(Input *input)
 
     // Only draw if required - otherwise we might just be blanking previous icon
     if (input->TrueIcon != NONE)
-      RREIcons.drawChar(input->XPos, input->YPos, input->TrueIcon);
+      //RREIcons.drawChar(input->XPos, input->YPos, input->TrueIcon);
+      input->IconFont->drawChar(input->XPos, input->YPos, input->TrueIcon);
   }
 }
 
@@ -103,8 +105,11 @@ void RenderInput_DoubleIcon(Input *input)
 
     if (input->FalseIcon != NONE)
     {
-      RREIcons.drawChar(input->XPos, input->YPos, input->FalseIcon);
-      RREIcons.drawChar(input->XPos + 16, input->YPos, input->FalseIcon + 1);
+      //RREIcons.drawChar(input->XPos, input->YPos, input->FalseIcon);
+      //RREIcons.drawChar(input->XPos + 16, input->YPos, input->FalseIcon + 1);
+      
+      input->IconFont->drawChar(input->XPos, input->YPos, input->FalseIcon);
+      input->IconFont->drawChar(input->XPos + 16, input->YPos, input->FalseIcon + 1);
     }
   }
   else
@@ -113,10 +118,13 @@ void RenderInput_DoubleIcon(Input *input)
     Serial.println("Icon.Button down [" + String(input->BluetoothInput) + "]: " + String(input->Label));
 #endif
 
-    if (input->TrueIcon != NONE)
-      RREIcons.drawChar(input->XPos, input->YPos, input->TrueIcon);
-
-    RREIcons.drawChar(input->XPos + 16, input->YPos, input->TrueIcon + 1);
+    if (input->TrueIcon != NONE) {
+      // RREIcons.drawChar(input->XPos, input->YPos, input->TrueIcon);
+      // RREIcons.drawChar(input->XPos + 16, input->YPos, input->TrueIcon + 1);
+      
+      input->IconFont->drawChar(input->XPos, input->YPos, input->TrueIcon);
+      input->IconFont->drawChar(input->XPos + 16, input->YPos, input->TrueIcon + 1);
+    }
   }
 }
 

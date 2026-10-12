@@ -7,6 +7,7 @@
 #include "ControllerConfigManagerDefinitions.h"
 #include <Icons.h>
 #include <Screen.h>
+#include "Gamepad.h"
 
 IntConfig Config_GfxGuitarModel {
     .Type = ConfigType::Int,
@@ -43,10 +44,12 @@ ConfigManagerUpdateResult OnGfxGuitarModelConfigChange(BaseConfig* cfg, void* ne
 
     Serial.println("Cycled Guitar Model to " + String(v));
     
-    Display.clearDisplay();
+    // Display.clearDisplay();
 
-    if (ControllerGfx_RunCount > 0)
-        RenderIconRuns(ControllerGfx, ControllerGfx_RunCount, ControllerGfxOffsets[Config_GfxGuitarModel.Value], RREControllerIcons);
+    // if (ControllerGfx_RunCount > 0)
+    //     RenderIconRuns(ControllerGfx, ControllerGfx_RunCount, ControllerGfxOffsets[Config_GfxGuitarModel.Value], RREControllerIcons);
+
+    DrawMainScreen();
 
     return ConfigManagerUpdateResult::OK;
 }
@@ -63,10 +66,12 @@ void Config_GfxGuitarModel_CycleValue()
 
     Serial.println("Cycled Guitar Model to " + String(val));
     
-    Display.clearDisplay();
+    // Display.clearDisplay();
 
-    if (ControllerGfx_RunCount > 0)
-        RenderIconRuns(ControllerGfx, ControllerGfx_RunCount, ControllerGfxOffsets[Config_GfxGuitarModel.Value], RREControllerIcons);
+    // if (ControllerGfx_RunCount > 0)
+    //     RenderIconRuns(ControllerGfx, ControllerGfx_RunCount, ControllerGfxOffsets[Config_GfxGuitarModel.Value], RREControllerIcons);
+    DrawMainScreen();
+
 }
 
 FloatConfig Config_Idle_LED_Timeout {

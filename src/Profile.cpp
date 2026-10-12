@@ -81,7 +81,7 @@ void Profile::Load()
 
     prefs.end();
 
-    Serial.print("Loaded Profile " + Description + " from saved preferences: ");
+    Serial.print("👤 Loaded Profile " + Description + " from saved preferences: ");
     Serial.print("DeviceName='" + CustomDeviceName + "', ");
     Serial.print("WiFi_Name='" + WiFi_Name + "', ");
     Serial.println("WiFi_Password='" + SaferPasswordString(WiFi_Password) + "'");

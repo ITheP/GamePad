@@ -8,6 +8,7 @@
 #include "Icons.h"
 #include "DeviceConfig.h"
 #include "Utils.h"
+#include "UI.h"
 #include <Debug.h>
 
 #define CLAMP(x, lo, hi) ((x < lo) ? lo : (x > hi) ? hi \
@@ -75,8 +76,8 @@ void Battery::CalculateState()
   // Was Raw_Battery = Raw_CumulativeReadings / Raw_CumulativeCount;
   // Moved to a exponential moving average (should be smoother)
   float rawAverage = Raw_CumulativeReadings / Raw_CumulativeCount;
-  Raw_Battery =  (Raw_Battery * 0.875f) + (rawAverage * 0.125f);    // Use 12.5% new / 87.5% old:
-  
+  Raw_Battery = (Raw_Battery * 0.875f) + (rawAverage * 0.125f); // Use 12.5% new / 87.5% old:
+
   // Serial.printf("culm: %d, count: %d, bat: %.2f", Raw_CumulativeReadings, Raw_CumulativeCount,Raw_Battery );
   Raw_CumulativeReadings = 0; // Ready for next round of readings
   Raw_CumulativeCount = 0;    // Set up to start readings again
@@ -711,12 +712,14 @@ void Battery::ProcessInputs()
 
     uint16_t analogState = 0;
 
-    if (input->Pin != NONE) {
+    if (input->Pin != NONE)
+    {
       uint32_t sum = 0;
 
-      for (int i = 0; i < 4; i++) {
-          sum += analogRead(input->Pin);
-          delayMicroseconds(60);   // 60–80 µs is enough
+      for (int i = 0; i < 4; i++)
+      {
+        sum += analogRead(input->Pin);
+        delayMicroseconds(60); // 60–80 µs is enough
       }
 
       analogState = sum >> 2;
@@ -856,4 +859,43 @@ void Battery::DitheredFillRandom(int x, int y, int w, int h,
         Display.drawPixel(x + dx, y + dy, C_WHITE);
     }
   }
+}
+
+char Battery::Icon = 0;
+bool Battery::ShowPowerBar = false;
+
+void Battery::Init()
+{
+  // Icon = Icon_Battery;
+  // ShowPowerBar = false;
+}
+
+void Battery::NoPowerBar()
+{
+  ShowPowerBar = false;
+}
+
+void Battery::RenderIcons()
+{
+  RenderBatteryIcon(Icon, uiBattery_xPos, uiBattery_yPos, 16, 11);
+  if (ShowPowerBar)
+    RenderBar(ClampedPercentage);
+}
+
+void Battery::RenderIcon(char icon)
+{
+  Icon = icon;
+  RenderBatteryIcon(icon, uiBattery_xPos, uiBattery_yPos, 16, 11);
+}
+
+void Battery::RenderBar(int percentage)
+{
+  ShowPowerBar = true;
+
+  // Battery level scale to 0->10 pixels
+  int width = ((percentage / 100.0) * 10.0);
+
+  // Render width as 0->10 pixel wide rectangle inside icon
+  Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, 10, 5, C_BLACK);
+  Display.fillRect(uiBattery_xPos + 2, uiBattery_yPos + 3, width, 5, C_WHITE);
 }

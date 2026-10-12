@@ -55,6 +55,7 @@ public:
     static bool IsWiFiTestInProgress();
     static WiFiTestResult GetLastTestResult();
     static void CancelWiFiTest();  // Cancel any in-progress test
+    static void RenderIcons(bool forceRedraw = false);
 
 private:
     static int WiFiConnecting;
@@ -74,5 +75,4 @@ private:
     static unsigned long TestStartTime;
     static const unsigned long TEST_TIMEOUT_MS = 15000; // 15 second timeout for WiFi test
 
-    static void RenderIcons();
 };

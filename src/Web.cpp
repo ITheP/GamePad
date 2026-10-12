@@ -65,16 +65,16 @@ void Web::WiFiDisabled()
     WebServerIcon = Icon_Web_Disabled;
 }
 
-static void register_handler(const httpd_uri_t &uri)
+static void RegisterUriHandler(const httpd_uri_t &uri)
 {
     if (WebServerHTTP)
     {
         esp_err_t res = httpd_register_uri_handler(WebServerHTTP, &uri);
         if (res != ESP_OK)
-            Serial.printf("HTTP handler register failed for %s\n", uri.uri);
+            Serial.printf("🌐 HTTP handler register failed for %s\n", uri.uri);
         else
 
-            Serial.printf("HTTP handler registered for %s\n", uri.uri);
+            Serial.printf("🌐 HTTP handler registered for %s\n", uri.uri);
     }
     if (WebServerHTTPS)
     {
@@ -809,14 +809,14 @@ void Web::InitWebServer()
     }
     else
     {
-        Serial.println("🌐 ✅ HTTP server started on port 80");
+        Serial.println("🌐✅ HTTP server started on port 80");
     }
 
     // HTTPS Web Server
 
     // #ifdef EXTRA_SERIAL_DEBUG_PLUS
-    //     Serial.println("🌐 ✅ Pre-HTTPS server heap: " + String(ESP.getFreeHeap()) + " bytes");
-    //     Serial.println("🌐 ✅ Pre-HTTPS server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
+    //     Serial.println("🌐✅ Pre-HTTPS server heap: " + String(ESP.getFreeHeap()) + " bytes");
+    //     Serial.println("🌐✅ Pre-HTTPS server max alloc: " + String(ESP.getMaxAllocHeap()) + " bytes");
     // #endif
 
     // if (!HttpsCertPem.empty() && !HttpsKeyPem.empty())
@@ -914,22 +914,22 @@ void Web::InitWebServer()
         { return Web::POST_UpdateConfig(req); },
     };
 
-    register_handler(uri_root);
-    register_handler(uri_main);
-    register_handler(uri_debug);
-    register_handler(uri_stats_table);
-    register_handler(uri_stats_json);
-    register_handler(uri_config_json);
-    register_handler(uri_config_update);
-    register_handler(uri_wifi_status);
-    register_handler(uri_battery_info);
+    RegisterUriHandler(uri_root);
+    RegisterUriHandler(uri_main);
+    RegisterUriHandler(uri_debug);
+    RegisterUriHandler(uri_stats_table);
+    RegisterUriHandler(uri_stats_json);
+    RegisterUriHandler(uri_config_json);
+    RegisterUriHandler(uri_config_update);
+    RegisterUriHandler(uri_wifi_status);
+    RegisterUriHandler(uri_battery_info);
 
     static const httpd_uri_t uri_default = {
         .uri = "/*",
         .method = HTTP_GET,
         .handler = default_handler,
     };
-    register_handler(uri_default);
+    RegisterUriHandler(uri_default);
 
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("✅ Main mode routes registered");
@@ -1028,18 +1028,18 @@ void Web::InitWebServer_Hotspot()
         { return Web::POST_UpdateWiFiDetails(req); },
     };
 
-    register_handler(uri_hotspot);
-    register_handler(uri_hotspot_info);
-    register_handler(uri_ap_list);
-    register_handler(uri_wifi_test);
-    register_handler(uri_update_wifi);
+    RegisterUriHandler(uri_hotspot);
+    RegisterUriHandler(uri_hotspot_info);
+    RegisterUriHandler(uri_ap_list);
+    RegisterUriHandler(uri_wifi_test);
+    RegisterUriHandler(uri_update_wifi);
 
     static const httpd_uri_t uri_default = {
         .uri = "/*",
         .method = HTTP_GET,
         .handler = default_handler,
     };
-    register_handler(uri_default);
+    RegisterUriHandler(uri_default);
 
 #ifdef EXTRA_SERIAL_DEBUG
     Serial.println("🌐 ✅ Hotspot mode routes registered");
@@ -1230,9 +1230,9 @@ void Web::WebListDir(std::ostringstream *stream, const char *dirname, uint8_t de
 int Web::ShowTraffic = -1;
 char LastWebServerIcon;
 
-void Web::RenderIcons()
+void Web::RenderIcons(bool forceRedraw)
 {
-    if (WebServerIcon != LastWebServerIcon)
+    if (WebServerIcon != LastWebServerIcon || forceRedraw)
     {
         RenderIcon(WebServerIcon, uiWebServer_xPos, uiWebServer_yPos, 16, 16);
         LastWebServerIcon = WebServerIcon;

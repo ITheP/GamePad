@@ -615,6 +615,7 @@ Input DigitalInput_Tilt = // Tilt button on main body, or when guitar his tiled 
         .RenderHeight = 7,
         .TrueIcon = Icon_Tilt,
         .FalseIcon = NONE,
+        .IconFont = &RREControllerIcons,
         .OnboardLED = {CRGB(0, 255, 255), true}
         // .LEDConfig = new ExternalLEDConfig {
         //     .LEDNumber = LED_Tilt,
