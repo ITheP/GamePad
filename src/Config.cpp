@@ -35,7 +35,7 @@ BoolConfig Config_InputSerialLiveOutput {
         .FunctionOnSet = nullptr
     },
     .Value = DEFAULT_INPUT_SERIAL_LIVE_OUTPUT,
-    .DefaultValue = false
+    .DefaultValue = DEFAULT_INPUT_SERIAL_LIVE_OUTPUT
 };
 
 void ConfigInputSerialLiveOutput_ToggleState()
@@ -59,7 +59,7 @@ IntConfig Config_InputSerialLiveOutputThrottle {
         .FunctionOnSet = nullptr,
     },
     .Value = DEFAULT_INPUT_SERIAL_LIVE_OUTPUT_THROTTLE,
-    .DefaultValue = 0
+    .DefaultValue = DEFAULT_INPUT_SERIAL_LIVE_OUTPUT_THROTTLE
 };
 
 void ConfigInputSerialLiveOutputThrottle_Slow()
@@ -98,7 +98,7 @@ BoolConfig Config_ForceFPSDisplay {
         .FunctionOnSet = nullptr
     },
     .Value = DEFAULT_FORCE_FPS_DISPLAY,
-    .DefaultValue = false
+    .DefaultValue = DEFAULT_FORCE_FPS_DISPLAY
 };
 
 void ConfigForceFPSDisplay_ToggleState()
@@ -117,7 +117,7 @@ BoolConfig Config_ScreenWhite {
         .FunctionOnSet = &OnWhiteConfigChange
     },
     .Value = DEFAULT_WHITE_SCREEN,
-    .DefaultValue = false
+    .DefaultValue = DEFAULT_WHITE_SCREEN
 };
 
 ConfigManagerUpdateResult OnWhiteConfigChange(BaseConfig* cfg, void* newValue)
@@ -146,7 +146,6 @@ void ConfigScreenWhite_ToggleState()
 // Put in order you want things processed
 BaseConfig* ConfigManager_Web_GlobalDefinitions[] = {
     reinterpret_cast<BaseConfig*>(&Config_StartupThrottle),
-    reinterpret_cast<BaseConfig*>(&Config_InputSerialLiveOutput),
     reinterpret_cast<BaseConfig*>(&Config_ScreenWhite),
     reinterpret_cast<BaseConfig*>(&Config_ForceFPSDisplay),
     reinterpret_cast<BaseConfig*>(&Config_InputSerialLiveOutput),

@@ -2,9 +2,6 @@
 #include "Battery.h"
 #include "Prefs.h"
 
-
-
-
 // Forward declarations of handlers
 static void HandleHelp(const std::string &param);
 
@@ -16,6 +13,17 @@ SerialDebugFunction SerialDebug::SerialDebugFunctions[] = {
      "Show This Help.\n  Help <command>            - ...for more detailed information about a specific command",
      "",
      &SerialDebug::ShowHelp},
+
+    {"Hello",
+     "Shows a little hello 😎",
+     "",
+     &SerialDebug::ShowHello},
+
+    {"Clear",
+     "Clears Serial window (if client allows)",
+     "",
+     &SerialDebug::ClearSerial},
+
 
     {Description : "Power"}, // Heading
 
@@ -127,7 +135,7 @@ void SerialDebug::Init()
 {
     AddSerialDebugFunctions(SerialDebugFunctions, SerialDebugFunctionsCount);
     AddSerialDebugFunctions(ConfigManager_SerialDebugFunctions, ConfigManager_SerialDebugFunctions_Count);
-    
+
     Serial_INFO;
     Serial.println("🔌 SerialDebug Initialised. Enter 'Help' for commands.");
 }
@@ -174,6 +182,52 @@ void SerialDebug::ShowHelp()
     }
 }
 
+void SerialDebug::ShowHello()
+{
+    static int callCount = 0;
+    ++callCount;
+
+    static const char *greetings[] = {
+        // Initial greetings
+        "👋 Hello to you too my friend!",
+        "👋 Well hello there!",
+        "❤️ Hi! Good to see you.",
+        "🖥️ Greetings, human.",
+        "⚓ Ahoy!",
+        "😊 Hey there, welcome!",
+        "❤️ Hello, nice to meet you.",
+        "👀 Hiya! What can I do for you?",
+        "😁 Good day to you!",
+        "🙂 Salutations!",
+
+        // Repeat-visitor greetings
+        "👋 Hello again! Back so soon?",
+        "👋 You're back! Hello once more.",
+        "🎉 Well, if it isn't you again. Hello!",
+        "😁 Hello yet again, my persistent friend.",
+        "👀 Still here? Hello again!",
+        "👀 You really like saying hello, don't you?",
+        "❤️ Hello again — I was just thinking about you.",
+        "🎁 Another hello? You spoil me!",
+        "🪖 Shall we play a game? ... Only joking!",
+        "🎵 Hello again, you're back once more,\n Lot's of times knocking at my door,\n Keep it coming cause I don't mind,\n I'll sing this greeting 'til you get bored and stop 😎"};
+
+    constexpr int total = sizeof(greetings) / sizeof(greetings[0]);
+    constexpr int firstHalf = total / 2;
+
+    int index = (callCount <= 2)
+                    ? random(firstHalf) // pick from first half only
+                    : random(total);    // pick from whole array
+
+    Serial.println(greetings[index]);
+}
+
+/// @brief Clears Serial window in client (if client supports relevant codes)
+void SerialDebug::ClearSerial()
+{
+    Serial.print("\033[3J\033[2J\033[H");
+}
+
 // ------------------------------------------------------------------------
 // Parameter parser
 //
@@ -201,7 +255,7 @@ static bool TryParseParameter(const std::string &raw,
     if (s.back() == '"')
     {
         size_t closePos = s.size() - 1;
-        size_t openPos  = s.rfind('"', closePos - 1);
+        size_t openPos = s.rfind('"', closePos - 1);
         if (openPos != std::string::npos)
         {
             bool atStart = (openPos == 0);
@@ -283,15 +337,19 @@ void SerialDebug::CheckSerialInput()
         if (buffer.length() == 0)
             continue;
 
+        // Different modes we can use for serial handling to aid visibility
+        //Serial.println();
+        ClearSerial();
+
         std::string line = buffer.c_str();
         buffer = "";
 
         // 1. Try to peel a parameter off the end.
         std::string keyPart = line;
         SerialDebugFunctionParameterType paramType = SerialDebugFunctionParameterType::None;
-        int         intVal    = 0;
-        float       floatVal  = 0.0f;
-        bool        boolVal   = false;
+        int intVal = 0;
+        float floatVal = 0.0f;
+        bool boolVal = false;
         std::string stringVal;
 
         TryParseParameter(line, keyPart, paramType,
@@ -301,39 +359,53 @@ void SerialDebug::CheckSerialInput()
         std::string key = keyPart;
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
 
-        // 3. "help <command>" special case.
-        if (key == "help" || key == "?")
+        // 3. "help" / "help <command>" special case.
+        // Must run before the "unknown command" lookup, and must catch both
+        // the bare "help" and "help <anything>" forms.
         {
-            // Did the user actually type "help <something>"?
+            // Peek at the first word only — case-insensitively.
+            std::string firstWord = line;
             size_t sp = line.find(' ');
-            if (sp == std::string::npos)
+            if (sp != std::string::npos)
+                firstWord = line.substr(0, sp);
+
+            std::string lowerFirst = firstWord;
+            std::transform(lowerFirst.begin(), lowerFirst.end(),
+                           lowerFirst.begin(), ::tolower);
+
+            if (lowerFirst == "help" || lowerFirst == "?")
             {
-                ShowHelp();
+                // Bare "help" → full list
+                if (sp == std::string::npos)
+                {
+                    ShowHelp();
+                    return;
+                }
+
+                // "help <something>" → detailed help for that command
+                std::string target = line.substr(sp + 1);
+                while (!target.empty() && isspace((unsigned char)target.back()))
+                    target.pop_back();
+
+                std::string lowerTarget = target;
+                std::transform(lowerTarget.begin(), lowerTarget.end(),
+                               lowerTarget.begin(), ::tolower);
+
+                auto it2 = FunctionMap.find(lowerTarget);
+                if (it2 == FunctionMap.end())
+                {
+                    Serial.printf("No help available for '%s', command not found\n",
+                                  target.c_str());
+                }
+                else
+                {
+                    auto *h = it2->second;
+                    Serial.printf("⚙️ %s\nℹ️ %s\n", h->Instruction.c_str(), h->Description.c_str());
+                    if (!h->Details.empty())
+                        Serial.printf("ℹ️ %s\n", h->Details.c_str());
+                }
                 return;
             }
-
-            std::string target = line.substr(sp + 1);
-            while (!target.empty() && isspace((unsigned char)target.back()))
-                target.pop_back();
-
-            std::string lowerTarget = target;
-            std::transform(lowerTarget.begin(), lowerTarget.end(),
-                           lowerTarget.begin(), ::tolower);
-
-            auto it2 = FunctionMap.find(lowerTarget);
-            if (it2 == FunctionMap.end())
-            {
-                Serial.printf("No help available for '%s', command not found\n",
-                              target.c_str());
-            }
-            else
-            {
-                auto *h = it2->second;
-                Serial.printf("%s - %s\n", h->Instruction.c_str(), h->Description.c_str());
-                if (!h->Details.empty())
-                    Serial.printf("%s\n", h->Details.c_str());
-            }
-            return;
         }
 
         // 4. Look up the command.
@@ -353,6 +425,7 @@ void SerialDebug::CheckSerialInput()
         {
             if (paramType != SerialDebugFunctionParameterType::None)
             {
+                Serial_INFO;
                 Serial.printf("Note: '%s' does not take a parameter; ignoring '%s'\n",
                               entry->Instruction.c_str(),
                               line.substr(keyPart.size() + 1).c_str());
@@ -361,8 +434,11 @@ void SerialDebug::CheckSerialInput()
             if (entry->Function)
                 entry->Function();
             else
+            {
+                Serial_ERROR;
                 Serial.printf("Command '%s' has no function handler.\n",
                               entry->Instruction.c_str());
+            }
             return;
         }
 
@@ -383,12 +459,22 @@ void SerialDebug::CheckSerialInput()
             const char *expected = "unknown";
             switch (entry->ParameterType)
             {
-                case SerialDebugFunctionParameterType::Int:    expected = "int";    break;
-                case SerialDebugFunctionParameterType::Float:  expected = "float";  break;
-                case SerialDebugFunctionParameterType::Bool:   expected = "bool";   break;
-                case SerialDebugFunctionParameterType::String: expected = "string"; break;
-                default: break;
+            case SerialDebugFunctionParameterType::Int:
+                expected = "int";
+                break;
+            case SerialDebugFunctionParameterType::Float:
+                expected = "float";
+                break;
+            case SerialDebugFunctionParameterType::Bool:
+                expected = "bool";
+                break;
+            case SerialDebugFunctionParameterType::String:
+                expected = "string";
+                break;
+            default:
+                break;
             }
+            Serial_ERROR;
             Serial.printf("Parameter type mismatch for '%s': expected %s\n",
                           entry->Instruction.c_str(), expected);
             return;
@@ -397,32 +483,32 @@ void SerialDebug::CheckSerialInput()
         // 5d. Invoke the trampoline with a pointer to the correctly-typed value.
         switch (entry->ParameterType)
         {
-            case SerialDebugFunctionParameterType::Int:
-            {
-                int v = intVal;
-                entry->ParameterFunction(&v);
-                break;
-            }
-            case SerialDebugFunctionParameterType::Float:
-            {
-                float v = floatVal;
-                entry->ParameterFunction(&v);
-                break;
-            }
-            case SerialDebugFunctionParameterType::Bool:
-            {
-                bool v = boolVal;
-                entry->ParameterFunction(&v);
-                break;
-            }
-            case SerialDebugFunctionParameterType::String:
-            {
-                std::string v = stringVal;
-                entry->ParameterFunction(&v);
-                break;
-            }
-            default:
-                break;
+        case SerialDebugFunctionParameterType::Int:
+        {
+            int v = intVal;
+            entry->ParameterFunction(&v);
+            break;
+        }
+        case SerialDebugFunctionParameterType::Float:
+        {
+            float v = floatVal;
+            entry->ParameterFunction(&v);
+            break;
+        }
+        case SerialDebugFunctionParameterType::Bool:
+        {
+            bool v = boolVal;
+            entry->ParameterFunction(&v);
+            break;
+        }
+        case SerialDebugFunctionParameterType::String:
+        {
+            std::string v = stringVal;
+            entry->ParameterFunction(&v);
+            break;
+        }
+        default:
+            break;
         }
     }
 }

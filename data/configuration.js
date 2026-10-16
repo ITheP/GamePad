@@ -934,7 +934,7 @@ main();
         defaultBtn.type = "button";
         defaultBtn.className = "btn btn--autowidth btn--right";
         defaultBtn.textContent = ICON.DEFAULT;
-        defaultBtn.title = "Apply default value";
+        defaultBtn.title = "Apply Default Value (" + String(field(item, "DefaultValue", "")) + ")";
 
         var statusEl = document.createElement("span");
         statusEl.className = "config-status";

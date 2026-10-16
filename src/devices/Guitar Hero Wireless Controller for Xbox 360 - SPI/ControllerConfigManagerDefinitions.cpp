@@ -93,7 +93,7 @@ FloatConfig Config_Idle_LED_Timeout {
         .FunctionOnSet = nullptr
     },
     .Value = DEFAULT_IDLE_LED_TIMEOUT,
-    .DefaultValue = 0
+    .DefaultValue = DEFAULT_IDLE_LED_TIMEOUT
 };
 
 FloatConfig Config_Idle_Screen_Timeout {
@@ -112,7 +112,7 @@ FloatConfig Config_Idle_Screen_Timeout {
         .FunctionOnSet = nullptr
     },
     .Value = DEFAULT_IDLE_SCREEN_TIMEOUT,
-    .DefaultValue = 0
+    .DefaultValue = DEFAULT_IDLE_SCREEN_TIMEOUT
 };
 
 FloatConfig Config_Idle_Effect_Restart {
@@ -131,7 +131,7 @@ FloatConfig Config_Idle_Effect_Restart {
         .FunctionOnSet = nullptr
     },
     .Value = DEFAULT_IDLE_EFFECT_RESTART,
-    .DefaultValue = 0
+    .DefaultValue = DEFAULT_IDLE_EFFECT_RESTART
 };
 
 IntConfig Config_LED_Brightness {
@@ -150,7 +150,7 @@ IntConfig Config_LED_Brightness {
         .FunctionOnSet = &GlobalLEDBrightnessConfigChange
     },
     .Value = DEFAULT_LED_BRIGHTNESS,
-    .DefaultValue = 0
+    .DefaultValue = DEFAULT_LED_BRIGHTNESS
 };
 
 // Config variables we want exposing to web/preferences

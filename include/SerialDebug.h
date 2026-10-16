@@ -56,6 +56,8 @@ public:
     static void Init();
     static void CheckSerialInput();
     static void ShowHelp();
+    static void ShowHello();
+    static void ClearSerial();
 
     static void AddSerialDebugFunctions(SerialDebugFunction serialDebugFunctions[], int count);
 
