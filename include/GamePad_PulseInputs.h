@@ -2,7 +2,7 @@
 
 #include "Structs.h"
 
-void setupPulseInputs();
+void setupPulseInputs(PulseInput *pulseInputs[], int pulseInputs_Count);
 void mcpwm_capture_callback();
 
 int measureDutyCycle(PulseInput *pulseInput);

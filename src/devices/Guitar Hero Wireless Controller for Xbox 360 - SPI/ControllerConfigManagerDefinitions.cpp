@@ -1,16 +1,18 @@
 // Configurable run time variables for controller, which may also be exposed into the web interface, serial interaction, etc. and
 // and automated within the device for loading from/saving to Prefs
 
-#include "LED.h"
+//#include "LED.h"
 #include "ControllerConfig.h"
-#include "SerialDebug.h"
+//#include "ConfigManager.h"
+//#include "SerialDebug.h"
+#include "DeviceConfig.h"
 #include "ControllerConfigManagerDefinitions.h"
-#include <Icons.h>
+//#include <Icons.h>
 #include <Screen.h>
 #include "Gamepad.h"
 
 IntConfig Config_GfxGuitarModel {
-    .Type = ConfigType::Int,
+    //.Type = ConfigType::Int,
     .Metadata = {
         .Group = "Gfx",
         .Label = "Guitar Model",
@@ -21,6 +23,7 @@ IntConfig Config_GfxGuitarModel {
         .Max = 5,
         .uiMin = 0,
         .uiMax = 5,
+        .uiStep = 1,
         .PrefsId = "Gfx.GuitarModel",
         .FunctionOnSet = &OnGfxGuitarModelConfigChange,
         .Image = "guitar_logos.png",
@@ -75,7 +78,7 @@ void Config_GfxGuitarModel_CycleValue()
 }
 
 FloatConfig Config_Idle_LED_Timeout {
-    .Type = ConfigType::Float,
+    //.Type = ConfigType::Float,
     .Metadata = {
         .Group = "Idle",
         .Label = "LED Timeout",
@@ -94,7 +97,7 @@ FloatConfig Config_Idle_LED_Timeout {
 };
 
 FloatConfig Config_Idle_Screen_Timeout {
-    .Type = ConfigType::Float,
+    //.Type = ConfigType::Float,
     .Metadata = {
         .Group = "Idle",
         .Label = "Screen Timeout",
@@ -113,7 +116,7 @@ FloatConfig Config_Idle_Screen_Timeout {
 };
 
 FloatConfig Config_Idle_Effect_Restart {
-    .Type = ConfigType::Float,
+    //.Type = ConfigType::Float,
     .Metadata = {
         .Group = "Idle",
         .Label = "Screen Restart",
@@ -132,7 +135,7 @@ FloatConfig Config_Idle_Effect_Restart {
 };
 
 IntConfig Config_LED_Brightness {
-    .Type = ConfigType::Int,
+    //.Type = ConfigType::Int,
     .Metadata = {
         .Group = "LED",
         .Label = "Brightness",
@@ -144,7 +147,7 @@ IntConfig Config_LED_Brightness {
         .uiMin = 0,
         .uiMax = 255,
         .uiStep = 1,
-        .FunctionOnSet = &OnGlobalLEDBrightnessConfigChange
+        .FunctionOnSet = &GlobalLEDBrightnessConfigChange
     },
     .Value = DEFAULT_LED_BRIGHTNESS,
     .DefaultValue = 0
@@ -154,7 +157,6 @@ IntConfig Config_LED_Brightness {
 // Put in order you want things processed
 BaseConfig* ConfigManager_Web_ControllerDefinitions[] = {
     reinterpret_cast<BaseConfig*>(&Config_GfxGuitarModel),
-    reinterpret_cast<BaseConfig*>(&Config_InputSerialLiveOutput),
     reinterpret_cast<BaseConfig*>(&Config_Idle_LED_Timeout),
     reinterpret_cast<BaseConfig*>(&Config_Idle_Screen_Timeout),
     reinterpret_cast<BaseConfig*>(&Config_Idle_Effect_Restart),

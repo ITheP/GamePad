@@ -240,8 +240,8 @@ void MenuFunctions::Config_Draw_WiFi_AccessPoint(int showScrollIcons)
     int apSize = ConfigAccessPointList.size();
     if (apSize == 0)
     {
-        RRESmall.printStr(ALIGN_CENTER, MenuContentStartY + 12, "Scanning");
-        RRESmall.printStr(ALIGN_CENTER, MenuContentStartY + 22, "Please Wait...");
+        RRESmall.printStr(ALIGN_CENTER, MenuContentStartY + 12, (char *)"Scanning");
+        RRESmall.printStr(ALIGN_CENTER, MenuContentStartY + 22, (char *)"Please Wait...");
     }
     else
     {

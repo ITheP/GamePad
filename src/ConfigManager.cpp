@@ -75,8 +75,9 @@ void ConfigManager::RenderConfigJsonToSerial()
 
 void ConfigManager::RenderConfigToSerial()
 {
+    Serial_INFO;
     std::ostringstream output;
-    output << "Config...\n";
+    output << "⚙️ Config...\n";
 
     for (int i = 0; i < ConfigCount; i++)
     {
@@ -85,7 +86,7 @@ void ConfigManager::RenderConfigToSerial()
         if (i > 0)
             output << "\n";
 
-        output << "[" << config->Id << "] "
+        output << "⚙️ [" << config->Id << "] "
                << config->Metadata.Group << "." << config->Metadata.Label << "\n"
                << "Type: " << ConfigTypeDescriptions[(int)config->Type] << ", ";
 
@@ -108,7 +109,7 @@ void ConfigManager::RenderConfigToSerial()
             output << "Value: " << reinterpret_cast<StringConfig *>(config)->Value << ","
                    << "DefaultValue: " << reinterpret_cast<StringConfig *>(config)->DefaultValue;
             break;
-        case ConfigType::Colour:
+        case ConfigType::Color:
             output << "Value: {"
                    << "r: " << (int)reinterpret_cast<ColorConfig *>(config)->r << ","
                    << "g: " << (int)reinterpret_cast<ColorConfig *>(config)->g << ","
@@ -121,17 +122,17 @@ void ConfigManager::RenderConfigToSerial()
         }
 
         output << "\nMetadata...\n"
-               << "\tDescription: " << config->Metadata.Description << "\n"
-               << "\tInfo: " << config->Metadata.Info << "\n"
-               << "\tRenderAs: " << ConfigRenderAsDescriptions[(int)config->Metadata.RenderAs] << ", "
-               << "PrefsId: " << (config->Metadata.PrefsId ? config->Metadata.PrefsId : "") << ", "
-               << "Unit: " << config->Metadata.Unit << "\n"
-               << "\tMin: " << config->Metadata.Min << ", "
+               << "... Description: " << config->Metadata.Description << "\n"
+               << "... Info: " << (config->Metadata.Info != "" ? config->Metadata.Info : "<not set>") << "\n"
+               << "... RenderAs: " << ConfigRenderAsDescriptions[(int)config->Metadata.RenderAs] << "\n"
+               << "... PrefsId: " << (config->Metadata.PrefsId ? (std::string("[") + config->Metadata.PrefsId + "]") : std::string("<not set>")) << "\n"
+               << "... Min: " << config->Metadata.Min << ", "
                << "Max: " << config->Metadata.Max << ", "
                << "uiMin: " << config->Metadata.uiMin << ", "
                << "uiMax: " << config->Metadata.uiMax << ", "
                << "uiStep: " << config->Metadata.uiStep << ", "
-               << "Image: " << config->Metadata.Image << ", "
+               << "Unit: " << config->Metadata.Unit << "\n"
+               << "... Image: " << (config->Metadata.Image != "" ? config->Metadata.Image : "<not set>") << ", "
                << "ImageVariants: " << config->Metadata.ImageVariants << ", "
                << "ImageSplitVertically: " << (config->Metadata.ImageSplitVertically ? "true" : "false");
     }
@@ -198,7 +199,7 @@ std::ostringstream ConfigManager::GetConfigAsJson()
             json << "\"Value\": \"" << reinterpret_cast<StringConfig *>(config)->Value << "\","
                  << "\"DefaultValue\": \"" << reinterpret_cast<StringConfig *>(config)->DefaultValue << "\"";
             break;
-        case ConfigType::Colour:
+        case ConfigType::Color:
             json << "\"Value\": {"
                  << "\"r\": " << (int)reinterpret_cast<ColorConfig *>(config)->r << ","
                  << "\"g\": " << (int)reinterpret_cast<ColorConfig *>(config)->g << ","
@@ -310,7 +311,7 @@ ConfigManagerUpdateResult ConfigManager::AttemptUpdateConfigById(char *id, char 
         return UpdateConfig(base, raw);
     }
 
-    case ConfigType::Colour:
+    case ConfigType::Color:
     {
         const char *c = value;
         if (*c == '"')
@@ -368,6 +369,14 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfigById(int id, void *value)
 //     }
 // }
 
+/// @brief
+/// Updates Config value. Works out type for you based on ConfigType.
+/// Auto set's config value, unless a FunctionOnSet has been defined, then passes to that function.
+/// Function is responsible for setting the value. Function may want to do e.g. additional validation.
+/// Saves value to Prefs if valid PrefsId exists and value has changed.
+/// @param base 
+/// @param value 
+/// @return 
 ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *value)
 {
     auto result = ConfigManagerUpdateResult::OK;
@@ -508,7 +517,7 @@ ConfigManagerUpdateResult ConfigManager::UpdateConfig(BaseConfig *base, void *va
     // ------------------------------------------------------------
     // COLOUR
     // ------------------------------------------------------------
-    case ConfigType::Colour:
+    case ConfigType::Color:
     {
         ColorConfig *config = (ColorConfig *)base;
         uint8_t *rgb = static_cast<uint8_t *>(value);
@@ -577,7 +586,7 @@ std::string ConfigManager::GetConfigValueAsString(BaseConfig *config)
         return (c->Value != nullptr) ? std::string(c->Value) : std::string();
     }
 
-    case ConfigType::Colour:
+    case ConfigType::Color:
     {
         ColorConfig *c = reinterpret_cast<ColorConfig *>(config);
         char buf[8]; // "#RRGGBB" + NUL = 8 bytes exactly

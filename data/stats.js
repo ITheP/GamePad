@@ -79,11 +79,28 @@ if (savedState) {
     startAutoRefresh();
 }
 
+var shaderEnabled = document.getElementById('shaderToggle') ? document.getElementById('shaderToggle').checked : true;
+
+function toggleShaderEffect() {
+    shaderEnabled = !shaderEnabled;
+
+    if (shaderEnabled) {
+        main();
+    } else {
+        cancelAnimationFrame(animationFrameId);
+        document.body.querySelectorAll("canvas").forEach(canvas => canvas.remove());
+    }
+}
+
 function main() {
     // Vaguely clean up any existing effect
     cancelAnimationFrame(animationFrameId);
     document.body.querySelectorAll("canvas").forEach(canvas => canvas.remove());
 
+    if (!shaderEnabled) {
+        return;
+    }
+    
     var canvas = document.createElement("canvas");
     var content = document.getElementById("content");
     canvas.style.position = 'fixed';

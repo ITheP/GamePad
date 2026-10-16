@@ -3,8 +3,29 @@
 #include <Screen.h>
 #include <GamePad.h>
 
+IntConfig Config_StartupThrottle {
+    //.Type = ConfigType::Int,
+    .Metadata = {
+        .Group = "Startup",
+        .Label = "Startup Throttle",
+        .Description = "Small delays (in ms) at points in startup sequence.",
+        .Info = "Not required, simply there to give some weight to the startup UX plus a chance to see the UI more clearly.",
+        .RenderAs = ConfigRenderAs::Toggle,
+        .Unit = "ms",
+        .Min = 0,
+        .Max = 1000,
+        .uiMin = 0,
+        .uiMax = 1000,
+        .uiStep = 10,
+        .PrefsId = "Start.Throttle",
+        .FunctionOnSet = nullptr,
+    },
+    .Value = DEFAULT_STARTUP_THROTTLE,
+    .DefaultValue = DEFAULT_STARTUP_THROTTLE
+};
+
 BoolConfig Config_InputSerialLiveOutput {
-    .Type = ConfigType::Bool,
+    //.Type = ConfigType::Bool,
     .Metadata = {
         .Group = "Debug",
         .Label = "Live Serial Output",
@@ -23,7 +44,7 @@ void ConfigInputSerialLiveOutput_ToggleState()
 }
 
 IntConfig Config_InputSerialLiveOutputThrottle {
-    .Type = ConfigType::Int,
+    //.Type = ConfigType::Int,
     .Metadata = {
         .Group = "Debug",
         .Label = "Live Serial Output Throttle",
@@ -66,7 +87,7 @@ void ConfigInputSerialLiveOutputThrottle_Max()
 }
 
 BoolConfig Config_ForceFPSDisplay {
-    .Type = ConfigType::Bool,
+    //.Type = ConfigType::Bool,
     .Metadata = {
         .Group = "Screen",
         .Label = "Force FPS Display",
@@ -87,7 +108,7 @@ void ConfigForceFPSDisplay_ToggleState()
 
 // Extra function pointer here to make when screen no longer white it's redrawn accordingly
 BoolConfig Config_ScreenWhite {
-    .Type = ConfigType::Bool,
+    //.Type = ConfigType::Bool,
     .Metadata = {
         .Group = "Screen",
         .Label = "White Screen",
@@ -124,6 +145,7 @@ void ConfigScreenWhite_ToggleState()
 // Config variables we want exposing to web/preferences
 // Put in order you want things processed
 BaseConfig* ConfigManager_Web_GlobalDefinitions[] = {
+    reinterpret_cast<BaseConfig*>(&Config_StartupThrottle),
     reinterpret_cast<BaseConfig*>(&Config_InputSerialLiveOutput),
     reinterpret_cast<BaseConfig*>(&Config_ScreenWhite),
     reinterpret_cast<BaseConfig*>(&Config_ForceFPSDisplay),
@@ -132,3 +154,32 @@ BaseConfig* ConfigManager_Web_GlobalDefinitions[] = {
 };
 
 int ConfigManager_Web_GlobalDefinitions_Count = sizeof(ConfigManager_Web_GlobalDefinitions) / sizeof(BaseConfig*);
+
+IntConfig Config_Hardware_DebounceDelay {
+    //.Type = ConfigType::Int,
+    .Metadata = {
+        .Group = "Hardware",
+        .Label = "Debounce Delay",
+        .Description = "Debounce delay (in microseconds) on digital inputs.",
+        .Info = "Debounce delay is where no digital on/off is reprocessed within this time span upon a change, to help with electrical noise when a change takes place. Smaller numbers = lower latency but more chance of bad readings. 10ms (10000µs) is a decent figure to use.",
+        .RenderAs = ConfigRenderAs::Toggle,
+        .Unit = "µs",
+        .Min = 0,
+        .Max = 20000,
+        .uiMin = 2000,
+        .uiMax = 20000,
+        .uiStep = 250,
+        .PrefsId = "HW.Debounce",
+        .FunctionOnSet = nullptr,
+    },
+    .Value = DEFAULT_DEBOUNCE_DELAY,
+    .DefaultValue = DEFAULT_DEBOUNCE_DELAY
+};
+
+// Config variables we want exposing to web/preferences
+// Put in order you want things processed
+BaseConfig* ConfigManager_Web_HardwareDefinitions[] = {
+    reinterpret_cast<BaseConfig*>(&Config_Hardware_DebounceDelay)
+};
+
+int ConfigManager_Web_HardwareDefinitions_Count = sizeof(ConfigManager_Web_HardwareDefinitions) / sizeof(BaseConfig*);

@@ -1,6 +1,6 @@
 #pragma once
-
 #include "Structs.h"
+// ####include <DeviceConfig.h>
 #include "Stats.h"
 #include "RenderText.h"
 #include "IconMappings.h"

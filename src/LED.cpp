@@ -1,7 +1,6 @@
 #include "Structs.h"
 #include "LED.h"
 // #include "LEDConfig.h"
-// #include "ControllerConfig.h"
 #include "DeviceConfig.h"
 #include "GamePad.h"
 #include "LEDEffects.h"
@@ -10,6 +9,8 @@
 #include "Benchmark.h"
 Benchmark LEDBenchmark("PERF.LED");
 #endif
+#include <Debug.h>
+#include <Prefs.h>
 
 CRGB StatusLed[1];
 
@@ -17,25 +18,55 @@ float StatusLED_R = 0;
 float StatusLED_G = 0;
 float StatusLED_B = 0;
 
+// CRGB ExternalLeds[ExternalLED_Count];
+// int ExternalLedsEnabled[ExternalLED_Count];
+
 TaskHandle_t UpdateExternalLEDsTask;
 volatile int UpdateLEDs = false;
 
-extern CRGB ExternalLeds[];
-extern int ExternalLedsEnabled[];
+CRGB ExternalLeds[ExternalLED_Count];
+int ExternalLedsEnabled[ExternalLED_Count];
+
 extern int Second;
 
-ConfigManagerUpdateResult OnGlobalLEDBrightnessConfigChange(BaseConfig* cfg, void* newValue)
+// Config function to save and apply Brightness value
+ConfigManagerUpdateResult GlobalLEDBrightnessConfigChange(BaseConfig *config, void *brightness)
 {
-    IntConfig* c = (IntConfig*)cfg;
-    int v = *static_cast<int*>(newValue);
+  IntConfig *c = (IntConfig *)config;
+  int b = *static_cast<int *>(brightness);
 
-    c->Value = v;
-    ApplyGlobalLEDBrightnessFromConfig();
+  c->Value = b;
+  ApplyGlobalLEDBrightnessFromConfig();
 
-    return ConfigManagerUpdateResult::OK;
+  return ConfigManagerUpdateResult::OK;
 }
 
-void ApplyGlobalLEDBrightnessFromConfig() {
+/// Call coming in from e.g. Serial instruction
+/// Both applies brightness and saves if different to value there
+void ApplyGlobalLEDBrightnessToConfig(int brightness)
+{
+  IntConfig *config = &Config_LED_Brightness;
+
+  auto result = ConfigManager::UpdateConfig((BaseConfig *)config, &brightness);
+  
+  if (result == ConfigManagerUpdateResult::OK)
+  {
+    Serial_INFO;
+    Serial.printf("Set Global LED Brightness to %d", brightness);
+  }
+  else
+  {
+    Serial_ERROR;
+    Serial.printf("Unable to set Global LED Brightness to %d: %s. Valid number range = %d->%d.\n",
+                  brightness,
+                  ConfigManagerUpdateResultDescriptions[(int)result],
+                  (int)(config->Metadata.Min),
+                  (int)(config->Metadata.Max));
+  }
+}
+
+void ApplyGlobalLEDBrightnessFromConfig()
+{
   FastLED.setBrightness(Config_LED_Brightness.Value);
 }
 

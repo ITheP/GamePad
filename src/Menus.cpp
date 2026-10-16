@@ -433,7 +433,7 @@ void Menus::Config_CheckInputs()
     input->ValueState.StateJustChanged = false;
 
     unsigned long timeCheck = micros();
-    if ((timeCheck - input->ValueState.StateChangedWhen) > DEBOUNCE_DELAY)
+    if ((timeCheck - input->ValueState.StateChangedWhen) > Config_Hardware_DebounceDelay.Value )
     {
       // Compare current with previous, and timing, so we can de-bounce if required
       state = digitalRead(input->Pin);

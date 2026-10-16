@@ -1,14 +1,17 @@
 #pragma once
 
 #include <vector>
+//### #include "DeviceConfig.h"
 #include "FastLED.h"
 #include "Stats.h"
-//#include "DeviceConfig.h"
 #include "ConfigManager.h"
 
 struct Input;
 struct HatInput;
 struct State;
+
+extern CRGB ExternalLeds[];
+extern int ExternalLedsEnabled[];
 
 extern CRGB StatusLed[1];
 
@@ -58,8 +61,10 @@ void InitExternalLED(ExternalLEDConfig* config, CRGB* leds);
 void UpdateExternalLEDs(float onboardFadeRate, uint8_t externalFadeRate);
 void UpdateExternalLEDsLoop(float onboardFadeRate, uint8_t externalFadeRate);
 
-ConfigManagerUpdateResult OnGlobalLEDBrightnessConfigChange(BaseConfig* cfg, void* newValue);
+ConfigManagerUpdateResult GlobalLEDBrightnessConfigChange(BaseConfig* cfg, void* newValue);
+//ConfigManagerUpdateResult OnGlobalLEDBrightnessConfigChange(IntConfig *cfg, int brightness);
 void ApplyGlobalLEDBrightnessFromConfig();
+void ApplyGlobalLEDBrightnessToConfig(int brightness);
 
 // void Test();
 // void FastTest();

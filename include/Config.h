@@ -5,7 +5,6 @@
 
 //#define EXTRA_SERIAL_DEBUG                            // Enable to print loads of extra information to serial
 //#define EXTRA_SERIAL_DEBUG_PLUS                       // ...further detail including analog input values, but can flood serial output somewhat!
-//#define INPUT_SERIAL_DEBUG                            // Basic per frame serial output overview of input states
 #define DEFAULT_INPUT_SERIAL_LIVE_OUTPUT false          // Enables detailed serial output of input states, including digital, analog, virtual and battery states.
                                                         // Includes sending ANSI codes to reset cursor position to provide a static display in a suitable terminal.
 #define DEFAULT_INPUT_SERIAL_LIVE_OUTPUT_THROTTLE 200   // If you want a delay, e.g. 250ms makes things a bit more readable...    
@@ -19,12 +18,12 @@
 #define DEFAULT_FORCE_FPS_DISPLAY false                 // Debug variant of Show FPS in top right corner of screen (doesn't need to be selected from menus)
 //#define STRAIGHT_TO_IDLE_SCREEN                       // Skip straight to idle screen on start up for easier testing of idle screen and effects
 
-#define SETUP_DELAY     250         // Delay between stages of initial start up
+#define DEFAULT_STARTUP_THROTTLE     250         // Delay between stages of initial start up
                                     // Could be pretty much instant, but having a delay gives a chance to display
                                     // startup information on screen when we turn the device on,
                                     // and have a chance to actually see it. And looks nice :)
 
-#define DEBOUNCE_DELAY  10000       // Button debounce delay (10000 == 10ms)
+#define DEFAULT_DEBOUNCE_DELAY  10000       // Button debounce delay (10000 == 10ms)
                                     // Some info on timings - https://www.digikey.com/en/articles/how-to-implement-hardware-debounce-for-switches-and-relays?form=MG0AV3
 
 // XBox 360 X-Plorer Guitar Hero Controller (model 95065)
@@ -44,6 +43,8 @@
 // Undefine below if using SPI
 //#define SCREEN_INTERFACE_I2C
 
+extern IntConfig Config_StartupThrottle;
+
 extern BoolConfig Config_ScreenWhite;
 void ConfigScreenWhite_ToggleState();
 extern ConfigManagerUpdateResult OnWhiteConfigChange(BaseConfig* cfg, void* newValue);
@@ -59,6 +60,12 @@ void ConfigInputSerialLiveOutputThrottle_Max();
 extern BoolConfig Config_ForceFPSDisplay;
 void ConfigForceFPSDisplay_ToggleState();
 
+extern IntConfig Config_Hardware_DebounceDelay;
+
 // Config variables we want exposing to web/preferences
 extern BaseConfig* ConfigManager_Web_GlobalDefinitions[];
 extern int ConfigManager_Web_GlobalDefinitions_Count;
+extern BaseConfig* ConfigManager_Web_HardwareDefinitions[];
+extern int ConfigManager_Web_HardwareDefinitions_Count;
+
+

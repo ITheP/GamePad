@@ -1,6 +1,7 @@
 #pragma once
+
+//#include "ConfigManager.h"
 #include <SerialDebug.h>
-#include "ConfigManager.h"
 
 extern IntConfig Config_GfxGuitarModel;
 void Config_GfxGuitarModel_CycleValue();

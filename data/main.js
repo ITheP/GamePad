@@ -59,11 +59,12 @@ function startAutoRefresh() {
 }
 
 function showResponseError(message = 'Please check controller is powered on and successfully connected to your WiFi network') {
-    ui.response.innerHTML += '<span style="color: red;"><strong>Error</strong> - ' + message + '</span><br/>';
+    //ui.response.innerHTML += '<span style="color: red;"><strong>Error</strong> - ' + message + '</span><br/>';
+    ui.response.innerHTML += '<span style="color: red;">❌ ' + message + '</span><br/>';
 }
 
 function showResponse(message) {
-    ui.response.innerHTML += '<span style="color: green;">' + message + '</span><br/>';
+    ui.response.innerHTML += '<span style="color: green;">✅ ' + message + '</span><br/>';
 }
 
 function clearResponse() {

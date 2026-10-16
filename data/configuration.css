@@ -36,9 +36,7 @@
 }
 
 .config-global-status {
-    color: #ccc;
-    font-size: 14px;
-    font-style: italic;
+    color: red;
 }
 
 /* ---------- Table overrides ---------- */
@@ -342,10 +340,13 @@
     flex-shrink: 0;
 }
 
-/* Waiting – pulsing hourglass */
+/* Waiting – spinning hourglass */
 .status-waiting {
-    /* animation: pulse 1s infinite; */
     animation: spinPause 1s infinite;
+}
+
+.status-wiggle {
+    animation: wiggle 1s infinite;
 }
 
 /* Success tick – fades out over 1s */
@@ -392,6 +393,17 @@
     0%   { opacity: 1; }
     70%  { opacity: 1; }
     100% { opacity: 0; }
+}
+
+@keyframes wiggle {
+    0%   { transform: rotate(0deg) scale(1); }
+    40%  { transform: rotate(0deg) scale(1); }
+    50%  { transform: rotate(-5deg) scale(1.1); }
+    60%  { transform: rotate(5deg) scale(1.1); }
+    70%  { transform: rotate(-5deg) scale(1.1); }
+    80%  { transform: rotate(5deg) scale(1.1); }
+    90%  { transform: rotate(0deg) scale(1.1); }
+    100% { transform: rotate(0deg) scale(1); }
 }
 
 /* ---------- Config images (Description column) ---------- */

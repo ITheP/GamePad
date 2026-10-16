@@ -81,7 +81,8 @@ void Prefs::LoadStats()
 
 static char *ConfigKey = "Config";
 
-// Config is saved to a global configuration - not individual profiles
+/// Config is saved to a global configuration - not individual profiles
+/// Only saves if value has changed. Cut's down on NVS wear.
 void Prefs::SaveConfig(BaseConfig *config)
 {
     // ---- 0. Validate ---------------------------------------------------
@@ -110,44 +111,55 @@ void Prefs::SaveConfig(BaseConfig *config)
         return;
     }
 
-    // ---- 2. Write by type ----------------------------------------------
+    // ---- 2. Only write if the stored value differs from the config -----
+    bool isNewKey = !prefs.isKey(prefsId);
+
     switch (config->Type)
     {
     case ConfigType::Int:
     {
         IntConfig *c = reinterpret_cast<IntConfig *>(config);
-        prefs.putInt(prefsId, c->Value);
+        if (isNewKey || prefs.getInt(prefsId, c->Value) != c->Value)
+            prefs.putInt(prefsId, c->Value);
         break;
     }
 
     case ConfigType::Bool:
     {
         BoolConfig *c = reinterpret_cast<BoolConfig *>(config);
-        prefs.putBool(prefsId, c->Value);
+        if (isNewKey || prefs.getBool(prefsId, c->Value) != c->Value)
+            prefs.putBool(prefsId, c->Value);
         break;
     }
 
     case ConfigType::Float:
     {
         FloatConfig *c = reinterpret_cast<FloatConfig *>(config);
-        prefs.putFloat(prefsId, c->Value);
+        // getFloat defaults to NAN and NAN != NAN is always true, but the
+        // isNewKey check above already handles "key absent" — so a plain
+        // != comparison is safe here.
+        if (isNewKey || prefs.getFloat(prefsId, c->Value) != c->Value)
+            prefs.putFloat(prefsId, c->Value);
         break;
     }
 
     case ConfigType::String:
     {
         StringConfig *c = reinterpret_cast<StringConfig *>(config);
-        // c->Value is char*; guard against null so putString gets a valid c-string.
-        prefs.putString(prefsId, c->Value ? c->Value : "");
+        const char *current = c->Value ? c->Value : "";
+        if (isNewKey || prefs.getString(prefsId, "") != current)
+            prefs.putString(prefsId, current);
         break;
     }
 
-    case ConfigType::Colour:
+    case ConfigType::Color:
     {
         ColorConfig *c = reinterpret_cast<ColorConfig *>(config);
-        // Pack RGB into 0x00RRGGBB
-        uint32_t packed = ((uint32_t)c->r << 16) | ((uint32_t)c->g << 8) | ((uint32_t)c->b);
-        prefs.putUInt(prefsId, packed);
+        uint32_t packed = ((uint32_t)c->r << 16) |
+                          ((uint32_t)c->g <<  8) |
+                          ((uint32_t)c->b);
+        if (isNewKey || prefs.getUInt(prefsId, packed) != packed)
+            prefs.putUInt(prefsId, packed);
         break;
     }
 
@@ -218,7 +230,7 @@ void Prefs::LoadConfig(BaseConfig *config)
         break;
     }
 
-    case ConfigType::Colour:
+    case ConfigType::Color:
     {
         ColorConfig *c = reinterpret_cast<ColorConfig *>(config);
         // 0xFFFFFFFF is a "not present" sentinel — no valid colour packs to it.
@@ -249,7 +261,7 @@ void Prefs::RenderPrefsConfigToSerial()
     nvs_iterator_t it = nvs_entry_find(partitionName, namespaceName, NVS_TYPE_ANY);
 
     if (it == nullptr) {
-        Serial.println("No keys found in namespace");
+        Serial.println("No NVS keys found in namespace");
         return;
     }
 
@@ -267,36 +279,59 @@ void Prefs::RenderPrefsConfigToSerial()
         nvs_entry_info_t info;
         nvs_entry_info(it, &info);
 
+        // Look up a config whose PrefsId matches this NVS key.
+        // If found, remember its Label for annotation; otherwise the NVS entry is an orphan.
+        BaseConfig *matched = nullptr;
+        for (int i = 0; i < ConfigManager::ConfigCount; i++) {
+            BaseConfig *candidate = ConfigManager::ConfigMap[i];
+            if (candidate->Metadata.PrefsId != nullptr
+                && strcmp(candidate->Metadata.PrefsId, info.key) == 0) {
+                matched = candidate;
+                break;
+            }
+        }
+
+        // Print the key/value line (no trailing newline — annotation is appended next).
         switch (info.type) {
             case NVS_TYPE_I32:
-                Serial.printf("🧠#️⃣ %-15s: %d\n", info.key, prefs.getInt(info.key));
+                Serial.printf("🧠#️⃣ [%-15s]: %-10d", info.key, prefs.getInt(info.key));
                 break;
             case NVS_TYPE_U32:
-                Serial.printf("🧠#️⃣ %-15s: %u\n", info.key, prefs.getUInt(info.key));
+                Serial.printf("🧠#️⃣ [%-15s]: %-10u", info.key, prefs.getUInt(info.key));
                 break;
             case NVS_TYPE_I8:
-                Serial.printf("🧠🔤 %-15s: %d\n", info.key, prefs.getChar(info.key));
+                Serial.printf("🧠🔤 [%-15s]: %-10d", info.key, prefs.getChar(info.key));
                 break;
             case NVS_TYPE_U8:
-                Serial.printf("🧠🔤 %-15s: %u\n", info.key, prefs.getUChar(info.key));
+                Serial.printf("🧠🔤 [%-15s]: %-10u", info.key, prefs.getUChar(info.key));
                 break;
             case NVS_TYPE_I16:
-                Serial.printf("🧠#️⃣ %-15s: %d\n", info.key, prefs.getShort(info.key));
+                Serial.printf("🧠#️⃣ [%-15s]: %-10d", info.key, prefs.getShort(info.key));
                 break;
             case NVS_TYPE_U16:
-                Serial.printf("🧠#️⃣ %-15s: %u\n", info.key, prefs.getUShort(info.key));
+                Serial.printf("🧠#️⃣ [%-15s]: %-10u", info.key, prefs.getUShort(info.key));
                 break;
             case NVS_TYPE_STR:
-                Serial.printf("🧠📝 %-15s: %s\n", info.key,
+                Serial.printf("🧠📝 [%-15s]: %-10s", info.key,
                               prefs.getString(info.key, String()).c_str());
                 break;
             case NVS_TYPE_BLOB:
-                Serial.printf("🧠❔ %-15s: <blob, %u bytes>\n", info.key,
-                              prefs.getBytesLength(info.key));
+                Serial.printf("🧠❔ [%-15s]: %-10s", info.key,
+                              (String("<blob, ") + String(prefs.getBytesLength(info.key)) + " bytes>").c_str());
                 break;
             default:
-                Serial.printf("🧠❔ %-15s: <type %d>\n", info.key, info.type);
+                Serial.printf("🧠❔ [%-15s]: %-10s", info.key,
+                              (String("<type ") + String(info.type) + ">").c_str());
                 break;
+        }
+
+        // Annotation: matching config label, or ORPHAN marker
+        if (matched != nullptr) {
+            Serial.printf("  -> [%s.%s]\n",
+                          matched->Metadata.Group.c_str(),
+                          matched->Metadata.Label.c_str());
+        } else {
+            Serial.println("  *ORPHAN*");
         }
 
         it = nvs_entry_next(it);

@@ -88,18 +88,18 @@ static void free_capture_data() {
     }
 }
 
-void setupPulseInputs() {
+void setupPulseInputs(PulseInput *pulseInputs[], int pulseInputs_Count) {
     Serial.println();
-    Serial.println("🎚 Pulse Input via Hardware MCPWM - Count: " + String(PulseInputs_Count));
+    Serial.println("〰️ Pulse Input via Hardware MCPWM - Count: " + String(pulseInputs_Count));
 
-    if (PulseInputs_Count < 1) {
+    if (pulseInputs_Count < 1) {
         Serial.println("❌ No pulse inputs configured!");
         return;
     }
 
     // Dynamically allocate capture data array in DRAM
     // Use heap_caps_malloc to ensure it's in DRAM (not PSRAM)
-    size_t alloc_size = sizeof(PulseCaptureData_t) * PulseInputs_Count;
+    size_t alloc_size = sizeof(PulseCaptureData_t) * pulseInputs_Count;
     g_pulse_capture_data = (PulseCaptureData_t*)heap_caps_malloc(alloc_size, MALLOC_CAP_INTERNAL);
 
     if (g_pulse_capture_data == NULL) {
@@ -113,11 +113,11 @@ void setupPulseInputs() {
     esp_err_t err;
     
     // Store count in a global for ISR safety checks
-    // (PulseInputs_Count is already global from Structs.h)
+    // (pulseInputs_Count is already global from Structs.h)
 
     // Configure each pulse input
-    for (int i = 0; i < PulseInputs_Count; i++) {
-        PulseInput *sourceInput = PulseInputs[i];
+    for (int i = 0; i < pulseInputs_Count; i++) {
+        PulseInput *sourceInput = pulseInputs[i];
         int pin = sourceInput->Pin;
         
         // Store the index in the pulse input structure for later reference

@@ -1,9 +1,24 @@
+var shaderEnabled = document.getElementById('shaderToggle') ? document.getElementById('shaderToggle').checked : true;
+
+function toggleShaderEffect() {
+    shaderEnabled = !shaderEnabled;
+
+    if (shaderEnabled) {
+        main();
+    } else {
+        cancelAnimationFrame(animationFrameId);
+        document.body.querySelectorAll("canvas").forEach(canvas => canvas.remove());
+    }
+}
 
 function main() {
     // Vaguely clean up any existing effect
     cancelAnimationFrame(animationFrameId);
     document.body.querySelectorAll("canvas").forEach(canvas => canvas.remove());
 
+    if (!shaderEnabled) {
+        return;
+    }
     var canvas = document.createElement("canvas");
     var content = document.getElementById("content");
     canvas.style.position = 'fixed';
@@ -164,7 +179,7 @@ main();
     var ICON = {
         FAILED: "❌",                      // "\u274C"
         SAVE: "💾",                      // "\uD83D\uDCBE"
-        SAVING: "⏳",                      // "\u23F3",
+        WAITING: "⏳",                      // "\u23F3",
         TICK: "✅",                      // "\u2705"
         DEFAULT: "Default",
         RETRY: "🔄",                      // "\uD83D\uDD04"
@@ -269,33 +284,10 @@ main();
        --------------------------------------------------------------------- */
 
     function loadConfig() {
-        setGlobalStatus(ICON.SAVING + " Loading configuration\u2026");
+        setGlobalStatus("span class='status-waiting'>" + ICON.WAITING + "</span> Loading configuration\u2026");
         if (ui.refreshBtn) ui.refreshBtn.disabled = true;
 
         while (ui.tableBody.firstChild) ui.tableBody.removeChild(ui.tableBody.firstChild);
-
-//         var TEST_CONFIG_JSON = `{"config": [
-// {"Id": 6,"Type": "Bool","Metadata": {"Group": "Debug","Label": "Live Serial Output","Description": "Enables detailed serial output of input states, including digital, analog, virtual and battery states.","Info": "","RenderAs": "Toggle","SaveInPrefs": 0,"Unit": "","Min": 0,"Max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-// {"Id": 1,"Type": "Bool","Metadata": {"Group": "Screen","Label": "White Screen","Description": "Screen will show a solid white, handy when physically aligning panel in device where visible edges are visible","Info": "","RenderAs": "Default","SaveInPrefs": 0,"Unit": "","Min": 0,"Max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-// {"Id": 2,"Type": "Bool","Metadata": {"Group": "Screen","Label": "Force FPS Display","Description": "Forces the display of FPS in the top right corner of the screen","Info": "","RenderAs": "Toggle","SaveInPrefs": 1,"Unit": "","Min": 0,"Max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-// {"Id": 6,"Type": "Bool","Metadata": {"Group": "Debug","Label": "Live Serial Output","Description": "Enables detailed serial output of input states, including digital, analog, virtual and battery states.","Info": "","RenderAs": "Toggle","SaveInPrefs": 0,"Unit": "","Min": 0,"Max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-// {"Id": 4,"Type": "Int","Metadata": {"Group": "Debug","Label": "Live Serial Output Throttle","Description": "Introduces a delay when viewing live serial output of input states. Will slow down device.","Info": "","RenderAs": "Default","SaveInPrefs": 1,"Unit": "","Min": 0,"Max": 1000,"uiMin": 0,"uiMax": 1000,"uiStep": 10,"Value": 200,"DefaultValue": 0}},
-// {"Id": 5,"Type": "Int","Metadata": {"Group": "Gfx","Label": "Guitar Model","Description": "Visual model used for guitar.","Info": "","RenderAs": "Default","SaveInPrefs": 1,"Unit": "Guitar number","Min": 0,"Max": 5,"uiMin": 0,"uiMax": 5,"uiStep": 0,"Image": "guitar_logos.png", "ImageVariants": 8,"ImageSplitVertically": true,"Value": 1,"DefaultValue": 0}},
-// {"Id": 6,"Type": "Bool","Metadata": {"Group": "Debug","Label": "Live Serial Output","Description": "Enables detailed serial output of input states, including digital, analog, virtual and battery states.","Info": "","RenderAs": "Toggle","SaveInPrefs": 0,"Unit": "","Min": 0,"Max": 0,"uiMin": 0,"uiMax": 0,"uiStep": 0,"Value": 0,"DefaultValue": 0}},
-// {"Id": 7,"Type": "Float","Metadata": {"Group": "Idle","Label": "LED Timeout","Description": "Seconds before LED's go into idle mode.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"Unit": "Sec","Min": 0,"Max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 10,"DefaultValue": 0}},
-// {"Id": 8,"Type": "Float","Metadata": {"Group": "Idle","Label": "Screen Timeout","Description": "Seconds before screen go into idle mode.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"Unit": "Sec","Min": 1,"Max": 86400,"uiMin": 1,"uiMax": 600,"uiStep": 10,"Value": 30,"DefaultValue": 0}},
-// {"Id": 9,"Type": "Float","Metadata": {"Group": "Idle","Label": "Screen Restart","Description": "Seconds before screen idle effect restarts.","Info": "","RenderAs": "Default","SaveInPrefs": 0,"Unit": "Sec","Min": 0,"Max": 86400,"uiMin": 0,"uiMax": 600,"uiStep": 10,"Value": 60,"DefaultValue": 0}},
-// {"Id": 10,"Type": "Int","Metadata": {"Group": "LED","Label": "Brightness","Description": "Global brightness of LED's","Info": "Very low brightness levels may result in funny looking LED colours or fades as there isn't the resolution of brightness levels to represent subtle differences in colour","RenderAs": "Default","SaveInPrefs": 0,"Unit": "Thingies","Min": 0,"Max": 255,"uiMin": 0,"uiMax": 255,"uiStep": 1,"Value": 200,"DefaultValue": 0}}
-// ]}`;
-
-//         // ---- Loader (test mode) ----
-//         return Promise.resolve(JSON.parse(TEST_CONFIG_JSON)
-//             .then(function (data) {
-//                 var list = (data && (data.config || data.Config)) || data;
-//                 if (!Array.isArray(list)) list = [];
-//                 renderConfig(list);
-//                 setGlobalStatus("");
-//             });
 
         // ---- Loader (live mode) ----
         return fetch(CONFIG_URL, { cache: "no-store" })
@@ -398,7 +390,7 @@ main();
 
         switch (row.statusState) {
             case "saving":
-                el.appendChild(iconSpan(ICON.SAVING, "status-waiting", "Saving\u2026"));
+                el.appendChild(iconSpan(ICON.WAITING, "status-waiting", "Saving\u2026"));
                 break;
 
             case "saved": {
@@ -434,7 +426,7 @@ main();
                 var hasWarning = !!(row.control && row.control.hasWarning && row.control.hasWarning());
 
                 if (hasWarning) {
-                    el.appendChild(iconSpan(ICON.WARNING, "warning-icon", null));
+                    el.appendChild(iconSpan(ICON.WARNING, "warning-icon status-wiggle", null));
                     var text = document.createElement("span");
                     text.className = "warning-text";
                     text.textContent = (row.control.warningMessage && row.control.warningMessage())

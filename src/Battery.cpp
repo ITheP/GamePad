@@ -9,6 +9,7 @@
 #include "DeviceConfig.h"
 #include "Utils.h"
 #include "UI.h"
+#include "Config.h"
 #include <Debug.h>
 
 #define CLAMP(x, lo, hi) ((x < lo) ? lo : (x > hi) ? hi \
@@ -424,7 +425,7 @@ void Battery::ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bo
     snprintf(buffer, sizeof(buffer), "Charge to %d%%+", POWER_Percentage_Low);
 
   RRESmall.printStr(ALIGN_CENTER, SCREEN_HEIGHT - (FONT_SMALL_HEIGHT * 2), buffer);
-  RRESmall.printStr(ALIGN_CENTER, SCREEN_HEIGHT - FONT_SMALL_HEIGHT, "to continue");
+  RRESmall.printStr(ALIGN_CENTER, SCREEN_HEIGHT - FONT_SMALL_HEIGHT, (char *)"to continue");
 
   int barWidth = 41;
   float stepSize = 1.0 / barWidth;
@@ -629,7 +630,7 @@ void Battery::ProcessFullDisplayState(int secondRollover, int secondFlipFlop, bo
       }
       else if (PowerState::Unknown == State)
       {
-        RREDefault.printStr(-1, BatteryGfxYPos, "Unknown Power State");
+        RREDefault.printStr(-1, BatteryGfxYPos, (char *)"Unknown Power State");
       }
       // // Just draw a percentage full battery bar, no animation
 
@@ -751,7 +752,7 @@ void Battery::ProcessInputs()
     input->ValueState.StateJustChanged = false;
 
     unsigned long timeCheck = micros();
-    if ((timeCheck - input->ValueState.StateChangedWhen) > DEBOUNCE_DELAY)
+    if ((timeCheck - input->ValueState.StateChangedWhen) > Config_Hardware_DebounceDelay.Value)
     {
       // May not have set the in state by this point in time so - lets make sure!
 

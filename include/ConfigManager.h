@@ -1,6 +1,5 @@
 #pragma once
 
-#pragma once
 #include <string>
 #include <cstring>
 #include <cstdint>
@@ -15,7 +14,8 @@ enum class ConfigType
     Bool,
     Float,
     String,
-    Colour
+    Color,
+    CheckList
 };
 
 static const char *ConfigTypeDescriptions[] = {
@@ -23,7 +23,8 @@ static const char *ConfigTypeDescriptions[] = {
     "Bool",
     "Float",
     "String",
-    "Colour"};
+    "Colour",
+    "CheckList"};
 
 enum class ConfigRenderAs
 {
@@ -87,24 +88,109 @@ typedef ConfigManagerUpdateResult (*OnSetCallback)(BaseConfig *, void *);
 
 struct ConfigMetadata
 {
-    // Group.Label MUST BE UNIQUE (also used as a key for saving to preferences)
+    /// <summary>
+    /// Group label. Used to group config items in web and in serial output.
+    /// e.g. "LED" for LED related settings
+    /// </summary>
     std::string Group;
+
+    /// <summary>
+    /// Display label
+    /// e.g. "Brightness" for LED Brightness setting in LED group.
+    /// </summary>
     std::string Label;
+
+    /// <summary>
+    /// Short description shown to the user.
+    /// e.g. "Global brightness of LED's"
+    /// </summary>
     std::string Description;
+
+    /// <summary>
+    /// Additional info text.
+    /// e.g. "Very low brightness levels may result in funny looking LED colours or fades as there isn't the resolution of brightness levels to represent subtle differences in colour"
+    /// </summary>
     std::string Info;
+
+    /// <summary>
+    /// Hint on how this config item should be rendered in a UI.
+    /// Not needed most of the time, defaults to "Default"
+    /// </summary>
     ConfigRenderAs RenderAs;
+
+    /// <summary>
+    /// Unit string displayed next to the value
+    /// e.g. "Hz", "ms", "Seconds"
+    /// </summary>
     std::string Unit;
+
+    /// <summary>
+    /// Minimum allowed value. May be..
+    /// - Int value e.g. 20
+    /// - Float value e.g. 0.5
+    /// - String minimum character length e.g. 10
+    /// </summary>
     float Min;
+
+    /// <summary>
+    /// Maximum allowed value.
+    /// - Int value e.g. 200
+    /// - Float value e.g. 1.5
+    /// - String maximum character length e.g. 100
+    /// </summary>
     float Max;
+
+    /// <summary>
+    /// Minimum value shown in the UI.
+    /// Similar to minimum value, except optimised for UI (e.g. sensible ranges rather than theoretical max)
+    /// </summary>
     float uiMin;
+
+    /// <summary>
+    /// Maximum value shown in the UI.
+    /// Similar to maximum value, except optimised for UI (e.g. sensible ranges rather than theoretical max)
+    /// </summary>
     float uiMax;
+
+    /// <summary>
+    /// Step size hint for e.g. sliders in UI components
+    /// e.g. 0.1, 10, 250, etc.
+    /// </summary>
     float uiStep;
 
-    char *PrefsId = nullptr;             // Some things we want saved in preferences, others should be reset every time device is reset. To save, give a unique prefs name. Max 15 chars.
+    /// <summary>
+    /// Some config settings are (or should be) reset every time device is reset.
+    /// Others we want to save permanently so they survive a device reset.
+    /// To save, give a unique prefs name. Max 15 chars. Name must be unique across all Config settings.
+    /// e.g. "HW.Debounce"
+    /// </summary>
+    char *PrefsId = nullptr;
+
+    /// <summary>
+    /// Callback invoked when this value is set.
+    /// Note that when used, the function called must also set the Config.Value, it will not be done automatically.
+    /// If no function is set, then .Value will automatically update when changed via ConfigManager::UpdateConfig(...)
+    /// </summary>
     OnSetCallback FunctionOnSet;
-    std::string Image;         // e.g. mypic.png
-    int ImageVariants;         // e.g. 3 -> mypic.0.png mypic.1.png mypic.2.png
-    bool ImageSplitVertically; // e.g. min = 0, max = 3 = 4. Split image vertically into 4, should only display 1/4 the image at a time depending if value is 0,1,2 or 3
+
+    /// <summary>
+    /// Image filename, e.g. "mypic.png" - may be used by web ui. Assume image must exist within /data/img/ for the web service to access
+    /// </summary>
+    std::string Image;
+
+    /// <summary>
+    /// Number of image variants. If <= 1 then any image specified will be used as is. For values > 1 then a random variant will be defined.
+    /// Allows for some variance in web UI.
+    /// e.g. 3 -> mypic.0.png mypic.1.png mypic.2.png
+    /// </summary>
+    int ImageVariants;
+
+    /// <summary>
+    /// Split image vertically into 4 separate images. i.e. Image Sprites.
+    /// Based on number of values from min to max.
+    /// e.g. Min = 0, Max = 3, ImageSplitVertically = true, the web UI can map a value 0->3 to corresponding slices of the image.
+    /// </summary>
+    bool ImageSplitVertically;
 };
 
 // ------------------------------------------------------------
@@ -121,7 +207,7 @@ struct BaseConfig
 
 struct IntConfig
 {
-    ConfigType Type;
+    ConfigType Type = ConfigType::Int;
     int Id;
     ConfigMetadata Metadata;
     int Value;
@@ -130,18 +216,18 @@ struct IntConfig
 
 struct BoolConfig
 {
-    ConfigType Type;
+    ConfigType Type = ConfigType::Bool;
     int Id;
     ConfigMetadata Metadata;
     bool Value;
     bool DefaultValue;
 };
 
-// .Value shouldn't be specified in code, it will be allocated at run time (copied from DefaultValue).
+// For StringConfig, .Value shouldn't be specified in code, it will be allocated at run time (copied from DefaultValue).
 // This is to allow us to free it easily if it is replaced e.g. something else is loaded instead from preferences
 struct StringConfig
 {
-    ConfigType Type;
+    ConfigType Type = ConfigType::String;
     int Id;
     ConfigMetadata Metadata;
     char *Value = nullptr;
@@ -168,7 +254,7 @@ struct StringConfig
 
 struct FloatConfig
 {
-    ConfigType Type;
+    ConfigType Type = ConfigType::Float;
     int Id;
     ConfigMetadata Metadata;
     float Value;
@@ -177,7 +263,7 @@ struct FloatConfig
 
 struct ColorConfig
 {
-    ConfigType Type;
+    ConfigType Type = ConfigType::Color;
     int Id;
     ConfigMetadata Metadata;
     uint8_t r, g, b;
@@ -193,7 +279,7 @@ struct CheckListItem
 
 struct CheckListConfig
 {
-    ConfigType Type;
+    ConfigType Type = ConfigType::CheckList;
     int Id;
     ConfigMetadata Metadata;
     CheckListItem CheckList[];
@@ -206,12 +292,10 @@ struct CheckListConfig
 class ConfigManager
 {
 public:
-    // static int ConfigId;
     static BaseConfig **ConfigMap;
     static int ConfigCount;
     static int ConfigCapacity;
 
-    // static void AddConfig(BaseConfig* config);
     static BaseConfig *GetConfig(int id);
     static ConfigManagerUpdateResult AttemptUpdateConfigById(char *id, char *value);
     static ConfigManagerUpdateResult UpdateConfigById(int id, void *value);
@@ -226,8 +310,6 @@ public:
 
     static void LoadAllConfigFromPrefs();
     static void SaveAllConfigToPrefs();
-
-    // static void SetStringValue(StringConfig *config, char *value);
 
     template <typename T>
     static void AddConfig(T *config)
@@ -245,8 +327,6 @@ public:
                       config->Metadata.Label.c_str(),
                       GetConfigValueAsString(config).c_str(),
                       ConfigTypeDescriptions[(int)config->Type]);
-
-        // Check if is also saved in Preferences and load in value if it is
     }
 
 private:
